@@ -20,9 +20,11 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Install dependencies
-        working-directory: docs
-        run: flutter pub get
+      - name: Install Melos
+        run: dart pub global activate melos
+
+      - name: Bootstrap dependencies
+        run: melos bootstrap
 
       - name: Build web
         working-directory: docs
