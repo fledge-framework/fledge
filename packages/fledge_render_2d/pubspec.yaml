@@ -25,6 +25,6 @@ dev_dependencies:
 topics:
   - ecs
   - game-engine
-  - 2d-rendering
+  - graphics
   - sprites
   - flutter-games
