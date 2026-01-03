@@ -1,7 +1,7 @@
 name: fledge_docs
 description: Documentation and tutorials for the Fledge game framework.
 publish_to: 'none'
-version: 0.1.0
+version: 0.1.1
 
 environment:
   sdk: ^3.0.0
