@@ -75,7 +75,8 @@ class AssetTilemapLoader implements TilemapLoader {
     String sourcePath = '',
   }) async {
     // Pre-load all TSX files referenced in the TMX
-    final tsxProviders = await _loadTsxProviders(tmxContent, basePath, tsxLoader);
+    final tsxProviders =
+        await _loadTsxProviders(tmxContent, basePath, tsxLoader);
 
     // Parse the TMX file
     final tiledMap = TileMapParser.parseTmx(tmxContent, tsxList: tsxProviders);
@@ -176,7 +177,8 @@ class AssetTilemapLoader implements TilemapLoader {
 
       // Properties
       if (tile.properties.isNotEmpty) {
-        tileProperties[localId] = TiledProperties.fromCustomProperties(tile.properties);
+        tileProperties[localId] =
+            TiledProperties.fromCustomProperties(tile.properties);
       }
 
       // Animation

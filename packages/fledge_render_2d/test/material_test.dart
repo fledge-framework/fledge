@@ -92,7 +92,7 @@ void main() {
       final material = SpriteMaterial(texture: texture);
 
       expect(material.texture, texture);
-      expect(material.tint.value, 0xFFFFFFFF);
+      expect(material.tint.toARGB32(), 0xFFFFFFFF);
       expect(material.blendMode, BlendMode.normal);
       expect(material.alphaThreshold, 0);
       expect(material.hasShader, isFalse);

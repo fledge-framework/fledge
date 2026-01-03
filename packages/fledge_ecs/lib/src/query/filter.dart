@@ -54,12 +54,10 @@ class And<T extends Record> extends QueryFilter {
   const And(this.filters);
 
   @override
-  Set<ComponentId> get required =>
-      filters.expand((f) => f.required).toSet();
+  Set<ComponentId> get required => filters.expand((f) => f.required).toSet();
 
   @override
-  Set<ComponentId> get excluded =>
-      filters.expand((f) => f.excluded).toSet();
+  Set<ComponentId> get excluded => filters.expand((f) => f.excluded).toSet();
 }
 
 /// Marker for no filter.

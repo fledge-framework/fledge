@@ -13,7 +13,8 @@ final router = GoRouter(
     ),
     GoRoute(
       path: '/docs',
-      builder: (context, state) => const DocsPage(section: 'getting-started', page: 'introduction'),
+      builder: (context, state) =>
+          const DocsPage(section: 'getting-started', page: 'introduction'),
     ),
     GoRoute(
       path: '/docs/:section',
@@ -66,7 +67,8 @@ class DocNavigation {
         NavPage(title: 'Hierarchies', path: 'hierarchies'),
         NavPage(title: 'Observers', path: 'observers'),
         NavPage(title: 'App & Plugins', path: 'app-plugins'),
-        NavPage(title: 'Two-World Architecture', path: 'two-world-architecture'),
+        NavPage(
+            title: 'Two-World Architecture', path: 'two-world-architecture'),
       ],
     ),
     NavSection(

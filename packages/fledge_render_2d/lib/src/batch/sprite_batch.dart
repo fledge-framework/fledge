@@ -79,8 +79,7 @@ class SpriteBatches {
   List<SpriteBatch> get all => _batches;
 
   /// Total number of sprites across all batches.
-  int get totalSprites =>
-      _batches.fold(0, (sum, batch) => sum + batch.length);
+  int get totalSprites => _batches.fold(0, (sum, batch) => sum + batch.length);
 
   /// Number of batches (draw calls).
   int get batchCount => _batches.length;

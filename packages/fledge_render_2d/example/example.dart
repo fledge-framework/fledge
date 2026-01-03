@@ -56,4 +56,5 @@ void main() async {
 }
 
 // Placeholder for texture - in real code, load from assets
-TextureHandle _placeholderTexture() => TextureHandle(id: 0, width: 32, height: 32);
+TextureHandle _placeholderTexture() =>
+    TextureHandle(id: 0, width: 32, height: 32);

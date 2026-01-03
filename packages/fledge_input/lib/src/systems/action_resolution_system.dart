@@ -281,7 +281,8 @@ class ActionResolutionSystem implements System {
 
       case ActionType.vector2:
         // Determine if this is X or Y based on axis name
-        final isY = source.axisKey.contains('y') || source.axisKey.contains('Y');
+        final isY =
+            source.axisKey.contains('y') || source.axisKey.contains('Y');
         final (cx, cy) = vector2Values[binding.action] ?? (0.0, 0.0);
         if (isY) {
           vector2Values[binding.action] = (cx, cy + value);

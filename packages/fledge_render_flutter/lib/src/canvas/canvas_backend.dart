@@ -32,8 +32,8 @@ class CanvasBackend implements RenderBackend {
     final recorder = ui.PictureRecorder();
     final canvas = ui.Canvas(recorder);
     canvas.drawRect(
-      ui.Rect.fromLTWH(0, 0, descriptor.width.toDouble(),
-          descriptor.height.toDouble()),
+      ui.Rect.fromLTWH(
+          0, 0, descriptor.width.toDouble(), descriptor.height.toDouble()),
       ui.Paint()..color = const ui.Color(0x00000000),
     );
     final picture = recorder.endRecording();

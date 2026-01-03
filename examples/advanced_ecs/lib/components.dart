@@ -9,7 +9,8 @@ class Position {
   Position(this.x, this.y);
 
   @override
-  String toString() => 'Position(${x.toStringAsFixed(1)}, ${y.toStringAsFixed(1)})';
+  String toString() =>
+      'Position(${x.toStringAsFixed(1)}, ${y.toStringAsFixed(1)})';
 }
 
 /// Velocity component - represents movement speed and direction.

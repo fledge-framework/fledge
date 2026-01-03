@@ -67,8 +67,9 @@ class TileLayer {
 
   /// Returns the combined tint color with layer opacity.
   Color get effectiveColor {
-    final alpha = (opacity * tintColor.alpha).round().clamp(0, 255);
-    return Color.fromARGB(alpha, tintColor.red, tintColor.green, tintColor.blue);
+    final alpha = (opacity * tintColor.a * 255).round().clamp(0, 255);
+    return Color.fromARGB(alpha, (tintColor.r * 255).round(),
+        (tintColor.g * 255).round(), (tintColor.b * 255).round());
   }
 }
 

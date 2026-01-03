@@ -146,7 +146,8 @@ class SearchService {
 
           // Extract snippet around the match
           if (bestSnippet == null) {
-            bestSnippet = _extractSnippet(doc.content, contentIndex, word.length);
+            bestSnippet =
+                _extractSnippet(doc.content, contentIndex, word.length);
             matchedText = word;
           }
         }
@@ -156,7 +157,8 @@ class SearchService {
       if (doc.contentLower.contains(queryLower)) {
         score += 30;
         final phraseIndex = doc.contentLower.indexOf(queryLower);
-        bestSnippet = _extractSnippet(doc.content, phraseIndex, queryLower.length);
+        bestSnippet =
+            _extractSnippet(doc.content, phraseIndex, queryLower.length);
         matchedText = query;
       }
 

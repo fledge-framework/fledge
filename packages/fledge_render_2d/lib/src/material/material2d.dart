@@ -121,10 +121,10 @@ class Vec4Uniform extends UniformValue {
   /// Create from color.
   factory Vec4Uniform.fromColor(Color color) {
     return Vec4Uniform(
-      color.red / 255.0,
-      color.green / 255.0,
-      color.blue / 255.0,
-      color.alpha / 255.0,
+      color.r,
+      color.g,
+      color.b,
+      color.a,
     );
   }
 }

@@ -29,7 +29,8 @@ class Sprite {
 class SpriteExtractor extends Extractor {
   @override
   void extract(World mainWorld, RenderWorld renderWorld) {
-    for (final (_, pos, sprite) in mainWorld.query2<Position, Sprite>().iter()) {
+    for (final (_, pos, sprite)
+        in mainWorld.query2<Position, Sprite>().iter()) {
       renderWorld.spawn().insert(ExtractedSprite(
             x: pos.x,
             y: pos.y,

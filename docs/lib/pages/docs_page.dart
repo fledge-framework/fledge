@@ -142,7 +142,9 @@ class _DocsPageState extends State<DocsPage> {
       if (distance <= 0 && distance.abs() < closestDistance) {
         closestDistance = distance.abs();
         newActiveId = entry.key;
-      } else if (newActiveId == null && distance > 0 && distance < closestDistance) {
+      } else if (newActiveId == null &&
+          distance > 0 &&
+          distance < closestDistance) {
         // If no heading is above viewport, use the first one below
         closestDistance = distance;
         newActiveId = entry.key;
@@ -201,7 +203,8 @@ class _DocsPageState extends State<DocsPage> {
               Text(
                 'Docs',
                 style: theme.textTheme.headlineMedium?.copyWith(
-                  color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+                  color:
+                      theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
                 ),
               ),
             ],
@@ -218,56 +221,58 @@ class _DocsPageState extends State<DocsPage> {
             const SizedBox(width: 8),
           ],
         ),
-      drawer: isMediumScreen ? null : Drawer(
-        child: DocSidebar(
-          currentSection: widget.section,
-          currentPage: widget.page,
-          onClose: () => Navigator.of(context).pop(),
-        ),
-      ),
-      body: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Sidebar (visible on medium+ screens)
-          if (isMediumScreen)
-            SizedBox(
-              width: 280,
-              child: Container(
-                decoration: BoxDecoration(
-                  border: Border(
-                    right: BorderSide(
-                      color: theme.dividerColor,
-                    ),
-                  ),
-                ),
+        drawer: isMediumScreen
+            ? null
+            : Drawer(
                 child: DocSidebar(
                   currentSection: widget.section,
                   currentPage: widget.page,
+                  onClose: () => Navigator.of(context).pop(),
                 ),
               ),
-            ),
-          // Main content
-          Expanded(
-            child: _buildContent(theme, isDark, isWideScreen),
-          ),
-          // Table of contents (visible on wide screens)
-          if (isWideScreen && _markdownContent != null)
-            SizedBox(
-              width: 240,
-              child: Container(
-                decoration: BoxDecoration(
-                  border: Border(
-                    left: BorderSide(
-                      color: theme.dividerColor,
+        body: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Sidebar (visible on medium+ screens)
+            if (isMediumScreen)
+              SizedBox(
+                width: 280,
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border(
+                      right: BorderSide(
+                        color: theme.dividerColor,
+                      ),
                     ),
                   ),
+                  child: DocSidebar(
+                    currentSection: widget.section,
+                    currentPage: widget.page,
+                  ),
                 ),
-                padding: const EdgeInsets.all(24),
-                child: _buildTableOfContents(theme),
               ),
+            // Main content
+            Expanded(
+              child: _buildContent(theme, isDark, isWideScreen),
             ),
-        ],
-      ),
+            // Table of contents (visible on wide screens)
+            if (isWideScreen && _markdownContent != null)
+              SizedBox(
+                width: 240,
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border(
+                      left: BorderSide(
+                        color: theme.dividerColor,
+                      ),
+                    ),
+                  ),
+                  padding: const EdgeInsets.all(24),
+                  child: _buildTableOfContents(theme),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -383,7 +388,8 @@ class _DocsPageState extends State<DocsPage> {
                             ? FledgeTheme.primaryColor
                             : theme.textTheme.bodySmall?.color
                                 ?.withValues(alpha: 0.7),
-                        fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                        fontWeight:
+                            isActive ? FontWeight.w600 : FontWeight.normal,
                       ),
                     ),
                   ),
@@ -475,7 +481,8 @@ class _DocsPageState extends State<DocsPage> {
     if (currentIndex == -1) return (null, null);
 
     final prev = currentIndex > 0 ? allPages[currentIndex - 1] : null;
-    final next = currentIndex < allPages.length - 1 ? allPages[currentIndex + 1] : null;
+    final next =
+        currentIndex < allPages.length - 1 ? allPages[currentIndex + 1] : null;
 
     return (prev, next);
   }
@@ -532,13 +539,15 @@ class _NavButton extends StatelessWidget {
             ],
             Flexible(
               child: Column(
-                crossAxisAlignment:
-                    isPrevious ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+                crossAxisAlignment: isPrevious
+                    ? CrossAxisAlignment.start
+                    : CrossAxisAlignment.end,
                 children: [
                   Text(
                     isPrevious ? 'Previous' : 'Next',
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6),
+                      color: theme.textTheme.bodySmall?.color
+                          ?.withValues(alpha: 0.6),
                     ),
                   ),
                   Text(
@@ -612,7 +621,8 @@ class _SearchButton extends StatelessWidget {
             Text(
               'Search docs...',
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
+                color:
+                    theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
               ),
             ),
             const SizedBox(width: 16),
@@ -625,7 +635,8 @@ class _SearchButton extends StatelessWidget {
               child: Text(
                 'Ctrl K',
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+                  color:
+                      theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
                   fontWeight: FontWeight.w500,
                   fontSize: 11,
                 ),

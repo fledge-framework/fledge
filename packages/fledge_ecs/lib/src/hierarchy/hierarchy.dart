@@ -257,6 +257,7 @@ extension WorldHierarchyExtension on World {
         collectDescendants(child);
       }
     }
+
     collectDescendants(entity);
 
     // Despawn in reverse order (children before parents)

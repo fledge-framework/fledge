@@ -96,7 +96,8 @@ class EllipseShape extends CollisionShape {
   });
 
   /// Creates an ellipse from bounding box coordinates.
-  factory EllipseShape.fromBounds(double x, double y, double width, double height) {
+  factory EllipseShape.fromBounds(
+      double x, double y, double width, double height) {
     return EllipseShape(
       centerX: x + width / 2,
       centerY: y + height / 2,

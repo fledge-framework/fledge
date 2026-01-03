@@ -145,7 +145,8 @@ void main() {
 
       await schedule.run(world);
 
-      expect(order, equals(['first', 'preUpdate', 'update', 'postUpdate', 'last']));
+      expect(order,
+          equals(['first', 'preUpdate', 'update', 'postUpdate', 'last']));
     });
 
     test('runs non-conflicting systems in parallel', () async {

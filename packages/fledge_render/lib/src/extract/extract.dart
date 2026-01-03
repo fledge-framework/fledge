@@ -52,15 +52,16 @@ class ComponentExtractor<TSource, TExtracted> extends Extractor {
   /// The [extract] function is called for each entity with the source component.
   /// An optional [filter] can be provided to narrow the query.
   ComponentExtractor(
-    TExtracted Function(World world, Entity entity, TSource component) extract, {
+    TExtracted Function(World world, Entity entity, TSource component)
+        extract, {
     QueryFilter? filter,
   })  : _extractFn = extract,
         _filter = filter;
 
   @override
   void extract(World mainWorld, RenderWorld renderWorld) {
-    for (final (entity, component) in
-        mainWorld.query1<TSource>(filter: _filter).iter()) {
+    for (final (entity, component)
+        in mainWorld.query1<TSource>(filter: _filter).iter()) {
       final extracted = _extractFn(mainWorld, entity, component);
       renderWorld.spawn()..insert(extracted);
     }

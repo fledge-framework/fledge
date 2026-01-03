@@ -141,10 +141,8 @@ void main() {
       world.spawnWith([Position(2, 0), Enemy()]);
       world.spawnWith([Position(3, 0)]);
 
-      final results = world
-          .query1<Position>(filter: const With<Player>())
-          .iter()
-          .toList();
+      final results =
+          world.query1<Position>(filter: const With<Player>()).iter().toList();
 
       expect(results.length, equals(1));
       expect(results[0].$2.x, equals(1));
@@ -212,8 +210,7 @@ void main() {
       final e1 = world.spawnWith([Position(1, 0)]);
       final e2 = world.spawnWith([Position(2, 0)]);
 
-      final entities =
-          world.query1<Position>().iter().map((r) => r.$1).toSet();
+      final entities = world.query1<Position>().iter().map((r) => r.$1).toSet();
 
       expect(entities, contains(e1));
       expect(entities, contains(e2));

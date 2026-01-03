@@ -48,16 +48,16 @@ class SystemGenerator extends GeneratorForAnnotation<SystemAnnotation> {
     ConstantReader annotation,
     BuildStep buildStep,
   ) {
-    if (element is! FunctionElement) {
+    if (element is! TopLevelFunctionElement) {
       throw InvalidGenerationSourceError(
         '@system can only be applied to top-level functions.',
         element: element,
       );
     }
 
-    final functionName = element.name;
+    final functionName = element.name!;
     final className = _toClassName(functionName);
-    final params = element.parameters;
+    final params = element.formalParameters;
 
     // Analyze parameters to extract component and resource access
     final analysis = _analyzeParameters(params);
@@ -80,10 +80,12 @@ class SystemGenerator extends GeneratorForAnnotation<SystemAnnotation> {
       buffer.writeln('    reads: {${analysis.reads.join(', ')}},');
     }
     if (analysis.resourceReads.isNotEmpty) {
-      buffer.writeln('    resourceReads: {${analysis.resourceReads.join(', ')}},');
+      buffer.writeln(
+          '    resourceReads: {${analysis.resourceReads.join(', ')}},');
     }
     if (analysis.resourceWrites.isNotEmpty) {
-      buffer.writeln('    resourceWrites: {${analysis.resourceWrites.join(', ')}},');
+      buffer.writeln(
+          '    resourceWrites: {${analysis.resourceWrites.join(', ')}},');
     }
     if (analysis.eventReads.isNotEmpty) {
       buffer.writeln('    eventReads: {${analysis.eventReads.join(', ')}},');
@@ -102,7 +104,8 @@ class SystemGenerator extends GeneratorForAnnotation<SystemAnnotation> {
 
     // Generate shouldRun method
     buffer.writeln('  @override');
-    buffer.writeln('  bool shouldRun(World world) => runCondition?.call(world) ?? true;');
+    buffer.writeln(
+        '  bool shouldRun(World world) => runCondition?.call(world) ?? true;');
     buffer.writeln();
 
     // Generate run method
@@ -115,7 +118,7 @@ class SystemGenerator extends GeneratorForAnnotation<SystemAnnotation> {
     }
 
     // Call the original function
-    final args = params.map((p) => p.name).join(', ');
+    final args = params.map((p) => p.name!).join(', ');
     buffer.writeln('    $functionName($args);');
     buffer.writeln('    return Future.value();');
     buffer.writeln('  }');
@@ -132,18 +135,19 @@ class SystemGenerator extends GeneratorForAnnotation<SystemAnnotation> {
     return '${pascal}Wrapper';
   }
 
-  _ParameterAnalysis _analyzeParameters(List<ParameterElement> params) {
+  _ParameterAnalysis _analyzeParameters(List<FormalParameterElement> params) {
     final analysis = _ParameterAnalysis();
 
     for (final param in params) {
       final type = param.type;
+      final paramName = param.name!;
 
       if (type is InterfaceType) {
-        final typeName = type.element.name;
+        final typeName = type.element.name ?? '';
 
         // Check for Query types
         if (typeName.startsWith('Query')) {
-          _analyzeQueryParameter(type, analysis, param.name);
+          _analyzeQueryParameter(type, analysis, paramName);
         }
         // Check for World parameter - no setup needed, passed directly
         else if (typeName == 'World') {
@@ -151,33 +155,32 @@ class SystemGenerator extends GeneratorForAnnotation<SystemAnnotation> {
         }
         // Check for Commands parameter
         else if (typeName == 'Commands') {
-          analysis.parameterSetup
-              .add('final ${param.name} = Commands();');
+          analysis.parameterSetup.add('final $paramName = Commands();');
           analysis.needsCommandsApply = true;
         }
         // Check for Res<T> parameter (read-only resource access)
         else if (typeName == 'Res') {
-          _analyzeResParameter(type, analysis, param.name, isWrite: false);
+          _analyzeResParameter(type, analysis, paramName, isWrite: false);
         }
         // Check for ResMut<T> parameter (mutable resource access)
         else if (typeName == 'ResMut') {
-          _analyzeResParameter(type, analysis, param.name, isWrite: true);
+          _analyzeResParameter(type, analysis, paramName, isWrite: true);
         }
         // Check for ResOption<T> parameter
         else if (typeName == 'ResOption') {
-          _analyzeResOptionParameter(type, analysis, param.name);
+          _analyzeResOptionParameter(type, analysis, paramName);
         }
         // Check for EventReader<T> parameter
         else if (typeName == 'EventReader') {
-          _analyzeEventReaderParameter(type, analysis, param.name);
+          _analyzeEventReaderParameter(type, analysis, paramName);
         }
         // Check for EventWriter<T> parameter
         else if (typeName == 'EventWriter') {
-          _analyzeEventWriterParameter(type, analysis, param.name);
+          _analyzeEventWriterParameter(type, analysis, paramName);
         }
         // Check for EventReadWriter<T> parameter
         else if (typeName == 'EventReadWriter') {
-          _analyzeEventReadWriterParameter(type, analysis, param.name);
+          _analyzeEventReadWriterParameter(type, analysis, paramName);
         }
       }
     }
@@ -196,7 +199,7 @@ class SystemGenerator extends GeneratorForAnnotation<SystemAnnotation> {
 
     final resourceType = typeArgs.first;
     if (resourceType is InterfaceType) {
-      final resourceTypeName = resourceType.element.name;
+      final resourceTypeName = resourceType.element.name!;
 
       if (isWrite) {
         analysis.resourceWrites.add(resourceTypeName);
@@ -221,7 +224,7 @@ class SystemGenerator extends GeneratorForAnnotation<SystemAnnotation> {
 
     final resourceType = typeArgs.first;
     if (resourceType is InterfaceType) {
-      final resourceTypeName = resourceType.element.name;
+      final resourceTypeName = resourceType.element.name!;
       analysis.resourceReads.add(resourceTypeName);
       analysis.parameterSetup.add(
         'final $paramName = ResOption<$resourceTypeName>(world.getResource<$resourceTypeName>());',
@@ -239,7 +242,7 @@ class SystemGenerator extends GeneratorForAnnotation<SystemAnnotation> {
 
     final eventType = typeArgs.first;
     if (eventType is InterfaceType) {
-      final eventTypeName = eventType.element.name;
+      final eventTypeName = eventType.element.name!;
       analysis.eventReads.add(eventTypeName);
       analysis.parameterSetup.add(
         'final $paramName = world.eventReader<$eventTypeName>();',
@@ -257,7 +260,7 @@ class SystemGenerator extends GeneratorForAnnotation<SystemAnnotation> {
 
     final eventType = typeArgs.first;
     if (eventType is InterfaceType) {
-      final eventTypeName = eventType.element.name;
+      final eventTypeName = eventType.element.name!;
       analysis.eventWrites.add(eventTypeName);
       analysis.parameterSetup.add(
         'final $paramName = world.eventWriter<$eventTypeName>();',
@@ -275,7 +278,7 @@ class SystemGenerator extends GeneratorForAnnotation<SystemAnnotation> {
 
     final eventType = typeArgs.first;
     if (eventType is InterfaceType) {
-      final eventTypeName = eventType.element.name;
+      final eventTypeName = eventType.element.name!;
       analysis.eventReads.add(eventTypeName);
       analysis.eventWrites.add(eventTypeName);
       analysis.parameterSetup.add(
@@ -297,7 +300,7 @@ class SystemGenerator extends GeneratorForAnnotation<SystemAnnotation> {
 
     for (final arg in typeArgs) {
       if (arg is InterfaceType) {
-        componentTypes.add(arg.element.name);
+        componentTypes.add(arg.element.name!);
       }
     }
 
@@ -314,7 +317,7 @@ class SystemGenerator extends GeneratorForAnnotation<SystemAnnotation> {
     if (typeArgs.isNotEmpty) {
       final typeArgsStr = typeArgs.map((t) {
         if (t is InterfaceType) {
-          return t.element.name;
+          return t.element.name!;
         }
         return t.toString();
       }).join(', ');

@@ -52,7 +52,8 @@ class ButtonInputState {
   bool get justPressed => _pressedThisFrame || (pressed && !previouslyPressed);
 
   /// Whether just released this frame.
-  bool get justReleased => _releasedThisFrame || (!pressed && previouslyPressed);
+  bool get justReleased =>
+      _releasedThisFrame || (!pressed && previouslyPressed);
 
   /// Get the ButtonPhase.
   ButtonPhase get phase {

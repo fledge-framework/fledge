@@ -139,8 +139,7 @@ void main() {
     test('updates root entities', () async {
       final world = World();
 
-      final entity = world.spawn()
-        ..insert(Transform2D.from(50, 100));
+      final entity = world.spawn()..insert(Transform2D.from(50, 100));
 
       final system = TransformPropagateSystem();
       await system.run(world);
@@ -154,8 +153,7 @@ void main() {
     test('propagates to children', () async {
       final world = World();
 
-      final parent = world.spawn()
-        ..insert(Transform2D.from(10, 20));
+      final parent = world.spawn()..insert(Transform2D.from(10, 20));
 
       final child = world.spawnChild(parent.entity)
         ..insert(Transform2D.from(5, 5));
@@ -172,8 +170,7 @@ void main() {
     test('propagates multiple levels', () async {
       final world = World();
 
-      final root = world.spawn()
-        ..insert(Transform2D.from(100, 0));
+      final root = world.spawn()..insert(Transform2D.from(100, 0));
 
       final child = world.spawnChild(root.entity)
         ..insert(Transform2D.from(10, 0));

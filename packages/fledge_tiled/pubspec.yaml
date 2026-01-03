@@ -15,15 +15,15 @@ dependencies:
   fledge_ecs: ^0.1.0
   fledge_render: ^0.1.0
   fledge_render_2d: ^0.1.0
-  tiled: ^0.10.2
-  vector_math: ^2.1.4
-  meta: ^1.9.0
-  xml: ^6.3.0
+  tiled: ^0.11.1
+  vector_math: ^2.2.0
+  meta: ^1.17.0
+  xml: ^6.6.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  lints: ^3.0.0
+  lints: ^6.0.0
 
 topics:
   - ecs

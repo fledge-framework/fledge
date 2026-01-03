@@ -33,7 +33,8 @@ void main() async {
   }));
 
   world.observers.register(Observer<Health>.onRemove((w, entity, health) {
-    print('  [Observer] Entity $entity lost Health component (was ${health.current}/${health.max})');
+    print(
+        '  [Observer] Entity $entity lost Health component (was ${health.current}/${health.max})');
   }));
 
   world.observers.register(Observer<Health>.onChange((w, entity, health) {
@@ -101,7 +102,8 @@ void main() async {
 
   // Query for changed health components
   print('Entities with changed Health this tick:');
-  for (final (entity, h) in world.query1<Health>(filter: Changed<Health>()).iter()) {
+  for (final (entity, h)
+      in world.query1<Health>(filter: Changed<Health>()).iter()) {
     print('  Entity $entity: ${h.current}/${h.max}');
   }
 
@@ -114,9 +116,9 @@ void main() async {
 
   // Create app with states
   final app = App()
-    .addState<GameState>(GameState.loading)
-    .insertResource(Score(0))
-    .insertResource(GameTime(0.0));
+      .addState<GameState>(GameState.loading)
+      .insertResource(Score(0))
+      .insertResource(GameTime(0.0));
 
   // Add state transition handlers
   app.addSystem(FunctionSystem(
@@ -173,7 +175,8 @@ void main() async {
     await app.tick();
   }
   print('  Score: ${app.world.getResource<Score>()?.value}');
-  print('  Time: ${app.world.getResource<GameTime>()?.elapsed.toStringAsFixed(3)}s');
+  print(
+      '  Time: ${app.world.getResource<GameTime>()?.elapsed.toStringAsFixed(3)}s');
 
   // Pause
   print('\nTransitioning to PAUSED...');
@@ -185,7 +188,8 @@ void main() async {
   for (var i = 0; i < 3; i++) {
     await app.tick();
   }
-  print('  Score before: $scoreBefore, after: ${app.world.getResource<Score>()?.value}');
+  print(
+      '  Score before: $scoreBefore, after: ${app.world.getResource<Score>()?.value}');
 
   // Resume
   print('\nTransitioning back to PLAYING...');
@@ -204,9 +208,9 @@ void main() async {
 
   // Configure system sets with ordering
   app2
-    .configureSet('input', (set) => set)
-    .configureSet('physics', (set) => set.after('input').before('render'))
-    .configureSet('render', (set) => set);
+      .configureSet('input', (set) => set)
+      .configureSet('physics', (set) => set.after('input').before('render'))
+      .configureSet('render', (set) => set);
 
   // Add systems to sets
   app2.addSystemToSet(
@@ -251,8 +255,7 @@ void main() async {
   // ============================================
   print('--- 6. Run Conditions Demo ---\n');
 
-  final app3 = App()
-    .insertResource(Score(0));
+  final app3 = App().insertResource(Score(0));
 
   var conditionalRuns = 0;
 

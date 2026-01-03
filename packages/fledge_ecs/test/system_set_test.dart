@@ -274,8 +274,7 @@ void main() {
 
       final app = App();
 
-      app.configureSet(
-          'physics', (s) => s.runIf((world) => shouldRunPhysics));
+      app.configureSet('physics', (s) => s.runIf((world) => shouldRunPhysics));
 
       app.addSystemToSet(
         FunctionSystem('gravity', run: (_) => physicsRan = true),

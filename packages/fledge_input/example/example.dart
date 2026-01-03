@@ -23,6 +23,7 @@ void main() async {
   );
 
   // Add to your app
+  // ignore: unused_local_variable
   final app = App()
     ..addPlugin(TimePlugin())
     ..addPlugin(inputPlugin);

@@ -7,7 +7,6 @@ import 'package:source_gen/source_gen.dart';
 ///
 /// For each component class, generates:
 /// - A ComponentId getter for type-safe access
-/// - Registration in the component registry
 ///
 /// Example input:
 /// ```dart
@@ -22,10 +21,6 @@ import 'package:source_gen/source_gen.dart';
 /// ```dart
 /// extension PositionComponentExtension on Position {
 ///   static ComponentId get componentId => ComponentId.of<Position>();
-/// }
-///
-/// void _registerPosition() {
-///   ComponentId.of<Position>();
 /// }
 /// ```
 class ComponentGenerator extends GeneratorForAnnotation<Component> {
@@ -48,17 +43,9 @@ class ComponentGenerator extends GeneratorForAnnotation<Component> {
     // Generate extension with componentId getter
     buffer.writeln('/// Generated component extension for [$className].');
     buffer.writeln('extension ${className}ComponentExtension on $className {');
-    buffer.writeln(
-        '  /// The unique [ComponentId] for this component type.');
+    buffer.writeln('  /// The unique [ComponentId] for this component type.');
     buffer.writeln(
         '  static ComponentId get componentId => ComponentId.of<$className>();');
-    buffer.writeln('}');
-    buffer.writeln();
-
-    // Generate a registration function that can be called at startup
-    buffer.writeln('/// Ensures [$className] is registered as a component.');
-    buffer.writeln('void _register${className}Component() {');
-    buffer.writeln('  ComponentId.of<$className>();');
     buffer.writeln('}');
 
     return buffer.toString();

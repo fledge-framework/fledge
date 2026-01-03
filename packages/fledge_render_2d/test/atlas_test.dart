@@ -279,7 +279,7 @@ void main() {
       expect(sprite.texture, texture);
       expect(sprite.sourceRect, isNotNull);
       expect(sprite.sourceRect!.left, 32);
-      expect(sprite.color.value, 0xFF0000FF);
+      expect(sprite.color.toARGB32(), 0xFF0000FF);
     });
   });
 
@@ -295,7 +295,7 @@ void main() {
       final atlasSprite = AtlasSprite(atlas: atlas);
 
       expect(atlasSprite.index, 0);
-      expect(atlasSprite.color.value, 0xFFFFFFFF);
+      expect(atlasSprite.color.toARGB32(), 0xFFFFFFFF);
       expect(atlasSprite.flipX, isFalse);
       expect(atlasSprite.flipY, isFalse);
     });

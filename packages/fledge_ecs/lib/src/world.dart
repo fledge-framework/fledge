@@ -188,12 +188,17 @@ class World {
 
     // Check if component already exists in this archetype
     if (currentTable.archetypeId.contains(componentId)) {
-      _updateExistingComponent<T>(currentTable, location, componentId, entity, component);
+      _updateExistingComponent<T>(
+          currentTable, location, componentId, entity, component);
       return;
     }
 
     _moveToNewArchetypeWithComponent<T>(
-      entity, location, currentTable, componentId, component,
+      entity,
+      location,
+      currentTable,
+      componentId,
+      component,
     );
   }
 

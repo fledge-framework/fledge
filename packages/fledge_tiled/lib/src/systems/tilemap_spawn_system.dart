@@ -124,7 +124,8 @@ class TilemapSpawnConfig {
   ///
   /// Called when a tile collider entity is spawned, allowing custom
   /// component insertion. The [Collider] is already attached.
-  final void Function(EntityCommands entity, String layerName, Collider collider)?
+  final void Function(
+          EntityCommands entity, String layerName, Collider collider)?
       onTileColliderSpawn;
 
   const TilemapSpawnConfig({

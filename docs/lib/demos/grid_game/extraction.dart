@@ -8,7 +8,13 @@ import 'resources.dart';
 
 // Re-export the fledge_render classes for convenience
 export 'package:fledge_render/fledge_render.dart'
-    show RenderWorld, Extractor, Extractors, ExtractSystem, ExtractedData, SortableExtractedData;
+    show
+        RenderWorld,
+        Extractor,
+        Extractors,
+        ExtractSystem,
+        ExtractedData,
+        SortableExtractedData;
 
 /// Entity type for rendering differentiation.
 enum GridEntityType {

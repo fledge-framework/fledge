@@ -86,8 +86,8 @@ class Table {
       _columns[componentId]!.add(components[componentId]);
 
       // Use existing ticks if migrating, otherwise create new
-      final ticks = existingTicks?[componentId] ??
-          ComponentTicks.added(currentTick);
+      final ticks =
+          existingTicks?[componentId] ?? ComponentTicks.added(currentTick);
       _ticks[componentId]!.add(ticks);
     }
 
@@ -158,7 +158,8 @@ class Table {
   ///
   /// If [currentTick] is provided, the component's change tick is updated
   /// to enable change detection via [Changed<T>] queries.
-  void setComponent<T>(int row, ComponentId componentId, T value, {int? currentTick}) {
+  void setComponent<T>(int row, ComponentId componentId, T value,
+      {int? currentTick}) {
     final column = _columns[componentId];
     if (column == null) {
       throw ArgumentError('Component $componentId not in archetype');

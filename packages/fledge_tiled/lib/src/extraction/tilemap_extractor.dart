@@ -27,9 +27,8 @@ class TilemapExtractor extends Extractor {
     if (assets == null) return;
 
     // Query for tilemap entities
-    for (final (mapEntity, tilemap, mapTransform) in mainWorld
-        .query2<Tilemap, GlobalTransform2D>()
-        .iter()) {
+    for (final (mapEntity, tilemap, mapTransform)
+        in mainWorld.query2<Tilemap, GlobalTransform2D>().iter()) {
       final animator = mainWorld.get<TilemapAnimator>(mapEntity);
 
       // Find the loaded tilemap data
@@ -43,8 +42,7 @@ class TilemapExtractor extends Extractor {
 
         // Check visibility
         if (respectVisibility) {
-          final visible =
-              tilemap.isLayerVisible(layer.name, layer.visible);
+          final visible = tilemap.isLayerVisible(layer.name, layer.visible);
           if (!visible) continue;
         }
 

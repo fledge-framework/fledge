@@ -74,8 +74,8 @@ class ExtractedSprite with ExtractedData, SortableExtractedData {
 class SpriteExtractor extends Extractor {
   @override
   void extract(World mainWorld, RenderWorld renderWorld) {
-    for (final (entity, sprite, globalTransform) in
-        mainWorld.query2<Sprite, GlobalTransform2D>().iter()) {
+    for (final (entity, sprite, globalTransform)
+        in mainWorld.query2<Sprite, GlobalTransform2D>().iter()) {
       // Check visibility
       final visibility = mainWorld.get<Visibility>(entity);
       if (visibility != null && !visibility.isVisible) continue;

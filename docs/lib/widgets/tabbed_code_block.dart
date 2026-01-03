@@ -61,8 +61,7 @@ class _TabbedCodeBlockState extends State<TabbedCodeBlock> {
         widget.isDark ? FledgeTheme.phantom : const Color(0xFFE2E8F0);
     final codeColor =
         widget.isDark ? FledgeTheme.surfaceDark : const Color(0xFFF8FAFC);
-    final mutedColor =
-        theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6);
+    final mutedColor = theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6);
     const radius = Radius.circular(8);
 
     return Container(
@@ -194,7 +193,9 @@ class _TabbedCodeBlockState extends State<TabbedCodeBlock> {
                 tab.label,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: isSelected
-                      ? (widget.isDark ? FledgeTheme.primaryColor : FledgeTheme.primaryColor)
+                      ? (widget.isDark
+                          ? FledgeTheme.primaryColor
+                          : FledgeTheme.primaryColor)
                       : mutedColor,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                 ),

@@ -10,30 +10,30 @@ void main() {
   group('Color', () {
     test('creates from value', () {
       const color = Color(0xFF112233);
-      expect(color.value, 0xFF112233);
-      expect(color.alpha, 0xFF);
-      expect(color.red, 0x11);
-      expect(color.green, 0x22);
-      expect(color.blue, 0x33);
+      expect(color.toARGB32(), 0xFF112233);
+      expect((color.a * 255).round(), 0xFF);
+      expect((color.r * 255).round(), 0x11);
+      expect((color.g * 255).round(), 0x22);
+      expect((color.b * 255).round(), 0x33);
     });
 
     test('creates from ARGB', () {
       const color = Color.fromARGB(255, 128, 64, 32);
-      expect(color.alpha, 255);
-      expect(color.red, 128);
-      expect(color.green, 64);
-      expect(color.blue, 32);
+      expect((color.a * 255).round(), 255);
+      expect((color.r * 255).round(), 128);
+      expect((color.g * 255).round(), 64);
+      expect((color.b * 255).round(), 32);
     });
 
     test('calculates opacity', () {
       const opaque = Color(0xFFFFFFFF);
-      expect(opaque.opacity, 1.0);
+      expect(opaque.a, 1.0);
 
       const transparent = Color(0x00000000);
-      expect(transparent.opacity, 0.0);
+      expect(transparent.a, 0.0);
 
       const half = Color(0x80000000);
-      expect(half.opacity, closeTo(0.5, 0.01));
+      expect(half.a, closeTo(0.5, 0.01));
     });
 
     test('equality', () {
@@ -108,7 +108,8 @@ void main() {
       const rect = Rect.fromLTRB(0, 0, 100, 100);
       expect(rect.contains(const Offset(50, 50)), isTrue);
       expect(rect.contains(const Offset(0, 0)), isTrue);
-      expect(rect.contains(const Offset(100, 100)), isFalse); // Right edge exclusive
+      expect(rect.contains(const Offset(100, 100)),
+          isFalse); // Right edge exclusive
       expect(rect.contains(const Offset(-1, 50)), isFalse);
     });
   });
@@ -178,7 +179,7 @@ void main() {
 
       expect(sprite.texture, texture);
       expect(sprite.sourceRect, isNull);
-      expect(sprite.color.value, 0xFFFFFFFF);
+      expect(sprite.color.toARGB32(), 0xFFFFFFFF);
       expect(sprite.flipX, isFalse);
       expect(sprite.flipY, isFalse);
       expect(sprite.anchor.x, 0.5);
@@ -532,9 +533,9 @@ void main() {
 
       // Verify order by checking colors
       final instances = batches.all.first.instances;
-      expect(instances[0].color.value, 0xFF00FF00); // Green (sort key 100)
-      expect(instances[1].color.value, 0xFF0000FF); // Blue (sort key 200)
-      expect(instances[2].color.value, 0xFFFF0000); // Red (sort key 300)
+      expect(instances[0].color.toARGB32(), 0xFF00FF00); // Green (sort key 100)
+      expect(instances[1].color.toARGB32(), 0xFF0000FF); // Blue (sort key 200)
+      expect(instances[2].color.toARGB32(), 0xFFFF0000); // Red (sort key 300)
     });
   });
 
@@ -583,7 +584,8 @@ void main() {
       final extractor = SpriteExtractor();
       extractor.extract(world, renderWorld);
 
-      for (final (_, extracted) in renderWorld.query1<ExtractedSprite>().iter()) {
+      for (final (_, extracted)
+          in renderWorld.query1<ExtractedSprite>().iter()) {
         // Sort key should be Y * 1000
         expect(extracted.sortKey, 250000);
       }

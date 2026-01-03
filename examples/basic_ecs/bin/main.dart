@@ -71,7 +71,8 @@ void main() async {
               label = 'Entity';
             }
 
-            print('  $label: ${pos.x.toStringAsFixed(1)}, ${pos.y.toStringAsFixed(1)}');
+            print(
+                '  $label: ${pos.x.toStringAsFixed(1)}, ${pos.y.toStringAsFixed(1)}');
           }
         },
       ),
@@ -91,20 +92,20 @@ void main() async {
 
   // Query only players
   print('Players:');
-  for (final (entity, pos) in world
-      .query1<Position>(filter: const With<Player>())
-      .iter()) {
+  for (final (entity, pos)
+      in world.query1<Position>(filter: const With<Player>()).iter()) {
     final p = world.get<Player>(entity)!;
-    print('  ${p.name} at (${pos.x.toStringAsFixed(1)}, ${pos.y.toStringAsFixed(1)})');
+    print(
+        '  ${p.name} at (${pos.x.toStringAsFixed(1)}, ${pos.y.toStringAsFixed(1)})');
   }
 
   // Query only enemies
   print('\nEnemies:');
-  for (final (entity, pos) in world
-      .query1<Position>(filter: const With<Enemy>())
-      .iter()) {
+  for (final (entity, pos)
+      in world.query1<Position>(filter: const With<Enemy>()).iter()) {
     final e = world.get<Enemy>(entity)!;
-    print('  Difficulty ${e.difficulty} at (${pos.x.toStringAsFixed(1)}, ${pos.y.toStringAsFixed(1)})');
+    print(
+        '  Difficulty ${e.difficulty} at (${pos.x.toStringAsFixed(1)}, ${pos.y.toStringAsFixed(1)})');
   }
 
   // Demonstrate commands
@@ -118,11 +119,8 @@ void main() async {
     ..insert(Velocity(0, -1));
 
   // Queue despawning an enemy
-  final firstEnemy = world
-      .query1<Position>(filter: const With<Enemy>())
-      .iter()
-      .first
-      .$1;
+  final firstEnemy =
+      world.query1<Position>(filter: const With<Enemy>()).iter().first.$1;
   commands.despawn(firstEnemy);
 
   print('Commands queued: ${commands.length}');

@@ -121,7 +121,8 @@ class MarkdownContent extends StatelessWidget {
         vertical: 8,
       ),
       code: FledgeTheme.codeStyle.copyWith(
-        backgroundColor: isDark ? FledgeTheme.surfaceDark2 : Colors.grey.shade100,
+        backgroundColor:
+            isDark ? FledgeTheme.surfaceDark2 : Colors.grey.shade100,
         color: FledgeTheme.purpleLight,
       ),
       codeblockDecoration: const BoxDecoration(),

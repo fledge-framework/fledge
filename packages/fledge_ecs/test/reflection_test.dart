@@ -61,8 +61,7 @@ void main() {
           FieldInfo(name: 'x', type: double),
           FieldInfo(name: 'y', type: double),
         ],
-        fromJson: (json) =>
-            Position(json['x'] as double, json['y'] as double),
+        fromJson: (json) => Position(json['x'] as double, json['y'] as double),
         toJson: (pos) => {'x': pos.x, 'y': pos.y},
       );
 
@@ -76,8 +75,7 @@ void main() {
         type: Position,
         name: 'Position',
         fields: [],
-        fromJson: (json) =>
-            Position(json['x'] as double, json['y'] as double),
+        fromJson: (json) => Position(json['x'] as double, json['y'] as double),
         toJson: (pos) => {'x': pos.x, 'y': pos.y},
       );
 
@@ -91,8 +89,7 @@ void main() {
         type: Position,
         name: 'Position',
         fields: [],
-        fromJson: (json) =>
-            Position(json['x'] as double, json['y'] as double),
+        fromJson: (json) => Position(json['x'] as double, json['y'] as double),
         toJson: (pos) => {'x': pos.x, 'y': pos.y},
       );
 
@@ -105,8 +102,7 @@ void main() {
         type: Position,
         name: 'Position',
         fields: [],
-        fromJson: (json) =>
-            Position(json['x'] as double, json['y'] as double),
+        fromJson: (json) => Position(json['x'] as double, json['y'] as double),
         toJson: (pos) => {'x': pos.x, 'y': pos.y},
         defaultFactory: () => Position(0, 0),
       );
@@ -127,8 +123,7 @@ void main() {
         type: Position,
         name: 'Position',
         fields: [],
-        fromJson: (json) =>
-            Position(json['x'] as double, json['y'] as double),
+        fromJson: (json) => Position(json['x'] as double, json['y'] as double),
         toJson: (pos) => {'x': pos.x, 'y': pos.y},
       );
 
@@ -143,8 +138,7 @@ void main() {
         type: Position,
         name: 'Position',
         fields: [],
-        fromJson: (json) =>
-            Position(json['x'] as double, json['y'] as double),
+        fromJson: (json) => Position(json['x'] as double, json['y'] as double),
         toJson: (pos) => {'x': pos.x, 'y': pos.y},
       );
 
@@ -159,8 +153,7 @@ void main() {
         type: Position,
         name: 'Position',
         fields: [],
-        fromJson: (json) =>
-            Position(json['x'] as double, json['y'] as double),
+        fromJson: (json) => Position(json['x'] as double, json['y'] as double),
         toJson: (pos) => {'x': pos.x, 'y': pos.y},
       );
 
@@ -175,8 +168,7 @@ void main() {
         type: Position,
         name: 'Position',
         fields: [],
-        fromJson: (json) =>
-            Position(json['x'] as double, json['y'] as double),
+        fromJson: (json) => Position(json['x'] as double, json['y'] as double),
         toJson: (pos) => {'x': pos.x, 'y': pos.y},
       );
 
@@ -196,8 +188,7 @@ void main() {
         type: Position,
         name: 'Position',
         fields: [],
-        fromJson: (json) =>
-            Position(json['x'] as double, json['y'] as double),
+        fromJson: (json) => Position(json['x'] as double, json['y'] as double),
         toJson: (pos) => {'x': pos.x, 'y': pos.y},
       ));
 
@@ -212,8 +203,7 @@ void main() {
         type: Position,
         name: 'Position',
         fields: [],
-        fromJson: (json) =>
-            Position(json['x'] as double, json['y'] as double),
+        fromJson: (json) => Position(json['x'] as double, json['y'] as double),
         toJson: (pos) => {'x': pos.x, 'y': pos.y},
       ));
 
@@ -234,13 +224,11 @@ void main() {
         type: Position,
         name: 'Position',
         fields: [],
-        fromJson: (json) =>
-            Position(json['x'] as double, json['y'] as double),
+        fromJson: (json) => Position(json['x'] as double, json['y'] as double),
         toJson: (pos) => {'x': pos.x, 'y': pos.y},
       ));
 
-      expect(
-          TypeRegistry.instance.registeredNames, containsAll(['Position']));
+      expect(TypeRegistry.instance.registeredNames, containsAll(['Position']));
     });
   });
 
@@ -280,8 +268,7 @@ void main() {
           FieldInfo(name: 'x', type: double),
           FieldInfo(name: 'y', type: double),
         ],
-        fromJson: (json) =>
-            Position(json['x'] as double, json['y'] as double),
+        fromJson: (json) => Position(json['x'] as double, json['y'] as double),
         toJson: (pos) => {'x': pos.x, 'y': pos.y},
       ));
 
@@ -373,8 +360,7 @@ void main() {
         type: Position,
         name: 'Position',
         fields: [],
-        fromJson: (json) =>
-            Position(json['x'] as double, json['y'] as double),
+        fromJson: (json) => Position(json['x'] as double, json['y'] as double),
         toJson: (pos) => {'x': pos.x, 'y': pos.y},
       ));
     });
@@ -422,8 +408,7 @@ void main() {
         type: Position,
         name: 'Position',
         fields: [],
-        fromJson: (json) =>
-            Position(json['x'] as double, json['y'] as double),
+        fromJson: (json) => Position(json['x'] as double, json['y'] as double),
         toJson: (pos) => {'x': pos.x, 'y': pos.y},
       ));
     });

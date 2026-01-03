@@ -23,8 +23,7 @@ class WindowModeChanged {
   });
 
   @override
-  String toString() =>
-      'WindowModeChanged($previousMode -> $newMode)';
+  String toString() => 'WindowModeChanged($previousMode -> $newMode)';
 }
 
 /// Event fired when the window is resized.

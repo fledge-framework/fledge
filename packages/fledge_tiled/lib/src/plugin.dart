@@ -54,14 +54,10 @@ class TiledPlugin implements Plugin {
   @override
   void build(App app) {
     // Insert resources
-    app
-        .insertResource(TilemapAssets())
-        .insertResource(TilesetRegistry());
+    app.insertResource(TilemapAssets()).insertResource(TilesetRegistry());
 
     // Register events
-    app
-        .addEvent<SpawnTilemapEvent>()
-        .addEvent<TilemapSpawnedEvent>();
+    app.addEvent<SpawnTilemapEvent>().addEvent<TilemapSpawnedEvent>();
 
     // Add systems
     app

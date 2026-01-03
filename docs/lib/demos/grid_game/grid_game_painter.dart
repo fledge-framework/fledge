@@ -38,9 +38,9 @@ class GridGamePainter extends CustomPainter {
   ///
   /// Note: We query ExtractedGridEntity from the render world.
   /// The pixel coordinates are already computed - no grid math needed!
-  void _drawEntities(
-      Canvas canvas, ExtractedGridConfig config, Paint paint) {
-    for (final (_, extracted) in renderWorld.query1<ExtractedGridEntity>().iter()) {
+  void _drawEntities(Canvas canvas, ExtractedGridConfig config, Paint paint) {
+    for (final (_, extracted)
+        in renderWorld.query1<ExtractedGridEntity>().iter()) {
       paint.color = extracted.color;
 
       switch (extracted.entityType) {

@@ -11,7 +11,8 @@ class RenderGraphCycleError extends Error {
   RenderGraphCycleError(this.cycle);
 
   @override
-  String toString() => 'RenderGraphCycleError: Cycle detected: ${cycle.join(' -> ')}';
+  String toString() =>
+      'RenderGraphCycleError: Cycle detected: ${cycle.join(' -> ')}';
 }
 
 /// Exception thrown when a required input slot is not connected.
@@ -26,7 +27,8 @@ class MissingInputError extends Error {
   MissingInputError(this.node, this.slot);
 
   @override
-  String toString() => 'MissingInputError: Node "$node" has unconnected required input "$slot"';
+  String toString() =>
+      'MissingInputError: Node "$node" has unconnected required input "$slot"';
 }
 
 /// Exception thrown when slot types don't match.
@@ -121,17 +123,22 @@ class RenderGraph {
     }
 
     // Validate slots exist
-    final outputSlot = fromNode.outputs.where((s) => s.name == from.slot).firstOrNull;
+    final outputSlot =
+        fromNode.outputs.where((s) => s.name == from.slot).firstOrNull;
     if (outputSlot == null) {
-      throw ArgumentError('Output slot "${from.slot}" does not exist on node "${from.node}"');
+      throw ArgumentError(
+          'Output slot "${from.slot}" does not exist on node "${from.node}"');
     }
     final inputSlot = toNode.inputs.where((s) => s.name == to.slot).firstOrNull;
     if (inputSlot == null) {
-      throw ArgumentError('Input slot "${to.slot}" does not exist on node "${to.node}"');
+      throw ArgumentError(
+          'Input slot "${to.slot}" does not exist on node "${to.node}"');
     }
 
     // Validate type compatibility
-    if (outputSlot.type != inputSlot.type && inputSlot.type != SlotType.custom && outputSlot.type != SlotType.custom) {
+    if (outputSlot.type != inputSlot.type &&
+        inputSlot.type != SlotType.custom &&
+        outputSlot.type != SlotType.custom) {
       throw SlotTypeMismatchError(from, to, outputSlot.type, inputSlot.type);
     }
 
@@ -267,9 +274,8 @@ class RenderGraph {
   /// Get the execution order of nodes.
   ///
   /// Returns `null` if the graph has not been sorted yet.
-  List<String>? get executionOrder => _sortedOrder != null
-      ? List.unmodifiable(_sortedOrder!)
-      : null;
+  List<String>? get executionOrder =>
+      _sortedOrder != null ? List.unmodifiable(_sortedOrder!) : null;
 
   /// Force recalculation of execution order.
   void invalidateOrder() {

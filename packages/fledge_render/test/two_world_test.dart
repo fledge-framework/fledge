@@ -116,8 +116,7 @@ void main() {
       extractor.extract(mainWorld, renderWorld);
 
       // Verify extraction
-      final extracted =
-          renderWorld.query1<ExtractedPosition>().iter().toList();
+      final extracted = renderWorld.query1<ExtractedPosition>().iter().toList();
       expect(extracted, hasLength(2));
     });
 
@@ -131,8 +130,7 @@ void main() {
       final extractor = PositionExtractor();
       extractor.extract(mainWorld, renderWorld);
 
-      final extracted =
-          renderWorld.query1<ExtractedPosition>().iter().toList();
+      final extracted = renderWorld.query1<ExtractedPosition>().iter().toList();
       expect(extracted, hasLength(2));
 
       final positions = extracted.map((e) => (e.$2.x, e.$2.y)).toList();
@@ -194,8 +192,7 @@ void main() {
       extractSystem.run(mainWorld, renderWorld);
 
       // Should have cleared old data and extracted new
-      final extracted =
-          renderWorld.query1<ExtractedPosition>().iter().toList();
+      final extracted = renderWorld.query1<ExtractedPosition>().iter().toList();
       expect(extracted, hasLength(1));
       expect(extracted.first.$2.x, equals(1));
     });
@@ -227,8 +224,7 @@ void main() {
   group('RenderSchedule', () {
     test('addSystem adds to correct stage', () {
       final schedule = RenderSchedule();
-      final system =
-          SyncRenderSystem('test', (mainWorld, renderWorld) {});
+      final system = SyncRenderSystem('test', (mainWorld, renderWorld) {});
 
       schedule.addSystem(RenderStage.prepare, system);
 
@@ -262,8 +258,7 @@ void main() {
 
     test('removeSystem removes from stage', () {
       final schedule = RenderSchedule();
-      final system =
-          SyncRenderSystem('test', (mainWorld, renderWorld) {});
+      final system = SyncRenderSystem('test', (mainWorld, renderWorld) {});
 
       schedule.addSystem(RenderStage.prepare, system);
       schedule.removeSystem(RenderStage.prepare, system);
@@ -341,8 +336,7 @@ void main() {
         RenderStage.render,
         'check',
         (m, r) {
-          final extracted =
-              r.query1<ExtractedPosition>().iter().toList();
+          final extracted = r.query1<ExtractedPosition>().iter().toList();
           foundEntity = extracted.isNotEmpty && extracted.first.$2.x == 5;
         },
       );

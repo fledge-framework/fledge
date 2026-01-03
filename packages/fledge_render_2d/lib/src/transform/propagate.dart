@@ -34,9 +34,8 @@ class TransformPropagateSystem implements System {
   @override
   Future<void> run(World world) async {
     // First pass: Update root entities (no parent)
-    for (final (entity, transform) in world
-        .query1<Transform2D>(filter: const Without<Parent>())
-        .iter()) {
+    for (final (entity, transform)
+        in world.query1<Transform2D>(filter: const Without<Parent>()).iter()) {
       final globalMatrix = transform.toMatrix();
 
       // Get or create GlobalTransform2D
@@ -54,8 +53,8 @@ class TransformPropagateSystem implements System {
 
   void _propagateToChildren(World world) {
     // Get all entities with children
-    for (final (_, children, parentGlobal) in
-        world.query2<Children, GlobalTransform2D>().iter()) {
+    for (final (_, children, parentGlobal)
+        in world.query2<Children, GlobalTransform2D>().iter()) {
       for (final childEntity in children.children) {
         final childLocal = world.get<Transform2D>(childEntity);
         if (childLocal == null) continue;
@@ -80,8 +79,7 @@ class TransformPropagateSystem implements System {
     }
   }
 
-  void _propagateFromEntity(
-      World world, Entity parent, Matrix3 parentMatrix) {
+  void _propagateFromEntity(World world, Entity parent, Matrix3 parentMatrix) {
     final children = world.get<Children>(parent);
     if (children == null) return;
 

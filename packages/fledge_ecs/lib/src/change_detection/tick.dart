@@ -63,5 +63,6 @@ class ComponentTicks {
   }
 
   @override
-  String toString() => 'ComponentTicks(added: $addedTick, changed: $changedTick)';
+  String toString() =>
+      'ComponentTicks(added: $addedTick, changed: $changedTick)';
 }

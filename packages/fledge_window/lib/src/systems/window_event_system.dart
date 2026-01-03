@@ -108,9 +108,8 @@ class WindowEventSystem implements System {
         await windowManager.setAsFrameless();
         await windowManager.setHasShadow(false);
         // Position at display origin with full display size
-        final displayOrigin = display.isPrimary
-            ? Offset.zero
-            : display.bounds.topLeft;
+        final displayOrigin =
+            display.isPrimary ? Offset.zero : display.bounds.topLeft;
         final borderlessBounds = Rect.fromLTWH(
           displayOrigin.dx,
           displayOrigin.dy,

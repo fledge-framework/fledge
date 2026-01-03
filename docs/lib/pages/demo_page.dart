@@ -538,7 +538,6 @@ class DemoPage extends StatelessWidget {
       ],
     );
   }
-
 }
 
 // Code snippets for the walkthrough

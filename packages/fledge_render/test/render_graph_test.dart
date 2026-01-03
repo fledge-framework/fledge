@@ -238,13 +238,11 @@ void main() {
       graph.addNode(RecordingNode('a', log, outputs: [
         const SlotInfo(name: 'out', type: SlotType.custom),
       ]));
-      graph.addNode(RecordingNode('b', log,
-          inputs: [
-            const SlotInfo(name: 'in', type: SlotType.custom),
-          ],
-          outputs: [
-            const SlotInfo(name: 'out', type: SlotType.custom),
-          ]));
+      graph.addNode(RecordingNode('b', log, inputs: [
+        const SlotInfo(name: 'in', type: SlotType.custom),
+      ], outputs: [
+        const SlotInfo(name: 'out', type: SlotType.custom),
+      ]));
 
       // a -> b (c is independent)
       graph.addEdge(

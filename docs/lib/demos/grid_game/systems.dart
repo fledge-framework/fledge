@@ -34,9 +34,8 @@ class MovementSystem extends System {
     if (!input.tick(time.delta)) return;
 
     // Find and move the player
-    for (final (_, pos) in world
-        .query1<GridPosition>(filter: const With<Player>())
-        .iter()) {
+    for (final (_, pos)
+        in world.query1<GridPosition>(filter: const With<Player>()).iter()) {
       pos.x = (pos.x + input.dx).clamp(0, config.width - 1);
       pos.y = (pos.y + input.dy).clamp(0, config.height - 1);
     }
@@ -122,9 +121,8 @@ class CollectionSystem extends System {
 
     // Find player position
     GridPosition? playerPos;
-    for (final (_, pos) in world
-        .query1<GridPosition>(filter: const With<Player>())
-        .iter()) {
+    for (final (_, pos)
+        in world.query1<GridPosition>(filter: const With<Player>()).iter()) {
       playerPos = pos;
       break;
     }
@@ -132,9 +130,8 @@ class CollectionSystem extends System {
 
     // Check collectibles for overlap
     final toCollect = <Entity>[];
-    for (final (entity, pos, collectible) in world
-        .query2<GridPosition, Collectible>()
-        .iter()) {
+    for (final (entity, pos, collectible)
+        in world.query2<GridPosition, Collectible>().iter()) {
       if (pos.x == playerPos.x && pos.y == playerPos.y) {
         toCollect.add(entity);
         score.add(collectible.points);

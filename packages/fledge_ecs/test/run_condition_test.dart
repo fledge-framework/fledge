@@ -93,12 +93,12 @@ void main() {
       final world = World();
       world.insertResource(GameState(isPlaying: true));
 
-      final notPlaying =
-          RunConditions.not(RunConditions.resource<GameState>((s) => s.isPlaying));
+      final notPlaying = RunConditions.not(
+          RunConditions.resource<GameState>((s) => s.isPlaying));
       expect(notPlaying(world), isFalse);
 
-      final notPaused =
-          RunConditions.not(RunConditions.resource<GameState>((s) => s.isPaused));
+      final notPaused = RunConditions.not(
+          RunConditions.resource<GameState>((s) => s.isPaused));
       expect(notPaused(world), isTrue);
     });
 

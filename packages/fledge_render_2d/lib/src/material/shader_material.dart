@@ -231,7 +231,8 @@ class ShaderEffects {
         'threshold': FloatUniform(threshold),
         'edgeWidth': FloatUniform(edgeWidth),
         'edgeColor': Vec3Uniform(r, g, b),
-        if (noiseTexture != null) 'noiseTexture': TextureUniform(noiseTexture.id, samplerSlot: 1),
+        if (noiseTexture != null)
+          'noiseTexture': TextureUniform(noiseTexture.id, samplerSlot: 1),
       },
     );
   }

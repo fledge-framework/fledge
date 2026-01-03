@@ -16,8 +16,7 @@ class SystemNode {
   /// Whether this system has completed in the current run.
   bool completed = false;
 
-  SystemNode(this.system, [Set<int>? deps])
-      : dependencies = deps ?? <int>{};
+  SystemNode(this.system, [Set<int>? deps]) : dependencies = deps ?? <int>{};
 }
 
 /// A stage containing systems that run together.

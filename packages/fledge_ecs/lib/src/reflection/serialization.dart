@@ -86,7 +86,9 @@ class BatchEntitySerializer {
   /// Deserializes multiple entities from a JSON list.
   static List<Entity> fromJsonList(
       World world, List<Map<String, dynamic>> jsonList) {
-    return jsonList.map((json) => EntitySerializer.fromJson(world, json)).toList();
+    return jsonList
+        .map((json) => EntitySerializer.fromJson(world, json))
+        .toList();
   }
 }
 

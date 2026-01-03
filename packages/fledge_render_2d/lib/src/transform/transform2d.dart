@@ -56,9 +56,15 @@ class Transform2D {
 
     // Combine with translation
     return Matrix3(
-      a, b, 0,
-      c, d, 0,
-      translation.x, translation.y, 1,
+      a,
+      b,
+      0,
+      c,
+      d,
+      0,
+      translation.x,
+      translation.y,
+      1,
     );
   }
 

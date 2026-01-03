@@ -15,7 +15,8 @@ enum TriggerKind {
 }
 
 /// A callback type for observer reactions.
-typedef ObserverCallback<T> = void Function(World world, Entity entity, T component);
+typedef ObserverCallback<T> = void Function(
+    World world, Entity entity, T component);
 
 /// An observer that reacts to component lifecycle events.
 ///
@@ -132,8 +133,7 @@ class Observers {
     // Remove from by-component index
     final componentList = _byComponent[componentId];
     if (componentList != null) {
-      componentList
-          .removeWhere((r) => identical(r.observer, observer));
+      componentList.removeWhere((r) => identical(r.observer, observer));
     }
 
     // Remove from by-trigger index
@@ -225,7 +225,8 @@ class Observers {
   bool hasObserversFor<T>() => _byComponent.containsKey(ComponentId.of<T>());
 
   /// The total number of registered observers.
-  int get count => _byComponent.values.fold(0, (sum, list) => sum + list.length);
+  int get count =>
+      _byComponent.values.fold(0, (sum, list) => sum + list.length);
 
   /// Clears all registered observers.
   void clear() {

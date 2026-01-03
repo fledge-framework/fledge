@@ -134,9 +134,8 @@ class WindowInitSystem implements System {
         // Position at display origin with full display size
         // For primary display, origin is (0,0). For secondary displays,
         // we use bounds.topLeft as an approximation of the display origin.
-        final displayOrigin = display.isPrimary
-            ? Offset.zero
-            : display.bounds.topLeft;
+        final displayOrigin =
+            display.isPrimary ? Offset.zero : display.bounds.topLeft;
         final borderlessBounds = Rect.fromLTWH(
           displayOrigin.dx,
           displayOrigin.dy,
@@ -153,7 +152,8 @@ class WindowInitSystem implements System {
         await windowManager.setTitleBarStyle(TitleBarStyle.normal);
 
         final size = config.windowedSize ?? WindowConfig.defaultWindowedSize;
-        final position = config.windowedPosition ?? _centerOnDisplay(size, display);
+        final position =
+            config.windowedPosition ?? _centerOnDisplay(size, display);
 
         await windowManager.setBounds(Rect.fromLTWH(
           position.dx,

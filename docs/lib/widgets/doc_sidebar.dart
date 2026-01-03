@@ -128,7 +128,8 @@ class _SectionItemState extends State<_SectionItem> {
                       ? Icons.keyboard_arrow_down_rounded
                       : Icons.keyboard_arrow_right_rounded,
                   size: 20,
-                  color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5),
+                  color:
+                      theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5),
                 ),
               ],
             ),
@@ -139,8 +140,8 @@ class _SectionItemState extends State<_SectionItem> {
             padding: const EdgeInsets.only(left: 8),
             child: Column(
               children: widget.section.pages.map((page) {
-                final isActive = widget.isCurrentSection &&
-                    page.path == widget.currentPage;
+                final isActive =
+                    widget.isCurrentSection && page.path == widget.currentPage;
 
                 return _PageItem(
                   page: page,

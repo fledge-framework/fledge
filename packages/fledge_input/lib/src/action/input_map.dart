@@ -131,7 +131,8 @@ class InputMapBuilder {
       {String? gamepadId, double deadzone = 0.1, bool inverted = false}) {
     _bindings.add(InputBinding(
       action: action,
-      source: GamepadAxisBinding(axisKey, gamepadId: gamepadId, inverted: inverted),
+      source:
+          GamepadAxisBinding(axisKey, gamepadId: gamepadId, inverted: inverted),
       deadzone: deadzone,
     ));
     _actionTypes[action] ??= ActionType.axis;

@@ -16,8 +16,8 @@ import 'texture_atlas.dart';
 class AtlasSpriteExtractor extends Extractor {
   @override
   void extract(World mainWorld, RenderWorld renderWorld) {
-    for (final (entity, atlasSprite, globalTransform) in
-        mainWorld.query2<AtlasSprite, GlobalTransform2D>().iter()) {
+    for (final (entity, atlasSprite, globalTransform)
+        in mainWorld.query2<AtlasSprite, GlobalTransform2D>().iter()) {
       // Check visibility
       final visibility = mainWorld.get<Visibility>(entity);
       if (visibility != null && !visibility.isVisible) continue;
