@@ -300,6 +300,12 @@ class World {
   /// The total number of alive entities.
   int get entityCount => entities.length;
 
+  /// The total number of archetypes (unique component combinations).
+  int get archetypeCount => archetypes.length;
+
+  /// The total number of resources.
+  int get resourceCount => resources.length;
+
   /// Clears all entities from the world.
   ///
   /// This only clears entities and archetypes. Resources and events are
