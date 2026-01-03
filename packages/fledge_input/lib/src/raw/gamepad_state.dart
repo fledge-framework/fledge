@@ -61,6 +61,13 @@ class SingleGamepadState {
       state.beginFrame();
     }
   }
+
+  /// Called at the end of each frame to clear transition flags.
+  void endFrame() {
+    for (final state in buttons.values) {
+      state.endFrame();
+    }
+  }
 }
 
 /// Tracks the state of all connected gamepads.
@@ -144,6 +151,13 @@ class GamepadState {
   void beginFrame() {
     for (final gamepad in gamepads.values) {
       gamepad.beginFrame();
+    }
+  }
+
+  /// Called at the end of each frame to clear transition flags.
+  void endFrame() {
+    for (final gamepad in gamepads.values) {
+      gamepad.endFrame();
     }
   }
 

@@ -9,6 +9,7 @@ import 'raw/gamepad_state.dart';
 import 'systems/input_polling_system.dart';
 import 'systems/action_resolution_system.dart';
 import 'systems/context_update_system.dart';
+import 'systems/input_frame_end_system.dart';
 
 /// Plugin that adds comprehensive input handling to a Fledge app.
 ///
@@ -135,6 +136,9 @@ class InputPlugin<S extends Enum> implements Plugin {
     }
 
     app.addSystem(ActionResolutionSystem(), stage: CoreStage.first);
+
+    // Clear transition flags at end of frame, after all systems have read input
+    app.addSystem(InputFrameEndSystem(), stage: CoreStage.last);
   }
 
   @override

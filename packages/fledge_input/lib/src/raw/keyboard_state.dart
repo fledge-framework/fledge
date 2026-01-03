@@ -51,6 +51,13 @@ class KeyboardState {
     }
   }
 
+  /// Called at the end of each frame to clear transition flags.
+  void endFrame() {
+    for (final state in _keys.values) {
+      state.endFrame();
+    }
+  }
+
   /// Clear all key states.
   void clear() {
     _keys.clear();

@@ -34,11 +34,16 @@ class ButtonInputState {
     }
   }
 
-  /// Update for a new frame. Call at the START of each frame.
+  /// Prepare for action resolution. Call BEFORE reading justPressed/justReleased.
+  /// This does nothing - flags are preserved until endFrame().
   void beginFrame() {
-    // The previous frame's state is what we had at the end of last frame
+    // Intentionally empty - we preserve transition flags until endFrame()
+  }
+
+  /// Clean up after action resolution. Call AFTER all systems have read input.
+  /// This clears transition flags and updates previouslyPressed for next frame.
+  void endFrame() {
     previouslyPressed = pressed;
-    // Clear the transition flags for the new frame
     _pressedThisFrame = false;
     _releasedThisFrame = false;
   }

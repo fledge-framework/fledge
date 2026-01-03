@@ -11,8 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fixed `justPressed` and `justReleased` detection for asynchronous input events
   - Flutter key/button events arrive asynchronously between frames
-  - Previously, if an event arrived before `beginFrame()`, the transition was lost
-  - Now explicitly tracks press/release transitions that persist until consumed
+  - Previously, `beginFrame()` cleared transition flags before `ActionResolutionSystem` could read them
+  - Added `endFrame()` method to clear flags AFTER systems have read input
+  - Added `InputFrameEndSystem` that runs at `CoreStage.last` to call `endFrame()`
 - Updated `ButtonInputState` to use `press()` and `release()` methods instead of direct property access
 - Applied fix to `KeyboardState`, `MouseState`, and `GamepadState`
 

@@ -93,6 +93,13 @@ class MouseState {
     }
   }
 
+  /// Called at the end of each frame to clear transition flags.
+  void endFrame() {
+    for (final state in _buttons.values) {
+      state.endFrame();
+    }
+  }
+
   /// Clear all state.
   void clear() {
     x = 0;
