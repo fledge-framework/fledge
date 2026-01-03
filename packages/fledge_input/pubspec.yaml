@@ -12,7 +12,7 @@ environment:
 resolution: workspace
 
 dependencies:
-  fledge_ecs: ^0.1.1
+  fledge_ecs: ^0.1.2
   flutter:
     sdk: flutter
   gamepads: ^0.1.9

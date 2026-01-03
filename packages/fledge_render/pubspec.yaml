@@ -11,7 +11,7 @@ environment:
 resolution: workspace
 
 dependencies:
-  fledge_ecs: ^0.1.1
+  fledge_ecs: ^0.1.2
   meta: ^1.17.0
 
 dev_dependencies:
