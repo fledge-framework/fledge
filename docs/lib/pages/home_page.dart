@@ -61,7 +61,8 @@ class HomePage extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               ElevatedButton(
-                onPressed: () => context.go('/docs/getting-started/introduction'),
+                onPressed: () =>
+                    context.go('/docs/getting-started/introduction'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: FledgeTheme.primaryColor,
@@ -233,7 +234,7 @@ void main() {
           const Divider(),
           const SizedBox(height: 24),
           Text(
-            'Fledge is open source and available under the MIT license.',
+            'Fledge is open source and available under the Apache 2.0 license.',
             style: theme.textTheme.bodyMedium,
             textAlign: TextAlign.center,
           ),

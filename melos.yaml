@@ -4,6 +4,7 @@ repository: https://github.com/fledge-framework/fledge
 packages:
   - packages/*
   - examples/*
+  - docs
 
 command:
   bootstrap:
