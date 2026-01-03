@@ -1,6 +1,6 @@
 name: fledge_render_2d
 description: 2D rendering components for Fledge - sprites, cameras, transforms, and animation.
-version: 0.1.0
+version: 0.1.1
 repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_render_2d
 homepage: https://fledge-framework.dev
 issue_tracker: https://github.com/fledge-framework/fledge/issues

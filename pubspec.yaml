@@ -39,10 +39,29 @@ melos:
       run: melos exec -- dart analyze .
 
     test:
-      description: Run tests in all packages
+      description: Run all tests (dart and flutter)
+      run: melos run test:dart --no-select && melos run test:flutter --no-select
+
+    test:dart:
+      description: Run tests in pure Dart packages
       run: melos exec -- dart test
       packageFilters:
         dirExists: test
+        ignore:
+          - fledge_render_2d
+          - fledge_render_flutter
+          - fledge_audio
+          - fledge_input
+          - fledge_window
+          - fledge_tiled
+          - fledge_docs
+
+    test:flutter:
+      description: Run tests in Flutter packages
+      run: melos exec -- flutter test
+      packageFilters:
+        dirExists: test
+        dependsOn: flutter
 
     format:
       description: Format all packages
