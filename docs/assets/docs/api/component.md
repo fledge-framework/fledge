@@ -8,7 +8,7 @@ Components are data containers attached to entities. They hold the state that sy
 // @tab Annotations
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_ecs_annotations/fledge_ecs_annotations.dart';
-// @tab Classes
+// @tab Inheritance
 import 'package:fledge_ecs/fledge_ecs.dart';
 ```
 
@@ -26,7 +26,7 @@ class Position {
 }
 
 // Run `dart run build_runner build` to generate registration code
-// @tab Classes
+// @tab Inheritance
 // Any class can be used as a component
 class Position {
   double x;
@@ -75,7 +75,7 @@ class Transform {
     this.scaleY = 1,
   });
 }
-// @tab Classes
+// @tab Inheritance
 class Health {
   int current;
   int max;
@@ -118,7 +118,7 @@ class Static {} // Won't be moved by physics
 
 @component
 class Dead {} // Marked for cleanup
-// @tab Classes
+// @tab Inheritance
 class Player {}
 
 class Enemy {}
@@ -145,7 +145,7 @@ class Children {
   final List<Entity> entities;
   Children(this.entities);
 }
-// @tab Classes
+// @tab Inheritance
 class Parent {
   final Entity entity;
   Parent(this.entity);

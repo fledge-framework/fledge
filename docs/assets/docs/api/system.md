@@ -8,7 +8,7 @@ Systems contain game logic that processes entities and components.
 // @tab Annotations
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_ecs_annotations/fledge_ecs_annotations.dart';
-// @tab Classes
+// @tab Inheritance
 import 'package:fledge_ecs/fledge_ecs.dart';
 ```
 
@@ -27,7 +27,7 @@ Future<void> movementSystem(World world) async {
 
 // After running `build_runner`, use the generated function:
 // app.addSystem(movementSystem);
-// @tab Classes
+// @tab Inheritance
 // Implement the System interface
 class MovementSystem implements System {
   @override

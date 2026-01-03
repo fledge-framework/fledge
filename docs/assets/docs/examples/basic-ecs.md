@@ -14,7 +14,7 @@ dependencies:
 dev_dependencies:
   build_runner: ^2.4.0
   fledge_ecs_generator: ^0.1.0
-// @tab Classes
+// @tab Inheritance
 # pubspec.yaml
 dependencies:
   fledge_ecs: ^0.1.0
@@ -54,7 +54,7 @@ class Player {}
 
 @component
 class Enemy {}
-// @tab Classes
+// @tab Inheritance
 // lib/components.dart
 import 'package:fledge_ecs/fledge_ecs.dart';
 
@@ -106,7 +106,7 @@ Future<void> printPositionsSystem(World world) async {
     print('Entity ${entity.id}: $pos');
   }
 }
-// @tab Classes
+// @tab Inheritance
 // lib/systems.dart
 import 'package:fledge_ecs/fledge_ecs.dart';
 
@@ -181,7 +181,7 @@ class GamePlugin implements Plugin {
   @override
   void cleanup() {}
 }
-// @tab Classes
+// @tab Inheritance
 // lib/game_plugin.dart
 import 'package:fledge_ecs/fledge_ecs.dart';
 
@@ -243,7 +243,7 @@ void main() async {
 // @tab Annotations
 dart run build_runner build
 dart run lib/main.dart
-// @tab Classes
+// @tab Inheritance
 dart run lib/main.dart
 ```
 

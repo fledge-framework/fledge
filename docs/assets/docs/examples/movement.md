@@ -39,7 +39,7 @@ class MaxSpeed {
   double value;
   MaxSpeed(this.value);
 }
-// @tab Classes
+// @tab Inheritance
 class Position {
   double x, y;
   Position(this.x, this.y);
@@ -112,7 +112,7 @@ Future<void> movementSystem(World world) async {
     pos.y += vel.dy;
   }
 }
-// @tab Classes
+// @tab Inheritance
 import 'dart:math';
 
 import 'package:fledge_ecs/fledge_ecs.dart';
@@ -219,7 +219,7 @@ void main() async {
     .addPlugin(PhysicsPlugin())
     .run();
 }
-// @tab Classes
+// @tab Inheritance
 import 'package:fledge_ecs/fledge_ecs.dart';
 
 import 'systems.dart';

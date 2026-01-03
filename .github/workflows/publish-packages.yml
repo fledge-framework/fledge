@@ -10,9 +10,13 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write  # Required for OIDC token authentication with pub.dev
+      contents: write  # Required for creating GitHub releases and pushing commits
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for changelog generation
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract version from tag
         id: version
@@ -47,6 +51,57 @@ jobs:
 
           # Show updated versions
           grep -r "^version:" packages/fledge_*/pubspec.yaml
+
+      - name: Generate changelog
+        id: changelog
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --latest --strip header
+        env:
+          OUTPUT: CHANGES.md
+
+      - name: Update root CHANGELOG
+        run: |
+          VERSION=${{ steps.version.outputs.VERSION }}
+          DATE=$(date +%Y-%m-%d)
+
+          # Create new changelog entry
+          echo "## [$VERSION] - $DATE" > CHANGELOG_NEW.md
+          echo "" >> CHANGELOG_NEW.md
+          cat CHANGES.md >> CHANGELOG_NEW.md
+          echo "" >> CHANGELOG_NEW.md
+
+          # Prepend to existing changelog or create new one
+          if [ -f CHANGELOG.md ]; then
+            # Skip the header if it exists
+            tail -n +3 CHANGELOG.md >> CHANGELOG_NEW.md 2>/dev/null || true
+          fi
+
+          # Add header
+          echo "# Changelog" > CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          cat CHANGELOG_NEW.md >> CHANGELOG.md
+          rm CHANGELOG_NEW.md CHANGES.md
+
+      - name: Commit version updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add packages/fledge_*/pubspec.yaml
+          git add CHANGELOG.md
+
+          VERSION=${{ steps.version.outputs.VERSION }}
+          git commit -m "chore(release): v$VERSION [skip ci]" || echo "No changes to commit"
+
+          git push origin HEAD:main
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: ${{ steps.changelog.outputs.content }}
+          tag_name: ${{ github.ref_name }}
 
       - name: Publish packages
         run: |

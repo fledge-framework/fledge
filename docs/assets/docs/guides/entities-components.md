@@ -72,7 +72,7 @@ class Static {}
 
 @component
 class Dead {}
-// @tab Classes
+// @tab Inheritance
 class Player {}
 
 class Enemy {}
@@ -117,7 +117,7 @@ class Health {
   int max;
   Health(this.current, this.max);
 }
-// @tab Classes
+// @tab Inheritance
 // Good - focused components
 class Position {
   double x, y;
@@ -159,7 +159,7 @@ class Children {
   final List<Entity> entities;
   Children([List<Entity>? entities]) : entities = entities ?? [];
 }
-// @tab Classes
+// @tab Inheritance
 class Parent {
   final Entity entity;
   Parent(this.entity);
@@ -197,11 +197,22 @@ void followTargetSystem(World world) {
     }
   }
 }
-// @tab FunctionSystem
-final followTargetSystem = FunctionSystem(
-  'followTarget',
-  writes: {ComponentId.of<Position>(), ComponentId.of<Target>()},
-  run: (world) {
+// @tab Inheritance
+class FollowTargetSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'followTarget',
+        writes: {ComponentId.of<Position>(), ComponentId.of<Target>()},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     for (final (entity, pos, target) in world.query2<Position, Target>().iter()) {
       if (target.entity == null) continue;
       if (!world.isAlive(target.entity!)) {
@@ -216,8 +227,8 @@ final followTargetSystem = FunctionSystem(
         pos.y += (targetPos.y - pos.y) * 0.1;
       }
     }
-  },
-);
+  }
+}
 ```
 
 ### Event Components
@@ -238,7 +249,7 @@ class CollisionEvent {
   final Entity other;
   CollisionEvent(this.other);
 }
-// @tab Classes
+// @tab Inheritance
 class DamageEvent {
   final int amount;
   final Entity source;

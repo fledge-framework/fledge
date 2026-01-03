@@ -92,12 +92,23 @@ void collisionDetection(World world) {
     }
   }
 }
-// @tab FunctionSystem
-final collisionDetection = FunctionSystem(
-  'collisionDetection',
-  reads: {ComponentId.of<Position>(), ComponentId.of<Collider>()},
-  eventWrites: {CollisionEvent},
-  run: (world) {
+// @tab Inheritance
+class CollisionDetectionSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'collisionDetection',
+        reads: {ComponentId.of<Position>(), ComponentId.of<Collider>()},
+        eventWrites: {CollisionEvent},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final collisions = world.eventWriter<CollisionEvent>();
     final entities = world.query2<Position, Collider>().iter().toList();
 
@@ -111,8 +122,8 @@ final collisionDetection = FunctionSystem(
         }
       }
     }
-  },
-);
+  }
+}
 ```
 
 ### Batch Sending
@@ -134,12 +145,23 @@ void explosionSystem(World world) {
     ]);
   }
 }
-// @tab FunctionSystem
-final explosionSystem = FunctionSystem(
-  'explosion',
-  reads: {ComponentId.of<Position>(), ComponentId.of<Exploding>()},
-  eventWrites: {DamageEvent},
-  run: (world) {
+// @tab Inheritance
+class ExplosionSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'explosion',
+        reads: {ComponentId.of<Position>(), ComponentId.of<Exploding>()},
+        eventWrites: {DamageEvent},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final damage = world.eventWriter<DamageEvent>();
 
     for (final (entity, pos, _) in world.query2<Position, Exploding>().iter()) {
@@ -150,8 +172,8 @@ final explosionSystem = FunctionSystem(
           DamageEvent(target, 25, source: entity)
       ]);
     }
-  },
-);
+  }
+}
 ```
 
 ## Reading Events
@@ -169,20 +191,31 @@ void damageHandler(World world) {
     }
   }
 }
-// @tab FunctionSystem
-final damageHandler = FunctionSystem(
-  'damageHandler',
-  writes: {ComponentId.of<Health>()},
-  eventReads: {DamageEvent},
-  run: (world) {
+// @tab Inheritance
+class DamageHandlerSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'damageHandler',
+        writes: {ComponentId.of<Health>()},
+        eventReads: {DamageEvent},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     for (final event in world.eventReader<DamageEvent>().read()) {
       final health = world.get<Health>(event.target);
       if (health != null) {
         health.current -= event.amount;
       }
     }
-  },
-);
+  }
+}
 ```
 
 ### Checking for Events
@@ -201,12 +234,23 @@ void scoreHandler(World world) {
 
   print('Processed ${events.length} score events');
 }
-// @tab FunctionSystem
-final scoreHandler = FunctionSystem(
-  'scoreHandler',
-  resourceWrites: {Score},
-  eventReads: {ScoreEvent},
-  run: (world) {
+// @tab Inheritance
+class ScoreHandlerSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'scoreHandler',
+        resourceWrites: {Score},
+        eventReads: {ScoreEvent},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final events = world.eventReader<ScoreEvent>();
     if (events.isEmpty) return; // Early exit if no events
 
@@ -216,8 +260,8 @@ final scoreHandler = FunctionSystem(
     }
 
     print('Processed ${events.length} score events');
-  },
-);
+  }
+}
 ```
 
 ## Read and Write
@@ -241,13 +285,24 @@ void chainExplosions(World world) {
     }
   }
 }
-// @tab FunctionSystem
-final chainExplosions = FunctionSystem(
-  'chainExplosions',
-  reads: {ComponentId.of<Position>(), ComponentId.of<Explosive>()},
-  eventReads: {ExplosionEvent},
-  eventWrites: {ExplosionEvent},
-  run: (world) {
+// @tab Inheritance
+class ChainExplosionsSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'chainExplosions',
+        reads: {ComponentId.of<Position>(), ComponentId.of<Explosive>()},
+        eventReads: {ExplosionEvent},
+        eventWrites: {ExplosionEvent},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final reader = world.eventReader<ExplosionEvent>();
     final writer = world.eventWriter<ExplosionEvent>();
 
@@ -260,8 +315,8 @@ final chainExplosions = FunctionSystem(
         }
       }
     }
-  },
-);
+  }
+}
 ```
 
 ## Event Timing
@@ -283,26 +338,48 @@ void systemB(World world) {
     print('Got event');
   }
 }
-// @tab FunctionSystem
-final systemA = FunctionSystem(
-  'systemA',
-  eventWrites: {MyEvent},
-  run: (world) {
-    world.eventWriter<MyEvent>().send(MyEvent()); // Written this frame
-  },
-);
+// @tab Inheritance
+class SystemA implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'systemA',
+        eventWrites: {MyEvent},
+      );
 
-final systemB = FunctionSystem(
-  'systemB',
-  eventReads: {MyEvent},
-  run: (world) {
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
+    world.eventWriter<MyEvent>().send(MyEvent()); // Written this frame
+  }
+}
+
+class SystemB implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'systemB',
+        eventReads: {MyEvent},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     // Won't see events from systemA this frame!
     // Will see them next frame
     for (final event in world.eventReader<MyEvent>().read()) {
       print('Got event');
     }
-  },
-);
+  }
+}
 ```
 
 ### Multi-Frame Processing
@@ -363,17 +440,28 @@ void handleStateChange(World world) {
     }
   }
 }
-// @tab FunctionSystem
+// @tab Inheritance
 class GameStateChange {
   final GamePhase newPhase;
   GameStateChange(this.newPhase);
 }
 
-final handleStateChange = FunctionSystem(
-  'handleStateChange',
-  resourceWrites: {GameState},
-  eventReads: {GameStateChange},
-  run: (world) {
+class HandleStateChangeSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'handleStateChange',
+        resourceWrites: {GameState},
+        eventReads: {GameStateChange},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final state = world.getResource<GameState>()!;
 
     for (final event in world.eventReader<GameStateChange>().read()) {
@@ -384,8 +472,8 @@ final handleStateChange = FunctionSystem(
         print('Game Over!');
       }
     }
-  },
-);
+  }
+}
 ```
 
 ### Aggregation
@@ -406,25 +494,36 @@ void damageStats(World world) {
   }
   stats.totalDamage += totalDamage;
 }
-// @tab FunctionSystem
+// @tab Inheritance
 class DamageDealt {
   final int amount;
   DamageDealt(this.amount);
 }
 
-final damageStats = FunctionSystem(
-  'damageStats',
-  resourceWrites: {GameStats},
-  eventReads: {DamageDealt},
-  run: (world) {
+class DamageStatsSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'damageStats',
+        resourceWrites: {GameStats},
+        eventReads: {DamageDealt},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final stats = world.getResource<GameStats>()!;
     var totalDamage = 0;
     for (final event in world.eventReader<DamageDealt>().read()) {
       totalDamage += event.amount;
     }
     stats.totalDamage += totalDamage;
-  },
-);
+  }
+}
 ```
 
 ## Event vs Component

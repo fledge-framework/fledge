@@ -131,12 +131,23 @@ void transformPropagationSystem(World world) {
     }
   }
 }
-// @tab FunctionSystem
-final transformPropagationSystem = FunctionSystem(
-  'transformPropagation',
-  reads: {ComponentId.of<LocalPosition>(), ComponentId.of<Parent>()},
-  writes: {ComponentId.of<Position>()},
-  run: (world) {
+// @tab Inheritance
+class TransformPropagationSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'transformPropagation',
+        reads: {ComponentId.of<LocalPosition>(), ComponentId.of<Parent>()},
+        writes: {ComponentId.of<Position>()},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     // Process entities with parents
     for (final (entity, localPos, parent) in
         world.query2<LocalPosition, Parent>().iter()) {
@@ -150,8 +161,8 @@ final transformPropagationSystem = FunctionSystem(
         ));
       }
     }
-  },
-);
+  }
+}
 ```
 
 ### UI Layout

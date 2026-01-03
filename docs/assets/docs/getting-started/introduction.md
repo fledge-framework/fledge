@@ -62,7 +62,7 @@ import 'package:fledge_ecs_annotations/fledge_ecs_annotations.dart';
 
 part 'main.g.dart';
 
-// Define components
+// Define components with annotations (generates boilerplate)
 @component
 class Position {
   double x, y;
@@ -75,7 +75,7 @@ class Velocity {
   Velocity(this.dx, this.dy);
 }
 
-// Define a system
+// Define a system with annotation (generates wrapper class)
 @system
 void movementSystem(World world) {
   final dt = world.getResource<Time>()!.delta;
@@ -107,42 +107,51 @@ void main() async {
     .addPlugin(GamePlugin())   // Your game setup
     .run();
 }
-// @tab FunctionSystem
+// @tab Inheritance
 import 'package:fledge_ecs/fledge_ecs.dart';
 
-// Define components
-@component
+// Define components as plain classes (no annotations)
 class Position {
   double x, y;
   Position(this.x, this.y);
 }
 
-@component
 class Velocity {
   double dx, dy;
   Velocity(this.dx, this.dy);
 }
 
-// Define a system
-final movementSystem = FunctionSystem(
-  'movement',
-  writes: {ComponentId.of<Position>()},
-  reads: {ComponentId.of<Velocity>()},
-  resourceReads: {Time},
-  run: (world) {
+// Define a system by implementing the System interface
+class MovementSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'movement',
+        writes: {ComponentId.of<Position>()},
+        reads: {ComponentId.of<Velocity>()},
+        resourceReads: {Time},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final dt = world.getResource<Time>()!.delta;
     for (final (_, pos, vel) in world.query2<Position, Velocity>().iter()) {
       pos.x += vel.dx * dt;
       pos.y += vel.dy * dt;
     }
-  },
-);
+  }
+}
 
 // Create a plugin to organize game setup
 class GamePlugin implements Plugin {
   @override
   void build(App app) {
-    app.addSystem(movementSystem);
+    app.addSystem(MovementSystem());
 
     // Spawn initial entities
     app.world.spawn()

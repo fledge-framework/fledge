@@ -36,7 +36,7 @@ class Velocity {
 /// Marker component to identify player entities
 @component
 class Player {}
-// @tab Plain Classes
+// @tab Inheritance
 // lib/components.dart
 
 // Components are just plain Dart classes - no annotation needed
@@ -92,34 +92,56 @@ void printPositionsSystem(World world) {
     print('Entity ${entity.id}: $pos');
   }
 }
-// @tab FunctionSystem
+// @tab Inheritance
 // lib/systems.dart
 import 'package:fledge_ecs/fledge_ecs.dart';
 
 import 'components.dart';
 
-final movementSystem = FunctionSystem(
-  'movement',
-  writes: {ComponentId.of<Position>()},
-  reads: {ComponentId.of<Velocity>()},
-  run: (world) {
+class MovementSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'movement',
+        writes: {ComponentId.of<Position>()},
+        reads: {ComponentId.of<Velocity>()},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     for (final (_, pos, vel) in world.query2<Position, Velocity>().iter()) {
       pos.x += vel.dx;
       pos.y += vel.dy;
     }
-  },
-);
+  }
+}
 
-final printPositionsSystem = FunctionSystem(
-  'printPositions',
-  reads: {ComponentId.of<Position>()},
-  run: (world) {
+class PrintPositionsSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'printPositions',
+        reads: {ComponentId.of<Position>()},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     print('--- Entity Positions ---');
     for (final (entity, pos) in world.query1<Position>().iter()) {
       print('Entity ${entity.id}: $pos');
     }
-  },
-);
+  }
+}
 ```
 
 ## Step 3: Create a Plugin
@@ -160,7 +182,7 @@ class SimulationPlugin implements Plugin {
   @override
   void cleanup() {}
 }
-// @tab FunctionSystem
+// @tab Inheritance
 // lib/game_plugin.dart
 import 'package:fledge_ecs/fledge_ecs.dart';
 
@@ -170,10 +192,10 @@ import 'systems.dart';
 class SimulationPlugin implements Plugin {
   @override
   void build(App app) {
-    // Add systems directly
+    // Add class-based systems
     app
-      .addSystem(movementSystem)
-      .addSystem(printPositionsSystem);
+      .addSystem(MovementSystem())
+      .addSystem(PrintPositionsSystem());
 
     // Spawn initial entities
     app.world.spawn()
@@ -303,33 +325,55 @@ void physicsSystem(World world) {
     // All non-static entities
   }
 }
-// @tab FunctionSystem
+// @tab Inheritance
 // Only process entities that have Player component
-final playerMovement = FunctionSystem(
-  'playerMovement',
-  writes: {ComponentId.of<Position>()},
-  reads: {ComponentId.of<Velocity>()},
-  run: (world) {
+class PlayerMovementSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'playerMovement',
+        writes: {ComponentId.of<Position>()},
+        reads: {ComponentId.of<Velocity>()},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     for (final (_, pos, vel) in world.query2<Position, Velocity>(
       filter: const With<Player>(),
     ).iter()) {
       // Only player entities
     }
-  },
-);
+  }
+}
 
 // Process all entities except those with Static component
-final physicsSystem = FunctionSystem(
-  'physics',
-  writes: {ComponentId.of<Position>()},
-  run: (world) {
+class PhysicsSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'physics',
+        writes: {ComponentId.of<Position>()},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     for (final (_, pos) in world.query1<Position>(
       filter: const Without<Static>(),
     ).iter()) {
       // All non-static entities
     }
-  },
-);
+  }
+}
 ```
 
 ## Next Steps

@@ -58,40 +58,72 @@ void systemC(World world) {
 void systemD(World world) {
   for (final (_, pos) in world.query1<Position>().iter()) { }
 }
-// @tab FunctionSystem
+// @tab Inheritance
 // Can run in parallel (different components)
-final systemA = FunctionSystem(
-  'systemA',
-  reads: {ComponentId.of<Position>()},
-  run: (world) {
-    for (final (_, pos) in world.query1<Position>().iter()) { }
-  },
-);
+class SystemA implements System {
+  @override
+  SystemMeta get meta => SystemMeta(name: 'systemA', reads: {ComponentId.of<Position>()});
 
-final systemB = FunctionSystem(
-  'systemB',
-  reads: {ComponentId.of<Health>()},
-  run: (world) {
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
+    for (final (_, pos) in world.query1<Position>().iter()) { }
+  }
+}
+
+class SystemB implements System {
+  @override
+  SystemMeta get meta => SystemMeta(name: 'systemB', reads: {ComponentId.of<Health>()});
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     for (final (_, health) in world.query1<Health>().iter()) { }
-  },
-);
+  }
+}
 
 // Must run sequentially (same component)
-final systemC = FunctionSystem(
-  'systemC',
-  reads: {ComponentId.of<Position>()},
-  run: (world) {
-    for (final (_, pos) in world.query1<Position>().iter()) { }
-  },
-);
+class SystemC implements System {
+  @override
+  SystemMeta get meta => SystemMeta(name: 'systemC', reads: {ComponentId.of<Position>()});
 
-final systemD = FunctionSystem(
-  'systemD',
-  reads: {ComponentId.of<Position>()},
-  run: (world) {
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     for (final (_, pos) in world.query1<Position>().iter()) { }
-  },
-);
+  }
+}
+
+class SystemD implements System {
+  @override
+  SystemMeta get meta => SystemMeta(name: 'systemD', reads: {ComponentId.of<Position>()});
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
+    for (final (_, pos) in world.query1<Position>().iter()) { }
+  }
+}
 ```
 
 ## See Also

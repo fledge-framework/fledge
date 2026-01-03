@@ -53,7 +53,7 @@ class Score {
   int value;
   Score(this.value);
 }
-// @tab Classes
+// @tab Inheritance
 // lib/components.dart
 import 'package:fledge_ecs/fledge_ecs.dart';
 

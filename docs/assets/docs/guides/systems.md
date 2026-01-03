@@ -20,7 +20,7 @@ Future<void> movementSystem(World world) async {
     pos.y += vel.dy;
   }
 }
-// @tab Classes
+// @tab Inheritance
 import 'package:fledge_ecs/fledge_ecs.dart';
 
 class MovementSystem implements System {
@@ -68,12 +68,23 @@ void combatSystem(World world) {
     }
   }
 }
-// @tab FunctionSystem
-final combatSystem = FunctionSystem(
-  'combat',
-  writes: {ComponentId.of<Health>()},
-  reads: {ComponentId.of<Position>(), ComponentId.of<Damage>()},
-  run: (world) {
+// @tab Inheritance
+class CombatSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'combat',
+        writes: {ComponentId.of<Health>()},
+        reads: {ComponentId.of<Position>(), ComponentId.of<Damage>()},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final players = world.query2<Position, Health>(filter: const With<Player>());
     final enemies = world.query2<Position, Damage>(filter: const With<Enemy>());
 
@@ -84,8 +95,8 @@ final combatSystem = FunctionSystem(
         }
       }
     }
-  },
-);
+  }
+}
 ```
 
 ### World Access
@@ -103,19 +114,30 @@ void mySystem(World world) {
     }
   }
 }
-// @tab FunctionSystem
-final mySystem = FunctionSystem(
-  'mySystem',
-  reads: {ComponentId.of<Position>()},
-  run: (world) {
+// @tab Inheritance
+class MySystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'mySystem',
+        reads: {ComponentId.of<Position>()},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     for (final (entity, pos) in world.query1<Position>().iter()) {
       // Check for additional components
       if (world.has<Special>(entity)) {
         // Handle special case
       }
     }
-  },
-);
+  }
+}
 ```
 
 ### Commands
@@ -180,51 +202,95 @@ void renderSystem(World world) {
     // Draw sprites
   }
 }
-// @tab FunctionSystem
+// @tab Inheritance
 // Input stage - CoreStage.preUpdate
-final inputSystem = FunctionSystem(
-  'input',
-  reads: {ComponentId.of<InputReceiver>()},
-  run: (world) {
+class InputSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'input',
+        reads: {ComponentId.of<InputReceiver>()},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     for (final (_, input) in world.query1<InputReceiver>(filter: const With<Player>()).iter()) {
       // Process player input
     }
-  },
-);
+  }
+}
 
 // Update stage - CoreStage.update (default)
-final movementSystem = FunctionSystem(
-  'movement',
-  writes: {ComponentId.of<Position>()},
-  reads: {ComponentId.of<Velocity>()},
-  run: (world) {
+class MovementSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'movement',
+        writes: {ComponentId.of<Position>()},
+        reads: {ComponentId.of<Velocity>()},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     for (final (_, pos, vel) in world.query2<Position, Velocity>().iter()) {
       // Apply movement
     }
-  },
-);
+  }
+}
 
 // Physics stage - CoreStage.postUpdate
-final collisionSystem = FunctionSystem(
-  'collision',
-  reads: {ComponentId.of<Position>(), ComponentId.of<Collider>()},
-  run: (world) {
+class CollisionSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'collision',
+        reads: {ComponentId.of<Position>(), ComponentId.of<Collider>()},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     for (final (_, pos, collider) in world.query2<Position, Collider>().iter()) {
       // Detect and resolve collisions
     }
-  },
-);
+  }
+}
 
 // Render stage - CoreStage.last
-final renderSystem = FunctionSystem(
-  'render',
-  reads: {ComponentId.of<Position>(), ComponentId.of<Sprite>()},
-  run: (world) {
+class RenderSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'render',
+        reads: {ComponentId.of<Position>(), ComponentId.of<Sprite>()},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     for (final (_, pos, sprite) in world.query2<Position, Sprite>().iter()) {
       // Draw sprites
     }
-  },
-);
+  }
+}
 ```
 
 ### By Feature
@@ -252,16 +318,16 @@ void frictionSystem(World world) { /* ... */ }
 
 @system
 void boundarySystem(World world) { /* ... */ }
-// @tab FunctionSystem
+// @tab Inheritance
 // combat_systems.dart
-final damageSystem = FunctionSystem('damage', run: (world) { /* ... */ });
-final deathSystem = FunctionSystem('death', run: (world) { /* ... */ });
-final healthRegenSystem = FunctionSystem('healthRegen', run: (world) { /* ... */ });
+class DamageSystem implements System { /* ... */ }
+class DeathSystem implements System { /* ... */ }
+class HealthRegenSystem implements System { /* ... */ }
 
 // movement_systems.dart
-final velocitySystem = FunctionSystem('velocity', run: (world) { /* ... */ });
-final frictionSystem = FunctionSystem('friction', run: (world) { /* ... */ });
-final boundarySystem = FunctionSystem('boundary', run: (world) { /* ... */ });
+class VelocitySystem implements System { /* ... */ }
+class FrictionSystem implements System { /* ... */ }
+class BoundarySystem implements System { /* ... */ }
 ```
 
 ## Common Patterns
@@ -281,19 +347,30 @@ void countEnemiesSystem(World world) {
   }
   stats.enemyCount = count;
 }
-// @tab FunctionSystem
-final countEnemiesSystem = FunctionSystem(
-  'countEnemies',
-  resourceWrites: {GameStats},
-  run: (world) {
+// @tab Inheritance
+class CountEnemiesSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'countEnemies',
+        resourceWrites: {GameStats},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final stats = world.getResource<GameStats>()!;
     var count = 0;
     for (final _ in world.query1<Enemy>().iter()) {
       count++;
     }
     stats.enemyCount = count;
-  },
-);
+  }
+}
 ```
 
 ### Pairwise Iteration
@@ -345,11 +422,22 @@ void playerFollowCamera(World world) {
     cameraPos.y = playerPos.y;
   }
 }
-// @tab FunctionSystem
-final playerFollowCamera = FunctionSystem(
-  'playerFollowCamera',
-  writes: {ComponentId.of<Position>()},
-  run: (world) {
+// @tab Inheritance
+class PlayerFollowCameraSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'playerFollowCamera',
+        writes: {ComponentId.of<Position>()},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final playerQuery = world.query1<Position>(filter: const With<Player>());
     final cameraQuery = world.query1<Position>(filter: const With<Camera>());
 
@@ -365,8 +453,8 @@ final playerFollowCamera = FunctionSystem(
       cameraPos.x = playerPos.x;
       cameraPos.y = playerPos.y;
     }
-  },
-);
+  }
+}
 ```
 
 ### State Machine
@@ -391,16 +479,27 @@ void idleToWalkTransition(World world) {
 
   commands.apply(world);
 }
-// @tab Plain Classes / FunctionSystem
+// @tab Inheritance
 class Idle {}
 class Walking {}
 class Attacking {}
 class Dead {}
 
-final idleToWalkTransition = FunctionSystem(
-  'idleToWalkTransition',
-  reads: {ComponentId.of<Idle>()},
-  run: (world) {
+class IdleToWalkTransitionSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'idleToWalkTransition',
+        reads: {ComponentId.of<Idle>()},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final commands = Commands();
 
     for (final (entity, _) in world.query1<Idle>(filter: const With<HasInput>()).iter()) {
@@ -409,8 +508,8 @@ final idleToWalkTransition = FunctionSystem(
     }
 
     commands.apply(world);
-  },
-);
+  }
+}
 ```
 
 ## Async Systems
@@ -450,27 +549,49 @@ void badSystem(World world) {
     final query = world.query1<Position>(); // Created 100 times!
   }
 }
-// @tab FunctionSystem
+// @tab Inheritance
 // Good
-final goodSystem = FunctionSystem(
-  'good',
-  reads: {ComponentId.of<Position>()},
-  run: (world) {
+class GoodSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'good',
+        reads: {ComponentId.of<Position>()},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final query = world.query1<Position>();
     for (final entry in query.iter()) { }
-  },
-);
+  }
+}
 
 // Bad
-final badSystem = FunctionSystem(
-  'bad',
-  reads: {ComponentId.of<Position>()},
-  run: (world) {
+class BadSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'bad',
+        reads: {ComponentId.of<Position>()},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     for (var i = 0; i < 100; i++) {
       final query = world.query1<Position>(); // Created 100 times!
     }
-  },
-);
+  }
+}
 ```
 
 ### Early Exit
@@ -488,19 +609,30 @@ void optionalSystem(World world) {
     // Process
   }
 }
-// @tab FunctionSystem
-final optionalSystem = FunctionSystem(
-  'optional',
-  reads: {ComponentId.of<RareComponent>()},
-  run: (world) {
+// @tab Inheritance
+class OptionalSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'optional',
+        reads: {ComponentId.of<RareComponent>()},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final query = world.query1<RareComponent>();
     if (query.isEmpty) return; // Quick check
 
     for (final entry in query.iter()) {
       // Process
     }
-  },
-);
+  }
+}
 ```
 
 ### Batch Operations

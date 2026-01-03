@@ -63,19 +63,35 @@ void moveSystem(World world) { /* writes Position */ }
 
 @system
 void renderSystem(World world) { /* reads Position */ }
-// @tab FunctionSystem
+// @tab Inheritance
 // These systems access Position - they'll run sequentially
-final moveSystem = FunctionSystem(
-  'move',
-  writes: {ComponentId.of<Position>()},
-  run: (world) { /* writes Position */ },
-);
+class MoveSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(name: 'move', writes: {ComponentId.of<Position>()});
 
-final renderSystem = FunctionSystem(
-  'render',
-  reads: {ComponentId.of<Position>()},
-  run: (world) { /* reads Position */ },
-);
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async { /* writes Position */ }
+}
+
+class RenderSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(name: 'render', reads: {ComponentId.of<Position>()});
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async { /* reads Position */ }
+}
 ```
 
 Explicit ordering constraints combine with automatic conflict detection.
@@ -163,23 +179,39 @@ void audioSystem(World world) {
 void particleSystem(World world) {
   for (final (_, emitter) in world.query1<ParticleEmitter>().iter()) { }
 }
-// @tab FunctionSystem
+// @tab Inheritance
 // These systems are independent - may run in parallel
-final audioSystem = FunctionSystem(
-  'audio',
-  reads: {ComponentId.of<AudioSource>()},
-  run: (world) {
-    for (final (_, audio) in world.query1<AudioSource>().iter()) { }
-  },
-);
+class AudioSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(name: 'audio', reads: {ComponentId.of<AudioSource>()});
 
-final particleSystem = FunctionSystem(
-  'particle',
-  reads: {ComponentId.of<ParticleEmitter>()},
-  run: (world) {
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
+    for (final (_, audio) in world.query1<AudioSource>().iter()) { }
+  }
+}
+
+class ParticleSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(name: 'particle', reads: {ComponentId.of<ParticleEmitter>()});
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     for (final (_, emitter) in world.query1<ParticleEmitter>().iter()) { }
-  },
-);
+  }
+}
 ```
 
 ## Debugging Order

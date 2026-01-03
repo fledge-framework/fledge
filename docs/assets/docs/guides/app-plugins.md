@@ -261,20 +261,28 @@ void mySystem(World world) {
   final elapsed = time.elapsed;  // Total seconds
   final frame = time.frameCount; // Frame number
 }
-// @tab FunctionSystem
+// @tab Inheritance
 App().addPlugin(TimePlugin());
 
 // Access in systems
-final mySystem = FunctionSystem(
-  'mySystem',
-  resourceReads: {Time},
-  run: (world) {
+class MySystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(name: 'mySystem', resourceReads: {Time});
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final time = world.getResource<Time>()!;
     final delta = time.delta;      // Seconds since last frame
     final elapsed = time.elapsed;  // Total seconds
     final frame = time.frameCount; // Frame number
-  },
-);
+  }
+}
 ```
 
 **Provides:**
@@ -296,19 +304,27 @@ void debugSystem(World world) {
   print('FPS: ${ft.fps}');
   print('Frame time: ${ft.frameTime}ms');
 }
-// @tab FunctionSystem
+// @tab Inheritance
 App().addPlugin(FrameLimiterPlugin(targetFps: 60));
 
 // Access timing info
-final debugSystem = FunctionSystem(
-  'debug',
-  resourceReads: {FrameTime},
-  run: (world) {
+class DebugSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(name: 'debug', resourceReads: {FrameTime});
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final ft = world.getResource<FrameTime>()!;
     print('FPS: ${ft.fps}');
     print('Frame time: ${ft.frameTime}ms');
-  },
-);
+  }
+}
 ```
 
 **Provides:**
@@ -390,7 +406,7 @@ void main() async {
 
   print('Game ran for $frameCount frames');
 }
-// @tab FunctionSystem
+// @tab Inheritance
 import 'package:fledge_ecs/fledge_ecs.dart';
 
 // Components (plain classes)
@@ -399,25 +415,36 @@ class Position { double x, y; Position(this.x, this.y); }
 class Velocity { double dx, dy; Velocity(this.dx, this.dy); }
 
 // Systems
-final movementSystem = FunctionSystem(
-  'movement',
-  writes: {ComponentId.of<Position>()},
-  reads: {ComponentId.of<Velocity>()},
-  resourceReads: {Time},
-  run: (world) {
+class MovementSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'movement',
+        writes: {ComponentId.of<Position>()},
+        reads: {ComponentId.of<Velocity>()},
+        resourceReads: {Time},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final dt = world.getResource<Time>()!.delta;
     for (final (_, pos, vel) in world.query2<Position, Velocity>().iter()) {
       pos.x += vel.dx * dt;
       pos.y += vel.dy * dt;
     }
-  },
-);
+  }
+}
 
 // Game Plugin
 class GamePlugin implements Plugin {
   @override
   void build(App app) {
-    app.addSystem(movementSystem);
+    app.addSystem(MovementSystem());
 
     // Spawn initial entities
     app.world.spawn()

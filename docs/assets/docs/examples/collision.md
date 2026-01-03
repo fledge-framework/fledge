@@ -27,7 +27,7 @@ class CollisionEvent {
   final Entity other;
   CollisionEvent(this.other);
 }
-// @tab Classes
+// @tab Inheritance
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart' show Transform2D, GlobalTransform2D;
 
@@ -96,7 +96,7 @@ Future<void> handleCollisionsSystem(World world) async {
     world.remove<CollisionEvent>(entity);
   }
 }
-// @tab Classes
+// @tab Inheritance
 import 'dart:math';
 
 import 'package:fledge_ecs/fledge_ecs.dart';
@@ -214,7 +214,7 @@ void main() async {
   // Output: Entity 0 collided with 1
   //         Entity 1 collided with 0
 }
-// @tab Classes
+// @tab Inheritance
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart' show Transform2D, GlobalTransform2D;
 

@@ -106,18 +106,29 @@ void goodSystem(World world) {
   // Can iterate again with cached archetype info
   for (final entry in query.iter()) { }
 }
-// @tab FunctionSystem
+// @tab Inheritance
 // Good - query created once
-final goodSystem = FunctionSystem(
-  'good',
-  reads: {ComponentId.of<Position>(), ComponentId.of<Velocity>()},
-  run: (world) {
+class GoodSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'good',
+        reads: {ComponentId.of<Position>(), ComponentId.of<Velocity>()},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final query = world.query2<Position, Velocity>();
     for (final entry in query.iter()) { }
     // Can iterate again with cached archetype info
     for (final entry in query.iter()) { }
-  },
-);
+  }
+}
 ```
 
 ### Specific Filters
@@ -143,30 +154,52 @@ void moreEfficient(World world) {
     // Directly iterates players only
   }
 }
-// @tab FunctionSystem
+// @tab Inheritance
 // Less efficient - checks every entity
-final lessEfficient = FunctionSystem(
-  'lessEfficient',
-  reads: {ComponentId.of<Position>()},
-  run: (world) {
+class LessEfficientSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'lessEfficient',
+        reads: {ComponentId.of<Position>()},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     for (final (entity, pos) in world.query1<Position>().iter()) {
       if (world.has<Player>(entity)) {
         // Only 1 player among thousands of entities
       }
     }
-  },
-);
+  }
+}
 
 // More efficient - only iterates player entities
-final moreEfficient = FunctionSystem(
-  'moreEfficient',
-  reads: {ComponentId.of<Position>()},
-  run: (world) {
+class MoreEfficientSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'moreEfficient',
+        reads: {ComponentId.of<Position>()},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     for (final (entity, pos) in world.query1<Position>(filter: const With<Player>()).iter()) {
       // Directly iterates players only
     }
-  },
-);
+  }
+}
 ```
 
 ## Common Patterns
@@ -188,11 +221,22 @@ void interactionSystem(World world) {
     }
   }
 }
-// @tab FunctionSystem
-final interactionSystem = FunctionSystem(
-  'interaction',
-  reads: {ComponentId.of<Position>(), ComponentId.of<Player>(), ComponentId.of<Item>()},
-  run: (world) {
+// @tab Inheritance
+class InteractionSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'interaction',
+        reads: {ComponentId.of<Position>(), ComponentId.of<Player>(), ComponentId.of<Item>()},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final players = world.query2<Position, Player>();
     final items = world.query2<Position, Item>();
 
@@ -203,8 +247,8 @@ final interactionSystem = FunctionSystem(
         }
       }
     }
-  },
-);
+  }
+}
 ```
 
 ### Conditional Processing

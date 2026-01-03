@@ -112,7 +112,7 @@ void main() {
 
   print('Fledge is working correctly!');
 }
-// @tab Plain Classes
+// @tab Inheritance
 // lib/test_ecs.dart
 import 'package:fledge_ecs/fledge_ecs.dart';
 

@@ -85,39 +85,72 @@ void addScore(World world) {
     score.value += 10;
   }
 }
-// @tab FunctionSystem
-final displayScore = FunctionSystem(
-  'displayScore',
-  resourceReads: {Score},
-  run: (world) {
+// @tab Inheritance
+class DisplayScoreSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'displayScore',
+        resourceReads: {Score},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final score = world.getResource<Score>();
     if (score != null) {
       print('Current score: ${score.value}');
     }
-  },
-);
+  }
+}
 
-final updateTime = FunctionSystem(
-  'updateTime',
-  resourceWrites: {Time},
-  run: (world) {
+class UpdateTimeSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'updateTime',
+        resourceWrites: {Time},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final time = world.getResource<Time>();
     if (time != null) {
       time.elapsed += time.delta;
     }
-  },
-);
+  }
+}
 
-final addScore = FunctionSystem(
-  'addScore',
-  resourceWrites: {Score},
-  run: (world) {
+class AddScoreSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'addScore',
+        resourceWrites: {Score},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final score = world.getResource<Score>()!;
     for (final (entity, _) in world.query1<Collected>().iter()) {
       score.value += 10;
     }
-  },
-);
+  }
+}
 ```
 
 ### Optional Resources
@@ -134,18 +167,29 @@ void debugSystem(World world) {
     print('Debug: ${debug.showFps}');
   }
 }
-// @tab FunctionSystem
-final debugSystem = FunctionSystem(
-  'debug',
-  resourceReads: {DebugConfig},
-  run: (world) {
+// @tab Inheritance
+class DebugSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'debug',
+        resourceReads: {DebugConfig},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final debug = world.getResource<DebugConfig>();
     if (debug != null) {
       // Debug mode is enabled
       print('Debug: ${debug.showFps}');
     }
-  },
-);
+  }
+}
 ```
 
 ## Direct World Access
@@ -199,44 +243,76 @@ void systemD(World world) {
   final score = world.getResource<Score>()!;
   score.value += 1;
 }
-// @tab FunctionSystem
+// @tab Inheritance
 // These systems both modify Score
-final systemA = FunctionSystem(
-  'systemA',
-  resourceWrites: {Score},
-  run: (world) {
+class SystemA implements System {
+  @override
+  SystemMeta get meta => SystemMeta(name: 'systemA', resourceWrites: {Score});
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final score = world.getResource<Score>()!;
     score.value += 10;
-  },
-);
+  }
+}
 
-final systemB = FunctionSystem(
-  'systemB',
-  resourceWrites: {Score},
-  run: (world) {
+class SystemB implements System {
+  @override
+  SystemMeta get meta => SystemMeta(name: 'systemB', resourceWrites: {Score});
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final score = world.getResource<Score>()!;
     score.value *= 2;
-  },
-);
+  }
+}
 
 // These can run in parallel (different resources)
-final systemC = FunctionSystem(
-  'systemC',
-  resourceReads: {Time},
-  run: (world) {
+class SystemC implements System {
+  @override
+  SystemMeta get meta => SystemMeta(name: 'systemC', resourceReads: {Time});
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final time = world.getResource<Time>()!;
     print(time.elapsed);
-  },
-);
+  }
+}
 
-final systemD = FunctionSystem(
-  'systemD',
-  resourceWrites: {Score},
-  run: (world) {
+class SystemD implements System {
+  @override
+  SystemMeta get meta => SystemMeta(name: 'systemD', resourceWrites: {Score});
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final score = world.getResource<Score>()!;
     score.value += 1;
-  },
-);
+  }
+}
 ```
 
 ## Common Resource Patterns
@@ -265,7 +341,7 @@ void movementSystem(World world) {
     pos.y += vel.dy * dt;
   }
 }
-// @tab FunctionSystem
+// @tab Inheritance
 class Time {
   double delta = 0.0;      // Seconds since last frame
   double elapsed = 0.0;    // Total seconds since start
@@ -278,19 +354,30 @@ class Time {
   }
 }
 
-final movementSystem = FunctionSystem(
-  'movement',
-  writes: {ComponentId.of<Position>()},
-  reads: {ComponentId.of<Velocity>()},
-  resourceReads: {Time},
-  run: (world) {
+class MovementSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'movement',
+        writes: {ComponentId.of<Position>()},
+        reads: {ComponentId.of<Velocity>()},
+        resourceReads: {Time},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final dt = world.getResource<Time>()!.delta;
     for (final (_, pos, vel) in world.query2<Position, Velocity>().iter()) {
       pos.x += vel.dx * dt;
       pos.y += vel.dy * dt;
     }
-  },
-);
+  }
+}
 ```
 
 ### Input State
@@ -317,7 +404,7 @@ void playerControl(World world) {
     if (input.keysDown.contains('ArrowDown')) vel.dy = 1;
   }
 }
-// @tab FunctionSystem
+// @tab Inheritance
 class Input {
   final Set<String> keysDown = {};
   double mouseX = 0;
@@ -325,11 +412,22 @@ class Input {
   bool mousePressed = false;
 }
 
-final playerControl = FunctionSystem(
-  'playerControl',
-  writes: {ComponentId.of<Velocity>()},
-  resourceReads: {Input},
-  run: (world) {
+class PlayerControlSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'playerControl',
+        writes: {ComponentId.of<Velocity>()},
+        resourceReads: {Input},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final input = world.getResource<Input>()!;
     for (final (_, vel, _) in world.query2<Velocity, Player>().iter()) {
       vel.dx = 0;
@@ -340,8 +438,8 @@ final playerControl = FunctionSystem(
       if (input.keysDown.contains('ArrowUp')) vel.dy = -1;
       if (input.keysDown.contains('ArrowDown')) vel.dy = 1;
     }
-  },
-);
+  }
+}
 ```
 
 ### Game State
@@ -367,7 +465,7 @@ void checkGameOver(World world) {
     }
   }
 }
-// @tab FunctionSystem
+// @tab Inheritance
 enum GamePhase { menu, playing, paused, gameOver }
 
 class GameState {
@@ -376,10 +474,21 @@ class GameState {
   int lives = 3;
 }
 
-final checkGameOver = FunctionSystem(
-  'checkGameOver',
-  resourceWrites: {GameState},
-  run: (world) {
+class CheckGameOverSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'checkGameOver',
+        resourceWrites: {GameState},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final players = world.query1<Player>();
     if (players.isEmpty) {
       final state = world.getResource<GameState>()!;
@@ -388,8 +497,8 @@ final checkGameOver = FunctionSystem(
         state.phase = GamePhase.gameOver;
       }
     }
-  },
-);
+  }
+}
 ```
 
 ## Resources from Core Plugins
@@ -412,22 +521,33 @@ void mySystem(World world) {
   print('Elapsed: ${time.elapsed}');
   print('Frame: ${time.frameCount}');
 }
-// @tab FunctionSystem
+// @tab Inheritance
 App()
   .addPlugin(TimePlugin())
   .run();
 
 // Provides Time resource updated each frame
-final mySystem = FunctionSystem(
-  'mySystem',
-  resourceReads: {Time},
-  run: (world) {
+class MySystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'mySystem',
+        resourceReads: {Time},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final time = world.getResource<Time>()!;
     print('Delta: ${time.delta}');
     print('Elapsed: ${time.elapsed}');
     print('Frame: ${time.frameCount}');
-  },
-);
+  }
+}
 ```
 
 ### FrameLimiterPlugin
@@ -444,20 +564,31 @@ void debugFps(World world) {
   final frameTime = world.getResource<FrameTime>()!;
   print('FPS: ${frameTime.fps.toStringAsFixed(1)}');
 }
-// @tab FunctionSystem
+// @tab Inheritance
 App()
   .addPlugin(FrameLimiterPlugin(targetFps: 60))
   .run();
 
 // Provides FrameTime resource with timing info
-final debugFps = FunctionSystem(
-  'debugFps',
-  resourceReads: {FrameTime},
-  run: (world) {
+class DebugFpsSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'debugFps',
+        resourceReads: {FrameTime},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     final frameTime = world.getResource<FrameTime>()!;
     print('FPS: ${frameTime.fps.toStringAsFixed(1)}');
-  },
-);
+  }
+}
 ```
 
 ## See Also

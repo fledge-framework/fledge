@@ -50,7 +50,7 @@ class Health {
 
 @component
 class Enemy {} // Marker component (no data)
-// @tab Plain Classes
+// @tab Inheritance
 // Components are just plain Dart classes - no annotation needed
 class Position {
   double x;
@@ -111,18 +111,29 @@ void healthRegenSystem(World world) {
     }
   }
 }
-// @tab FunctionSystem
-final healthRegenSystem = FunctionSystem(
-  'healthRegen',
-  writes: {ComponentId.of<Health>()},
-  run: (world) {
+// @tab Inheritance
+class HealthRegenSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'healthRegen',
+        writes: {ComponentId.of<Health>()},
+      );
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => runCondition?.call(world) ?? true;
+
+  @override
+  Future<void> run(World world) async {
     for (final (entity, health) in world.query1<Health>().iter()) {
       if (health.current < health.max) {
         health.current += 1;
       }
     }
-  },
-);
+  }
+}
 ```
 
 ### System Guidelines
