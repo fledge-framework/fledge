@@ -14,8 +14,8 @@ resolution: workspace
 dependencies:
   flutter:
     sdk: flutter
-  fledge_ecs: ^0.1.0
-  fledge_render: ^0.1.0
+  fledge_ecs: ^0.1.1
+  fledge_render: ^0.1.1
   vector_math: ^2.2.0
   meta: ^1.17.0
 
