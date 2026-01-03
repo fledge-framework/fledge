@@ -79,6 +79,9 @@ app.*.map.json
 **/web/favicon.png
 **/web/icons/
 
+# Firebase
+.firebase
+
 # Miscellaneous
 *.class
 *.pyc
