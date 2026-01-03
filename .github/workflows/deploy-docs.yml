@@ -38,3 +38,5 @@ jobs:
           channelId: live
           projectId: ${{ secrets.FIREBASE_PROJECT_ID }}
           entryPoint: docs
+        env:
+          FIREBASE_CLI_EXPERIMENTS: webframeworks
