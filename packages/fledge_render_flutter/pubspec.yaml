@@ -1,6 +1,6 @@
 name: fledge_render_flutter
 description: Flutter integration for Fledge rendering - backend abstraction for flutter_gpu and Canvas.
-version: 0.1.1
+version: 0.1.2
 repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_render_flutter
 homepage: https://fledge-framework.dev
 issue_tracker: https://github.com/fledge-framework/fledge/issues

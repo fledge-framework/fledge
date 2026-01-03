@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.1.2] - 2026-01-03
+
+## [Unreleased]
+
+### Bug Fixes
+
+- Update dependencies to latest stable versions
+- **fledge:** Update dependencies, upgrade melos to v7
+
+### Features
+
+- **fledge_render:** Use layer enums rather than magic numbers
+
+### Miscellaneous
+
+- **license:** Remove whitespace from license files
+- Update license text
+
+
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
