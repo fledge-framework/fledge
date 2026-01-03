@@ -27,7 +27,10 @@ class ExtractedTile with ExtractedData, SortableExtractedData {
   /// Tint color (from layer opacity/tint).
   final Color color;
 
-  /// Sort key (layer index * 10000 + Y position).
+  /// Sort key for draw ordering.
+  ///
+  /// Computed using [DrawLayerExtension.sortKeyFromIndex] with
+  /// layer index and Y position for correct depth ordering.
   @override
   final int sortKey;
 

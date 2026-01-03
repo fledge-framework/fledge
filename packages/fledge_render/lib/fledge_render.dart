@@ -72,6 +72,7 @@ export 'src/context/render_context.dart';
 export 'src/world/render_world.dart';
 
 // Extraction
+export 'src/extract/draw_layer.dart';
 export 'src/extract/extract.dart';
 export 'src/extract/extracted_data.dart';
 

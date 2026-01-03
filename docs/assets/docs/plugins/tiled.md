@@ -586,7 +586,7 @@ for (final (_, tile) in renderWorld.query1<ExtractedTile>().iter()) {
   final flipV = tile.flipVertical;
   final flipD = tile.flipDiagonal;
 
-  // Sort key for depth ordering (layer * 10000 + Y)
+  // Sort key for depth ordering (uses DrawLayerExtension.sortKeyFromIndex)
   final sortKey = tile.sortKey;
 }
 ```

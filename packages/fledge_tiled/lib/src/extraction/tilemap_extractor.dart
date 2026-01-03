@@ -1,7 +1,8 @@
 import 'dart:ui' show Offset;
 
 import 'package:fledge_ecs/fledge_ecs.dart';
-import 'package:fledge_render/fledge_render.dart' show Extractor, RenderWorld;
+import 'package:fledge_render/fledge_render.dart'
+    show DrawLayerExtension, Extractor, RenderWorld;
 import 'package:fledge_render_2d/fledge_render_2d.dart' show GlobalTransform2D;
 import 'package:vector_math/vector_math.dart' show Vector2;
 
@@ -132,8 +133,11 @@ class TilemapExtractor extends Extractor {
       worldX = mapPos.x;
       worldY = mapPos.y;
 
-      // Sort key: layer index * 10000 + Y position
-      final sortKey = layer.layerIndex * 10000 + tile.y;
+      // Sort key: layer index * layerMultiplier + Y position
+      final sortKey = DrawLayerExtension.sortKeyFromIndex(
+        layerIndex: layer.layerIndex,
+        subOrder: tile.y,
+      );
 
       renderWorld.spawn().insert(ExtractedTile(
             texture: tileset.atlas.texture,

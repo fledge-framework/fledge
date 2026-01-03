@@ -87,16 +87,23 @@ mixin ExtractedData {}
 /// }
 /// ```
 ///
-/// **Layer-based sorting**: Use layer index with sub-sorting:
+/// **Layer-based sorting**: Use [DrawLayer] enum for semantic layer names:
 ///
 /// ```dart
-/// // Layer 0: Background (0-9999)
-/// // Layer 1: Ground objects (10000-19999)
-/// // Layer 2: Characters (20000-29999)
-/// // Layer 3: Foreground (30000-39999)
+/// import 'package:fledge_render/fledge_render.dart';
 ///
-/// ExtractedTile({required int layer, required double y})
-///   : sortKey = layer * 10000 + (y * 100).toInt();
+/// ExtractedSprite({required DrawLayer layer, required double y})
+///   : sortKey = layer.sortKey(subOrder: (y * 1000).toInt());
+/// ```
+///
+/// For dynamic layer indices (e.g., tilemaps), use [DrawLayerExtension.sortKeyFromIndex]:
+///
+/// ```dart
+/// ExtractedTile({required int layerIndex, required double y})
+///   : sortKey = DrawLayerExtension.sortKeyFromIndex(
+///       layerIndex: layerIndex,
+///       subOrder: (y * 100).toInt(),
+///     );
 /// ```
 ///
 /// **Explicit Z-index**: For UI or when explicit control is needed:

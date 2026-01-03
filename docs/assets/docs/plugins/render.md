@@ -865,24 +865,24 @@ gameLayer.paint(canvas, size, renderWorld);
 Single query with layer information in sort keys:
 
 ```dart
-// Define draw layers as an enum
-enum DrawLayer {
-  background,   // 0-99999
-  ground,       // 100000-199999
-  characters,   // 200000-299999
-  foreground,   // 300000-399999
-  particles,    // 400000-499999
-  ui,           // 500000+
-}
+import 'package:fledge_render/fledge_render.dart';
 
-// Encode layer in sort key: layer * 100000 + y-position
+// Use the built-in DrawLayer enum with predefined ranges:
+// - background:  0 - 99,999
+// - ground:      100,000 - 199,999
+// - characters:  200,000 - 299,999
+// - foreground:  300,000 - 399,999
+// - particles:   400,000 - 499,999
+// - ui:          500,000+
+
+// Encode layer in sort key using the extension method
 class ExtractedSprite with ExtractedData, SortableExtractedData {
   @override
   final int sortKey;
   final DrawLayer layer;
 
   ExtractedSprite({required this.layer, required double y, ...})
-    : sortKey = layer.index * 100000 + (y * 1000).toInt();
+    : sortKey = layer.sortKey(subOrder: (y * 1000).toInt());
 }
 
 // Single painter sorts everything by sortKey

@@ -367,11 +367,16 @@ sortKey = (position.y * 1000).toInt()
 **Layer-based sorting** (platformers, tilemaps):
 
 ```dart
-// Layer 0: Background (0-9999)
-// Layer 1: Ground objects (10000-19999)
-// Layer 2: Characters (20000-29999)
-// Layer 3: Foreground (30000-39999)
-sortKey = layer * 10000 + (position.y * 100).toInt()
+import 'package:fledge_render/fledge_render.dart';
+
+// Using the DrawLayer enum for semantic layer names
+sortKey = DrawLayer.characters.sortKey(subOrder: (position.y * 1000).toInt())
+
+// Or for dynamic layer indices (e.g., tilemaps with many layers)
+sortKey = DrawLayerExtension.sortKeyFromIndex(
+  layerIndex: layer,
+  subOrder: (position.y * 100).toInt(),
+)
 ```
 
 **Explicit Z-index** (UI elements):
