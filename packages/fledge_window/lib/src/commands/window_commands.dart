@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:fledge_ecs/fledge_ecs.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../events/window_events.dart';
 import '../resources/display_info.dart';
@@ -128,5 +129,29 @@ extension WindowCommands on World {
     };
 
     setWindowMode(nextMode);
+  }
+}
+
+/// Extension methods for window control on [App].
+///
+/// Provides app-level window operations like closing the application.
+///
+/// ```dart
+/// // Close the application
+/// await app.close();
+/// ```
+extension AppWindowCommands on App {
+  /// Closes the application gracefully.
+  ///
+  /// This stops the game loop and closes the window. Use this for
+  /// "Exit to Desktop" functionality.
+  ///
+  /// ```dart
+  /// // In exit menu handler
+  /// await app.close();
+  /// ```
+  Future<void> close() async {
+    stop();
+    await windowManager.close();
   }
 }
