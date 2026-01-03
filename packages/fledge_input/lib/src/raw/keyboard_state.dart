@@ -16,12 +16,12 @@ class KeyboardState {
 
   /// Called by InputWidget on key down.
   void keyDown(LogicalKeyboardKey key) {
-    _getKey(key).pressed = true;
+    _getKey(key).press();
   }
 
   /// Called by InputWidget on key up.
   void keyUp(LogicalKeyboardKey key) {
-    _getKey(key).pressed = false;
+    _getKey(key).release();
   }
 
   /// Check if a key is pressed.

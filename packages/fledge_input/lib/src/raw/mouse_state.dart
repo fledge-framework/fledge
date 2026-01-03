@@ -36,12 +36,12 @@ class MouseState {
 
   /// Called by InputWidget on mouse button down.
   void buttonDown(int button) {
-    _getButton(button).pressed = true;
+    _getButton(button).press();
   }
 
   /// Called by InputWidget on mouse button up.
   void buttonUp(int button) {
-    _getButton(button).pressed = false;
+    _getButton(button).release();
   }
 
   /// Called by InputWidget on scroll.

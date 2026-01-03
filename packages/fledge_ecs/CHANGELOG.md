@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `World.resetGameState()` - Clear entities, archetypes, and events while preserving resources
 - `Schedule.clear()` - Remove all systems from all stages
 - `SystemStage.clear()` - Remove all systems from a stage
+- `World.archetypeCount` - Get total number of archetypes
+- `World.resourceCount` - Get total number of resourcse
 
 ## [0.1.0] - 2025-01-02
 

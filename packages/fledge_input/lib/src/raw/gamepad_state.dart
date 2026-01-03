@@ -27,7 +27,12 @@ class SingleGamepadState {
 
   /// Handle a button event.
   void setButtonPressed(String key, bool pressed) {
-    _getButton(key).pressed = pressed;
+    final button = _getButton(key);
+    if (pressed) {
+      button.press();
+    } else {
+      button.release();
+    }
   }
 
   /// Handle an axis event.
