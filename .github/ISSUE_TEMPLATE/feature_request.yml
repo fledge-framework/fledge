@@ -1,0 +1,97 @@
+name: Feature Request
+description: Suggest a new feature or enhancement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a feature! Please describe your idea clearly so we can evaluate it.
+
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package
+      description: Which package would this feature belong to?
+      options:
+        - fledge_ecs
+        - fledge_ecs_annotations
+        - fledge_ecs_generator
+        - fledge_render
+        - fledge_render_2d
+        - fledge_render_flutter
+        - fledge_audio
+        - fledge_input
+        - fledge_window
+        - fledge_tiled
+        - New package
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Feature Type
+      description: What type of feature is this?
+      options:
+        - New API / Component / System
+        - Performance improvement
+        - Developer experience improvement
+        - Documentation
+        - Integration with external tool/library
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve? What use case does it enable?
+      placeholder: I'm trying to... but currently I have to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe how you'd like this feature to work
+      placeholder: |
+        I would like to be able to...
+
+        Example usage:
+        ```dart
+        // code example
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered any alternative solutions or workarounds?
+
+  - type: textarea
+    id: api
+    attributes:
+      label: API Design (optional)
+      description: If you have ideas about the API design, share them here
+      render: dart
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Would you be willing to contribute this feature?
+      options:
+        - label: I would be willing to implement this feature
+        - label: I would be willing to help test this feature
+        - label: I would be willing to help document this feature
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other context, references, or screenshots

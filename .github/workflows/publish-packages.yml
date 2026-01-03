@@ -52,19 +52,27 @@ jobs:
           # Show updated versions
           grep -r "^version:" packages/fledge_*/pubspec.yaml
 
-      - name: Generate changelog
-        id: changelog
-        uses: orhun/git-cliff-action@v4
-        with:
-          config: cliff.toml
-          args: --latest --strip header
-        env:
-          OUTPUT: CHANGES.md
+      - name: Install git-cliff
+        run: |
+          curl -sSfL https://github.com/orhun/git-cliff/releases/download/v2.7.0/git-cliff-2.7.0-x86_64-unknown-linux-gnu.tar.gz | tar xz
+          sudo mv git-cliff-2.7.0/git-cliff /usr/local/bin/
+          git-cliff --version
 
-      - name: Update root CHANGELOG
+      - name: Generate root changelog
+        id: changelog
         run: |
           VERSION=${{ steps.version.outputs.VERSION }}
           DATE=$(date +%Y-%m-%d)
+
+          # Generate changelog content for this release
+          git-cliff --config cliff.toml --latest --strip header > CHANGES.md
+
+          # Store for GitHub release
+          {
+            echo 'content<<EOF'
+            cat CHANGES.md
+            echo 'EOF'
+          } >> $GITHUB_OUTPUT
 
           # Create new changelog entry
           echo "## [$VERSION] - $DATE" > CHANGELOG_NEW.md
@@ -84,12 +92,67 @@ jobs:
           cat CHANGELOG_NEW.md >> CHANGELOG.md
           rm CHANGELOG_NEW.md CHANGES.md
 
+      - name: Generate per-package changelogs
+        run: |
+          VERSION=${{ steps.version.outputs.VERSION }}
+          DATE=$(date +%Y-%m-%d)
+
+          PACKAGES=(
+            "fledge_ecs_annotations"
+            "fledge_ecs"
+            "fledge_ecs_generator"
+            "fledge_render"
+            "fledge_render_2d"
+            "fledge_render_flutter"
+            "fledge_audio"
+            "fledge_window"
+            "fledge_input"
+            "fledge_tiled"
+          )
+
+          for pkg in "${PACKAGES[@]}"; do
+            echo "Generating changelog for $pkg..."
+            PKG_DIR="packages/$pkg"
+
+            # Generate changelog for commits affecting this package
+            # Uses --include-path to filter commits by path
+            git-cliff --config cliff.toml --latest --strip header \
+              --include-path "$PKG_DIR/**" > "$PKG_DIR/CHANGES.md" 2>/dev/null || true
+
+            # Check if there are any changes for this package
+            if [ -s "$PKG_DIR/CHANGES.md" ]; then
+              echo "  Found changes for $pkg"
+
+              # Create new changelog entry
+              echo "## [$VERSION] - $DATE" > "$PKG_DIR/CHANGELOG_NEW.md"
+              echo "" >> "$PKG_DIR/CHANGELOG_NEW.md"
+              cat "$PKG_DIR/CHANGES.md" >> "$PKG_DIR/CHANGELOG_NEW.md"
+              echo "" >> "$PKG_DIR/CHANGELOG_NEW.md"
+
+              # Prepend to existing changelog or create new one
+              if [ -f "$PKG_DIR/CHANGELOG.md" ]; then
+                # Skip the header if it exists
+                tail -n +3 "$PKG_DIR/CHANGELOG.md" >> "$PKG_DIR/CHANGELOG_NEW.md" 2>/dev/null || true
+              fi
+
+              # Add header
+              echo "# Changelog" > "$PKG_DIR/CHANGELOG.md"
+              echo "" >> "$PKG_DIR/CHANGELOG.md"
+              cat "$PKG_DIR/CHANGELOG_NEW.md" >> "$PKG_DIR/CHANGELOG.md"
+              rm "$PKG_DIR/CHANGELOG_NEW.md" "$PKG_DIR/CHANGES.md"
+            else
+              echo "  No changes for $pkg in this release"
+              rm -f "$PKG_DIR/CHANGES.md"
+            fi
+          done
+
       - name: Commit version updates
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           git add packages/fledge_*/pubspec.yaml
+          git add packages/fledge_*/CHANGELOG.md
           git add CHANGELOG.md
 
           VERSION=${{ steps.version.outputs.VERSION }}

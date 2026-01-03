@@ -1,0 +1,79 @@
+name: Documentation Improvement
+description: Suggest improvements to documentation
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping us improve the documentation! Clear docs are essential for a good developer experience.
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Documentation Type
+      description: What type of documentation needs improvement?
+      options:
+        - API documentation (doc comments)
+        - Package README
+        - Docs website (fledge-framework.dev)
+        - Code examples
+        - CONTRIBUTING.md
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package (if applicable)
+      description: Which package's documentation needs improvement?
+      options:
+        - fledge_ecs
+        - fledge_ecs_annotations
+        - fledge_ecs_generator
+        - fledge_render
+        - fledge_render_2d
+        - fledge_render_flutter
+        - fledge_audio
+        - fledge_input
+        - fledge_window
+        - fledge_tiled
+        - General / Multiple
+        - Not applicable
+
+  - type: textarea
+    id: current
+    attributes:
+      label: Current State
+      description: What is the current documentation like? Include a link if possible.
+      placeholder: |
+        The current documentation for X doesn't explain...
+        Link: https://...
+    validations:
+      required: true
+
+  - type: textarea
+    id: improvement
+    attributes:
+      label: Suggested Improvement
+      description: How should the documentation be improved?
+      placeholder: |
+        It would be helpful to add...
+        The explanation should include...
+    validations:
+      required: true
+
+  - type: textarea
+    id: draft
+    attributes:
+      label: Draft Content (optional)
+      description: If you have draft content or examples, share them here
+      render: markdown
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Would you be willing to contribute these documentation improvements?
+      options:
+        - label: I would be willing to write/update this documentation

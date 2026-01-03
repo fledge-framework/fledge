@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Question / Discussion
+    url: https://github.com/fledge-framework/fledge/discussions
+    about: Ask questions and discuss ideas in GitHub Discussions
+  - name: Security Vulnerability
+    url: https://github.com/fledge-framework/fledge/security/advisories/new
+    about: Report security vulnerabilities privately
