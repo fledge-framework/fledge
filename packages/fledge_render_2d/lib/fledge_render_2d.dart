@@ -60,7 +60,7 @@
 /// ```dart
 /// import 'dart:ui' show Color, Rect;
 /// ```
-library fledge_render_2d;
+library;
 
 // Transform
 export 'src/transform/global_transform.dart';

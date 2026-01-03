@@ -50,21 +50,9 @@ A stylized swift bird in a banking pose, composed of geometric triangular shards
 
 ### Logo Usage
 
-- **Minimum size**: 32px height for digital, 10mm for print
+- **Minimum size**: 48px height for digital, 10mm for print
 - **Clear space**: Maintain padding equal to the height of the tail
 - **Do not**: Rotate, stretch, apply effects, or change colors
-
----
-
-## Mascot: Pixel Fledgling
-
-A pixel art representation of a young swift, the "younger sibling" of the geometric logo.
-
-### Mascot Personality
-
-- **Sleek**: Streamlined like the adult swift
-- **Energetic**: Ready to take flight
-- **Friendly**: Approachable for documentation and tutorials
 
 ---
 
@@ -99,7 +87,7 @@ Fledge is:
 ```
 brand/
 ├── BRAND.md           # This file
-├── mascot-32.svg      # 32x32 pixel mascot
-├── mascot-16.svg      # 16x16 pixel mascot
+├── logo-48.png        # 48x48 pixel logo
+├── logo-48.svg        # 48x48 pixel logo
 └── palette.svg        # Color palette visual reference
 ```

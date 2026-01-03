@@ -23,17 +23,19 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Install Melos
-        run: dart pub global activate melos
-
-      - name: Bootstrap
-        run: melos bootstrap
+      - name: Setup Melos
+        uses: bluefireteam/melos-action@v3
+        with:
+          melos-version: '7.3.0'
 
       - name: Check formatting
-        run: dart format --set-exit-if-changed .
+        run: melos exec -- dart format --set-exit-if-changed .
+
+      - name: Generate code
+        run: melos run build_runner
 
       - name: Analyze
-        run: dart analyze --fatal-infos
+        run: melos run analyze
 
   test:
     name: Test
@@ -47,14 +49,13 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Install Melos
-        run: dart pub global activate melos
-
-      - name: Bootstrap
-        run: melos bootstrap
+      - name: Setup Melos
+        uses: bluefireteam/melos-action@v3
+        with:
+          melos-version: '7.3.0'
 
       - name: Run tests
-        run: melos test
+        run: melos run test
 
   pana:
     name: Pana Analysis
@@ -82,14 +83,13 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Install Melos
-        run: dart pub global activate melos
+      - name: Setup Melos
+        uses: bluefireteam/melos-action@v3
+        with:
+          melos-version: '7.3.0'
 
       - name: Install Pana
         run: dart pub global activate pana
-
-      - name: Bootstrap
-        run: melos bootstrap
 
       - name: Run Pana on ${{ matrix.package }}
         run: |
@@ -108,11 +108,14 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Install Melos
-        run: dart pub global activate melos
+      - name: Setup Melos
+        uses: bluefireteam/melos-action@v3
+        with:
+          melos-version: '7.3.0'
 
-      - name: Bootstrap
-        run: melos bootstrap
+      - name: Generate code for basic_ecs example
+        working-directory: examples/basic_ecs
+        run: dart run build_runner build --delete-conflicting-outputs
 
       - name: Build basic_ecs example
         working-directory: examples/basic_ecs
@@ -134,11 +137,10 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Install Melos
-        run: dart pub global activate melos
-
-      - name: Bootstrap
-        run: melos bootstrap
+      - name: Setup Melos
+        uses: bluefireteam/melos-action@v3
+        with:
+          melos-version: '7.3.0'
 
       - name: Build docs
         working-directory: docs

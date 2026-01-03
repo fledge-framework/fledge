@@ -42,7 +42,7 @@
 ///   imageData,
 /// );
 /// ```
-library fledge_render_flutter;
+library;
 
 // Backend abstraction
 export 'src/backend/backend_selector.dart';

@@ -39,7 +39,7 @@
 ///   pos.y += vel.dy;
 /// }
 /// ```
-library fledge_ecs;
+library;
 
 // Re-export annotations for convenience
 export 'package:fledge_ecs_annotations/fledge_ecs_annotations.dart';

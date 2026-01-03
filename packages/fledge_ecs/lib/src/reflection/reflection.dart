@@ -35,6 +35,7 @@
 /// // Deserialize an entity
 /// final entity = EntitySerializer.fromJson(world, json);
 /// ```
+library;
 
 export 'type_registry.dart';
 export 'serialization.dart';

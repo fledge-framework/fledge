@@ -108,7 +108,7 @@ void main() {
         alphaThreshold: 0.5,
       );
 
-      expect(material.tint.value, 0xFF00FF00);
+      expect(material.tint.toARGB32(), 0xFF00FF00);
       expect(material.blendMode, BlendMode.additive);
       expect(material.alphaThreshold, 0.5);
     });
@@ -171,7 +171,7 @@ void main() {
       );
 
       expect(copy.texture, texture2);
-      expect(copy.tint.value, 0xFF00FF00);
+      expect(copy.tint.toARGB32(), 0xFF00FF00);
       expect(original.texture, texture1); // Original unchanged
     });
   });
@@ -180,7 +180,7 @@ void main() {
     test('creates with color', () {
       final material = ColorMaterial(color: const Color(0xFF0000FF));
 
-      expect(material.color.value, 0xFF0000FF);
+      expect(material.color.toARGB32(), 0xFF0000FF);
       expect(material.blendMode, BlendMode.normal);
       expect(material.hasShader, isFalse);
     });
@@ -212,7 +212,7 @@ void main() {
         blendMode: BlendMode.multiply,
       );
 
-      expect(copy.color.value, 0xFF00FF00);
+      expect(copy.color.toARGB32(), 0xFF00FF00);
       expect(copy.blendMode, BlendMode.multiply);
     });
   });

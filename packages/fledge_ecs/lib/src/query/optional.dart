@@ -16,7 +16,7 @@ import '../component.dart';
 /// }
 /// ```
 ///
-/// Note: Option<T> is a compile-time marker. The actual query iteration
+/// Note: `Option<T>` is a compile-time marker. The actual query iteration
 /// handles the optional logic internally.
 abstract class Option<T> {
   const Option._();

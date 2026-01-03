@@ -1,8 +1,0 @@
-# melos_managed_dependency_overrides: fledge_ecs,fledge_ecs_annotations,fledge_ecs_generator
-dependency_overrides:
-  fledge_ecs:
-    path: ..\\..\\packages\\fledge_ecs
-  fledge_ecs_annotations:
-    path: ..\\..\\packages\\fledge_ecs_annotations
-  fledge_ecs_generator:
-    path: ..\\..\\packages\\fledge_ecs_generator

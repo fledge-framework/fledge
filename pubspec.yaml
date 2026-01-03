@@ -3,7 +3,57 @@ description: Fledge - A Bevy-inspired ECS game framework for Flutter
 publish_to: none
 
 environment:
-  sdk: ^3.0.0
+  sdk: ^3.6.0
+
+workspace:
+  - packages/fledge_ecs
+  - packages/fledge_ecs_annotations
+  - packages/fledge_ecs_generator
+  - packages/fledge_render
+  - packages/fledge_render_2d
+  - packages/fledge_render_flutter
+  - packages/fledge_audio
+  - packages/fledge_input
+  - packages/fledge_window
+  - packages/fledge_tiled
+  - examples/basic_ecs
+  - examples/advanced_ecs
+  - docs
 
 dev_dependencies:
-  melos: ^6.0.0
+  melos: ^7.3.0
+
+# Override conflicting dependencies to allow workspace resolution
+dependency_overrides:
+  # Override test_api to allow test 1.27.0+ which is compatible with analyzer 9.x
+  # flutter_test pins 0.7.7 but we need 0.7.8 for test 1.27.0+
+  test_api: ^0.7.8
+
+melos:
+  name: fledge
+  repository: https://github.com/fledge-framework/fledge
+
+  scripts:
+    analyze:
+      description: Run dart analyze in all packages
+      run: melos exec -- dart analyze .
+
+    test:
+      description: Run tests in all packages
+      run: melos exec -- dart test
+      packageFilters:
+        dirExists: test
+
+    format:
+      description: Format all packages
+      run: melos exec -- dart format .
+
+    build_runner:
+      description: Run build_runner in packages that need it
+      run: melos exec -- dart run build_runner build --delete-conflicting-outputs
+      packageFilters:
+        dependsOn: build_runner
+
+    clean:
+      description: Clean all packages
+      run: melos exec -- dart pub cache clean

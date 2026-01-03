@@ -92,7 +92,7 @@ class TextureAtlas {
   int? getIndexByName(String name) => _nameToIndex?[name];
 
   /// Whether the atlas has named sprites.
-  bool get hasNames => _nameToIndex != null && _nameToIndex!.isNotEmpty;
+  bool get hasNames => _nameToIndex != null && _nameToIndex.isNotEmpty;
 
   /// All sprite names (if available).
   Iterable<String>? get names => _nameToIndex?.keys;

@@ -57,7 +57,7 @@
 /// import 'package:fledge_render_2d/fledge_render_2d.dart';
 /// import 'package:fledge_render_flutter/fledge_render_flutter.dart';
 /// ```
-library fledge_render;
+library;
 
 // Graph
 export 'src/graph/edge.dart';

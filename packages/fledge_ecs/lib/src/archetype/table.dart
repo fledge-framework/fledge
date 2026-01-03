@@ -149,7 +149,7 @@ class Table {
   ///
   /// Returns null if the component type is not in this archetype.
   /// The returned list contains components of type T but is typed as
-  /// List<dynamic> for performance. Callers should cast elements as needed.
+  /// `List<dynamic>` for performance. Callers should cast elements as needed.
   List<dynamic>? getColumn(ComponentId componentId) {
     return _columns[componentId];
   }

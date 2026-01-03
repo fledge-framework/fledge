@@ -6,8 +6,10 @@ homepage: https://fledge-framework.dev
 issue_tracker: https://github.com/fledge-framework/fledge/issues
 
 environment:
-  sdk: ^3.0.0
+  sdk: ^3.6.0
   flutter: ">=3.10.0"
+
+resolution: workspace
 
 dependencies:
   fledge_ecs: ^0.1.0
