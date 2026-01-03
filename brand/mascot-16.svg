@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <title>Fledge Pixel Mascot - 16x16</title>
+
+  <style>
+    .phantom { fill: #0A0A0F; }
+    .purple { fill: #7B2CBF; }
+    .purple-light { fill: #9D4EDD; }
+    .purple-dark { fill: #5B21B6; }
+    .gold { fill: #FFD700; }
+  </style>
+
+  <!-- Background -->
+  <rect width="16" height="16" class="phantom"/>
+
+  <!-- Simplified swift silhouette -->
+  <!-- Head row 3 -->
+  <rect x="7" y="3" width="1" height="1" class="purple-dark"/>
+  <rect x="8" y="3" width="1" height="1" class="purple-dark"/>
+
+  <!-- Head row 4 with eye -->
+  <rect x="6" y="4" width="1" height="1" class="purple-dark"/>
+  <rect x="7" y="4" width="1" height="1" class="purple"/>
+  <rect x="8" y="4" width="1" height="1" class="gold"/>
+  <rect x="9" y="4" width="1" height="1" class="purple-dark"/>
+
+  <!-- Body row 5 -->
+  <rect x="6" y="5" width="1" height="1" class="purple-dark"/>
+  <rect x="7" y="5" width="1" height="1" class="purple-light"/>
+  <rect x="8" y="5" width="1" height="1" class="purple"/>
+  <rect x="9" y="5" width="1" height="1" class="purple-dark"/>
+
+  <!-- Wings row 6 -->
+  <rect x="3" y="6" width="1" height="1" class="purple-dark"/>
+  <rect x="4" y="6" width="1" height="1" class="purple"/>
+  <rect x="6" y="6" width="1" height="1" class="purple"/>
+  <rect x="7" y="6" width="1" height="1" class="purple-light"/>
+  <rect x="8" y="6" width="1" height="1" class="purple-light"/>
+  <rect x="9" y="6" width="1" height="1" class="purple"/>
+  <rect x="11" y="6" width="1" height="1" class="purple"/>
+  <rect x="12" y="6" width="1" height="1" class="purple-dark"/>
+
+  <!-- Wings row 7 -->
+  <rect x="2" y="7" width="1" height="1" class="purple-dark"/>
+  <rect x="3" y="7" width="1" height="1" class="purple-light"/>
+  <rect x="4" y="7" width="1" height="1" class="purple-dark"/>
+  <rect x="6" y="7" width="1" height="1" class="purple-dark"/>
+  <rect x="7" y="7" width="1" height="1" class="purple"/>
+  <rect x="8" y="7" width="1" height="1" class="purple"/>
+  <rect x="9" y="7" width="1" height="1" class="purple-dark"/>
+  <rect x="11" y="7" width="1" height="1" class="purple-dark"/>
+  <rect x="12" y="7" width="1" height="1" class="purple-light"/>
+  <rect x="13" y="7" width="1" height="1" class="purple-dark"/>
+
+  <!-- Body row 8 -->
+  <rect x="7" y="8" width="1" height="1" class="purple-dark"/>
+  <rect x="8" y="8" width="1" height="1" class="purple-dark"/>
+
+  <!-- Tail row 9 -->
+  <rect x="6" y="9" width="1" height="1" class="purple-dark"/>
+  <rect x="7" y="9" width="1" height="1" class="purple"/>
+  <rect x="8" y="9" width="1" height="1" class="purple"/>
+  <rect x="9" y="9" width="1" height="1" class="purple-dark"/>
+
+  <!-- Tail row 10 - forked -->
+  <rect x="5" y="10" width="1" height="1" class="purple-dark"/>
+  <rect x="6" y="10" width="1" height="1" class="purple"/>
+  <rect x="9" y="10" width="1" height="1" class="purple"/>
+  <rect x="10" y="10" width="1" height="1" class="purple-dark"/>
+
+  <!-- Tail tips row 11 -->
+  <rect x="5" y="11" width="1" height="1" class="purple"/>
+  <rect x="10" y="11" width="1" height="1" class="purple"/>
+
+</svg>

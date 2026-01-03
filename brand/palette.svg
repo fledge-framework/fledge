@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 120">
+  <title>Fledge Color Palette - Phantom Circuit</title>
+
+  <!-- Color swatches -->
+  <rect x="10" y="10" width="80" height="80" rx="8" fill="#0A0A0F"/>
+  <rect x="100" y="10" width="80" height="80" rx="8" fill="#5B21B6"/>
+  <rect x="190" y="10" width="80" height="80" rx="8" fill="#7B2CBF"/>
+  <rect x="280" y="10" width="80" height="80" rx="8" fill="#9D4EDD"/>
+  <rect x="370" y="10" width="80" height="80" rx="8" fill="#E0AAFF"/>
+  <rect x="460" y="10" width="80" height="80" rx="8" fill="#FFD700"/>
+  <rect x="550" y="10" width="40" height="80" rx="8" fill="#FFFFFF" stroke="#E0E0E0"/>
+
+  <!-- Labels -->
+  <style>
+    .label { font-family: system-ui, sans-serif; font-size: 10px; fill: #666; }
+    .hex { font-family: monospace; font-size: 9px; fill: #999; }
+  </style>
+
+  <text x="50" y="105" text-anchor="middle" class="label">Phantom</text>
+  <text x="50" y="115" text-anchor="middle" class="hex">#0A0A0F</text>
+
+  <text x="140" y="105" text-anchor="middle" class="label">Deep Purple</text>
+  <text x="140" y="115" text-anchor="middle" class="hex">#5B21B6</text>
+
+  <text x="230" y="105" text-anchor="middle" class="label">Circuit Purple</text>
+  <text x="230" y="115" text-anchor="middle" class="hex">#7B2CBF</text>
+
+  <text x="320" y="105" text-anchor="middle" class="label">Lilac Purple</text>
+  <text x="320" y="115" text-anchor="middle" class="hex">#9D4EDD</text>
+
+  <text x="410" y="105" text-anchor="middle" class="label">Soft Lilac</text>
+  <text x="410" y="115" text-anchor="middle" class="hex">#E0AAFF</text>
+
+  <text x="500" y="105" text-anchor="middle" class="label">Signal Gold</text>
+  <text x="500" y="115" text-anchor="middle" class="hex">#FFD700</text>
+
+  <text x="570" y="105" text-anchor="middle" class="label">White</text>
+  <text x="570" y="115" text-anchor="middle" class="hex">#FFFFFF</text>
+</svg>

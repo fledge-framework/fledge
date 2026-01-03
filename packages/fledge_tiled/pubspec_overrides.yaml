@@ -1,0 +1,10 @@
+# melos_managed_dependency_overrides: fledge_ecs,fledge_ecs_annotations,fledge_render,fledge_render_2d
+dependency_overrides:
+  fledge_ecs:
+    path: ..\\fledge_ecs
+  fledge_ecs_annotations:
+    path: ..\\fledge_ecs_annotations
+  fledge_render:
+    path: ..\\fledge_render
+  fledge_render_2d:
+    path: ..\\fledge_render_2d

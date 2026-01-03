@@ -1,0 +1,14 @@
+name: advanced_ecs_example
+description: Advanced Fledge ECS example demonstrating states, observers, hierarchies, and more.
+
+version: 1.0.0
+
+environment:
+  sdk: ^3.0.0
+
+dependencies:
+  fledge_ecs:
+    path: ../../packages/fledge_ecs
+
+dev_dependencies:
+  lints: ^3.0.0

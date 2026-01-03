@@ -1,0 +1,33 @@
+name: fledge
+repository: https://github.com/fledge-framework/fledge
+
+packages:
+  - packages/*
+  - examples/*
+
+command:
+  bootstrap:
+    usePubspecOverrides: true
+
+scripts:
+  analyze:
+    description: Run dart analyze in all packages
+    run: melos exec -- dart analyze .
+
+  test:
+    description: Run tests in all packages
+    run: melos exec -- dart test
+
+  format:
+    description: Format all packages
+    run: melos exec -- dart format .
+
+  build_runner:
+    description: Run build_runner in all packages
+    run: melos exec -- dart run build_runner build --delete-conflicting-outputs
+    packageFilters:
+      dependsOn: build_runner
+
+  clean:
+    description: Clean all packages
+    run: melos exec -- dart pub cache clean

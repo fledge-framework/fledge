@@ -1,0 +1,9 @@
+name: fledge_workspace
+description: Fledge - A Bevy-inspired ECS game framework for Flutter
+publish_to: none
+
+environment:
+  sdk: ^3.0.0
+
+dev_dependencies:
+  melos: ^6.0.0

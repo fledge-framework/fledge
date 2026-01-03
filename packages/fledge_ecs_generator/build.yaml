@@ -1,0 +1,7 @@
+builders:
+  fledge_ecs:
+    import: "package:fledge_ecs_generator/builder.dart"
+    builder_factories: ["fledgeEcsBuilder"]
+    build_extensions: {".dart": [".g.dart"]}
+    auto_apply: dependents
+    build_to: source

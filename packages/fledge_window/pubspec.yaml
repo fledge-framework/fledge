@@ -1,0 +1,30 @@
+name: fledge_window
+description: Window management plugin for the Fledge ECS game framework. Provides fullscreen, borderless, and windowed modes with runtime switching.
+version: 0.1.0
+repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_window
+homepage: https://fledge-framework.dev
+issue_tracker: https://github.com/fledge-framework/fledge/issues
+
+environment:
+  sdk: ^3.0.0
+  flutter: ">=3.10.0"
+
+dependencies:
+  fledge_ecs: ^0.1.0
+  flutter:
+    sdk: flutter
+  window_manager: ^0.4.3
+  screen_retriever: ^0.2.0
+
+dev_dependencies:
+  test: ^1.24.0
+  lints: ^3.0.0
+  flutter_test:
+    sdk: flutter
+
+topics:
+  - ecs
+  - game-engine
+  - window-management
+  - fullscreen
+  - flutter-games

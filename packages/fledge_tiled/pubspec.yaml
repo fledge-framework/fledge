@@ -1,0 +1,33 @@
+name: fledge_tiled
+description: Tiled tilemap support for the Fledge ECS game framework. Load TMX/TSX maps and integrate with the Fledge render system.
+version: 0.1.0
+repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_tiled
+homepage: https://fledge-framework.dev
+issue_tracker: https://github.com/fledge-framework/fledge/issues
+
+environment:
+  sdk: ^3.0.0
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  fledge_ecs: ^0.1.0
+  fledge_render: ^0.1.0
+  fledge_render_2d: ^0.1.0
+  tiled: ^0.10.2
+  vector_math: ^2.1.4
+  meta: ^1.9.0
+  xml: ^6.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  lints: ^3.0.0
+
+topics:
+  - ecs
+  - game-engine
+  - tilemap
+  - tiled
+  - flutter-games

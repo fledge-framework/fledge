@@ -1,0 +1,105 @@
+# Dependencies
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+pubspec.lock
+
+# Build outputs
+build/
+*.js.deps
+*.js.map
+*.js_
+
+# Generated code
+*.g.dart
+*.freezed.dart
+*.mocks.dart
+
+# Coverage
+coverage/
+*.lcov
+
+# Documentation
+doc/api/
+**/doc/api/
+
+# IDE - IntelliJ/Android Studio
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# IDE - VS Code (uncomment if you want to ignore)
+# .vscode/
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.swp
+*.swo
+*~
+.temp/
+.tmp/
+
+# Flutter
+.flutter-plugins
+.flutter-plugins-dependencies
+**/ios/Flutter/.last_build_id
+**/ios/Pods/
+**/ios/.symlinks/
+**/android/.gradle/
+**/android/local.properties
+**/android/**/GeneratedPluginRegistrant.*
+
+# Symbolication
+app.*.symbols
+
+# Obfuscation
+app.*.map.json
+
+# Android Studio build artifacts
+**/android/app/debug
+**/android/app/profile
+**/android/app/release
+
+# Web build
+**/web/favicon.png
+**/web/icons/
+
+# Miscellaneous
+*.class
+*.pyc
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# Environment files (never commit secrets)
+.env
+.env.*
+*.env
+!.env.example
+
+# Local configuration
+local.properties
+*.local
+
+# Test artifacts
+.test_coverage/
+test_results/

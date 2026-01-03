@@ -1,0 +1,19 @@
+name: basic_ecs_example
+description: Example usage of the Fledge ECS framework with code generation.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.0.0
+
+dependencies:
+  fledge_ecs:
+    path: ../../packages/fledge_ecs
+  fledge_ecs_annotations:
+    path: ../../packages/fledge_ecs_annotations
+
+dev_dependencies:
+  build_runner: ^2.4.0
+  fledge_ecs_generator:
+    path: ../../packages/fledge_ecs_generator
+  lints: ^3.0.0

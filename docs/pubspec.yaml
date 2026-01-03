@@ -1,0 +1,54 @@
+name: fledge_docs
+description: Documentation and tutorials for the Fledge game framework.
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.0.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
+
+  # Fledge ECS
+  fledge_ecs:
+    path: ../packages/fledge_ecs
+
+  # Fledge Render (for two-world architecture)
+  fledge_render:
+    path: ../packages/fledge_render
+
+  # Routing
+  go_router: ^14.0.0
+
+  # Markdown rendering
+  flutter_markdown: ^0.7.0
+  markdown: ^7.0.0
+
+  # Syntax highlighting
+  flutter_highlight: ^0.7.0
+  highlight: ^0.7.0
+
+  # URL handling
+  url_launcher: ^6.2.0
+
+  # Google Fonts for clean typography
+  google_fonts: ^6.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/docs/
+    - assets/docs/getting-started/
+    - assets/docs/api/
+    - assets/docs/guides/
+    - assets/docs/plugins/
+    - assets/docs/examples/
