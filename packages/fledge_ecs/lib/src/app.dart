@@ -46,6 +46,10 @@ class App {
   /// Whether the app is currently running.
   bool _running = false;
 
+  /// The number of plugins that are considered session-level.
+  /// Set by [markSessionCheckpoint].
+  int _sessionPluginCount = 0;
+
   /// Callback for each frame tick.
   void Function(App app)? _onTick;
 
@@ -293,6 +297,67 @@ class App {
 
   /// Returns true if the app is currently running.
   bool get isRunning => _running;
+
+  /// Marks the current state as the session checkpoint.
+  ///
+  /// All plugins added before this call are considered session-level plugins.
+  /// When [resetToSessionCheckpoint] is called, plugins added after this
+  /// checkpoint will be cleaned up and removed.
+  ///
+  /// Call this in your app initialization after adding core/session plugins
+  /// but before entering the game screen.
+  ///
+  /// ```dart
+  /// final app = App()
+  ///   ..addPlugin(WindowPlugin())
+  ///   ..addPlugin(TimePlugin())
+  ///   ..addPlugin(AudioPlugin());
+  ///
+  /// app.markSessionCheckpoint(); // These plugins will persist
+  ///
+  /// // Later, game plugins are added...
+  /// app.addPlugin(GamePlugin());
+  ///
+  /// // On game exit, reset to session state
+  /// app.resetToSessionCheckpoint();
+  /// ```
+  void markSessionCheckpoint() {
+    _sessionPluginCount = _plugins.length;
+  }
+
+  /// Resets the app to the session checkpoint state.
+  ///
+  /// This:
+  /// 1. Calls [cleanup] on all game-level plugins (in reverse order)
+  /// 2. Removes game-level plugins from the app
+  /// 3. Clears all systems from the schedule
+  /// 4. Rebuilds systems from session-level plugins
+  /// 5. Resets game-level world state (entities, events)
+  ///
+  /// Session-level resources are preserved. Game-level plugins should
+  /// remove their resources in their [cleanup] method.
+  ///
+  /// Call this when returning to the main menu or starting a new game.
+  void resetToSessionCheckpoint() {
+    // 1. Cleanup game plugins in reverse order
+    while (_plugins.length > _sessionPluginCount) {
+      final plugin = _plugins.removeLast();
+      plugin.cleanup();
+    }
+
+    // 2. Clear all systems from the schedule
+    schedule.clear();
+
+    // 3. Rebuild systems from session plugins
+    // Copy the list to avoid concurrent modification if build() adds plugins
+    final sessionPlugins = _plugins.toList();
+    for (final plugin in sessionPlugins) {
+      plugin.build(this);
+    }
+
+    // 4. Reset world game state
+    world.resetGameState();
+  }
 
   /// Updates a single frame without entering the game loop.
   ///

@@ -278,6 +278,42 @@ Swaps event buffers. Call once per frame (done automatically by App).
 world.updateEvents();
 ```
 
+## World Management Methods
+
+### clear()
+
+```dart
+void clear()
+```
+
+Clears all entities and archetypes. Resources and events are preserved.
+
+```dart
+world.clear(); // Remove all entities
+```
+
+### resetGameState()
+
+```dart
+void resetGameState()
+```
+
+Resets game-level state while preserving session-level resources. Clears:
+- All entities and their components
+- All archetype tables
+- All event queues
+
+Preserves:
+- Resources (should be cleaned up by plugin cleanup methods)
+- Observers
+
+Use this when transitioning between game sessions (e.g., returning to main menu) while keeping the app alive.
+
+```dart
+// In game screen dispose
+world.resetGameState();
+```
+
 ## Example Usage
 
 ```dart

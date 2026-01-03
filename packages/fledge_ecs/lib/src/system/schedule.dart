@@ -159,6 +159,14 @@ class SystemStage {
 
   /// Returns true if this stage has no systems.
   bool get isEmpty => _systems.isEmpty;
+
+  /// Clears all systems from this stage.
+  void clear() {
+    _systems.clear();
+    _nameToIndex.clear();
+    _pendingBefore.clear();
+    _pendingAfter.clear();
+  }
 }
 
 /// The schedule containing all systems organized by stage.
@@ -247,4 +255,15 @@ class Schedule {
 
   /// The total number of systems across all stages.
   int get systemCount => _stages.fold(0, (sum, stage) => sum + stage.length);
+
+  /// Clears all systems from all stages.
+  ///
+  /// The stages themselves are preserved, only the systems within them
+  /// are removed. Use this when resetting the app to rebuild systems
+  /// from plugins.
+  void clear() {
+    for (final stage in _stages) {
+      stage.clear();
+    }
+  }
 }

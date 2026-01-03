@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2025-01-03
+
+### Added
+
+- Session checkpoint API for managing session vs game-level state:
+  - `App.markSessionCheckpoint()` - Mark current plugins as session-level
+  - `App.resetToSessionCheckpoint()` - Reset to session state, cleanup game plugins
+- `World.resetGameState()` - Clear entities, archetypes, and events while preserving resources
+- `Schedule.clear()` - Remove all systems from all stages
+- `SystemStage.clear()` - Remove all systems from a stage
+
 ## [0.1.0] - 2025-01-02
 
 ### Added

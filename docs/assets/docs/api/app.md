@@ -168,6 +168,53 @@ app.onTick((app) {
 });
 ```
 
+## Session Checkpoint Methods
+
+These methods support managing session-level vs game-level state, useful when you want to reset game state without restarting the entire app (e.g., returning to a main menu).
+
+### markSessionCheckpoint()
+
+```dart
+void markSessionCheckpoint()
+```
+
+Marks the current state as the session checkpoint. All plugins added before this call are considered session-level and will persist through resets.
+
+```dart
+// In main.dart - session plugins
+final app = App()
+  ..addPlugin(WindowPlugin())
+  ..addPlugin(TimePlugin())
+  ..addPlugin(AudioPlugin());
+
+app.markSessionCheckpoint(); // These plugins persist
+
+// Later, game plugins are added in GameScreen...
+```
+
+### resetToSessionCheckpoint()
+
+```dart
+void resetToSessionCheckpoint()
+```
+
+Resets the app to the session checkpoint state:
+1. Calls `cleanup()` on game-level plugins (in reverse order)
+2. Removes game-level plugins
+3. Clears all systems from the schedule
+4. Rebuilds systems from session-level plugins
+5. Resets world game state (entities, events)
+
+Game-level plugins should remove their resources in their `cleanup()` method.
+
+```dart
+// GameScreen.dispose()
+void dispose() {
+  app.resetToSessionCheckpoint();
+  super.dispose();
+}
+```
+
 ## Callbacks
 
 ### onStart(callback)

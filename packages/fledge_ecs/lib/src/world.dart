@@ -301,9 +301,32 @@ class World {
   int get entityCount => entities.length;
 
   /// Clears all entities from the world.
+  ///
+  /// This only clears entities and archetypes. Resources and events are
+  /// preserved. Use [resetGameState] for a more complete reset that
+  /// preserves session-level resources.
   void clear() {
     entities.clear();
     archetypes.clear();
+  }
+
+  /// Resets game-level state while preserving session-level resources.
+  ///
+  /// This clears:
+  /// - All entities and their components
+  /// - All archetype tables
+  /// - All event queues (clears both buffers)
+  ///
+  /// This preserves:
+  /// - Resources (should be cleaned up by plugin cleanup methods)
+  /// - Observers (typically registered by session-level plugins)
+  ///
+  /// Use this when transitioning between game sessions (e.g., returning
+  /// to main menu) while keeping the app alive.
+  void resetGameState() {
+    entities.clear();
+    archetypes.clear();
+    events.clear();
   }
 
   // ===== Resource Methods =====
