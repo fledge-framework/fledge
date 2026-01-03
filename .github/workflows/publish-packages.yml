@@ -141,7 +141,22 @@ jobs:
               cat "$PKG_DIR/CHANGELOG_NEW.md" >> "$PKG_DIR/CHANGELOG.md"
               rm "$PKG_DIR/CHANGELOG_NEW.md" "$PKG_DIR/CHANGES.md"
             else
-              echo "  No changes for $pkg in this release"
+              echo "  No specific changes for $pkg, adding version entry"
+              # Create minimal changelog entry for version bump
+              echo "## [$VERSION] - $DATE" > "$PKG_DIR/CHANGELOG_NEW.md"
+              echo "" >> "$PKG_DIR/CHANGELOG_NEW.md"
+              echo "- Version bump for framework release" >> "$PKG_DIR/CHANGELOG_NEW.md"
+              echo "" >> "$PKG_DIR/CHANGELOG_NEW.md"
+
+              # Prepend to existing changelog
+              if [ -f "$PKG_DIR/CHANGELOG.md" ]; then
+                tail -n +3 "$PKG_DIR/CHANGELOG.md" >> "$PKG_DIR/CHANGELOG_NEW.md" 2>/dev/null || true
+              fi
+
+              echo "# Changelog" > "$PKG_DIR/CHANGELOG.md"
+              echo "" >> "$PKG_DIR/CHANGELOG.md"
+              cat "$PKG_DIR/CHANGELOG_NEW.md" >> "$PKG_DIR/CHANGELOG.md"
+              rm "$PKG_DIR/CHANGELOG_NEW.md"
               rm -f "$PKG_DIR/CHANGES.md"
             fi
           done

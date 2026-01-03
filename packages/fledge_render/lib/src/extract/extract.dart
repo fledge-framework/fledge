@@ -16,7 +16,7 @@ import '../world/render_world.dart';
 ///     for (final (entity, sprite, transform) in
 ///         mainWorld.query2<Sprite, GlobalTransform2D>().iter()) {
 ///       renderWorld.spawn()
-///         ..insert(ExtractedSprite(
+///         .insert(ExtractedSprite(
 ///           entity: entity,
 ///           texture: sprite.texture,
 ///           transform: transform.matrix,
@@ -63,7 +63,7 @@ class ComponentExtractor<TSource, TExtracted> extends Extractor {
     for (final (entity, component)
         in mainWorld.query1<TSource>(filter: _filter).iter()) {
       final extracted = _extractFn(mainWorld, entity, component);
-      renderWorld.spawn()..insert(extracted);
+      renderWorld.spawn().insert(extracted);
     }
   }
 }
