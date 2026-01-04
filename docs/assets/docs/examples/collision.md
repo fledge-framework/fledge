@@ -2,6 +2,8 @@
 
 Basic circle-based collision detection between entities using `Transform2D` from fledge_render_2d.
 
+> **Note:** For production games, consider using the [fledge_physics](/docs/plugins/physics) plugin which provides complete collision detection, resolution with wall-sliding, layer-based filtering, and sensor support. This example demonstrates the underlying concepts.
+
 ## Components
 
 ```dart-tabs
