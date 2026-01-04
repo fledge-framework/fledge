@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.1.4] - 2026-01-04
+
+## [0.1.4] - 2026-01-04
+
+### Bug Fixes
+
+- **docs:** Allow all docs text to be selectable
+
+### Ci
+
+- **github:** Add publish step for fledge_physics
+- **github:** Add analyze step for fledge_physics
+
+
+
 ## [0.1.3] - 2026-01-04
 
 ## [0.1.3] - 2026-01-04

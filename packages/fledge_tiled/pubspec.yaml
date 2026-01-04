@@ -1,6 +1,6 @@
 name: fledge_tiled
 description: Tiled tilemap support for the Fledge ECS game framework. Load TMX/TSX maps and integrate with the Fledge render system.
-version: 0.1.3
+version: 0.1.4
 repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_tiled
 homepage: https://fledge-framework.dev
 issue_tracker: https://github.com/fledge-framework/fledge/issues
