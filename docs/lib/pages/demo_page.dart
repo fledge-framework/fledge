@@ -1,26 +1,166 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../app/theme.dart';
 import '../widgets/code_block.dart';
 import '../widgets/tabbed_code_block.dart';
 import '../widgets/doc_sidebar.dart';
+import '../widgets/search_dialog.dart';
+import '../services/search_service.dart';
 import '../demos/grid_game/grid_game_widget.dart';
 
 /// Demo page showing an interactive Fledge ECS example.
 ///
 /// Displays a playable grid game alongside code explanations
 /// showing how to recreate it as a desktop application.
-class DemoPage extends StatelessWidget {
+class DemoPage extends StatefulWidget {
   const DemoPage({super.key});
+
+  @override
+  State<DemoPage> createState() => _DemoPageState();
+}
+
+/// Section definition for the table of contents.
+class _Section {
+  final String id;
+  final String title;
+  final int level;
+
+  const _Section(this.id, this.title, {this.level = 2});
+}
+
+/// All sections in the demo page for TOC navigation.
+const _sections = [
+  _Section('try-it-out', 'Try It Out'),
+  _Section('how-it-works', 'How It Works'),
+  _Section('components', '1. Components', level: 3),
+  _Section('resources', '2. Resources', level: 3),
+  _Section('systems', '3. Systems', level: 3),
+  _Section('extraction', '4. Extraction', level: 3),
+  _Section('rendering', '5. Rendering', level: 3),
+  _Section('plugin', '6. Game Plugin', level: 3),
+  _Section('flutter-integration', '7. Flutter Integration', level: 3),
+  _Section('entry-point', '8. Entry Point', level: 3),
+  _Section('screen-navigation', '9. Screen Navigation', level: 3),
+];
+
+class _DemoPageState extends State<DemoPage> {
+  final ScrollController _scrollController = ScrollController();
+  final Map<String, GlobalKey> _sectionKeys = {};
+  final FocusNode _keyboardFocusNode = FocusNode();
+  String? _activeSectionId;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize section keys
+    for (final section in _sections) {
+      _sectionKeys[section.id] = GlobalKey();
+    }
+    _activeSectionId = _sections.first.id;
+    _scrollController.addListener(_onScroll);
+    // Pre-load search index in background
+    SearchService.instance.loadIndex();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    _keyboardFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _openSearch() {
+    showSearchDialog(context);
+  }
+
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+
+    // Ctrl+K or Cmd+K to open search
+    final isCtrlOrCmd = HardwareKeyboard.instance.isControlPressed ||
+        HardwareKeyboard.instance.isMetaPressed;
+
+    if (isCtrlOrCmd && event.logicalKey == LogicalKeyboardKey.keyK) {
+      _openSearch();
+      return KeyEventResult.handled;
+    }
+
+    // "/" to open search (when not in a text field)
+    if (event.logicalKey == LogicalKeyboardKey.slash) {
+      final focusedWidget = FocusManager.instance.primaryFocus?.context?.widget;
+      if (focusedWidget is! EditableText) {
+        _openSearch();
+        return KeyEventResult.handled;
+      }
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  void _onScroll() {
+    if (_sectionKeys.isEmpty) return;
+
+    String? newActiveId;
+    double closestDistance = double.infinity;
+
+    for (final entry in _sectionKeys.entries) {
+      final key = entry.value;
+      final context = key.currentContext;
+      if (context == null) continue;
+
+      final box = context.findRenderObject() as RenderBox?;
+      if (box == null) continue;
+
+      final position = box.localToGlobal(Offset.zero);
+      final distance = position.dy - 100;
+
+      if (distance <= 0 && distance.abs() < closestDistance) {
+        closestDistance = distance.abs();
+        newActiveId = entry.key;
+      } else if (newActiveId == null && distance > 0 && distance < closestDistance) {
+        closestDistance = distance;
+        newActiveId = entry.key;
+      }
+    }
+
+    if (newActiveId != null && newActiveId != _activeSectionId) {
+      setState(() {
+        _activeSectionId = newActiveId;
+      });
+    }
+  }
+
+  void _scrollToSection(String sectionId) {
+    final key = _sectionKeys[sectionId];
+    if (key?.currentContext != null) {
+      Scrollable.ensureVisible(
+        key!.currentContext!,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        alignment: 0.0,
+      );
+      setState(() {
+        _activeSectionId = sectionId;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
+    final isWideScreen = screenWidth >= 1200;
     final isMediumScreen = screenWidth >= 768;
 
-    return Scaffold(
+    return Focus(
+      focusNode: _keyboardFocusNode,
+      autofocus: true,
+      onKeyEvent: _handleKeyEvent,
+      child: SelectionArea(
+        child: Scaffold(
       appBar: AppBar(
         title: Row(
           children: [
@@ -45,6 +185,8 @@ class DemoPage extends StatelessWidget {
           ],
         ),
         actions: [
+          _SearchButton(onPressed: _openSearch),
+          const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.home_rounded),
             onPressed: () => context.go('/'),
@@ -63,7 +205,7 @@ class DemoPage extends StatelessWidget {
               ),
             ),
       body: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Sidebar (visible on medium+ screens)
           if (isMediumScreen)
@@ -86,7 +228,11 @@ class DemoPage extends StatelessWidget {
           // Main content
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(32),
+              controller: _scrollController,
+              padding: EdgeInsets.symmetric(
+                horizontal: isWideScreen ? 64 : 32,
+                vertical: 32,
+              ),
               child: Center(
                 child: Container(
                   constraints: const BoxConstraints(maxWidth: 900),
@@ -107,8 +253,90 @@ class DemoPage extends StatelessWidget {
               ),
             ),
           ),
+          // Table of contents (visible on wide screens)
+          if (isWideScreen)
+            SizedBox(
+              width: 240,
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border(
+                    left: BorderSide(
+                      color: theme.dividerColor,
+                    ),
+                  ),
+                ),
+                padding: const EdgeInsets.all(24),
+                child: _buildTableOfContents(theme),
+              ),
+            ),
         ],
       ),
+      ),
+      ),
+    );
+  }
+
+  Widget _buildTableOfContents(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'On this page',
+          style: theme.textTheme.labelLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Expanded(
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: _sections.map((section) {
+              final isActive = section.id == _activeSectionId;
+
+              return Padding(
+                padding: EdgeInsets.only(
+                  left: (section.level - 2) * 12.0,
+                  bottom: 4,
+                ),
+                child: InkWell(
+                  onTap: () => _scrollToSection(section.id),
+                  borderRadius: BorderRadius.circular(4),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(4),
+                      color: isActive
+                          ? FledgeTheme.primaryColor.withValues(alpha: 0.1)
+                          : Colors.transparent,
+                      border: Border(
+                        left: BorderSide(
+                          color: isActive
+                              ? FledgeTheme.primaryColor
+                              : Colors.transparent,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                    child: Text(
+                      section.title,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: isActive
+                            ? FledgeTheme.primaryColor
+                            : theme.textTheme.bodySmall?.color
+                                ?.withValues(alpha: 0.7),
+                        fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ],
     );
   }
 
@@ -196,6 +424,7 @@ class DemoPage extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
+          key: _sectionKeys['try-it-out'],
           'Try It Out',
           style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.bold,
@@ -214,6 +443,7 @@ class DemoPage extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
+          key: _sectionKeys['how-it-works'],
           'How It Works',
           style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.bold,
@@ -241,6 +471,7 @@ class DemoPage extends StatelessWidget {
         // Components section
         _buildTabbedCodeSection(
           theme,
+          sectionId: 'components',
           title: '1. Components',
           description:
               'The first step in designing an ECS game is identifying what data belongs '
@@ -266,6 +497,7 @@ class DemoPage extends StatelessWidget {
         // Resources section
         _buildCodeSection(
           theme,
+          sectionId: 'resources',
           title: '2. Resources',
           description:
               'Resources are singletons—there\'s exactly one instance shared across all systems. '
@@ -291,6 +523,7 @@ class DemoPage extends StatelessWidget {
         // Systems section
         _buildTabbedCodeSection(
           theme,
+          sectionId: 'systems',
           title: '3. Systems',
           description:
               'Systems are where behavior lives. The key principle: each system should do ONE thing well. '
@@ -317,6 +550,7 @@ class DemoPage extends StatelessWidget {
         // Extraction section
         _buildTabbedCodeSection(
           theme,
+          sectionId: 'extraction',
           title: '4. Extraction (Two-World Architecture)',
           description:
               'The two-world architecture separates game logic from rendering. The Main World '
@@ -345,6 +579,7 @@ class DemoPage extends StatelessWidget {
         // Painter section
         _buildCodeSection(
           theme,
+          sectionId: 'rendering',
           title: '5. Rendering from the Render World',
           description:
               'The painter queries ONLY the Render World—it never sees the main game world. '
@@ -368,6 +603,7 @@ class DemoPage extends StatelessWidget {
         // Plugin section
         _buildTabbedCodeSection(
           theme,
+          sectionId: 'plugin',
           title: '6. Game Plugin',
           description:
               'Plugins are the organizational unit for Fledge code. They bundle related resources, '
@@ -398,6 +634,7 @@ class DemoPage extends StatelessWidget {
         // Widget integration section
         _buildCodeSection(
           theme,
+          sectionId: 'flutter-integration',
           title: '7. Flutter Integration',
           description:
               'The game widget bridges Flutter\'s widget world and Fledge\'s two-world ECS architecture. '
@@ -420,6 +657,7 @@ class DemoPage extends StatelessWidget {
         // Main entry point section
         _buildCodeSection(
           theme,
+          sectionId: 'entry-point',
           title: '8. Application Entry Point',
           description:
               'The main() function establishes the application\'s foundation. The App is created once '
@@ -444,6 +682,7 @@ class DemoPage extends StatelessWidget {
         // Screen navigation section
         _buildCodeSection(
           theme,
+          sectionId: 'screen-navigation',
           title: '9. Screen Navigation',
           description:
               'This section demonstrates the recommended pattern for mixing Flutter UI with ECS gameplay. '
@@ -475,11 +714,13 @@ class DemoPage extends StatelessWidget {
     required String title,
     required String description,
     required String code,
+    String? sectionId,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
+          key: sectionId != null ? _sectionKeys[sectionId] : null,
           title,
           style: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w600,
@@ -509,11 +750,13 @@ class DemoPage extends StatelessWidget {
     required String description,
     required String inheritanceCode,
     required String annotationCode,
+    String? sectionId,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
+          key: sectionId != null ? _sectionKeys[sectionId] : null,
           title,
           style: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w600,
@@ -536,6 +779,79 @@ class DemoPage extends StatelessWidget {
           isDark: theme.brightness == Brightness.dark,
         ),
       ],
+    );
+  }
+}
+
+/// Search button with keyboard shortcut hint.
+class _SearchButton extends StatelessWidget {
+  final VoidCallback onPressed;
+
+  const _SearchButton({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isWide = screenWidth >= 600;
+
+    if (!isWide) {
+      // Just show icon on small screens
+      return IconButton(
+        icon: const Icon(Icons.search_rounded),
+        onPressed: onPressed,
+        tooltip: 'Search (Ctrl+K)',
+      );
+    }
+
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: theme.dividerColor.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: theme.dividerColor,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.search_rounded,
+              size: 18,
+              color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Search docs...',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color:
+                    theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: theme.dividerColor,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                'Ctrl K',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color:
+                      theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+                  fontWeight: FontWeight.w500,
+                  fontSize: 11,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

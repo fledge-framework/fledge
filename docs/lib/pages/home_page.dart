@@ -12,14 +12,16 @@ class HomePage extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildHeader(context, theme, isDark),
-            _buildFeatures(context, theme),
-            _buildQuickStart(context, theme),
-            _buildFooter(context, theme, isDark),
-          ],
+      body: SelectionArea(
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              _buildHeader(context, theme, isDark),
+              _buildFeatures(context, theme),
+              _buildQuickStart(context, theme),
+              _buildFooter(context, theme, isDark),
+            ],
+          ),
         ),
       ),
     );

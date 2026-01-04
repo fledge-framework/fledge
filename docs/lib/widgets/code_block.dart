@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_highlight/flutter_highlight.dart';
 import 'package:flutter_highlight/themes/atom-one-dark.dart';
 import 'package:flutter_highlight/themes/atom-one-light.dart';
+import 'package:highlight/highlight.dart' show highlight;
 
 import '../app/theme.dart';
 
@@ -106,12 +106,13 @@ class _CodeBlockState extends State<CodeBlock> {
             padding: const EdgeInsets.all(16),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              child: HighlightView(
-                widget.code,
-                language: widget.language,
-                theme: _buildCodeTheme(widget.isDark),
-                textStyle: FledgeTheme.codeStyle,
-                padding: EdgeInsets.zero,
+              child: SelectableText.rich(
+                _buildHighlightedSpan(
+                  widget.code,
+                  widget.language,
+                  _buildCodeTheme(widget.isDark),
+                ),
+                style: FledgeTheme.codeStyle,
               ),
             ),
           ),
@@ -149,5 +150,39 @@ class _CodeBlockState extends State<CodeBlock> {
     }
 
     return modifiedTheme;
+  }
+
+  TextSpan _buildHighlightedSpan(
+    String source,
+    String language,
+    Map<String, TextStyle> theme,
+  ) {
+    final result = highlight.parse(source, language: language);
+    final nodes = result.nodes ?? [];
+    return TextSpan(
+      style: theme['root'],
+      children: _convertNodesToSpans(nodes, theme),
+    );
+  }
+
+  List<TextSpan> _convertNodesToSpans(
+    List<dynamic> nodes,
+    Map<String, TextStyle> theme,
+  ) {
+    final spans = <TextSpan>[];
+    for (final node in nodes) {
+      if (node.value != null) {
+        spans.add(TextSpan(
+          text: node.value as String,
+          style: theme[node.className],
+        ));
+      } else if (node.children != null) {
+        spans.add(TextSpan(
+          style: theme[node.className],
+          children: _convertNodesToSpans(node.children as List<dynamic>, theme),
+        ));
+      }
+    }
+    return spans;
   }
 }
