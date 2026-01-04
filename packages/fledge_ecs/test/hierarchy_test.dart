@@ -9,24 +9,24 @@ void main() {
   group('Parent component', () {
     test('stores parent entity', () {
       const parent = Entity(1, 0);
-      final component = Parent(parent);
+      const component = Parent(parent);
       expect(component.entity, equals(parent));
     });
 
     test('equality works', () {
       const parent = Entity(1, 0);
-      expect(Parent(parent), equals(Parent(parent)));
-      expect(Parent(parent), isNot(equals(const Parent(Entity(2, 0)))));
+      expect(const Parent(parent), equals(const Parent(parent)));
+      expect(const Parent(parent), isNot(equals(const Parent(Entity(2, 0)))));
     });
 
     test('hashCode is consistent', () {
       const parent = Entity(1, 0);
-      expect(Parent(parent).hashCode, equals(Parent(parent).hashCode));
+      expect(const Parent(parent).hashCode, equals(const Parent(parent).hashCode));
     });
 
     test('toString includes entity', () {
       const parent = Entity(1, 0);
-      expect(Parent(parent).toString(), contains('1'));
+      expect(const Parent(parent).toString(), contains('1'));
     });
   });
 

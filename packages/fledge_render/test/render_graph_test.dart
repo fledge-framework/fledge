@@ -167,16 +167,16 @@ void main() {
   group('Edge', () {
     test('equality', () {
       const a = Edge(
-        from: const SlotId('a', 'out'),
-        to: const SlotId('b', 'in'),
+        from: SlotId('a', 'out'),
+        to: SlotId('b', 'in'),
       );
       const b = Edge(
-        from: const SlotId('a', 'out'),
-        to: const SlotId('b', 'in'),
+        from: SlotId('a', 'out'),
+        to: SlotId('b', 'in'),
       );
       const c = Edge(
-        from: const SlotId('a', 'out'),
-        to: const SlotId('c', 'in'),
+        from: SlotId('a', 'out'),
+        to: SlotId('c', 'in'),
       );
 
       expect(a, equals(b));
