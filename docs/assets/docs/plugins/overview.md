@@ -77,6 +77,7 @@ First-party plugins are distributed as separate packages and extend Fledge with 
 | [2D Rendering](/docs/plugins/render) | `fledge_render`, `fledge_render_2d`, `fledge_render_flutter` | Sprites, cameras, transforms, and GPU rendering |
 | [Audio](/docs/plugins/audio) | `fledge_audio` | Music, sound effects, and 2D spatial audio |
 | [Input Handling](/docs/plugins/input) | `fledge_input` | Action-based input with keyboard, mouse, and gamepad |
+| [Physics & Collision](/docs/plugins/physics) | `fledge_physics` | Collision detection, resolution, and layer filtering |
 | [Window Management](/docs/plugins/window) | `fledge_window` | Fullscreen, borderless, and windowed modes |
 | [Tiled Tilemaps](/docs/plugins/tiled) | `fledge_tiled` | Load and render Tiled TMX/TSX tilemaps |
 

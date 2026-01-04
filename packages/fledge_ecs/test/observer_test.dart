@@ -134,7 +134,8 @@ void main() {
         called = true;
       }));
 
-      observers.triggerOnAdd<Position>(World(), const Entity(1, 0), Position(0, 0));
+      observers.triggerOnAdd<Position>(
+          World(), const Entity(1, 0), Position(0, 0));
 
       expect(called, isTrue);
     });
@@ -177,7 +178,8 @@ void main() {
         removeCalled = true;
       }));
 
-      observers.triggerOnAdd<Position>(World(), const Entity(1, 0), Position(0, 0));
+      observers.triggerOnAdd<Position>(
+          World(), const Entity(1, 0), Position(0, 0));
 
       expect(addCalled, isTrue);
       expect(removeCalled, isFalse);
@@ -195,7 +197,8 @@ void main() {
         velocityCalled = true;
       }));
 
-      observers.triggerOnAdd<Position>(World(), const Entity(1, 0), Position(0, 0));
+      observers.triggerOnAdd<Position>(
+          World(), const Entity(1, 0), Position(0, 0));
 
       expect(positionCalled, isTrue);
       expect(velocityCalled, isFalse);

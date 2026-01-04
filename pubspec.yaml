@@ -16,6 +16,7 @@ workspace:
   - packages/fledge_input
   - packages/fledge_window
   - packages/fledge_tiled
+  - packages/fledge_physics
   - examples/basic_ecs
   - examples/advanced_ecs
   - docs

@@ -79,6 +79,7 @@ class DocNavigation {
         NavPage(title: '2D Rendering', path: 'render'),
         NavPage(title: 'Audio', path: 'audio'),
         NavPage(title: 'Input Handling', path: 'input'),
+        NavPage(title: 'Physics & Collision', path: 'physics'),
         NavPage(title: 'Window Management', path: 'window'),
         NavPage(title: 'Tiled Tilemaps', path: 'tiled'),
       ],
