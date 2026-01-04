@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.3] - 2026-01-04
+
+## [Unreleased]
+
+### Bug Fixes
+
+- **fledge_render_2d:** Fix null safety error on private field
+
+
+
 ## [0.1.2] - 2026-01-03
 
 ## [Unreleased]

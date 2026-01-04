@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.1.3] - 2026-01-04
+
+## [0.1.3] - 2026-01-04
+
+### Bug Fixes
+
+- **fledge_render_2d:** Fix null safety error on private field
+
+### Features
+
+- **docs:** Setup spa config for docs app
+- **fledge_tiled:** Refactor TilemapSpawnConfig API
+- **fledge_physics:** Extract collision engine into new package.
+
+### Miscellaneous
+
+- **lint:** Resolve const identifier issues
+
+
+
 ## [0.1.2] - 2026-01-03
 
 ## [0.1.2] - 2026-01-03
