@@ -108,6 +108,7 @@ jobs:
             "fledge_window"
             "fledge_input"
             "fledge_tiled"
+            "fledge_physics"
           )
 
           for pkg in "${PACKAGES[@]}"; do
@@ -195,6 +196,7 @@ jobs:
             "fledge_window"
             "fledge_input"
             "fledge_tiled"
+            "fledge_physics"
           )
 
           for pkg in "${PACKAGES[@]}"; do
