@@ -1,6 +1,6 @@
 name: fledge_render
 description: Core render infrastructure for Fledge - render graph, two-world architecture, and render scheduling.
-version: 0.1.4
+version: 0.1.5
 repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_render
 homepage: https://fledge-framework.dev
 issue_tracker: https://github.com/fledge-framework/fledge/issues

@@ -1,6 +1,6 @@
 name: fledge_ecs_generator
 description: Code generator for the Fledge ECS framework. Generates component registration and system wrappers.
-version: 0.1.4
+version: 0.1.5
 repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_ecs_generator
 homepage: https://fledge-framework.dev
 issue_tracker: https://github.com/fledge-framework/fledge/issues

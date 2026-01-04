@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.5] - 2026-01-04
+
+## [0.1.5] - 2026-01-04
+
+### Miscellaneous
+
+- **fledge_physics:** Provide docs for remaining public apis
+
+
+
 ## [0.1.4] - 2026-01-04
 
 

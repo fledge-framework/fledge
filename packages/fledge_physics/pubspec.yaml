@@ -1,6 +1,6 @@
 name: fledge_physics
 description: Physics and collision handling for Fledge ECS game framework
-version: 0.1.4
+version: 0.1.5
 repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_physics
 homepage: https://fledge-framework.dev
 issue_tracker: https://github.com/fledge-framework/fledge/issues
