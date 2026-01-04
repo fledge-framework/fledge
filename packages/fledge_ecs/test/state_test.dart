@@ -167,7 +167,8 @@ void main() {
       expect(condition(world), isFalse); // We're no longer in menu
 
       // Check that playing's exit condition would be true if we exit playing
-      final playingExit = const OnExitState<GameState>(GameState.playing).condition;
+      final playingExit =
+          const OnExitState<GameState>(GameState.playing).condition;
       state.set(GameState.menu);
       state.applyTransition();
       expect(playingExit(world), isFalse); // We're now in menu, not playing

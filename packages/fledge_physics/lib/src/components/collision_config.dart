@@ -95,7 +95,6 @@ class CollisionConfig {
   }
 
   @override
-  String toString() =>
-      'CollisionConfig(layer: 0x${layer.toRadixString(16)}, '
+  String toString() => 'CollisionConfig(layer: 0x${layer.toRadixString(16)}, '
       'mask: 0x${mask.toRadixString(16)}, isSensor: $isSensor)';
 }

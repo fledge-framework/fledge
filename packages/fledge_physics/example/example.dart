@@ -39,7 +39,8 @@ class CollisionResponseSystem extends System {
   @override
   Future<void> run(World world) async {
     // Check player collision events
-    for (final (_, _, collision) in world.query2<Player, CollisionEvent>().iter()) {
+    for (final (_, _, collision)
+        in world.query2<Player, CollisionEvent>().iter()) {
       final other = collision.other;
 
       // Check if player entered a trigger zone
@@ -109,9 +110,11 @@ void main() async {
 
     // Print player position every 10 frames
     if (frame % 10 == 0) {
-      for (final (_, transform, _) in app.world.query2<Transform2D, Player>().iter()) {
+      for (final (_, transform, _)
+          in app.world.query2<Transform2D, Player>().iter()) {
         final pos = transform.translation;
-        print('Frame $frame: Player at (${pos.x.toStringAsFixed(1)}, ${pos.y.toStringAsFixed(1)})');
+        print(
+            'Frame $frame: Player at (${pos.x.toStringAsFixed(1)}, ${pos.y.toStringAsFixed(1)})');
       }
     }
   }
