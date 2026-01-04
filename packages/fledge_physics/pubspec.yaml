@@ -7,16 +7,20 @@ issue_tracker: https://github.com/fledge-framework/fledge/issues
 
 environment:
   sdk: ^3.6.0
+  flutter: ">=3.0.0"
 
 resolution: workspace
 
 dependencies:
+  flutter:
+    sdk: flutter
   fledge_ecs: ^0.1.2
   fledge_render_2d: ^0.1.2
   fledge_tiled: ^0.1.2
 
 dev_dependencies:
-  test: any
+  flutter_test:
+    sdk: flutter
   lints: ^6.0.0
 
 topics:
