@@ -29,6 +29,9 @@ import '../layers/collision_layers.dart';
 /// Collision events are bidirectional - both entities receive an event.
 /// Events are removed by [CollisionCleanupSystem] at end of frame.
 class CollisionDetectionSystem implements System {
+  /// Creates a collision detection system.
+  const CollisionDetectionSystem();
+
   @override
   SystemMeta get meta => SystemMeta(
         name: 'collision_detection',

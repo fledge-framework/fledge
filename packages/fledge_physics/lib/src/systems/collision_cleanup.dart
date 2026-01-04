@@ -8,6 +8,9 @@ import '../components/collision_event.dart';
 /// [CollisionDetectionSystem] and consumed by game systems within
 /// the same frame, then cleaned up.
 class CollisionCleanupSystem implements System {
+  /// Creates a collision cleanup system.
+  const CollisionCleanupSystem();
+
   @override
   SystemMeta get meta => SystemMeta(
         name: 'collision_cleanup',

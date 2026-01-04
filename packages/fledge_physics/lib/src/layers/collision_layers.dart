@@ -16,6 +16,9 @@
 /// }
 /// ```
 abstract class CollisionLayers {
+  // Private constructor prevents instantiation.
+  CollisionLayers._();
+
   /// Default layer for static geometry (walls, terrain, obstacles).
   static const int solid = 1 << 0; // 0x0001
 

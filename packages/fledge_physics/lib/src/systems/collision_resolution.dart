@@ -30,6 +30,9 @@ import '../layers/collision_layers.dart';
 ///
 /// Only dynamic entities have their movement resolved against static ones.
 class CollisionResolutionSystem implements System {
+  /// Creates a collision resolution system.
+  const CollisionResolutionSystem();
+
   @override
   SystemMeta get meta => SystemMeta(
         name: 'collision_resolution',
