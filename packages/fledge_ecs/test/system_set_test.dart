@@ -23,7 +23,7 @@ void main() {
     });
 
     test('runIf sets condition', () {
-      final condition = (World world) => true;
+      bool condition(World world) => true;
       final set = SystemSet('physics')..runIf(condition);
       expect(set.runCondition, equals(condition));
     });

@@ -115,17 +115,17 @@ void main() {
       final world = World();
       world.insertResource(State<GameState>(GameState.playing));
 
-      final condition = InState<GameState>(GameState.playing).condition;
+      final condition = const InState<GameState>(GameState.playing).condition;
       expect(condition(world), isTrue);
 
-      final wrongCondition = InState<GameState>(GameState.menu).condition;
+      final wrongCondition = const InState<GameState>(GameState.menu).condition;
       expect(wrongCondition(world), isFalse);
     });
 
     test('InState returns false when state not registered', () {
       final world = World();
 
-      final condition = InState<GameState>(GameState.playing).condition;
+      final condition = const InState<GameState>(GameState.playing).condition;
       expect(condition(world), isFalse);
     });
 
@@ -135,7 +135,7 @@ void main() {
       world.insertResource(state);
 
       // Just created, so justEntered is true
-      var condition = OnEnterState<GameState>(GameState.menu).condition;
+      var condition = const OnEnterState<GameState>(GameState.menu).condition;
       expect(condition(world), isTrue);
 
       // After clearing flags, no longer just entered
@@ -146,7 +146,7 @@ void main() {
       state.set(GameState.playing);
       state.applyTransition();
 
-      condition = OnEnterState<GameState>(GameState.playing).condition;
+      condition = const OnEnterState<GameState>(GameState.playing).condition;
       expect(condition(world), isTrue);
     });
 
@@ -155,7 +155,7 @@ void main() {
       final state = State<GameState>(GameState.menu);
       world.insertResource(state);
 
-      final condition = OnExitState<GameState>(GameState.menu).condition;
+      final condition = const OnExitState<GameState>(GameState.menu).condition;
       expect(condition(world), isFalse);
 
       // Transition to playing - during transition, menu was exited
@@ -167,7 +167,7 @@ void main() {
       expect(condition(world), isFalse); // We're no longer in menu
 
       // Check that playing's exit condition would be true if we exit playing
-      final playingExit = OnExitState<GameState>(GameState.playing).condition;
+      final playingExit = const OnExitState<GameState>(GameState.playing).condition;
       state.set(GameState.menu);
       state.applyTransition();
       expect(playingExit(world), isFalse); // We're now in menu, not playing

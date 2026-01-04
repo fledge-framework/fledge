@@ -25,14 +25,14 @@ void main() {
 
   group('FieldInfo', () {
     test('stores field metadata', () {
-      final field = FieldInfo(name: 'x', type: double);
+      const field = FieldInfo(name: 'x', type: double);
       expect(field.name, equals('x'));
       expect(field.type, equals(double));
       expect(field.isNullable, isFalse);
     });
 
     test('nullable field', () {
-      final field = FieldInfo(name: 'id', type: int, isNullable: true);
+      const field = FieldInfo(name: 'id', type: int, isNullable: true);
       expect(field.isNullable, isTrue);
     });
 
@@ -46,7 +46,7 @@ void main() {
     });
 
     test('toString includes field info', () {
-      final field = FieldInfo(name: 'x', type: double);
+      const field = FieldInfo(name: 'x', type: double);
       expect(field.toString(), contains('x'));
       expect(field.toString(), contains('double'));
     });
@@ -58,8 +58,8 @@ void main() {
         type: Position,
         name: 'Position',
         fields: [
-          FieldInfo(name: 'x', type: double),
-          FieldInfo(name: 'y', type: double),
+          const FieldInfo(name: 'x', type: double),
+          const FieldInfo(name: 'y', type: double),
         ],
         fromJson: (json) => Position(json['x'] as double, json['y'] as double),
         toJson: (pos) => {'x': pos.x, 'y': pos.y},
@@ -237,8 +237,8 @@ void main() {
       TypeRegistry.instance.registerSimple<Position>(
         name: 'Position',
         fields: [
-          FieldInfo(name: 'x', type: double),
-          FieldInfo(name: 'y', type: double),
+          const FieldInfo(name: 'x', type: double),
+          const FieldInfo(name: 'y', type: double),
         ],
         constructor: (args) => Position(args[0] as double, args[1] as double),
         getFields: (pos) => [pos.x, pos.y],
@@ -265,8 +265,8 @@ void main() {
         type: Position,
         name: 'Position',
         fields: [
-          FieldInfo(name: 'x', type: double),
-          FieldInfo(name: 'y', type: double),
+          const FieldInfo(name: 'x', type: double),
+          const FieldInfo(name: 'y', type: double),
         ],
         fromJson: (json) => Position(json['x'] as double, json['y'] as double),
         toJson: (pos) => {'x': pos.x, 'y': pos.y},
@@ -276,8 +276,8 @@ void main() {
         type: Velocity,
         name: 'Velocity',
         fields: [
-          FieldInfo(name: 'dx', type: double),
-          FieldInfo(name: 'dy', type: double),
+          const FieldInfo(name: 'dx', type: double),
+          const FieldInfo(name: 'dy', type: double),
         ],
         fromJson: (json) =>
             Velocity(json['dx'] as double, json['dy'] as double),

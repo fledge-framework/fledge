@@ -253,12 +253,12 @@ void main() {
 
   group('SystemMeta ordering fields', () {
     test('before defaults to empty', () {
-      final meta = SystemMeta(name: 'test');
+      const meta = SystemMeta(name: 'test');
       expect(meta.before, isEmpty);
     });
 
     test('after defaults to empty', () {
-      final meta = SystemMeta(name: 'test');
+      const meta = SystemMeta(name: 'test');
       expect(meta.after, isEmpty);
     });
 

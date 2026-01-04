@@ -50,7 +50,7 @@ void main() {
       });
 
       final world = World();
-      final entity = Entity(1, 0);
+      const entity = Entity(1, 0);
       final position = Position(10, 20);
 
       observer.invoke(world, entity, position);
@@ -134,7 +134,7 @@ void main() {
         called = true;
       }));
 
-      observers.triggerOnAdd<Position>(World(), Entity(1, 0), Position(0, 0));
+      observers.triggerOnAdd<Position>(World(), const Entity(1, 0), Position(0, 0));
 
       expect(called, isTrue);
     });
@@ -147,7 +147,7 @@ void main() {
       }));
 
       observers.triggerOnRemove<Position>(
-          World(), Entity(1, 0), Position(0, 0));
+          World(), const Entity(1, 0), Position(0, 0));
 
       expect(called, isTrue);
     });
@@ -160,7 +160,7 @@ void main() {
       }));
 
       observers.triggerOnChange<Position>(
-          World(), Entity(1, 0), Position(0, 0));
+          World(), const Entity(1, 0), Position(0, 0));
 
       expect(called, isTrue);
     });
@@ -177,7 +177,7 @@ void main() {
         removeCalled = true;
       }));
 
-      observers.triggerOnAdd<Position>(World(), Entity(1, 0), Position(0, 0));
+      observers.triggerOnAdd<Position>(World(), const Entity(1, 0), Position(0, 0));
 
       expect(addCalled, isTrue);
       expect(removeCalled, isFalse);
@@ -195,7 +195,7 @@ void main() {
         velocityCalled = true;
       }));
 
-      observers.triggerOnAdd<Position>(World(), Entity(1, 0), Position(0, 0));
+      observers.triggerOnAdd<Position>(World(), const Entity(1, 0), Position(0, 0));
 
       expect(positionCalled, isTrue);
       expect(velocityCalled, isFalse);
@@ -306,7 +306,7 @@ void main() {
         spawnedCount++;
       }));
 
-      world.spawn()..insert(Position(0, 0));
+      world.spawn().insert(Position(0, 0));
 
       expect(spawnedCount, equals(1));
       expect(world.entityCount, equals(2));
@@ -357,7 +357,7 @@ void main() {
 
       observers.triggerOnAddDynamic(
         World(),
-        Entity(1, 0),
+        const Entity(1, 0),
         ComponentId.of<Position>(),
         Position(0, 0),
       );
@@ -374,7 +374,7 @@ void main() {
 
       observers.triggerOnRemoveDynamic(
         World(),
-        Entity(1, 0),
+        const Entity(1, 0),
         ComponentId.of<Position>(),
         Position(0, 0),
       );
@@ -391,7 +391,7 @@ void main() {
 
       observers.triggerOnChangeDynamic(
         World(),
-        Entity(1, 0),
+        const Entity(1, 0),
         ComponentId.of<Position>(),
         Position(0, 0),
       );

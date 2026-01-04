@@ -154,27 +154,27 @@ void main() {
 
   group('SlotValue', () {
     test('as<T> casts value', () {
-      final value = SlotValue(SlotType.custom, 42);
+      const value = SlotValue(SlotType.custom, 42);
       expect(value.as<int>(), equals(42));
     });
 
     test('value getter returns raw value', () {
-      final value = SlotValue(SlotType.custom, 'hello');
+      const value = SlotValue(SlotType.custom, 'hello');
       expect(value.value, equals('hello'));
     });
   });
 
   group('Edge', () {
     test('equality', () {
-      final a = Edge(
+      const a = Edge(
         from: const SlotId('a', 'out'),
         to: const SlotId('b', 'in'),
       );
-      final b = Edge(
+      const b = Edge(
         from: const SlotId('a', 'out'),
         to: const SlotId('b', 'in'),
       );
-      final c = Edge(
+      const c = Edge(
         from: const SlotId('a', 'out'),
         to: const SlotId('c', 'in'),
       );

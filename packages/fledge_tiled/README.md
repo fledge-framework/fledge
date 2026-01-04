@@ -59,19 +59,22 @@ Spawn game entities from Tiled objects:
 SpawnTilemapEvent(
   assetKey: 'level1',
   config: TilemapSpawnConfig(
-    spawnObjectEntities: true,
-    entityObjectTypes: {'enemy', 'collectible'},
-    onObjectSpawn: (entity, obj) {
-      switch (obj.type) {
-        case 'enemy':
+    objectTypes: {
+      'enemy': ObjectTypeConfig(
+        onSpawn: (entity, obj) {
           entity.insert(Enemy(
             health: obj.properties.getIntOr('health', 100),
           ));
-        case 'collectible':
+        },
+      ),
+      'collectible': ObjectTypeConfig(
+        createCollider: false,
+        onSpawn: (entity, obj) {
           entity.insert(Collectible(
             value: obj.properties.getIntOr('value', 10),
           ));
-      }
+        },
+      ),
     },
   ),
 )
@@ -93,14 +96,16 @@ final id = obj.properties.getInt('id');
 
 ## Collision
 
-Generate collision shapes from Tiled:
+Generate collision shapes from Tiled tile layers:
 
 ```dart
 SpawnTilemapEvent(
   assetKey: 'level1',
   config: TilemapSpawnConfig(
-    generateCollision: true,
-    collisionLayers: {'walls', 'obstacles'},
+    tileConfig: TileLayerConfig(
+      generateColliders: true,
+      colliderLayers: {'walls', 'obstacles'},
+    ),
   ),
 )
 ```

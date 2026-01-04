@@ -24,7 +24,7 @@ void main() {
         final world = World();
         final commands = Commands();
 
-        commands.spawn()..insert(Position(1, 2));
+        commands.spawn().insert(Position(1, 2));
 
         expect(world.entityCount, equals(0));
         commands.apply(world);
@@ -164,8 +164,8 @@ void main() {
         final world = World();
         final commands = Commands();
 
-        commands.spawn()..insert(Position(0, 0));
-        commands.spawn()..insert(Position(1, 1));
+        commands.spawn().insert(Position(0, 0));
+        commands.spawn().insert(Position(1, 1));
 
         expect(commands.length, equals(2));
         commands.clear();

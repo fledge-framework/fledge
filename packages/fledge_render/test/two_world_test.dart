@@ -32,7 +32,7 @@ class PositionExtractor extends Extractor {
   @override
   void extract(World mainWorld, RenderWorld renderWorld) {
     for (final (entity, pos) in mainWorld.query1<Position>().iter()) {
-      renderWorld.spawn()..insert(ExtractedPosition(entity, pos.x, pos.y));
+      renderWorld.spawn().insert(ExtractedPosition(entity, pos.x, pos.y));
     }
   }
 }
@@ -41,15 +41,15 @@ void main() {
   group('RenderWorld', () {
     test('spawn creates entity', () {
       final renderWorld = RenderWorld();
-      renderWorld.spawn()..insert(ExtractedPosition(Entity(0, 0), 1, 2));
+      renderWorld.spawn().insert(ExtractedPosition(const Entity(0, 0), 1, 2));
 
       expect(renderWorld.entityCount, equals(1));
     });
 
     test('clear removes all entities', () {
       final renderWorld = RenderWorld();
-      renderWorld.spawn()..insert(ExtractedPosition(Entity(0, 0), 1, 2));
-      renderWorld.spawn()..insert(ExtractedPosition(Entity(1, 0), 3, 4));
+      renderWorld.spawn().insert(ExtractedPosition(const Entity(0, 0), 1, 2));
+      renderWorld.spawn().insert(ExtractedPosition(const Entity(1, 0), 3, 4));
 
       expect(renderWorld.entityCount, equals(2));
 
@@ -61,7 +61,7 @@ void main() {
     test('resources persist across clear', () {
       final renderWorld = RenderWorld();
       renderWorld.insertResource('test resource');
-      renderWorld.spawn()..insert(ExtractedPosition(Entity(0, 0), 1, 2));
+      renderWorld.spawn().insert(ExtractedPosition(const Entity(0, 0), 1, 2));
 
       renderWorld.clear();
 
@@ -71,8 +71,8 @@ void main() {
 
     test('query returns entities', () {
       final renderWorld = RenderWorld();
-      renderWorld.spawn()..insert(ExtractedPosition(Entity(0, 0), 1, 2));
-      renderWorld.spawn()..insert(ExtractedPosition(Entity(1, 0), 3, 4));
+      renderWorld.spawn().insert(ExtractedPosition(const Entity(0, 0), 1, 2));
+      renderWorld.spawn().insert(ExtractedPosition(const Entity(1, 0), 3, 4));
 
       final results = renderWorld.query1<ExtractedPosition>().iter().toList();
 
@@ -106,8 +106,8 @@ void main() {
       final renderWorld = RenderWorld();
 
       // Add entities to main world
-      mainWorld.spawn()..insert(Position(1, 2));
-      mainWorld.spawn()..insert(Position(3, 4));
+      mainWorld.spawn().insert(Position(1, 2));
+      mainWorld.spawn().insert(Position(3, 4));
 
       // Create and run extractor
       final extractor = ComponentExtractor<Position, ExtractedPosition>(
@@ -124,8 +124,8 @@ void main() {
       final mainWorld = World();
       final renderWorld = RenderWorld();
 
-      mainWorld.spawn()..insert(Position(10, 20));
-      mainWorld.spawn()..insert(Position(30, 40));
+      mainWorld.spawn().insert(Position(10, 20));
+      mainWorld.spawn().insert(Position(30, 40));
 
       final extractor = PositionExtractor();
       extractor.extract(mainWorld, renderWorld);
@@ -181,10 +181,10 @@ void main() {
       mainWorld.insertResource(Extractors()..register(PositionExtractor()));
 
       // Add entities to main world
-      mainWorld.spawn()..insert(Position(1, 2));
+      mainWorld.spawn().insert(Position(1, 2));
 
       // Pre-populate render world
-      renderWorld.spawn()..insert(ExtractedPosition(Entity(99, 0), 0, 0));
+      renderWorld.spawn().insert(ExtractedPosition(const Entity(99, 0), 0, 0));
       expect(renderWorld.entityCount, equals(1));
 
       // Run extract system
@@ -211,7 +211,7 @@ void main() {
 
   group('RenderStage', () {
     test('stages are in correct order', () {
-      final stages = RenderStage.values;
+      const stages = RenderStage.values;
 
       expect(stages.indexOf(RenderStage.extract), equals(0));
       expect(stages.indexOf(RenderStage.prepare), equals(1));
@@ -328,7 +328,7 @@ void main() {
       mainWorld.insertResource(Extractors()..register(PositionExtractor()));
 
       // Add entity to main world
-      mainWorld.spawn()..insert(Position(5, 6));
+      mainWorld.spawn().insert(Position(5, 6));
 
       // Track if render stage sees the data
       var foundEntity = false;

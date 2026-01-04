@@ -33,11 +33,14 @@ import 'systems/tilemap_spawn_system.dart';
 /// app.world.eventWriter<SpawnTilemapEvent>().send(SpawnTilemapEvent(
 ///   assetKey: 'level1',
 ///   config: TilemapSpawnConfig(
-///     spawnObjectEntities: true,
-///     onObjectSpawn: (entity, obj) {
-///       if (obj.type == 'enemy') {
-///         entity.insert(Enemy());
-///       }
+///     tileConfig: TileLayerConfig(
+///       generateColliders: true,
+///       colliderLayers: {'Collision'},
+///     ),
+///     objectTypes: {
+///       'enemy': ObjectTypeConfig(
+///         onSpawn: (entity, obj) => entity.insert(Enemy()),
+///       ),
 ///     },
 ///   ),
 /// ));

@@ -11,6 +11,7 @@ import '../components/object_layer.dart';
 import '../components/tile_layer.dart';
 import '../components/tilemap.dart';
 import '../components/tilemap_animator.dart';
+import '../config/spawn_config.dart';
 import '../properties/tiled_properties.dart';
 import '../resources/tilemap_assets.dart';
 
@@ -30,6 +31,17 @@ import '../resources/tilemap_assets.dart';
 /// world.eventWriter<SpawnTilemapEvent>().send(SpawnTilemapEvent(
 ///   assetKey: 'level1',
 ///   position: Offset(100, 200),
+///   config: TilemapSpawnConfig(
+///     tileConfig: TileLayerConfig(
+///       generateColliders: true,
+///       colliderLayers: {'Collision'},
+///     ),
+///     objectTypes: {
+///       'enemy': ObjectTypeConfig(
+///         onSpawn: (entity, obj) => entity.insert(Enemy()),
+///       ),
+///     },
+///   ),
 /// ));
 /// ```
 class SpawnTilemapEvent {
@@ -62,82 +74,6 @@ class TilemapSpawnedEvent {
   const TilemapSpawnedEvent({
     required this.entity,
     required this.assetKey,
-  });
-}
-
-/// Configuration for tilemap spawning.
-class TilemapSpawnConfig {
-  /// Whether to spawn individual entities for objects.
-  final bool spawnObjectEntities;
-
-  /// Whether to create collision shapes from objects.
-  final bool createColliders;
-
-  /// Whether to generate colliders from tile collision data.
-  ///
-  /// When enabled, tiles with collision shapes defined in their tileset
-  /// will have those shapes collected and spawned as a [Collider] component.
-  ///
-  /// Example:
-  /// ```dart
-  /// SpawnTilemapEvent(
-  ///   assetKey: 'level1',
-  ///   config: TilemapSpawnConfig(
-  ///     generateTileColliders: true,
-  ///     optimizeTileColliders: true,
-  ///   ),
-  /// )
-  /// ```
-  final bool generateTileColliders;
-
-  /// Whether to optimize tile colliders by merging adjacent rectangles.
-  ///
-  /// When enabled, adjacent rectangular collision shapes are merged into
-  /// larger rectangles, reducing the number of collision checks needed.
-  /// Only affects [RectangleShape] colliders.
-  ///
-  /// Requires [generateTileColliders] to be true.
-  final bool optimizeTileColliders;
-
-  /// Layer names to generate tile colliders for (null = all layers).
-  ///
-  /// Only tile layers with names in this set will have colliders generated.
-  /// If null, all tile layers with collision data will be processed.
-  final Set<String>? tileColliderLayers;
-
-  /// Object types to spawn as entities (null = all).
-  ///
-  /// Only objects with types in this set will be spawned.
-  final Set<String>? entityObjectTypes;
-
-  /// Callback for custom object entity setup.
-  ///
-  /// Called for each spawned object entity, allowing custom
-  /// component insertion based on object type/properties.
-  final void Function(EntityCommands entity, TiledObjectData object)?
-      onObjectSpawn;
-
-  /// Callback for custom layer entity setup.
-  final void Function(EntityCommands entity, String layerName)? onLayerSpawn;
-
-  /// Callback for custom tile collider entity setup.
-  ///
-  /// Called when a tile collider entity is spawned, allowing custom
-  /// component insertion. The [Collider] is already attached.
-  final void Function(
-          EntityCommands entity, String layerName, Collider collider)?
-      onTileColliderSpawn;
-
-  const TilemapSpawnConfig({
-    this.spawnObjectEntities = false,
-    this.createColliders = true,
-    this.generateTileColliders = false,
-    this.optimizeTileColliders = true,
-    this.tileColliderLayers,
-    this.entityObjectTypes,
-    this.onObjectSpawn,
-    this.onLayerSpawn,
-    this.onTileColliderSpawn,
   });
 }
 
@@ -266,17 +202,17 @@ class TilemapSpawnSystem implements System {
     config.onLayerSpawn?.call(layerEntity, layer.name);
 
     // Generate tile colliders if enabled
-    if (config.generateTileColliders) {
+    if (config.tileConfig.generateColliders) {
       // Check if this layer should have colliders generated
-      if (config.tileColliderLayers == null ||
-          config.tileColliderLayers!.contains(layer.name)) {
+      if (config.tileConfig.colliderLayers == null ||
+          config.tileConfig.colliderLayers!.contains(layer.name)) {
         _generateTileColliders(
           world,
           layerEntity.entity,
           tiles,
           loaded,
           layer.name,
-          config,
+          config.tileConfig,
         );
       }
     }
@@ -288,7 +224,7 @@ class TilemapSpawnSystem implements System {
     List<TileData> tiles,
     LoadedTilemap loaded,
     String layerName,
-    TilemapSpawnConfig config,
+    TileLayerConfig tileConfig,
   ) {
     // Collect collision data from tiles
     final collisionData = <TileCollisionData>[];
@@ -319,23 +255,21 @@ class TilemapSpawnSystem implements System {
       tileHeight: tileHeight,
     );
 
-    // Optionally optimize by merging adjacent rectangles
-    if (config.optimizeTileColliders) {
-      final rectangles = <RectangleShape>[];
-      final otherShapes = <CollisionShape>[];
+    // Optimize by merging adjacent rectangles (always enabled)
+    final rectangles = <RectangleShape>[];
+    final otherShapes = <CollisionShape>[];
 
-      for (final shape in allShapes) {
-        if (shape is RectangleShape && shape.rotation == 0) {
-          rectangles.add(shape);
-        } else {
-          otherShapes.add(shape);
-        }
+    for (final shape in allShapes) {
+      if (shape is RectangleShape && shape.rotation == 0) {
+        rectangles.add(shape);
+      } else {
+        otherShapes.add(shape);
       }
+    }
 
-      if (rectangles.isNotEmpty) {
-        final merged = TileCollider.mergeRectangles(rectangles);
-        allShapes = [...merged, ...otherShapes];
-      }
+    if (rectangles.isNotEmpty) {
+      final merged = TileCollider.mergeRectangles(rectangles);
+      allShapes = [...merged, ...otherShapes];
     }
 
     if (allShapes.isEmpty) return;
@@ -347,7 +281,7 @@ class TilemapSpawnSystem implements System {
       ..insert(GlobalTransform2D())
       ..insert(collider);
 
-    config.onTileColliderSpawn?.call(colliderEntity, layerName, collider);
+    tileConfig.onColliderSpawn?.call(colliderEntity, layerName, collider);
   }
 
   List<TileData> _buildTileData(tiled.TileLayer layer, LoadedTilemap loaded) {
@@ -430,16 +364,18 @@ class TilemapSpawnSystem implements System {
 
     config.onLayerSpawn?.call(layerEntity, layer.name);
 
-    // Optionally spawn individual object entities
-    if (config.spawnObjectEntities) {
+    // Spawn individual object entities based on objectTypes map
+    final objectTypes = config.objectTypes;
+    if (objectTypes != null && objectTypes.isNotEmpty) {
       for (final obj in objects) {
-        if (config.entityObjectTypes != null &&
-            obj.type != null &&
-            !config.entityObjectTypes!.contains(obj.type)) {
+        // Only spawn objects with types in the objectTypes map
+        final objType = obj.type;
+        if (objType == null || !objectTypes.containsKey(objType)) {
           continue;
         }
 
-        _spawnObjectEntity(world, layerEntity.entity, obj, config);
+        final typeConfig = objectTypes[objType]!;
+        _spawnObjectEntity(world, layerEntity.entity, obj, typeConfig);
       }
     }
   }
@@ -448,23 +384,23 @@ class TilemapSpawnSystem implements System {
     World world,
     Entity layerEntity,
     TiledObjectData obj,
-    TilemapSpawnConfig config,
+    ObjectTypeConfig typeConfig,
   ) {
     final entity = world.spawnChild(layerEntity)
       ..insert(Transform2D.from(obj.x, obj.y))
       ..insert(GlobalTransform2D())
       ..insert(TiledObject.fromData(obj));
 
-    // Create collision shapes if enabled
-    if (config.createColliders) {
+    // Create collision shapes if enabled for this type
+    if (typeConfig.createCollider) {
       final shapes = TileCollider.fromObject(obj);
       if (shapes.isNotEmpty) {
         entity.insert(Collider(shapes: shapes));
       }
     }
 
-    // Call custom setup callback
-    config.onObjectSpawn?.call(entity, obj);
+    // Call custom setup callback for this type
+    typeConfig.onSpawn?.call(entity, obj);
   }
 
   ObjectShape _parseShape(tiled.TiledObject obj) {

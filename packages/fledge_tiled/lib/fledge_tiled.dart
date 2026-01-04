@@ -49,19 +49,26 @@
 /// SpawnTilemapEvent(
 ///   assetKey: 'level1',
 ///   config: TilemapSpawnConfig(
-///     spawnObjectEntities: true,
-///     entityObjectTypes: {'enemy', 'collectible'},
-///     onObjectSpawn: (entity, obj) {
-///       switch (obj.type) {
-///         case 'enemy':
+///     tileConfig: TileLayerConfig(
+///       generateColliders: true,
+///       colliderLayers: {'Collision'},
+///     ),
+///     objectTypes: {
+///       'enemy': ObjectTypeConfig(
+///         onSpawn: (entity, obj) {
 ///           entity.insert(Enemy(
 ///             health: obj.properties.getIntOr('health', 100),
 ///           ));
-///         case 'collectible':
+///         },
+///       ),
+///       'collectible': ObjectTypeConfig(
+///         createCollider: false,
+///         onSpawn: (entity, obj) {
 ///           entity.insert(Collectible(
 ///             value: obj.properties.getIntOr('value', 10),
 ///           ));
-///       }
+///         },
+///       ),
 ///     },
 ///   ),
 /// )
@@ -87,6 +94,9 @@ export 'src/properties/tiled_properties.dart';
 // Collision
 export 'src/collision/collision_shapes.dart';
 export 'src/collision/tile_collider.dart';
+
+// Config
+export 'src/config/spawn_config.dart';
 
 // Systems
 export 'src/systems/tilemap_spawn_system.dart';

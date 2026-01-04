@@ -27,14 +27,21 @@ void main() async {
   //   SpawnTilemapEvent(
   //     assetKey: 'level1',
   //     config: TilemapSpawnConfig(
-  //       spawnObjectEntities: true,
-  //       entityObjectTypes: {'enemy', 'collectible'},
-  //       onObjectSpawn: (entity, obj) {
-  //         if (obj.type == 'enemy') {
-  //           entity.insert(Enemy(
-  //             health: obj.properties.getIntOr('health', 100),
-  //           ));
-  //         }
+  //       tileConfig: TileLayerConfig(
+  //         generateColliders: true,
+  //         colliderLayers: {'Collision'},
+  //       ),
+  //       objectTypes: {
+  //         'enemy': ObjectTypeConfig(
+  //           onSpawn: (entity, obj) {
+  //             entity.insert(Enemy(
+  //               health: obj.properties.getIntOr('health', 100),
+  //             ));
+  //           },
+  //         ),
+  //         'collectible': ObjectTypeConfig(
+  //           createCollider: false,
+  //         ),
   //       },
   //     ),
   //   ),

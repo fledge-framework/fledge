@@ -8,24 +8,24 @@ void main() {
 
   group('Parent component', () {
     test('stores parent entity', () {
-      final parent = Entity(1, 0);
+      const parent = Entity(1, 0);
       final component = Parent(parent);
       expect(component.entity, equals(parent));
     });
 
     test('equality works', () {
-      final parent = Entity(1, 0);
+      const parent = Entity(1, 0);
       expect(Parent(parent), equals(Parent(parent)));
-      expect(Parent(parent), isNot(equals(Parent(Entity(2, 0)))));
+      expect(Parent(parent), isNot(equals(const Parent(Entity(2, 0)))));
     });
 
     test('hashCode is consistent', () {
-      final parent = Entity(1, 0);
+      const parent = Entity(1, 0);
       expect(Parent(parent).hashCode, equals(Parent(parent).hashCode));
     });
 
     test('toString includes entity', () {
-      final parent = Entity(1, 0);
+      const parent = Entity(1, 0);
       expect(Parent(parent).toString(), contains('1'));
     });
   });
@@ -38,8 +38,8 @@ void main() {
     });
 
     test('can be initialized with list', () {
-      final e1 = Entity(1, 0);
-      final e2 = Entity(2, 0);
+      const e1 = Entity(1, 0);
+      const e2 = Entity(2, 0);
       final children = Children([e1, e2]);
       expect(children.length, equals(2));
       expect(children.contains(e1), isTrue);
@@ -48,14 +48,14 @@ void main() {
 
     test('add adds child', () {
       final children = Children();
-      final e1 = Entity(1, 0);
+      const e1 = Entity(1, 0);
       children.add(e1);
       expect(children.contains(e1), isTrue);
     });
 
     test('add ignores duplicates', () {
       final children = Children();
-      final e1 = Entity(1, 0);
+      const e1 = Entity(1, 0);
       children.add(e1);
       children.add(e1);
       expect(children.length, equals(1));
@@ -63,7 +63,7 @@ void main() {
 
     test('remove removes child', () {
       final children = Children();
-      final e1 = Entity(1, 0);
+      const e1 = Entity(1, 0);
       children.add(e1);
       expect(children.remove(e1), isTrue);
       expect(children.contains(e1), isFalse);
@@ -71,19 +71,19 @@ void main() {
 
     test('remove returns false for missing child', () {
       final children = Children();
-      expect(children.remove(Entity(1, 0)), isFalse);
+      expect(children.remove(const Entity(1, 0)), isFalse);
     });
 
     test('list returns unmodifiable view', () {
       final children = Children();
-      children.add(Entity(1, 0));
-      expect(() => children.list.add(Entity(2, 0)), throwsUnsupportedError);
+      children.add(const Entity(1, 0));
+      expect(() => children.list.add(const Entity(2, 0)), throwsUnsupportedError);
     });
 
     test('isNotEmpty returns true when has children', () {
       final children = Children();
       expect(children.isNotEmpty, isFalse);
-      children.add(Entity(1, 0));
+      children.add(const Entity(1, 0));
       expect(children.isNotEmpty, isTrue);
     });
   });

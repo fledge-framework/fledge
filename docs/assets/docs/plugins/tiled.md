@@ -95,26 +95,38 @@ Configure automatic entity spawning from Tiled objects:
 SpawnTilemapEvent(
   assetKey: 'level1',
   config: TilemapSpawnConfig(
-    spawnObjectEntities: true,
-    entityObjectTypes: {'enemy', 'collectible', 'trigger'},
-    onObjectSpawn: (entity, obj) {
-      switch (obj.type) {
-        case 'enemy':
+    tileConfig: TileLayerConfig(
+      generateColliders: true,
+      colliderLayers: {'Collision'},
+    ),
+    objectTypes: {
+      'enemy': ObjectTypeConfig(
+        createCollider: false,
+        onSpawn: (entity, obj) {
           entity.insert(Enemy(
             health: obj.properties.getIntOr('health', 100),
             speed: obj.properties.getDoubleOr('speed', 50.0),
           ));
-        case 'collectible':
+        },
+      ),
+      'collectible': ObjectTypeConfig(
+        createCollider: true,
+        onSpawn: (entity, obj) {
           entity.insert(Collectible(
             itemType: obj.properties.getStringOr('item_type', 'coin'),
             value: obj.properties.getIntOr('value', 10),
           ));
-        case 'trigger':
+        },
+      ),
+      'trigger': ObjectTypeConfig(
+        createCollider: true,
+        onSpawn: (entity, obj) {
           entity.insert(TriggerZone(
             targetScene: obj.properties.getString('target_scene'),
             oneShot: obj.properties.getBoolOr('one_shot', true),
           ));
-      }
+        },
+      ),
     },
   ),
 )
@@ -185,8 +197,11 @@ Collision shapes from object layers are automatically created when spawning obje
 SpawnTilemapEvent(
   assetKey: 'level1',
   config: TilemapSpawnConfig(
-    spawnObjectEntities: true,
-    createColliders: true,  // Default: creates Collider from object shapes
+    objectTypes: {
+      'trigger': ObjectTypeConfig(
+        createCollider: true,
+      ),
+    },
   ),
 )
 ```
@@ -207,14 +222,15 @@ for (final (entity, collider) in world.query1<Collider>().iter()) {
 
 #### Tile Collision Generation
 
-In Tiled, you can define collision shapes directly on tiles in the tileset editor (Tileset → Select Tile → Collision Editor). Enable automatic tile collider generation with `generateTileColliders`:
+In Tiled, you can define collision shapes directly on tiles in the tileset editor (Tileset → Select Tile → Collision Editor). Enable automatic tile collider generation with `TileLayerConfig`:
 
 ```dart
 SpawnTilemapEvent(
   assetKey: 'level1',
   config: TilemapSpawnConfig(
-    generateTileColliders: true,   // Generate colliders from tile collision data
-    optimizeTileColliders: true,   // Merge adjacent rectangles for performance
+    tileConfig: TileLayerConfig(
+      generateColliders: true, // Enable collider generation
+    ),
   ),
 )
 ```
@@ -222,15 +238,17 @@ SpawnTilemapEvent(
 This automatically:
 1. Scans all tiles in each tile layer for collision shapes defined in their tileset
 2. Converts shapes to world-space coordinates
-3. Optionally merges adjacent rectangles into larger shapes (reduces collision checks)
+3. Merges adjacent rectangles into larger shapes (reduces collision checks)
 4. Spawns a `Collider` entity as a child of each layer
 
 **Filter specific layers:**
 
 ```dart
 TilemapSpawnConfig(
-  generateTileColliders: true,
-  tileColliderLayers: {'collision', 'walls'},  // Only these layers
+  tileConfig: TileLayerConfig(
+    generateColliders: true,
+    colliderLayers: {'collision', 'walls'}, // Only these layers
+  ),
 )
 ```
 
@@ -238,15 +256,17 @@ TilemapSpawnConfig(
 
 ```dart
 TilemapSpawnConfig(
-  generateTileColliders: true,
-  onTileColliderSpawn: (entity, layerName, collider) {
-    // Add custom components to the collider entity
-    if (layerName == 'hazards') {
-      entity.insert(DamageZone(damage: 10));
-    } else if (layerName == 'walls') {
-      entity.insert(StaticBody());
-    }
-  },
+  tileConfig: TileLayerConfig(
+    generateColliders: true,
+    onColliderSpawn: (entity, layerName, collider) {
+      // Add custom components to the collider entity
+      if (layerName == 'hazards') {
+        entity.insert(DamageZone(damage: 10));
+      } else if (layerName == 'walls') {
+        entity.insert(StaticBody());
+      }
+    },
+  ),
 )
 ```
 
@@ -254,15 +274,24 @@ TilemapSpawnConfig(
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `spawnObjectEntities` | `bool` | `false` | Spawn entities from object layers |
-| `createColliders` | `bool` | `true` | Create colliders for spawned objects |
-| `generateTileColliders` | `bool` | `false` | Generate colliders from tile collision data |
-| `optimizeTileColliders` | `bool` | `true` | Merge adjacent rectangles for performance |
-| `tileColliderLayers` | `Set<String>?` | `null` | Layer names to generate colliders for (null = all) |
-| `entityObjectTypes` | `Set<String>?` | `null` | Object types to spawn as entities (null = all) |
-| `onObjectSpawn` | `Function?` | `null` | Callback for custom object entity setup |
+| `tileConfig` | `TileLayerConfig` | `TileLayerConfig()` | Configuration for tile layer colliders |
+| `objectTypes` | `Map<String, ObjectTypeConfig>?` | `null` | Object spawning configuration by type |
 | `onLayerSpawn` | `Function?` | `null` | Callback for custom layer entity setup |
-| `onTileColliderSpawn` | `Function?` | `null` | Callback for custom tile collider entity setup |
+
+#### TileLayerConfig Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `generateColliders` | `bool` | `false` | Generate colliders from tile collision data |
+| `colliderLayers` | `Set<String>?` | `null` | Layer names to generate colliders for (null = all) |
+| `onColliderSpawn` | `Function?` | `null` | Callback for custom tile collider entity setup |
+
+#### ObjectTypeConfig Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `createCollider` | `bool` | `true` | Create collision shapes from the object's geometry |
+| `onSpawn` | `Function?` | `null` | Callback for custom setup when this object type is spawned |
 
 #### Manual Collision Generation
 
@@ -334,10 +363,10 @@ Tilemaps create a parent-child entity hierarchy:
 ```
 Tilemap Entity (root)
 ├── TileLayer Entity (child)
-│   └── Collider Entity (grandchild, if generateTileColliders enabled)
+│   └── Collider Entity (grandchild, if tileConfig.generateColliders enabled)
 ├── TileLayer Entity (child)
 ├── ObjectLayer Entity (child)
-│   ├── Object Entity (grandchild, with Collider if createColliders enabled)
+│   ├── Object Entity (grandchild, with Collider if ObjectTypeConfig.createCollider enabled)
 │   ├── Object Entity (grandchild)
 │   └── Object Entity (grandchild)
 └── TileLayer Entity (child)
