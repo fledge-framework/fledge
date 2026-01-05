@@ -79,3 +79,6 @@ export 'src/extract/extracted_data.dart';
 // Stages
 export 'src/stages/render_schedule.dart';
 export 'src/stages/render_stage.dart';
+
+// Plugin
+export 'src/plugin/render_plugin.dart';

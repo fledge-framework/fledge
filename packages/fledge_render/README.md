@@ -10,6 +10,7 @@ Core render infrastructure for [Fledge](https://fledge-framework.dev) - render g
 - **Render World**: GPU-optimized data structures rebuilt each frame
 - **Extractors**: Transform game data to render data
 - **Render Graph**: Modular render pipeline definition
+- **RenderPlugin**: Automatic extraction system setup
 
 ## Installation
 
@@ -18,9 +19,34 @@ dependencies:
   fledge_render: ^0.1.0
 ```
 
-## Usage
+## Quick Start
 
-### Two-World Architecture
+Use `RenderPlugin` to set up the extraction system automatically:
+
+```dart
+import 'package:fledge_ecs/fledge_ecs.dart';
+import 'package:fledge_render/fledge_render.dart';
+
+void main() {
+  final app = App()
+    .addPlugin(TimePlugin())
+    .addPlugin(RenderPlugin());  // Sets up Extractors, RenderWorld, and extraction system
+
+  // Register your extractors
+  final extractors = app.world.getResource<Extractors>()!;
+  extractors.register(SpriteExtractor());
+  extractors.register(TilemapExtractor());
+
+  app.run();
+}
+```
+
+The `RenderPlugin` provides:
+- `Extractors` resource for registering component extractors
+- `RenderWorld` resource for storing extracted render data
+- `RenderExtractionSystem` that runs at `CoreStage.last`
+
+## Two-World Architecture
 
 Fledge separates game logic (Main World) from rendering (Render World):
 
@@ -43,14 +69,6 @@ class SpriteExtractor extends Extractor {
     }
   }
 }
-```
-
-### Registering Extractors
-
-```dart
-final extractors = app.world.getResource<Extractors>()!;
-extractors.register(SpriteExtractor());
-extractors.register(TilemapExtractor());
 ```
 
 ## Documentation

@@ -92,27 +92,23 @@ The extractor:
 
 ### Registering Extractors
 
-Extractors are registered via the `Extractors` resource:
+Use `RenderPlugin` to set up the extraction infrastructure, then register your extractors via the `Extractors` resource:
 
 ```dart
-// In a plugin or during setup
-app.world.getResource<Extractors>()!
-  ..register(SpriteExtractor())
-  ..register(TilemapExtractor())
-  ..register(ParticleExtractor());
+// Add RenderPlugin to set up Extractors, RenderWorld, and extraction system
+app.addPlugin(RenderPlugin());
+
+// Register extractors
+final extractors = app.world.getResource<Extractors>()!;
+extractors.register(SpriteExtractor());
+extractors.register(TilemapExtractor());
+extractors.register(ParticleExtractor());
 ```
 
-Or via the render plugin:
-
-```dart
-App()
-  .addPlugin(RenderPlugin(
-    extractors: [
-      SpriteExtractor(),
-      TilemapExtractor(),
-    ],
-  ))
-```
+The `RenderPlugin` provides:
+- `Extractors` resource for registering component extractors
+- `RenderWorld` resource for storing extracted render data
+- `RenderExtractionSystem` that runs at `CoreStage.last`
 
 ## RenderWorld
 
@@ -439,19 +435,20 @@ ExtractedEnemy(
 
 ## Plugin Integration
 
-Plugins that need rendering should register their extractors:
+Plugins that need rendering should register their extractors. Ensure `RenderPlugin` is added before your plugin so that the `Extractors` resource is available:
 
 ```dart
-class MyRenderPlugin implements Plugin {
+// In your app setup
+app
+  .addPlugin(RenderPlugin())      // Must come first
+  .addPlugin(MyGamePlugin());     // Can now access Extractors
+
+// In your game plugin
+class MyGamePlugin implements Plugin {
   @override
   void build(App app) {
-    // Get or create extractors resource
-    final extractors = app.world.getResource<Extractors>() ?? Extractors();
-    if (app.world.getResource<Extractors>() == null) {
-      app.world.insertResource(extractors);
-    }
-
-    // Register our extractor
+    // RenderPlugin has already set up Extractors
+    final extractors = app.world.getResource<Extractors>()!;
     extractors.register(MyComponentExtractor());
   }
 

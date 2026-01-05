@@ -29,9 +29,14 @@ import 'package:fledge_render_2d/fledge_render_2d.dart';
 void main() async {
   final app = App()
     .addPlugin(TimePlugin())
-    // Add render systems manually
+    .addPlugin(RenderPlugin())  // Sets up extraction automatically
+    // Add render systems
     .addSystem(TransformPropagateSystem())
     .addSystem(AnimateSystemWithResource());
+
+  // Register extractors
+  final extractors = app.world.getResource<Extractors>()!;
+  extractors.register(SpriteExtractor());
 
   // Spawn a camera
   app.world.spawn()
@@ -907,18 +912,18 @@ class GamePainter extends CustomPainter {
 
 ### Registering Multiple Extractors
 
-Each painter needs its corresponding extractor:
+Each painter needs its corresponding extractor. Use `RenderPlugin` to set up the extraction infrastructure, then register your extractors:
 
 ```dart
 void _setupGame() {
-  _renderWorld = RenderWorld();
+  // RenderPlugin provides Extractors and RenderWorld resources
+  app.addPlugin(RenderPlugin());
 
-  _extractors = Extractors()
-    ..register(TilemapExtractor())     // Extracts ExtractedTile
-    ..register(NPCExtractor())         // Extracts ExtractedNPC
-    ..register(ParticleExtractor());   // Extracts ExtractedParticle
-
-  _world.insertResource(_extractors);
+  // Register extractors for each renderable type
+  final extractors = app.world.getResource<Extractors>()!;
+  extractors.register(TilemapExtractor());     // Extracts ExtractedTile
+  extractors.register(NPCExtractor());         // Extracts ExtractedNPC
+  extractors.register(ParticleExtractor());    // Extracts ExtractedParticle
 }
 ```
 
