@@ -1,59 +1,53 @@
 # Changelog
 
-## [0.1.5] - 2026-01-04
-
-
-
-## [0.1.4] - 2026-01-04
-
-
-
-## [0.1.3] - 2026-01-04
-
-## [Unreleased]
-
-### Bug Fixes
-
-- **fledge_render_2d:** Fix null safety error on private field
-
-### Features
-
-- **fledge_tiled:** Refactor TilemapSpawnConfig API
-
-### Miscellaneous
-
-- **lint:** Resolve const identifier issues
-
-
-
-## [0.1.2] - 2026-01-03
-
-## [0.1.2] - 2026-01-03
-
-### Bug Fixes
-
-- Update dependencies to latest stable versions
-- **fledge:** Update dependencies, upgrade melos to v7
-
-### Features
-
-- **fledge_render:** Use layer enums rather than magic numbers
-
-### Miscellaneous
-
-- **license:** Remove whitespace from license files
-- Update license text
-
-### Ci
-
-- **github:** Create changelogs for all packages on release
-
-
-
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.1.6] - 2026-01-04
+
+### Added
+
+- **RenderPlugin** - Plugin that sets up Extractors, RenderWorld, and RenderExtractionSystem automatically
+- **RenderLayer** classes merged from `fledge_render_flutter`:
+  - `RenderLayer` - Abstract base class for render layers
+  - `CompositeRenderLayer` - Combines multiple layers in order
+  - `TransformedRenderLayer` - Applies a transform matrix before rendering
+  - `ClippedRenderLayer` - Clips rendering to a rectangle
+  - `ConditionalRenderLayer` - Conditionally renders based on a predicate
+
+### Changed
+
+- Package now requires Flutter SDK (for Canvas and painting APIs)
+
+## [0.1.5] - 2026-01-04
+
+### Changed
+
+- Internal refactoring
+
+## [0.1.4] - 2026-01-04
+
+### Changed
+
+- Internal refactoring
+
+## [0.1.3] - 2026-01-04
+
+### Changed
+
+- Internal refactoring
+
+## [0.1.2] - 2026-01-03
+
+### Fixed
+
+- Update dependencies to latest stable versions
+
+### Added
+
+- DrawLayer enums for layer-based sort keys
 
 ## [0.1.0] - 2025-01-02
 

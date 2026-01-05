@@ -1,6 +1,6 @@
 name: fledge_render_flutter
-description: Flutter integration for Fledge rendering - backend abstraction for flutter_gpu and Canvas.
-version: 0.1.5
+description: "[Deprecated] Use fledge_render instead. This package re-exports fledge_render for backwards compatibility."
+version: 0.1.6
 repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_render_flutter
 homepage: https://fledge-framework.dev
 issue_tracker: https://github.com/fledge-framework/fledge/issues
@@ -14,9 +14,7 @@ resolution: workspace
 dependencies:
   flutter:
     sdk: flutter
-  fledge_ecs: ^0.1.2
-  fledge_render: ^0.1.2
-  vector_math: ^2.2.0
+  fledge_render: ^0.1.6
 
 dev_dependencies:
   flutter_test:
