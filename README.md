@@ -17,6 +17,7 @@ Fledge brings the power of modern ECS architecture to Flutter, enabling you to b
 - **Action-Based Input** - Map physical inputs to semantic actions
 - **Spatial Audio** - 2D positional audio with volume channels
 - **Tiled Integration** - Load and render TMX/TSX tilemaps
+- **Physics & Collision** - Layer-based collision detection and resolution
 
 ## Packages
 
@@ -32,6 +33,7 @@ Fledge brings the power of modern ECS architecture to Flutter, enabling you to b
 | [fledge_audio](packages/fledge_audio) | Music and sound effects | [![pub](https://img.shields.io/pub/v/fledge_audio.svg)](https://pub.dev/packages/fledge_audio) |
 | [fledge_window](packages/fledge_window) | Window management | [![pub](https://img.shields.io/pub/v/fledge_window.svg)](https://pub.dev/packages/fledge_window) |
 | [fledge_tiled](packages/fledge_tiled) | Tiled tilemap support | [![pub](https://img.shields.io/pub/v/fledge_tiled.svg)](https://pub.dev/packages/fledge_tiled) |
+| [fledge_physics](packages/fledge_physics) | Physics and collision detection | [![pub](https://img.shields.io/pub/v/fledge_physics.svg)](https://pub.dev/packages/fledge_physics) |
 
 ## Quick Start
 
