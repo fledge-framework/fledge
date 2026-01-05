@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.7] - 2026-01-05
+
+## [0.1.7] - 2026-01-05
+
+### Features
+
+- **fledge_tiled:** Enable class based tile sorting
+
+### Miscellaneous
+
+- Bump dependencies
+
+
+
 ## [0.1.6] - 2026-01-05
 
 ## [0.1.6] - 2026-01-05
