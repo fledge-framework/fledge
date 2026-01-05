@@ -641,15 +641,14 @@ class _DemoPageState extends State<DemoPage> {
           title: '7. Flutter Integration',
           description:
               'The game widget bridges Flutter\'s widget world and Fledge\'s two-world ECS architecture. '
-              'The key insight is that the game loop has three distinct phases.\n\n'
+              'With RenderPlugin, the game loop is simpler than ever.\n\n'
               'The game loop phases:\n\n'
-              '1. app.tick() - Runs game logic systems in the Main World (movement, spawning, collection)\n\n'
-              '2. extractors.extractAll() - Copies and transforms data from Main World to Render World\n\n'
-              '3. setState() - Triggers Flutter repaint, painter queries Render World\n\n'
+              '1. app.tick() - Runs game logic AND extraction (RenderPlugin runs extraction at CoreStage.last)\n\n'
+              '2. setState() - Triggers Flutter repaint, painter queries Render World\n\n'
               'Key architectural points:\n\n'
-              '• RenderWorld is created alongside the App and persists for the game\'s lifetime\n\n'
-              '• Extractors are registered once during setup, then run every frame\n\n'
-              '• The painter receives the RenderWorld (not the main World!)\n\n'
+              '• RenderPlugin provides RenderWorld and Extractors resources automatically\n\n'
+              '• Extractors are registered once during setup; RenderPlugin runs them every frame\n\n'
+              '• The painter receives the RenderWorld from the world\'s resources\n\n'
               '• Score comes from ExtractedScore in the render world, not GameScore in the main world\n\n'
               'This separation means the Flutter widget layer only ever sees render-ready data. '
               'It doesn\'t know about GridPosition, Player components, or game logic—just pixels and colors.',
@@ -667,15 +666,14 @@ class _DemoPageState extends State<DemoPage> {
               'and shared throughout the widget tree—this is crucial for maintaining consistent state.\n\n'
               '• App creation - We create a single App instance and add core plugins that persist for '
               'the application\'s lifetime: WindowPlugin for window management, TimePlugin for delta time, '
-              'and InputPlugin for input handling.\n\n'
+              'RenderPlugin for two-world extraction, and InputPlugin for input handling.\n\n'
+              '• RenderPlugin - This must be added before any plugin that registers extractors. It provides '
+              'Extractors, RenderWorld, and runs the extraction system automatically at CoreStage.last.\n\n'
               '• Initial tick - The first app.tick() initializes all systems. This is necessary before '
               'Flutter starts because some systems (like WindowPlugin) need to run before rendering.\n\n'
               '• Passing the App - The App is passed to the root widget, which passes it through navigation '
               'to screens that need it. This pattern ensures there\'s ONE App instance, ONE World, and ONE '
               'set of resources throughout the application.\n\n'
-              'Notice that game-specific plugins (GridGamePlugin) are NOT added here. They\'re added when '
-              'entering the game screen. This keeps the main setup focused on infrastructure that\'s always '
-              'needed, while game logic is loaded only when playing.\n\n'
               'For games with loading screens or asset preloading, you\'d extend this pattern: create the App, '
               'tick once to initialize, load assets asynchronously, then start the Flutter widget tree.',
           code: _mainCode,
@@ -1581,13 +1579,14 @@ InputPlugin createInputPlugin() {
 const _widgetCode = '''
 import 'package:flutter/material.dart';
 import 'package:fledge_ecs/fledge_ecs.dart' hide State;
+import 'package:fledge_render/fledge_render.dart';
 
 /// Game widget demonstrating the two-world architecture.
 ///
-/// Key insight: The game loop has THREE phases:
-/// 1. app.tick() - Run game logic (Main World)
-/// 2. extractors.extractAll() - Copy to Render World
-/// 3. setState() - Trigger repaint (queries Render World)
+/// Key insight: RenderPlugin handles extraction automatically!
+/// The game loop is now just TWO phases:
+/// 1. app.tick() - Run game logic AND extraction (at CoreStage.last)
+/// 2. setState() - Trigger repaint (queries Render World)
 class GridGameWidget extends StatefulWidget {
   /// The shared App instance created in main().
   final App app;
@@ -1602,17 +1601,13 @@ class _GridGameWidgetState extends State<GridGameWidget>
     with SingleTickerProviderStateMixin {
   late AnimationController _ticker;
 
-  // Two-world architecture: separate worlds for logic and rendering
-  late RenderWorld _renderWorld;
-  late Extractors _extractors;
-
   App get _app => widget.app;  // Use the shared App from main()
   World get _world => _app.world;
 
   @override
   void initState() {
     super.initState();
-    _setupRenderWorld();
+    _registerExtractors();
     _ticker = AnimationController(
       vsync: this,
       duration: const Duration(hours: 1),
@@ -1621,42 +1616,35 @@ class _GridGameWidgetState extends State<GridGameWidget>
       ..repeat();
   }
 
-  void _setupRenderWorld() {
-    // The App and its plugins were created in main() - we just set up rendering here
-
-    // Create the render world (separate from main world)
-    _renderWorld = RenderWorld();
-
-    // Set up extractors that copy data from main world to render world
-    _extractors = Extractors()
-      ..register(GridConfigExtractor())
-      ..register(ScoreExtractor())
-      ..register(GridEntityExtractor());
+  void _registerExtractors() {
+    // RenderPlugin provides the Extractors resource - just register your extractors
+    final extractors = _world.getResource<Extractors>()!;
+    extractors.register(GridConfigExtractor());
+    extractors.register(ScoreExtractor());
+    extractors.register(GridEntityExtractor());
   }
 
   void _gameLoop() {
-    // 1. Run game logic systems (main world)
+    // Run game logic AND extraction (RenderPlugin runs extraction at CoreStage.last)
     _app.tick();
 
-    // 2. Extract: Copy data from main world to render world
-    _extractors.extractAll(_world, _renderWorld);
-
-    // 3. Trigger repaint (painter will query render world)
+    // Trigger repaint (painter will query render world)
     setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    // Read from render world (extracted data) for display
-    final config = _renderWorld.getResource<ExtractedGridConfig>();
-    final score = _renderWorld.getResource<ExtractedScore>()?.value ?? 0;
+    // Get render world from RenderPlugin resource
+    final renderWorld = _world.getResource<RenderWorld>()!;
+    final config = renderWorld.getResource<ExtractedGridConfig>();
+    final score = renderWorld.getResource<ExtractedScore>()?.value ?? 0;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         CustomPaint(
           // Pass render world to painter (not main world!)
-          painter: GridGamePainter(_renderWorld),
+          painter: GridGamePainter(renderWorld),
           size: Size(config?.totalWidth ?? 298, config?.totalHeight ?? 298),
         ),
         const SizedBox(height: 16),
@@ -1676,6 +1664,7 @@ const _mainCode = '''
 import 'package:flutter/material.dart';
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_input/fledge_input.dart';
+import 'package:fledge_render/fledge_render.dart';
 import 'package:fledge_window/fledge_window.dart';
 
 void main() async {
@@ -1685,8 +1674,9 @@ void main() async {
   final app = App()
     ..addPlugin(WindowPlugin.borderless(title: 'Grid Collector'))
     ..addPlugin(TimePlugin())
-    ..addPlugin(createInputPlugin())  // Input handling with bindings
-    ..addPlugin(GridGamePlugin());     // Game-specific components and systems
+    ..addPlugin(RenderPlugin())         // Sets up RenderWorld, Extractors, extraction system
+    ..addPlugin(createInputPlugin())    // Input handling with bindings
+    ..addPlugin(GridGamePlugin());      // Game-specific components and systems
 
   // Initialize window and input systems
   await app.tick();

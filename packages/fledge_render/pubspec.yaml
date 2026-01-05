@@ -1,20 +1,26 @@
 name: fledge_render
-description: Core render infrastructure for Fledge - render graph, two-world architecture, and render scheduling.
-version: 0.1.5
+description: Core render infrastructure for Fledge - render graph, two-world architecture, render layers, and render scheduling.
+version: 0.1.6
 repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_render
 homepage: https://fledge-framework.dev
 issue_tracker: https://github.com/fledge-framework/fledge/issues
 
 environment:
   sdk: ^3.6.0
+  flutter: ">=3.0.0"
 
 resolution: workspace
 
 dependencies:
+  flutter:
+    sdk: flutter
   fledge_ecs: ^0.1.2
+  vector_math: ^2.2.0
   meta: ^1.17.0
 
 dev_dependencies:
+  flutter_test:
+    sdk: flutter
   test: any
   lints: ^6.0.0
 

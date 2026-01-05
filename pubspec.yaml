@@ -49,6 +49,7 @@ melos:
       packageFilters:
         dirExists: test
         ignore:
+          - fledge_render
           - fledge_render_2d
           - fledge_render_flutter
           - fledge_audio

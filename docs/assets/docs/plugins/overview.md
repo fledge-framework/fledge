@@ -68,13 +68,37 @@ print('FPS: ${frameTime.fps}, Frame time: ${frameTime.frameTime}s');
 - `FrameTime` resource with frame timing metrics
 - `FrameStartSystem` at `CoreStage.first` and `FrameLimiterSystem` at `CoreStage.last`
 
+#### RenderPlugin
+
+Sets up the render extraction system for the two-world architecture. This plugin is provided by `fledge_render`.
+
+```dart
+import 'package:fledge_render/fledge_render.dart';
+
+App()
+  .addPlugin(TimePlugin())
+  .addPlugin(RenderPlugin());  // Must come before plugins that register extractors
+
+// Register extractors in your game plugin
+final extractors = world.getResource<Extractors>()!;
+extractors.register(SpriteExtractor());
+```
+
+**Provides:**
+- `Extractors` resource for registering component extractors
+- `RenderWorld` resource for storing extracted render data
+- `RenderExtractionSystem` that runs at `CoreStage.last`
+
+See [Two-World Architecture](/docs/guides/two-world-architecture) for details on the extraction pattern.
+
 ### First-Party Plugins
 
 First-party plugins are distributed as separate packages and extend Fledge with significant additional functionality:
 
 | Plugin | Package | Description |
 |--------|---------|-------------|
-| [2D Rendering](/docs/plugins/render) | `fledge_render`, `fledge_render_2d`, `fledge_render_flutter` | Sprites, cameras, transforms, and GPU rendering |
+| [Render Infrastructure](/docs/plugins/render_plugin) | `fledge_render` | RenderPlugin, Extractors, RenderWorld, and RenderLayer |
+| [2D Rendering](/docs/plugins/render) | `fledge_render_2d` | Sprites, cameras, transforms, and animation |
 | [Audio](/docs/plugins/audio) | `fledge_audio` | Music, sound effects, and 2D spatial audio |
 | [Input Handling](/docs/plugins/input) | `fledge_input` | Action-based input with keyboard, mouse, and gamepad |
 | [Physics & Collision](/docs/plugins/physics) | `fledge_physics` | Collision detection, resolution, and layer filtering |

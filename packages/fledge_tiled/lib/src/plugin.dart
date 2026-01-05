@@ -17,8 +17,8 @@ import 'systems/tilemap_spawn_system.dart';
 /// ```dart
 /// final app = App()
 ///   .addPlugin(TimePlugin())      // Required for animations
-///   .addPlugin(TiledPlugin())
-///   .addPlugin(Render2DPlugin()); // For rendering
+///   .addPlugin(RenderPlugin())    // For render extraction
+///   .addPlugin(TiledPlugin());
 ///
 /// // Load a tilemap
 /// final loader = AssetTilemapLoader(

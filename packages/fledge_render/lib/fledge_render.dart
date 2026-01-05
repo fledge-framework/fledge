@@ -49,13 +49,11 @@
 ///
 /// ## Usage
 ///
-/// This library is typically used with `fledge_render_2d` for 2D rendering
-/// and `fledge_render_flutter` for Flutter integration:
+/// This library is typically used with `fledge_render_2d` for 2D rendering:
 ///
 /// ```dart
 /// import 'package:fledge_render/fledge_render.dart';
 /// import 'package:fledge_render_2d/fledge_render_2d.dart';
-/// import 'package:fledge_render_flutter/fledge_render_flutter.dart';
 /// ```
 library;
 
@@ -79,6 +77,9 @@ export 'src/extract/extracted_data.dart';
 // Stages
 export 'src/stages/render_schedule.dart';
 export 'src/stages/render_stage.dart';
+
+// Layers
+export 'src/layer/render_layer.dart';
 
 // Plugin
 export 'src/plugin/render_plugin.dart';

@@ -9,6 +9,7 @@ Core render infrastructure for [Fledge](https://fledge-framework.dev) - render g
 - **Two-World Architecture**: Separate game logic from rendering
 - **Render World**: GPU-optimized data structures rebuilt each frame
 - **Extractors**: Transform game data to render data
+- **Render Layers**: Organize rendering into composable layers
 - **Render Graph**: Modular render pipeline definition
 - **RenderPlugin**: Automatic extraction system setup
 
@@ -79,7 +80,6 @@ See the [Two-World Architecture Guide](https://fledge-framework.dev/docs/guides/
 
 - [fledge_ecs](https://pub.dev/packages/fledge_ecs) - Core ECS framework
 - [fledge_render_2d](https://pub.dev/packages/fledge_render_2d) - 2D rendering components
-- [fledge_render_flutter](https://pub.dev/packages/fledge_render_flutter) - Flutter render backend
 
 ## License
 

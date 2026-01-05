@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart' hide Color;
 import 'package:flutter/services.dart';
 import 'package:fledge_ecs/fledge_ecs.dart' hide State;
+import 'package:fledge_render/fledge_render.dart';
 
 import 'extraction.dart';
 import 'resources.dart';
@@ -30,7 +31,7 @@ import 'grid_game_painter.dart';
 ///
 /// Each frame:
 /// 1. Main world systems run (game logic)
-/// 2. Extractors copy and transform data to render world
+/// 2. RenderPlugin's extraction system copies data to render world
 /// 3. Painter queries only the render world
 ///
 /// This decouples rendering from game logic, enabling:
@@ -50,12 +51,6 @@ class _GridGameWidgetState extends State<GridGameWidget>
   late AnimationController _ticker;
   late FocusNode _focusNode;
 
-  /// The render world - contains extracted, GPU-ready data.
-  late RenderWorld _renderWorld;
-
-  /// Extractors that copy data from main world to render world.
-  late Extractors _extractors;
-
   /// Convenience accessor for the main ECS world (game logic).
   World get _world => _app.world;
 
@@ -73,33 +68,25 @@ class _GridGameWidgetState extends State<GridGameWidget>
   }
 
   void _setupGame() {
-    // Create the app with plugins (Main World)
+    // Create the app with plugins
+    // RenderPlugin provides: Extractors, RenderWorld, and RenderExtractionSystem
     _app = App()
       ..addPlugin(TimePlugin())
+      ..addPlugin(RenderPlugin())
       ..addPlugin(GridGamePlugin());
 
-    // Create the render world (separate from main world)
-    _renderWorld = RenderWorld();
-
-    // Set up extractors that copy data from main world to render world
-    _extractors = Extractors()
-      ..register(GridConfigExtractor()) // Extract grid config
-      ..register(ScoreExtractor()) // Extract score
-      ..register(GridEntityExtractor()); // Extract entities with positions
-
-    // Register extractors as a resource (for ExtractSystem to find)
-    _world.insertResource(_extractors);
+    // Register extractors with the Extractors resource from RenderPlugin
+    final extractors = _world.getResource<Extractors>()!;
+    extractors.register(GridConfigExtractor());
+    extractors.register(ScoreExtractor());
+    extractors.register(GridEntityExtractor());
   }
 
   void _gameLoop() {
-    // 1. Run game logic systems (main world)
+    // Run game logic AND extraction (RenderPlugin runs extraction at CoreStage.last)
     _app.tick();
 
-    // 2. Extract: Copy data from main world to render world
-    //    ExtractSystem clears render world, then runs all extractors
-    ExtractSystem().run(_world, _renderWorld);
-
-    // 3. Trigger repaint (painter will query render world)
+    // Trigger repaint (painter will query render world)
     setState(() {});
   }
 
@@ -140,8 +127,9 @@ class _GridGameWidgetState extends State<GridGameWidget>
   @override
   Widget build(BuildContext context) {
     // Read from render world (extracted data) for display
-    final config = _renderWorld.getResource<ExtractedGridConfig>();
-    final score = _renderWorld.getResource<ExtractedScore>()?.value ?? 0;
+    final renderWorld = _world.getResource<RenderWorld>();
+    final config = renderWorld?.getResource<ExtractedGridConfig>();
+    final score = renderWorld?.getResource<ExtractedScore>()?.value ?? 0;
 
     // Fallback to main world config if render world hasn't been populated yet
     final mainConfig = _world.getResource<GridConfig>()!;
@@ -175,7 +163,8 @@ class _GridGameWidgetState extends State<GridGameWidget>
                 borderRadius: BorderRadius.circular(6),
                 child: CustomPaint(
                   // Pass render world to painter (not main world!)
-                  painter: GridGamePainter(_renderWorld),
+                  painter:
+                      renderWorld != null ? GridGamePainter(renderWorld) : null,
                   size: Size(displayWidth, displayHeight),
                 ),
               ),

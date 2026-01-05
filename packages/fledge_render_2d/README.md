@@ -118,8 +118,7 @@ See the [Rendering Guide](https://fledge-framework.dev/docs/guides/rendering) an
 ## Related Packages
 
 - [fledge_ecs](https://pub.dev/packages/fledge_ecs) - Core ECS framework
-- [fledge_render](https://pub.dev/packages/fledge_render) - Render infrastructure
-- [fledge_render_flutter](https://pub.dev/packages/fledge_render_flutter) - Flutter backend
+- [fledge_render](https://pub.dev/packages/fledge_render) - Render infrastructure (RenderPlugin, RenderLayer)
 - [fledge_tiled](https://pub.dev/packages/fledge_tiled) - Tilemap rendering
 
 ## License

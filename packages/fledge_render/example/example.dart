@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_print
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_render/fledge_render.dart';
 
@@ -40,26 +41,28 @@ class SpriteExtractor extends Extractor {
   }
 }
 
+/// Example using RenderPlugin (recommended)
 void main() {
-  final world = World();
-  final renderWorld = RenderWorld();
+  // RenderPlugin sets up Extractors, RenderWorld, and RenderExtractionSystem
+  final app = App()
+    ..addPlugin(TimePlugin())
+    ..addPlugin(RenderPlugin());
 
-  // Register extractors as a resource
-  final extractors = Extractors()..register(SpriteExtractor());
-  world.insertResource(extractors);
+  // Register extractors
+  final extractors = app.world.getResource<Extractors>()!;
+  extractors.register(SpriteExtractor());
 
   // Spawn a game entity
-  world.spawn()
+  app.world.spawn()
     ..insert(Position(100, 200))
     ..insert(Sprite(1));
 
-  // Extract to render world (happens each frame)
-  final extractSystem = ExtractSystem();
-  extractSystem.run(world, renderWorld);
+  // Run one tick - this runs game logic AND extraction automatically
+  app.tick();
 
   // Query render world for drawing
+  final renderWorld = app.world.getResource<RenderWorld>()!;
   for (final (_, sprite) in renderWorld.query1<ExtractedSprite>().iter()) {
-    // ignore: avoid_print
     print('Draw sprite ${sprite.textureId} at (${sprite.x}, ${sprite.y})');
   }
 }

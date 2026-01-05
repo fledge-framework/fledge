@@ -69,6 +69,8 @@ class DocNavigation {
         NavPage(title: 'App & Plugins', path: 'app-plugins'),
         NavPage(
             title: 'Two-World Architecture', path: 'two-world-architecture'),
+        NavPage(
+            title: 'Pixel-Perfect Rendering', path: 'pixel-perfect-rendering'),
       ],
     ),
     NavSection(
@@ -76,6 +78,7 @@ class DocNavigation {
       path: 'plugins',
       pages: [
         NavPage(title: 'Overview', path: 'overview'),
+        NavPage(title: 'Render Infrastructure', path: 'render_plugin'),
         NavPage(title: '2D Rendering', path: 'render'),
         NavPage(title: 'Audio', path: 'audio'),
         NavPage(title: 'Input Handling', path: 'input'),

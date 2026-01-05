@@ -6,13 +6,12 @@ import 'package:fledge_render/fledge_render.dart';
 import 'components.dart';
 import 'resources.dart';
 
-// Re-export the fledge_render classes for convenience
+// Re-export the fledge_render classes used by other files in this demo
 export 'package:fledge_render/fledge_render.dart'
     show
         RenderWorld,
         Extractor,
         Extractors,
-        ExtractSystem,
         ExtractedData,
         SortableExtractedData;
 

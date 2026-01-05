@@ -26,9 +26,9 @@ Fledge brings the power of modern ECS architecture to Flutter, enabling you to b
 | [fledge_ecs](packages/fledge_ecs) | Core ECS framework | [![pub](https://img.shields.io/pub/v/fledge_ecs.svg)](https://pub.dev/packages/fledge_ecs) |
 | [fledge_ecs_annotations](packages/fledge_ecs_annotations) | Annotations for code generation | [![pub](https://img.shields.io/pub/v/fledge_ecs_annotations.svg)](https://pub.dev/packages/fledge_ecs_annotations) |
 | [fledge_ecs_generator](packages/fledge_ecs_generator) | Code generator for components/systems | [![pub](https://img.shields.io/pub/v/fledge_ecs_generator.svg)](https://pub.dev/packages/fledge_ecs_generator) |
-| [fledge_render](packages/fledge_render) | Render infrastructure | [![pub](https://img.shields.io/pub/v/fledge_render.svg)](https://pub.dev/packages/fledge_render) |
+| [fledge_render](packages/fledge_render) | Render infrastructure (RenderPlugin, RenderLayer) | [![pub](https://img.shields.io/pub/v/fledge_render.svg)](https://pub.dev/packages/fledge_render) |
 | [fledge_render_2d](packages/fledge_render_2d) | 2D rendering components | [![pub](https://img.shields.io/pub/v/fledge_render_2d.svg)](https://pub.dev/packages/fledge_render_2d) |
-| [fledge_render_flutter](packages/fledge_render_flutter) | Flutter render backend | [![pub](https://img.shields.io/pub/v/fledge_render_flutter.svg)](https://pub.dev/packages/fledge_render_flutter) |
+| ~~fledge_render_flutter~~ | *Deprecated - merged into fledge_render* | - |
 | [fledge_input](packages/fledge_input) | Action-based input handling | [![pub](https://img.shields.io/pub/v/fledge_input.svg)](https://pub.dev/packages/fledge_input) |
 | [fledge_audio](packages/fledge_audio) | Music and sound effects | [![pub](https://img.shields.io/pub/v/fledge_audio.svg)](https://pub.dev/packages/fledge_audio) |
 | [fledge_window](packages/fledge_window) | Window management | [![pub](https://img.shields.io/pub/v/fledge_window.svg)](https://pub.dev/packages/fledge_window) |

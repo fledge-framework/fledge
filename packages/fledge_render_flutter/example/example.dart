@@ -1,31 +1,34 @@
-// ignore_for_file: avoid_print
-import 'package:fledge_render_flutter/fledge_render_flutter.dart';
+// ignore_for_file: avoid_print, deprecated_member_use_from_same_package
 
-void main() async {
-  // Select the best available backend
-  // Tries flutter_gpu first, falls back to Canvas
-  final backend = await BackendSelector.selectBest();
+// DEPRECATED: This package has been merged into fledge_render.
+// Use package:fledge_render/fledge_render.dart instead.
 
-  print('Using backend: ${backend.runtimeType}');
+import 'package:fledge_render/fledge_render.dart';
+import 'package:flutter/material.dart';
 
-  // Or force Canvas backend (stable, works everywhere)
-  final canvasBackend = CanvasBackend();
-  await canvasBackend.initialize();
+// Example showing migration to fledge_render
 
-  print('Canvas backend initialized');
+/// A simple render layer that paints a colored rectangle.
+class ExampleLayer extends RenderLayer {
+  final Color color;
 
-  // In a real app, you would:
-  // 1. Create textures from images
-  // 2. Begin a frame
-  // 3. Draw sprite batches
-  // 4. End the frame
-  //
-  // Example:
-  // final texture = await backend.createTextureFromData(
-  //   TextureDescriptor(width: 256, height: 256),
-  //   imageData,
-  // );
-  // final frame = backend.beginFrame(size);
-  // frame.drawSpriteBatch(batch);
-  // backend.endFrame(frame);
+  ExampleLayer({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size, RenderWorld renderWorld) {
+    final paint = Paint()..color = color;
+    canvas.drawRect(const Rect.fromLTWH(10, 10, 100, 100), paint);
+  }
+}
+
+void main() {
+  print('fledge_render_flutter is deprecated.');
+  print('Use package:fledge_render/fledge_render.dart instead.');
+  print('');
+  print('RenderLayer and related classes are now in fledge_render:');
+  print('- RenderLayer');
+  print('- CompositeRenderLayer');
+  print('- ClippedRenderLayer');
+  print('- TransformedRenderLayer');
+  print('- ConditionalRenderLayer');
 }
