@@ -109,3 +109,8 @@ export 'src/extraction/tilemap_extractor.dart';
 // Loader
 export 'src/loader/tilemap_loader.dart';
 export 'src/loader/asset_tilemap_loader.dart';
+
+// Pathfinding
+export 'src/pathfinding/collision_grid.dart';
+export 'src/pathfinding/pathfinder.dart';
+export 'src/pathfinding/collision_extractor.dart';

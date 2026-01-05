@@ -12,6 +12,7 @@
 - **Object Layers**: Spawn entities from Tiled objects
 - **Animated Tiles**: Automatic tile animation support
 - **Collision Shapes**: Generate collision from objects and tiles
+- **Pathfinding**: A* pathfinding with collision grid extraction
 - **Custom Properties**: Type-safe access to Tiled properties
 - **Infinite Maps**: Chunk-based loading for large maps
 
@@ -119,6 +120,39 @@ Animated tiles defined in Tiled are automatically animated:
 // Just add the TiledPlugin and tiles animate automatically
 app.addPlugin(TiledPlugin());
 ```
+
+## Pathfinding
+
+Extract collision grids from tilemaps and find paths using A* pathfinding:
+
+```dart
+// Extract collision grid from a loaded tilemap
+final grid = extractCollisionGrid(
+  tilemap,
+  collisionLayers: {'Collision', 'Walls'},
+);
+
+// Or directly from TMX content (useful for preloading)
+final tmxContent = await rootBundle.loadString('assets/maps/level.tmx');
+final grid = extractCollisionGridFromTmx(
+  tmxContent,
+  mapWidth: 100,
+  mapHeight: 100,
+  collisionLayers: {'Collision'},
+);
+
+// Find a path
+final pathfinder = Pathfinder(allowDiagonal: true);
+final result = pathfinder.findPath(grid, startX, startY, goalX, goalY);
+
+if (result.success) {
+  for (final (x, y) in result.path!) {
+    print('Move to ($x, $y)');
+  }
+}
+```
+
+See the [Tilemap Guide](https://fledge-framework.dev/docs/plugins/tiled) for detailed pathfinding documentation.
 
 ## Layer Depth Sorting
 

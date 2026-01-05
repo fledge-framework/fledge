@@ -336,6 +336,248 @@ Both object and tileset collisions support:
 - `PolylineShape` - Open polylines
 - `PointShape` - Single points
 
+## Pathfinding
+
+The `fledge_tiled` package includes a complete pathfinding solution built on collision data from Tiled tilemaps. This enables NPCs, enemies, and other entities to navigate around obstacles.
+
+### CollisionGrid
+
+A `CollisionGrid` represents walkability data for a tilemap as a 2D grid of boolean values:
+
+```dart
+// Create an empty grid (all tiles walkable)
+final grid = CollisionGrid(width: 100, height: 100);
+
+// Query walkability
+if (grid.isWalkable(10, 20)) {
+  print('Tile (10, 20) is walkable');
+}
+
+// Mark tiles as blocked
+grid.setBlocked(10, 20);
+
+// Mark tiles as walkable
+grid.setWalkable(10, 20);
+
+// Check bounds
+if (grid.isInBounds(x, y)) {
+  // Safe to query this tile
+}
+```
+
+### Extracting Collision Data
+
+Extract collision grids from Tiled tilemaps using two approaches:
+
+#### From a Loaded Tilemap
+
+Use `extractCollisionGrid()` when you have a fully loaded tilemap:
+
+```dart
+// Load the tilemap
+final loader = AssetTilemapLoader(
+  loadStringContent: (path) => rootBundle.loadString(path),
+);
+final tilemap = await loader.load('assets/maps/level.tmx', textureLoader);
+
+// Extract collision grid
+final grid = extractCollisionGrid(
+  tilemap,
+  collisionLayers: {'Collision', 'Walls'}, // Layer names containing collision tiles
+);
+
+// Use for pathfinding
+final pathfinder = Pathfinder();
+final result = pathfinder.findPath(grid, 0, 0, 10, 10);
+```
+
+The extractor examines tile layers matching the specified names. Any non-zero tile GID in those layers marks that cell as blocked.
+
+#### From TMX Content (Lightweight)
+
+Use `extractCollisionGridFromTmx()` when you only need collision data without loading textures. This is useful for preloading pathfinding data at game start:
+
+```dart
+// Load raw TMX content
+final tmxContent = await rootBundle.loadString('assets/maps/level.tmx');
+
+// Extract collision grid without loading textures
+final grid = extractCollisionGridFromTmx(
+  tmxContent,
+  mapWidth: 100,   // Map dimensions in tiles
+  mapHeight: 100,
+  collisionLayers: {'Collision'},
+);
+```
+
+This approach is much faster than fully loading tilemaps and is ideal for:
+- Preloading collision data for all maps at game start
+- NPC pathfinding in maps the player hasn't visited yet
+- Memory-efficient collision storage
+
+#### Batch Extraction
+
+Extract collision data from multiple tilemaps at once:
+
+```dart
+final grids = extractCollisionGrids({
+  'level1': level1Tilemap,
+  'level2': level2Tilemap,
+  'dungeon': dungeonTilemap,
+});
+
+final level1Grid = grids['level1']!;
+```
+
+### Pathfinder
+
+The `Pathfinder` class implements A* pathfinding with configurable options:
+
+```dart
+// Create with default options
+final pathfinder = Pathfinder();
+
+// Or configure behavior
+final pathfinder = Pathfinder(
+  maxIterations: 10000,      // Prevent infinite loops on large maps
+  allowDiagonal: true,       // Allow 8-directional movement
+  allowCornerCutting: false, // Don't cut through diagonal obstacles
+);
+```
+
+#### Finding Paths
+
+```dart
+final result = pathfinder.findPath(
+  grid,
+  startX, startY,  // Starting tile coordinates
+  goalX, goalY,    // Destination tile coordinates
+);
+
+if (result.success) {
+  // Path found - result.path is List<(int, int)>
+  for (final (x, y) in result.path!) {
+    print('Move to tile ($x, $y)');
+  }
+} else {
+  // Path not found
+  print('Failed: ${result.failureReason}');
+  // Possible reasons:
+  // - "Start position is blocked"
+  // - "Goal position is blocked"
+  // - "No path found"
+  // - "Max iterations exceeded"
+}
+```
+
+#### PathResult
+
+The `PathResult` class contains:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `path` | `List<(int, int)>?` | List of tile coordinates from start to goal, or null if no path |
+| `success` | `bool` | Whether a valid path was found |
+| `failureReason` | `String?` | Human-readable reason if path finding failed |
+
+#### Pathfinder Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `maxIterations` | `int` | `10000` | Maximum A* iterations before giving up |
+| `allowDiagonal` | `bool` | `false` | Allow 8-directional movement instead of 4 |
+| `allowCornerCutting` | `bool` | `false` | Allow diagonal moves through corners (requires `allowDiagonal`) |
+
+### Use Cases
+
+#### NPC Schedule Movement
+
+Pre-calculate paths for NPCs following schedules:
+
+```dart
+class NpcWorldManager {
+  final Map<NpcId, CollisionGrid> _mapGrids = {};
+  final Pathfinder _pathfinder = Pathfinder(allowDiagonal: true);
+
+  void setNpcPath(NpcId id, int targetX, int targetY) {
+    final state = getState(id);
+    final grid = _mapGrids[state.currentMap];
+    if (grid == null) return;
+
+    final (currentX, currentY) = state.currentTile;
+    final result = _pathfinder.findPath(
+      grid,
+      currentX, currentY,
+      targetX, targetY,
+    );
+
+    if (result.success) {
+      state.setPath(result.path!);
+    }
+  }
+}
+```
+
+#### Preloading All Map Collision Data
+
+Load collision data for all maps at game start for seamless pathfinding:
+
+```dart
+class WorldCollisionData {
+  final Map<MapId, CollisionGrid> _grids = {};
+
+  Future<void> loadAll() async {
+    for (final mapDef in allMaps.values) {
+      final tmxContent = await rootBundle.loadString(
+        'assets/${mapDef.assetPath}',
+      );
+
+      _grids[mapDef.id] = extractCollisionGridFromTmx(
+        tmxContent,
+        mapWidth: mapDef.widthInTiles,
+        mapHeight: mapDef.heightInTiles,
+        collisionLayers: mapDef.collisionLayers,
+      );
+    }
+  }
+
+  CollisionGrid? getGrid(MapId id) => _grids[id];
+}
+```
+
+#### Enemy AI
+
+Use pathfinding for enemy movement toward the player:
+
+```dart
+@system
+void enemyPathfindingSystem(World world) {
+  final grid = world.getResource<CurrentMapCollision>()?.grid;
+  if (grid == null) return;
+
+  final pathfinder = Pathfinder(allowDiagonal: true);
+
+  // Get player position
+  final playerTile = getPlayerTile(world);
+
+  for (final (_, enemy, transform) in world.query2<Enemy, Transform2D>().iter()) {
+    final enemyTile = worldToTile(transform.translation);
+
+    final result = pathfinder.findPath(
+      grid,
+      enemyTile.x, enemyTile.y,
+      playerTile.x, playerTile.y,
+    );
+
+    if (result.success && result.path!.length > 1) {
+      // Move toward next tile in path
+      final (nextX, nextY) = result.path![1];
+      enemy.targetTile = (nextX, nextY);
+    }
+  }
+}
+```
+
 ### Layer Depth Sorting
 
 For top-down games where characters should appear between tilemap layers (e.g., behind roofs but in front of floors), use Tiled's layer `class` attribute combined with Fledge's `DrawLayer` system.
