@@ -340,6 +340,42 @@ class World {
     events.clear();
   }
 
+  /// Returns a set of all currently alive entities.
+  ///
+  /// Useful for capturing a snapshot of entity state that can later be
+  /// passed to [despawnExcept] to reset to that state.
+  ///
+  /// ```dart
+  /// final snapshot = world.getAllEntities();
+  /// // ... spawn more entities ...
+  /// world.despawnExcept(snapshot); // Removes entities spawned after snapshot
+  /// ```
+  Set<Entity> getAllEntities() {
+    return entities.allAlive.toSet();
+  }
+
+  /// Despawns all entities except those in [keep].
+  ///
+  /// Useful for resetting to a previous entity state. Entities in [keep]
+  /// that are no longer alive are silently ignored.
+  ///
+  /// ```dart
+  /// final snapshot = world.getAllEntities();
+  /// // ... spawn temporary entities ...
+  /// world.despawnExcept(snapshot); // Removes only the temporary entities
+  /// ```
+  void despawnExcept(Set<Entity> keep) {
+    final toRemove = <Entity>[];
+    for (final entity in entities.allAlive) {
+      if (!keep.contains(entity)) {
+        toRemove.add(entity);
+      }
+    }
+    for (final entity in toRemove) {
+      despawn(entity);
+    }
+  }
+
   // ===== Resource Methods =====
 
   /// Inserts a resource of type [T].

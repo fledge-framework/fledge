@@ -314,6 +314,39 @@ Use this when transitioning between game sessions (e.g., returning to main menu)
 world.resetGameState();
 ```
 
+### getAllEntities()
+
+```dart
+Set<Entity> getAllEntities()
+```
+
+Returns a set of all currently alive entities. Useful for capturing a snapshot of entity state that can later be passed to `despawnExcept()`.
+
+```dart
+final snapshot = world.getAllEntities();
+// ... spawn more entities ...
+world.despawnExcept(snapshot); // Removes entities spawned after snapshot
+```
+
+### despawnExcept(keep)
+
+```dart
+void despawnExcept(Set<Entity> keep)
+```
+
+Despawns all entities except those in the `keep` set. Useful for resetting to a previous entity state. Entities in `keep` that are no longer alive are silently ignored.
+
+```dart
+// Capture state with camera and player
+final snapshot = world.getAllEntities();
+
+// Spawn temporary map entities
+spawnTilemap(world);
+
+// Later, reset to just camera and player
+world.despawnExcept(snapshot);
+```
+
 ## Example Usage
 
 ```dart

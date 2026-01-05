@@ -120,7 +120,9 @@ class _DemoPageState extends State<DemoPage> {
       if (distance <= 0 && distance.abs() < closestDistance) {
         closestDistance = distance.abs();
         newActiveId = entry.key;
-      } else if (newActiveId == null && distance > 0 && distance < closestDistance) {
+      } else if (newActiveId == null &&
+          distance > 0 &&
+          distance < closestDistance) {
         closestDistance = distance;
         newActiveId = entry.key;
       }
@@ -161,117 +163,117 @@ class _DemoPageState extends State<DemoPage> {
       onKeyEvent: _handleKeyEvent,
       child: SelectionArea(
         child: Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            InkWell(
-              onTap: () => context.go('/'),
-              child: Text(
-                'Fledge',
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  color: FledgeTheme.primaryColor,
-                  fontWeight: FontWeight.bold,
+          appBar: AppBar(
+            title: Row(
+              children: [
+                InkWell(
+                  onTap: () => context.go('/'),
+                  child: Text(
+                    'Fledge',
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      color: FledgeTheme.primaryColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Demo',
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    color: theme.textTheme.bodyMedium?.color
+                        ?.withValues(alpha: 0.6),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              _SearchButton(onPressed: _openSearch),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: const Icon(Icons.home_rounded),
+                onPressed: () => context.go('/'),
+                tooltip: 'Home',
+              ),
+              const SizedBox(width: 8),
+            ],
+          ),
+          drawer: isMediumScreen
+              ? null
+              : Drawer(
+                  child: DocSidebar(
+                    currentSection: 'demos',
+                    currentPage: 'grid-game',
+                    onClose: () => Navigator.of(context).pop(),
+                  ),
+                ),
+          body: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Sidebar (visible on medium+ screens)
+              if (isMediumScreen)
+                SizedBox(
+                  width: 280,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        right: BorderSide(
+                          color: theme.dividerColor,
+                        ),
+                      ),
+                    ),
+                    child: const DocSidebar(
+                      currentSection: 'demos',
+                      currentPage: 'grid-game',
+                    ),
+                  ),
+                ),
+              // Main content
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: _scrollController,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isWideScreen ? 64 : 32,
+                    vertical: 32,
+                  ),
+                  child: Center(
+                    child: Container(
+                      constraints: const BoxConstraints(maxWidth: 900),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildHeader(theme),
+                          const SizedBox(height: 24),
+                          _buildDisclaimer(theme),
+                          const SizedBox(height: 32),
+                          _buildGameSection(theme),
+                          const SizedBox(height: 48),
+                          _buildCodeWalkthrough(theme),
+                          const SizedBox(height: 64),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'Demo',
-              style: theme.textTheme.headlineMedium?.copyWith(
-                color:
-                    theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
-              ),
-            ),
-          ],
+              // Table of contents (visible on wide screens)
+              if (isWideScreen)
+                SizedBox(
+                  width: 240,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        left: BorderSide(
+                          color: theme.dividerColor,
+                        ),
+                      ),
+                    ),
+                    padding: const EdgeInsets.all(24),
+                    child: _buildTableOfContents(theme),
+                  ),
+                ),
+            ],
+          ),
         ),
-        actions: [
-          _SearchButton(onPressed: _openSearch),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.home_rounded),
-            onPressed: () => context.go('/'),
-            tooltip: 'Home',
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      drawer: isMediumScreen
-          ? null
-          : Drawer(
-              child: DocSidebar(
-                currentSection: 'demos',
-                currentPage: 'grid-game',
-                onClose: () => Navigator.of(context).pop(),
-              ),
-            ),
-      body: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Sidebar (visible on medium+ screens)
-          if (isMediumScreen)
-            SizedBox(
-              width: 280,
-              child: Container(
-                decoration: BoxDecoration(
-                  border: Border(
-                    right: BorderSide(
-                      color: theme.dividerColor,
-                    ),
-                  ),
-                ),
-                child: const DocSidebar(
-                  currentSection: 'demos',
-                  currentPage: 'grid-game',
-                ),
-              ),
-            ),
-          // Main content
-          Expanded(
-            child: SingleChildScrollView(
-              controller: _scrollController,
-              padding: EdgeInsets.symmetric(
-                horizontal: isWideScreen ? 64 : 32,
-                vertical: 32,
-              ),
-              child: Center(
-                child: Container(
-                  constraints: const BoxConstraints(maxWidth: 900),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildHeader(theme),
-                      const SizedBox(height: 24),
-                      _buildDisclaimer(theme),
-                      const SizedBox(height: 32),
-                      _buildGameSection(theme),
-                      const SizedBox(height: 48),
-                      _buildCodeWalkthrough(theme),
-                      const SizedBox(height: 64),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          // Table of contents (visible on wide screens)
-          if (isWideScreen)
-            SizedBox(
-              width: 240,
-              child: Container(
-                decoration: BoxDecoration(
-                  border: Border(
-                    left: BorderSide(
-                      color: theme.dividerColor,
-                    ),
-                  ),
-                ),
-                padding: const EdgeInsets.all(24),
-                child: _buildTableOfContents(theme),
-              ),
-            ),
-        ],
-      ),
-      ),
       ),
     );
   }
@@ -327,7 +329,8 @@ class _DemoPageState extends State<DemoPage> {
                             ? FledgeTheme.primaryColor
                             : theme.textTheme.bodySmall?.color
                                 ?.withValues(alpha: 0.7),
-                        fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                        fontWeight:
+                            isActive ? FontWeight.w600 : FontWeight.normal,
                       ),
                     ),
                   ),

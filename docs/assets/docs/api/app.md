@@ -215,6 +215,65 @@ void dispose() {
 }
 ```
 
+## Game Checkpoint Methods
+
+These methods support managing entity state within a game session, useful for map transitions where you want to preserve persistent entities (camera, player) while cleaning up temporary entities (tiles, NPCs, objects).
+
+### markGameCheckpoint()
+
+```dart
+void markGameCheckpoint()
+```
+
+Marks the current entity state as the game checkpoint. All entities that exist at this point will be preserved when `resetToGameCheckpoint()` is called.
+
+```dart
+// After spawning persistent entities
+spawnCamera(app.world);
+spawnPlayer(app.world);
+app.markGameCheckpoint(); // These entities will persist
+
+// Map entities spawned after this point can be cleaned up
+await spawnTilemap(app.world);
+```
+
+### resetToGameCheckpoint()
+
+```dart
+void resetToGameCheckpoint()
+```
+
+Resets to the game checkpoint state:
+1. Despawns all entities spawned after `markGameCheckpoint()` was called
+2. Clears event queues
+3. Preserves resources, plugins, and systems
+
+Throws `StateError` if `markGameCheckpoint()` was not called first.
+
+```dart
+// On map transition
+void loadNewMap() async {
+  app.resetToGameCheckpoint(); // Removes tilemap, keeps camera/player
+  await spawnNewTilemap(app.world);
+}
+```
+
+### clearGameCheckpoint()
+
+```dart
+void clearGameCheckpoint()
+```
+
+Clears the game checkpoint without resetting. Note that `resetToSessionCheckpoint()` automatically clears the game checkpoint.
+
+### hasGameCheckpoint
+
+```dart
+bool get hasGameCheckpoint
+```
+
+Returns `true` if a game checkpoint has been set.
+
 ## Callbacks
 
 ### onStart(callback)

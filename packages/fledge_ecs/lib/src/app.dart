@@ -1,5 +1,6 @@
 import 'package:fledge_ecs_annotations/fledge_ecs_annotations.dart';
 
+import 'entity.dart';
 import 'plugin.dart';
 import 'state/state_conditions.dart';
 import 'state/state_machine.dart';
@@ -49,6 +50,10 @@ class App {
   /// The number of plugins that are considered session-level.
   /// Set by [markSessionCheckpoint].
   int _sessionPluginCount = 0;
+
+  /// Entity snapshot for game-level checkpoint.
+  /// Set by [markGameCheckpoint].
+  Set<Entity>? _gameCheckpointEntities;
 
   /// Callback for each frame tick.
   void Function(App app)? _onTick;
@@ -357,7 +362,68 @@ class App {
 
     // 4. Reset world game state
     world.resetGameState();
+
+    // 5. Clear game checkpoint since entities are gone
+    _gameCheckpointEntities = null;
   }
+
+  /// Marks the current entity state as the game checkpoint.
+  ///
+  /// All entities that exist at this point will be preserved when
+  /// [resetToGameCheckpoint] is called. Entities spawned after this
+  /// checkpoint will be despawned.
+  ///
+  /// This is useful for map transitions where you want to preserve
+  /// persistent entities (camera, player) but clean up map-specific
+  /// entities (tiles, NPCs, objects).
+  ///
+  /// ```dart
+  /// // Spawn persistent entities
+  /// spawnCamera(app.world);
+  /// spawnPlayer(app.world);
+  /// app.markGameCheckpoint(); // These entities will persist
+  ///
+  /// // Later, spawn map entities...
+  /// spawnTilemap(app.world);
+  ///
+  /// // On map transition:
+  /// app.resetToGameCheckpoint(); // Removes tilemap, keeps camera/player
+  /// spawnNewTilemap(app.world);
+  /// ```
+  void markGameCheckpoint() {
+    _gameCheckpointEntities = world.getAllEntities();
+  }
+
+  /// Resets to the game checkpoint state.
+  ///
+  /// Despawns all entities that were spawned after [markGameCheckpoint]
+  /// was called. Clears event queues but preserves resources, plugins,
+  /// and systems.
+  ///
+  /// Throws [StateError] if [markGameCheckpoint] was not called first.
+  ///
+  /// Call this before loading a new map to clean up the old one.
+  void resetToGameCheckpoint() {
+    if (_gameCheckpointEntities == null) {
+      throw StateError(
+          'No game checkpoint set. Call markGameCheckpoint() first.');
+    }
+    world.despawnExcept(_gameCheckpointEntities!);
+    world.events.clear();
+  }
+
+  /// Clears the game checkpoint without resetting.
+  ///
+  /// Call this when returning to the main menu (before [resetToSessionCheckpoint])
+  /// if you want to explicitly clear the checkpoint.
+  ///
+  /// Note: [resetToSessionCheckpoint] automatically clears the game checkpoint.
+  void clearGameCheckpoint() {
+    _gameCheckpointEntities = null;
+  }
+
+  /// Returns true if a game checkpoint has been set.
+  bool get hasGameCheckpoint => _gameCheckpointEntities != null;
 
   /// Updates a single frame without entering the game loop.
   ///
