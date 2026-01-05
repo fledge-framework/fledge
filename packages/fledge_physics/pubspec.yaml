@@ -14,9 +14,9 @@ resolution: workspace
 dependencies:
   flutter:
     sdk: flutter
-  fledge_ecs: ^0.1.2
-  fledge_render_2d: ^0.1.2
-  fledge_tiled: ^0.1.2
+  fledge_ecs: ^0.1.6
+  fledge_render_2d: ^0.1.6
+  fledge_tiled: ^0.1.6
 
 dev_dependencies:
   flutter_test:

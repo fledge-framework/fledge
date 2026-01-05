@@ -140,7 +140,8 @@ class TilemapExtractor extends Extractor {
       final drawLayer = (layer.layerClass == 'above')
           ? DrawLayer.foreground
           : DrawLayer.ground;
-      final sortKey = drawLayer.sortKey(subOrder: tile.y * 100 + layer.layerIndex);
+      final sortKey =
+          drawLayer.sortKey(subOrder: tile.y * 100 + layer.layerIndex);
 
       renderWorld.spawn().insert(ExtractedTile(
             texture: tileset.atlas.texture,

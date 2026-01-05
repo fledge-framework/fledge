@@ -12,7 +12,7 @@ environment:
 resolution: workspace
 
 dependencies:
-  fledge_ecs: ^0.1.2
+  fledge_ecs: ^0.1.6
   flutter:
     sdk: flutter
   window_manager: ^0.5.1
