@@ -194,6 +194,7 @@ class TilemapSpawnSystem implements System {
         offset: Offset(layer.offsetX, layer.offsetY),
         parallax: Offset(layer.parallaxX, layer.parallaxY),
         tintColor: _parseColor(layer.tintColorHex),
+        layerClass: layer.class_,
         tiles: tiles,
       ))
       ..insert(Transform2D())

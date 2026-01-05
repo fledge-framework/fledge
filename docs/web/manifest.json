@@ -1,13 +1,16 @@
 {
-    "name": "fledge_docs",
-    "short_name": "fledge_docs",
+    "name": "Fledge Documentation",
+    "short_name": "Fledge Docs",
+    "description": "Official documentation for the Fledge ECS game framework for Flutter. Build high-performance 2D games with clean architecture.",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#0F172A",
+    "theme_color": "#6366F1",
+    "orientation": "any",
     "prefer_related_applications": false,
+    "categories": ["developer", "documentation", "games"],
+    "lang": "en-US",
+    "scope": "/",
     "icons": [
         {
             "src": "icons/Icon-192.png",
@@ -30,6 +33,35 @@
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "maskable"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Getting Started",
+            "short_name": "Start",
+            "description": "Get started with Fledge",
+            "url": "/docs/getting-started/introduction",
+            "icons": [{"src": "icons/Icon-192.png", "sizes": "192x192"}]
+        },
+        {
+            "name": "API Reference",
+            "short_name": "API",
+            "description": "Fledge API documentation",
+            "url": "/docs/api/world",
+            "icons": [{"src": "icons/Icon-192.png", "sizes": "192x192"}]
+        },
+        {
+            "name": "Plugins",
+            "short_name": "Plugins",
+            "description": "Fledge plugin documentation",
+            "url": "/docs/plugins/overview",
+            "icons": [{"src": "icons/Icon-192.png", "sizes": "192x192"}]
+        }
+    ],
+    "related_applications": [
+        {
+            "platform": "web",
+            "url": "https://pub.dev/packages/fledge_ecs"
         }
     ]
 }

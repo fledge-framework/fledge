@@ -336,6 +336,102 @@ Both object and tileset collisions support:
 - `PolylineShape` - Open polylines
 - `PointShape` - Single points
 
+### Layer Depth Sorting
+
+For top-down games where characters should appear between tilemap layers (e.g., behind roofs but in front of floors), use Tiled's layer `class` attribute combined with Fledge's `DrawLayer` system.
+
+#### Setting Up Layers in Tiled
+
+In Tiled 1.9+, you can assign a "Class" to any layer:
+
+1. Select a layer in the Layers panel
+2. In the Properties panel, set the `Class` field to `above`
+3. Layers with `class="above"` will render in front of characters
+4. Layers without the class render behind characters
+
+```
+TMX Layer Structure:
+├── Collision (hidden)    → Not rendered
+├── Layer 0 (floor)       → DrawLayer.ground    (sortKey: 100,000+)
+├── Layer 1 (furniture)   → DrawLayer.ground    (sortKey: 100,000+)
+├── Layer 2 class="above" → DrawLayer.foreground (sortKey: 300,000+)
+└── Layer 3 class="above" → DrawLayer.foreground (sortKey: 300,000+)
+
+Character sprites use DrawLayer.characters (sortKey: 200,000+)
+```
+
+#### How It Works
+
+The `TilemapExtractor` checks each layer's `layerClass` property:
+
+```dart
+// In TilemapExtractor._extractLayer():
+final drawLayer = (layer.layerClass == 'above')
+    ? DrawLayer.foreground
+    : DrawLayer.ground;
+final sortKey = drawLayer.sortKey(subOrder: tile.y * 100 + layer.layerIndex);
+```
+
+This places tiles into the correct `DrawLayer` range:
+
+| DrawLayer | Sort Key Range | Purpose |
+|-----------|---------------|---------|
+| `ground` | 100,000 - 199,999 | Tile layers without `class="above"` |
+| `characters` | 200,000 - 299,999 | Player, NPCs, enemies |
+| `foreground` | 300,000 - 399,999 | Tile layers with `class="above"` |
+
+#### Rendering Pipeline Integration
+
+To render tiles correctly with characters, your render pipeline needs to handle the sortKey ranges:
+
+```dart
+// Example: Split tilemap rendering into ground and foreground passes
+layers = [
+  // Ground tiles (below characters)
+  TilemapLayer(
+    textureManager: textureManager,
+    maxSortKey: DrawLayer.characters.sortKey(),
+  ),
+  // Characters (sorted by Y position within their range)
+  CharacterLayer(textureManager: textureManager),
+  // Foreground tiles (above characters)
+  TilemapLayer(
+    textureManager: textureManager,
+    minSortKey: DrawLayer.foreground.sortKey(),
+  ),
+];
+```
+
+#### Accessing Layer Class
+
+Query the layer class at runtime:
+
+```dart
+for (final (_, layer) in world.query1<TileLayer>().iter()) {
+  if (layer.layerClass == 'above') {
+    print('${layer.name} renders above characters');
+  } else {
+    print('${layer.name} renders below characters');
+  }
+}
+```
+
+#### Character Sort Key
+
+Ensure your character extraction uses `DrawLayer.characters`:
+
+```dart
+class ExtractedCharacter with ExtractedData, SortableExtractedData {
+  @override
+  final int sortKey;
+
+  ExtractedCharacter(Transform2D transform)
+      : sortKey = DrawLayer.characters.sortKey(
+          subOrder: (transform.translation.y * 100).toInt(),
+        );
+}
+```
+
 ### Layer Visibility
 
 Toggle layer visibility at runtime:
@@ -411,6 +507,7 @@ Component for tile layers:
 |----------|------|-------------|
 | `name` | `String` | Layer name from Tiled |
 | `layerIndex` | `int` | Rendering order |
+| `layerClass` | `String?` | Layer class from Tiled (e.g., `"above"` for foreground layers) |
 | `opacity` | `double` | Layer opacity (0.0-1.0) |
 | `visible` | `bool` | Visibility flag |
 | `offset` | `Offset` | Pixel offset |
@@ -615,10 +712,20 @@ for (final (_, tile) in renderWorld.query1<ExtractedTile>().iter()) {
   final flipV = tile.flipVertical;
   final flipD = tile.flipDiagonal;
 
-  // Sort key for depth ordering (uses DrawLayerExtension.sortKeyFromIndex)
+  // Sort key for depth ordering
+  // Uses DrawLayer.ground (100,000+) or DrawLayer.foreground (300,000+)
+  // based on layer.layerClass == 'above'
   final sortKey = tile.sortKey;
 }
 ```
+
+The sort key is computed using `DrawLayer` ranges, enabling proper depth sorting with characters:
+
+- Layers without `class="above"` → `DrawLayer.ground` (100,000 - 199,999)
+- Character sprites → `DrawLayer.characters` (200,000 - 299,999)
+- Layers with `class="above"` → `DrawLayer.foreground` (300,000 - 399,999)
+
+See [Layer Depth Sorting](#layer-depth-sorting) for details on setting this up in Tiled.
 
 ### Data Flow Overview
 
@@ -674,3 +781,4 @@ final v1 = srcRect.bottom / texHeight;
 - [Plugins Overview](/docs/plugins/overview) - Plugin system introduction
 - [Hierarchies Guide](/docs/guides/hierarchies) - Entity parent-child relationships
 - [Two-World Architecture](/docs/guides/two-world-architecture) - Render extraction and the render pipeline
+- [Pixel-Perfect Rendering](/docs/guides/pixel-perfect-rendering) - Preventing tile seams

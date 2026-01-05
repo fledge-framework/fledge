@@ -39,6 +39,14 @@ class TileLayer {
   /// Tint color applied to all tiles in this layer.
   Color tintColor;
 
+  /// The layer class from Tiled (e.g., "above" for foreground layers).
+  ///
+  /// This corresponds to the `class` attribute in Tiled 1.9+, used for
+  /// custom layer classification. Common values:
+  /// - `null` or empty: Normal ground layer
+  /// - `"above"`: Layer renders above characters (foreground)
+  final String? layerClass;
+
   /// Pre-computed tile data for efficient rendering.
   ///
   /// Only populated for finite maps. For infinite maps, use [chunks].
@@ -58,6 +66,7 @@ class TileLayer {
     this.offset = Offset.zero,
     this.parallax = const Offset(1.0, 1.0),
     this.tintColor = const Color(0xFFFFFFFF),
+    this.layerClass,
     this.tiles,
     this.chunks,
   });

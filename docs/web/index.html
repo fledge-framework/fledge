@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -18,21 +18,155 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Primary Meta Tags -->
+  <title>Fledge - Flutter ECS Game Framework</title>
+  <meta name="title" content="Fledge - Flutter ECS Game Framework">
+  <meta name="description" content="Fledge is a high-performance Entity Component System (ECS) game framework for Flutter. Build 2D games with clean architecture, efficient rendering, and powerful tools for tilemaps, physics, and more.">
+  <meta name="keywords" content="Flutter, ECS, game framework, game engine, Entity Component System, Dart, game development, 2D games, tilemaps, Tiled, game programming">
+  <meta name="author" content="Fledge Framework">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://fledge-framework.dev/">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://fledge-framework.dev/">
+  <meta property="og:title" content="Fledge - Flutter ECS Game Framework">
+  <meta property="og:description" content="Build high-performance 2D games in Flutter with Fledge's Entity Component System. Clean architecture, efficient rendering, Tiled tilemap support, and more.">
+  <meta property="og:image" content="https://fledge-framework.dev/images/og-image.png">
+  <meta property="og:site_name" content="Fledge Framework">
+  <meta property="og:locale" content="en_US">
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content="https://fledge-framework.dev/">
+  <meta property="twitter:title" content="Fledge - Flutter ECS Game Framework">
+  <meta property="twitter:description" content="Build high-performance 2D games in Flutter with Fledge's Entity Component System. Clean architecture, efficient rendering, Tiled tilemap support, and more.">
+  <meta property="twitter:image" content="https://fledge-framework.dev/images/og-image.png">
+
+  <!-- Theme Color -->
+  <meta name="theme-color" content="#6366F1">
+  <meta name="msapplication-TileColor" content="#6366F1">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="fledge_docs">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Fledge Docs">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon.png">
 
-  <title>fledge_docs</title>
+  <!-- Manifest -->
   <link rel="manifest" href="manifest.json">
+
+  <!-- Structured Data (JSON-LD) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Fledge",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Cross-platform",
+    "description": "A high-performance Entity Component System (ECS) game framework for Flutter. Build 2D games with clean architecture, efficient rendering, and powerful tools.",
+    "url": "https://fledge-framework.dev",
+    "author": {
+      "@type": "Organization",
+      "name": "Fledge Framework"
+    },
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "programmingLanguage": ["Dart", "Flutter"],
+    "softwareRequirements": "Flutter SDK 3.0+",
+    "license": "https://opensource.org/licenses/Apache-2.0"
+  }
+  </script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Fledge Documentation",
+    "url": "https://fledge-framework.dev",
+    "description": "Official documentation for the Fledge ECS game framework for Flutter",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://fledge-framework.dev/docs?q={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Fledge Framework",
+    "url": "https://fledge-framework.dev",
+    "logo": "https://fledge-framework.dev/icons/Icon-512.png",
+    "sameAs": [
+      "https://github.com/fledge-framework/fledge",
+      "https://pub.dev/packages/fledge_ecs"
+    ]
+  }
+  </script>
+
+  <!-- Preconnect to external resources -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 </head>
 <body>
+  <!-- Noscript fallback for SEO -->
+  <noscript>
+    <style>
+      .noscript-content {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 20px;
+        line-height: 1.6;
+      }
+      .noscript-content h1 { color: #6366F1; }
+      .noscript-content a { color: #6366F1; }
+    </style>
+    <div class="noscript-content">
+      <h1>Fledge - Flutter ECS Game Framework</h1>
+      <p>Fledge is a high-performance Entity Component System (ECS) game framework for Flutter. Build 2D games with clean architecture, efficient rendering, and powerful tools.</p>
+
+      <h2>Features</h2>
+      <ul>
+        <li><strong>Entity Component System</strong> - Clean separation of data and logic</li>
+        <li><strong>High Performance</strong> - Optimized for thousands of entities</li>
+        <li><strong>Two-World Architecture</strong> - Separate game logic from rendering</li>
+        <li><strong>Tiled Support</strong> - Load and render TMX/TSX tilemaps</li>
+        <li><strong>Plugin System</strong> - Extend functionality with plugins</li>
+      </ul>
+
+      <h2>Quick Links</h2>
+      <ul>
+        <li><a href="https://github.com/fledge-framework/fledge">GitHub Repository</a></li>
+        <li><a href="https://pub.dev/packages/fledge_ecs">pub.dev Package</a></li>
+      </ul>
+
+      <h2>Documentation Sections</h2>
+      <ul>
+        <li>Getting Started - Introduction, Installation, Quick Start</li>
+        <li>Guides - Entities, Components, Systems, Queries, Resources</li>
+        <li>Plugins - Rendering, Audio, Input, Physics, Tilemaps</li>
+        <li>API Reference - Complete API documentation</li>
+        <li>Examples - Code examples and tutorials</li>
+      </ul>
+
+      <p><em>Please enable JavaScript to use the interactive documentation.</em></p>
+    </div>
+  </noscript>
+
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

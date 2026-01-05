@@ -8,6 +8,7 @@
 
 - **TMX/TSX Parsing**: Load Tiled maps and external tilesets
 - **Tile Layers**: Efficient rendering with atlas batching
+- **Layer Depth Sorting**: Render characters between tilemap layers using `class="above"`
 - **Object Layers**: Spawn entities from Tiled objects
 - **Animated Tiles**: Automatic tile animation support
 - **Collision Shapes**: Generate collision from objects and tiles
@@ -118,6 +119,33 @@ Animated tiles defined in Tiled are automatically animated:
 // Just add the TiledPlugin and tiles animate automatically
 app.addPlugin(TiledPlugin());
 ```
+
+## Layer Depth Sorting
+
+For top-down games where characters should appear between tilemap layers (e.g., behind roofs but in front of floors), use Tiled's layer `class` attribute:
+
+1. In Tiled, set `class="above"` on layers that should render in front of characters
+2. The `TilemapExtractor` automatically assigns these layers to `DrawLayer.foreground`
+3. Normal layers are assigned to `DrawLayer.ground`
+
+```
+TMX Layer Setup:
+├── Layer 0 (ground)      → DrawLayer.ground    (behind characters)
+├── Layer 1 (objects)     → DrawLayer.ground    (behind characters)
+├── Layer 2 class="above" → DrawLayer.foreground (in front of characters)
+└── Layer 3 class="above" → DrawLayer.foreground (in front of characters)
+```
+
+Access the layer class in code:
+
+```dart
+for (final (_, layer) in world.query1<TileLayer>().iter()) {
+  print('${layer.name}: class=${layer.layerClass}');
+  // Output: "Layer 2: class=above"
+}
+```
+
+See the [Tilemap Guide](https://fledge-framework.dev/docs/plugins/tiled) for render pipeline integration.
 
 ## Documentation
 

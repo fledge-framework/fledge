@@ -1,0 +1,31 @@
+# Robots.txt for Fledge Documentation
+# https://fledge-framework.dev
+
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://fledge-framework.dev/sitemap.xml
+
+# Crawl-delay for polite crawling
+Crawl-delay: 1
+
+# Allow all major search engines
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+User-agent: Slurp
+Allow: /
+
+# Block build artifacts and development files
+Disallow: /build/
+Disallow: /*.dart$
+Disallow: /flutter_bootstrap.js
+Disallow: /flutter_service_worker.js
+Disallow: /version.json
