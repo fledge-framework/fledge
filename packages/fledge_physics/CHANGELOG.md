@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.6] - 2026-01-05
+
+## [Unreleased]
+
+### Bug Fixes
+
+- **fledge_physics:** Add flutter dependency to package
+
+
+
 ## [0.1.5] - 2026-01-04
 
 ## [0.1.5] - 2026-01-04

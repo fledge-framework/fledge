@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.1.6] - 2026-01-05
+
+## [0.1.6] - 2026-01-05
+
+### Bug Fixes
+
+- **fledge_render_flutter:** Clean up deprecated api files
+
+### Features
+
+- **fledge_render:** Add plugin to auto register extractors
+
+### Refactoring
+
+- **fledge_render:** Combine core systems from fledge_render_flutter
+
+
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),

@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.1.6] - 2026-01-05
+
+## [0.1.6] - 2026-01-05
+
+### Bug Fixes
+
+- **fledge_physics:** Add flutter dependency to package
+- **fledge_render_flutter:** Clean up deprecated api files
+
+### Features
+
+- **fledge_ecs:** Add game checkpoint api
+- **fledge_render:** Add plugin to auto register extractors
+
+### Miscellaneous
+
+- **readme:** Add documentation for fledge_physics
+
+### Refactoring
+
+- **fledge_render:** Combine core systems from fledge_render_flutter
+
+
+
 ## [0.1.5] - 2026-01-04
 
 ## [0.1.5] - 2026-01-04

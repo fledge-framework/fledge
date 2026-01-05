@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.6] - 2026-01-05
+
+## [Unreleased]
+
+### Refactoring
+
+- **fledge_render:** Combine core systems from fledge_render_flutter
+
+
+
 ## [0.1.5] - 2026-01-04
 
 
