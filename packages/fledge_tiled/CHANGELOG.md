@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.9] - 2026-01-06
+
+## [0.1.9] - 2026-01-06
+
+### Features
+
+- **fledge_tiled:** Add CulledTilemapExtractor
+
+
+
 ## [0.1.8] - 2026-01-06
 
 ## [Unreleased]
