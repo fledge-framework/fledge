@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.8] - 2026-01-06
+
+## [Unreleased]
+
+### Features
+
+- **fledge_tiled:** Add support for pathfinding
+
+
+
 ## [0.1.7] - 2026-01-05
 
 ## [0.1.7] - 2026-01-05

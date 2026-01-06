@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.1.8] - 2026-01-06
+
+## [0.1.8] - 2026-01-06
+
+### Features
+
+- **fledge_tiled:** Add support for pathfinding
+- **fledge_yarn:** Create fledge_yarn for yarnspinner
+
+### Miscellaneous
+
+- **lint:** Format all files
+
+
+
 ## [0.1.7] - 2026-01-05
 
 ## [0.1.7] - 2026-01-05
