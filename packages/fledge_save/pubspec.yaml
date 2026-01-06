@@ -1,6 +1,6 @@
 name: fledge_save
 description: Save/load system for Fledge games with resource aggregation and version migration support.
-version: 0.1.9
+version: 0.1.10
 resolution: workspace
 
 repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_save

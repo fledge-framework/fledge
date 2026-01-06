@@ -1,6 +1,6 @@
 name: fledge_render_flutter
 description: "[Deprecated] Use fledge_render instead. This package re-exports fledge_render for backwards compatibility."
-version: 0.1.9
+version: 0.1.10
 repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_render_flutter
 homepage: https://fledge-framework.dev
 issue_tracker: https://github.com/fledge-framework/fledge/issues

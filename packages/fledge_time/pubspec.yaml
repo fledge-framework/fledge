@@ -1,6 +1,6 @@
 name: fledge_time
 description: Calendar and time system for Fledge games with configurable day/night cycles, seasons, and time scaling.
-version: 0.1.9
+version: 0.1.10
 resolution: workspace
 
 repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_time
