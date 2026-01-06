@@ -85,6 +85,7 @@ class DocNavigation {
         NavPage(title: 'Physics & Collision', path: 'physics'),
         NavPage(title: 'Window Management', path: 'window'),
         NavPage(title: 'Tiled Tilemaps', path: 'tiled'),
+        NavPage(title: 'Yarn Dialogue', path: 'yarn'),
       ],
     ),
     NavSection(

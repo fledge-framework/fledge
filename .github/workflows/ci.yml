@@ -74,6 +74,7 @@ jobs:
           - fledge_input
           - fledge_window
           - fledge_tiled
+          - fledge_yarn
           - fledge_physics
     steps:
       - uses: actions/checkout@v4

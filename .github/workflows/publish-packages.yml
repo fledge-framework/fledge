@@ -108,6 +108,7 @@ jobs:
             "fledge_window"
             "fledge_input"
             "fledge_tiled"
+            "fledge_yarn"
             "fledge_physics"
           )
 
@@ -196,6 +197,7 @@ jobs:
             "fledge_window"
             "fledge_input"
             "fledge_tiled"
+            "fledge_yarn"
             "fledge_physics"
           )
 

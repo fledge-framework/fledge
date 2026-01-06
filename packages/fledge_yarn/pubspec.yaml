@@ -1,0 +1,30 @@
+name: fledge_yarn
+description: Yarn Spinner dialogue system for the Fledge ECS game framework. Parse .yarn files and run interactive dialogues.
+version: 0.1.7
+repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_yarn
+homepage: https://fledge-framework.dev
+issue_tracker: https://github.com/fledge-framework/fledge/issues
+
+environment:
+  sdk: ^3.6.0
+  flutter: ">=3.0.0"
+
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+  fledge_ecs: ^0.1.7
+  meta: ^1.17.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  lints: ^6.0.0
+
+topics:
+  - ecs
+  - game-engine
+  - dialogue
+  - yarn-spinner
+  - flutter-games

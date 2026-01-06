@@ -104,6 +104,7 @@ First-party plugins are distributed as separate packages and extend Fledge with 
 | [Physics & Collision](/docs/plugins/physics) | `fledge_physics` | Collision detection, resolution, and layer filtering |
 | [Window Management](/docs/plugins/window) | `fledge_window` | Fullscreen, borderless, and windowed modes |
 | [Tiled Tilemaps](/docs/plugins/tiled) | `fledge_tiled` | Load and render Tiled TMX/TSX tilemaps |
+| [Yarn Dialogue](/docs/plugins/yarn) | `fledge_yarn` | Yarn Spinner dialogue system for branching narratives |
 
 ## Creating Custom Plugins
 
