@@ -969,6 +969,86 @@ The sort key is computed using `DrawLayer` ranges, enabling proper depth sorting
 
 See [Layer Depth Sorting](#layer-depth-sorting) for details on setting this up in Tiled.
 
+### Extraction Culling for Large Maps
+
+For large tilemaps (e.g., 100x100 tiles), the default `TilemapExtractor` can cause performance issues because it extracts **all tiles** every frame, even those outside the camera view. The actual culling happens at canvas paint time, but by then the expensive extraction, query, and sort operations have already occurred.
+
+Use `CulledTilemapExtractor` to cull tiles at extraction time based on camera position:
+
+```dart
+// In your tilemap plugin, use CulledTilemapExtractor instead of TilemapExtractor
+final extractors = app.world.getResource<Extractors>()!;
+extractors.register(CulledTilemapExtractor());
+```
+
+#### Performance Comparison
+
+| Map Size | TilemapExtractor | CulledTilemapExtractor |
+|----------|------------------|------------------------|
+| 10x10 (100 tiles) | 100 tiles/frame | ~100 tiles/frame |
+| 50x50 (2,500 tiles) | 2,500 tiles/frame | ~300 tiles/frame |
+| 100x100 (10,000 tiles) | 10,000 tiles/frame | ~300-400 tiles/frame |
+
+The culled extractor only extracts tiles within the camera's visible bounds plus a margin, reducing extraction time from O(width×height) to O(screenWidth×screenHeight).
+
+#### Setting Up ViewportSize
+
+`CulledTilemapExtractor` requires knowing the viewport dimensions. Register a `ViewportSize` resource and update it each frame:
+
+```dart
+// 1. Register the resource in your game plugin
+app.insertResource(ViewportSize());
+
+// 2. Update each frame in your game loop, BEFORE tick()
+void _gameLoop(Size screenSize) {
+  // Update viewport before extraction runs
+  world.getResource<ViewportSize>()?.updateFromSize(screenSize);
+
+  app.tick();  // Extraction happens here with correct bounds
+  setState(() {});
+}
+```
+
+In a Flutter app:
+
+```dart
+Widget build(BuildContext context) {
+  // Capture screen size and update resource
+  final screenSize = MediaQuery.of(context).size;
+  world.getResource<ViewportSize>()?.updateFromSize(screenSize);
+
+  return CustomPaint(...);
+}
+```
+
+#### CulledTilemapExtractor Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `respectVisibility` | `bool` | `true` | Skip layers marked invisible in Tiled |
+| `cullMargin` | `double` | `96.0` | Extra pixels beyond visible bounds to extract (prevents popping) |
+
+```dart
+// Custom configuration
+extractors.register(CulledTilemapExtractor(
+  cullMargin: 128.0,  // Larger margin for fast-moving cameras
+));
+```
+
+#### When to Use Each Extractor
+
+**Use `CulledTilemapExtractor` when:**
+- Maps are larger than ~20x20 tiles
+- You have multiple tile layers
+- Performance is important
+- The camera follows a character or target
+
+**Use `TilemapExtractor` when:**
+- Maps are small (under ~400 tiles total)
+- You need maximum simplicity
+- The entire map should always be visible
+- Camera behavior is unpredictable
+
 ### Data Flow Overview
 
 ```

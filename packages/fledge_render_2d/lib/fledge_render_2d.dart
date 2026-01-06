@@ -72,6 +72,7 @@ export 'src/camera/camera2d.dart';
 export 'src/camera/camera_driver.dart';
 export 'src/camera/pixel_perfect.dart';
 export 'src/camera/projection.dart';
+export 'src/camera/viewport_size.dart';
 
 // Sprite
 export 'src/sprite/extracted_sprite.dart';

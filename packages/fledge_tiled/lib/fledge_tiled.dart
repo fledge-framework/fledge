@@ -103,6 +103,7 @@ export 'src/systems/tilemap_spawn_system.dart';
 export 'src/systems/tile_animation_system.dart';
 
 // Extraction
+export 'src/extraction/culled_tilemap_extractor.dart';
 export 'src/extraction/extracted_tile.dart';
 export 'src/extraction/tilemap_extractor.dart';
 
