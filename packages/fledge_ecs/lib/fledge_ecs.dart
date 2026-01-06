@@ -92,3 +92,7 @@ export 'src/world.dart';
 export 'src/app.dart';
 export 'src/plugin.dart';
 export 'src/plugins/plugins.dart';
+
+// Traits (utility mixins/interfaces)
+export 'src/traits/change_tracking.dart';
+export 'src/traits/frame_aware.dart';

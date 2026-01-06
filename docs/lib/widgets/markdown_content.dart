@@ -38,14 +38,25 @@ class MarkdownContent extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    // Shared anchor counts across all heading levels to match docs_page.dart
+    final sharedAnchorCounts = <String, int>{};
+
     return MarkdownBody(
       data: content,
       selectable: true,
       styleSheet: _buildStyleSheet(theme, isDark),
       builders: {
         'code': CodeBlockBuilder(isDark: isDark),
-        'h2': HeadingBuilder(headingKeys: headingKeys, level: 2),
-        'h3': HeadingBuilder(headingKeys: headingKeys, level: 3),
+        'h2': HeadingBuilder(
+          headingKeys: headingKeys,
+          level: 2,
+          sharedAnchorCounts: sharedAnchorCounts,
+        ),
+        'h3': HeadingBuilder(
+          headingKeys: headingKeys,
+          level: 3,
+          sharedAnchorCounts: sharedAnchorCounts,
+        ),
       },
       onTapLink: (text, href, title) {
         if (href != null) {
@@ -261,9 +272,12 @@ class HeadingBuilder extends MarkdownElementBuilder {
   final int level;
 
   /// Tracks how many times each base anchor ID has been seen.
-  final Map<String, int> _anchorCounts = {};
+  final Map<String, int> sharedAnchorCounts;
 
-  HeadingBuilder({this.headingKeys, required this.level});
+  HeadingBuilder(
+      {this.headingKeys,
+      required this.level,
+      required this.sharedAnchorCounts});
 
   @override
   Widget? visitElementAfterWithContext(
@@ -276,8 +290,8 @@ class HeadingBuilder extends MarkdownElementBuilder {
     final baseAnchorId = generateAnchorId(text);
 
     // Track duplicates to generate matching anchor IDs
-    final count = _anchorCounts[baseAnchorId] ?? 0;
-    _anchorCounts[baseAnchorId] = count + 1;
+    final count = sharedAnchorCounts[baseAnchorId] ?? 0;
+    sharedAnchorCounts[baseAnchorId] = count + 1;
     final anchorId = count == 0 ? baseAnchorId : '$baseAnchorId-$count';
 
     final key = headingKeys?[anchorId];

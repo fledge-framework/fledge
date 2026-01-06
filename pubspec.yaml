@@ -18,6 +18,8 @@ workspace:
   - packages/fledge_tiled
   - packages/fledge_physics
   - packages/fledge_yarn
+  - packages/fledge_save
+  - packages/fledge_time
   - examples/basic_ecs
   - examples/advanced_ecs
   - docs

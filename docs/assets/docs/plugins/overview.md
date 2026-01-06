@@ -98,13 +98,15 @@ First-party plugins are distributed as separate packages and extend Fledge with 
 | Plugin | Package | Description |
 |--------|---------|-------------|
 | [Render Infrastructure](/docs/plugins/render_plugin) | `fledge_render` | RenderPlugin, Extractors, RenderWorld, and RenderLayer |
-| [2D Rendering](/docs/plugins/render) | `fledge_render_2d` | Sprites, cameras, transforms, and animation |
+| [2D Rendering](/docs/plugins/render) | `fledge_render_2d` | Sprites, cameras, transforms, animation, and scene transitions |
 | [Audio](/docs/plugins/audio) | `fledge_audio` | Music, sound effects, and 2D spatial audio |
 | [Input Handling](/docs/plugins/input) | `fledge_input` | Action-based input with keyboard, mouse, and gamepad |
 | [Physics & Collision](/docs/plugins/physics) | `fledge_physics` | Collision detection, resolution, and layer filtering |
 | [Window Management](/docs/plugins/window) | `fledge_window` | Fullscreen, borderless, and windowed modes |
 | [Tiled Tilemaps](/docs/plugins/tiled) | `fledge_tiled` | Load and render Tiled TMX/TSX tilemaps |
 | [Yarn Dialogue](/docs/plugins/yarn) | `fledge_yarn` | Yarn Spinner dialogue system for branching narratives |
+| [Save System](/docs/plugins/save) | `fledge_save` | Save/load with resource serialization via Saveable mixin |
+| [Game Time](/docs/plugins/time) | `fledge_time` | In-game calendar, day/night, seasons, and time events |
 
 ## Creating Custom Plugins
 

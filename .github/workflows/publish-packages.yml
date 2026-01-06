@@ -110,6 +110,8 @@ jobs:
             "fledge_tiled"
             "fledge_yarn"
             "fledge_physics"
+            "fledge_save"
+            "fledge_time"
           )
 
           for pkg in "${PACKAGES[@]}"; do
@@ -199,6 +201,8 @@ jobs:
             "fledge_tiled"
             "fledge_yarn"
             "fledge_physics"
+            "fledge_save"
+            "fledge_time"
           )
 
           for pkg in "${PACKAGES[@]}"; do

@@ -1,0 +1,24 @@
+name: fledge_time
+description: Calendar and time system for Fledge games with configurable day/night cycles, seasons, and time scaling.
+version: 0.1.9
+resolution: workspace
+
+repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_time
+homepage: https://fledge-framework.dev
+issue_tracker: https://github.com/fledge-framework/fledge/issues
+
+topics:
+  - ecs
+  - game-engine
+  - time
+  - calendar
+  - day-night
+
+environment:
+  sdk: ^3.7.1
+  flutter: ">=1.17.0"
+
+dependencies:
+  fledge_ecs: ^0.1.9
+  meta: ^1.17.0
+

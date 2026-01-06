@@ -584,6 +584,128 @@ print(player.progress);          // 0.0 to 1.0
 
 Add `AnimateSystemWithResource` to your app to update sprite source rects each frame (uses `Time` resource for delta time).
 
+## Scene Transitions
+
+`fledge_render_2d` provides a phase-based transition system for smooth scene changes with fade effects.
+
+### TransitionState
+
+The `TransitionState` resource manages fade animations between scenes:
+
+```dart
+// Insert the resource
+app.insertResource(TransitionState(fadeDuration: 0.3));
+
+// Request a transition
+final transition = world.getResource<TransitionState>()!;
+transition.requestTransition(
+  'level2',  // Target scene (any Object type)
+  metadata: {'spawnX': 100, 'spawnY': 200},  // Optional data
+);
+```
+
+### Transition Phases
+
+Transitions progress through four phases:
+
+```
+idle → fadeOut → loading → fadeIn → idle
+```
+
+| Phase | Description |
+|-------|-------------|
+| `idle` | No transition in progress |
+| `fadeOut` | Screen fading to black |
+| `loading` | Screen is black, load new scene |
+| `fadeIn` | Screen fading back in |
+
+### Using Transitions
+
+```dart
+@system
+void sceneTransitionSystem(World world) {
+  final transition = world.getResource<TransitionState>();
+  if (transition == null || !transition.isTransitioning) return;
+
+  // Handle loading phase
+  if (transition.phase == TransitionPhase.loading && !transition.isLoadingAsync) {
+    transition.isLoadingAsync = true;
+
+    // Load new scene
+    final targetScene = transition.targetScene as String;
+    final spawnX = transition.metadata?['spawnX'] as int?;
+
+    loadScene(targetScene).then((_) {
+      transition.beginFadeIn();
+      transition.isLoadingAsync = false;
+    });
+  }
+}
+```
+
+### TransitionFadeSystem
+
+The built-in `TransitionFadeSystem` handles fade animations automatically:
+
+```dart
+app.addSystem(TransitionFadeSystem());
+```
+
+This system:
+- Advances `fadeProgress` during `fadeOut` (0.0 → 1.0)
+- Calls `beginLoading()` when fade out completes
+- Advances `fadeProgress` during `fadeIn` (1.0 → 0.0)
+- Calls `complete()` when fade in completes
+
+### Rendering the Fade Overlay
+
+In your Flutter widget:
+
+```dart
+Widget build(BuildContext context) {
+  final transition = world.getResource<TransitionState>();
+
+  return Stack(
+    children: [
+      // Game content
+      GameWidget(),
+
+      // Fade overlay
+      if (transition != null && transition.isTransitioning)
+        Positioned.fill(
+          child: IgnorePointer(
+            child: Container(
+              color: Colors.black.withOpacity(
+                transition.fadeProgress.clamp(0.0, 1.0),
+              ),
+            ),
+          ),
+        ),
+    ],
+  );
+}
+```
+
+### Custom Fade Duration
+
+```dart
+// Per-transition duration
+TransitionState(fadeDuration: 0.5)  // 500ms fades
+
+// Or modify at runtime
+transition.fadeDuration = 1.0;  // Slow dramatic fade
+```
+
+### Canceling Transitions
+
+Transitions can be canceled during the fade out phase:
+
+```dart
+if (transition.phase == TransitionPhase.fadeOut) {
+  transition.cancel();  // Returns to idle
+}
+```
+
 ## Components Reference
 
 | Component | Description |
@@ -595,12 +717,19 @@ Add `AnimateSystemWithResource` to your app to update sprite source rects each f
 | `AnimationPlayer` | Frame-based animation |
 | `Visibility` | Show/hide entities |
 
+## Resources Reference
+
+| Resource | Description |
+|----------|-------------|
+| `TransitionState` | Manages scene transition phases and fade progress |
+
 ## Systems Reference
 
 | System | Description |
 |--------|-------------|
 | `TransformPropagateSystem` | Computes `GlobalTransform2D` from parent-child hierarchy |
 | `AnimateSystemWithResource` | Updates sprite source rects based on animation clips |
+| `TransitionFadeSystem` | Advances fade progress during scene transitions |
 
 ## See Also
 

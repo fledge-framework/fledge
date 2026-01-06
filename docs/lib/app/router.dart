@@ -84,6 +84,8 @@ class DocNavigation {
         NavPage(title: 'Input Handling', path: 'input'),
         NavPage(title: 'Physics & Collision', path: 'physics'),
         NavPage(title: 'Window Management', path: 'window'),
+        NavPage(title: 'Save System', path: 'save'),
+        NavPage(title: 'Game Time', path: 'time'),
         NavPage(title: 'Tiled Tilemaps', path: 'tiled'),
         NavPage(title: 'Yarn Dialogue', path: 'yarn'),
       ],

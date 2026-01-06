@@ -1,0 +1,24 @@
+name: fledge_save
+description: Save/load system for Fledge games with resource aggregation and version migration support.
+version: 0.1.9
+resolution: workspace
+
+repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_save
+homepage: https://fledge-framework.dev
+issue_tracker: https://github.com/fledge-framework/fledge/issues
+
+topics:
+  - ecs
+  - game-engine
+  - save-load
+  - persistence
+
+environment:
+  sdk: ^3.7.1
+  flutter: ">=1.17.0"
+
+dependencies:
+  fledge_ecs: ^0.1.9
+  path_provider: ^2.1.0
+  meta: ^1.17.0
+

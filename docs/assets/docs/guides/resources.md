@@ -501,6 +501,114 @@ class CheckGameOverSystem implements System {
 }
 ```
 
+## Utility Traits
+
+Fledge provides utility mixins and interfaces for common resource patterns.
+
+### ChangeTracking Mixin
+
+Track whether a resource was modified during the current frame:
+
+```dart
+import 'package:fledge_ecs/fledge_ecs.dart';
+
+class Inventory with ChangeTracking {
+  final List<Item> items = [];
+
+  void addItem(Item item) {
+    items.add(item);
+    markChanged();  // Flag modification
+  }
+
+  void removeItem(Item item) {
+    items.remove(item);
+    markChanged();
+  }
+}
+```
+
+**Usage in systems:**
+
+```dart
+// At frame start - reset tracking
+@system
+void inventoryFrameReset(World world) {
+  world.getResource<Inventory>()?.resetChangeTracking();
+}
+
+// In UI update - check if changed
+void updateUI() {
+  final inventory = world.getResource<Inventory>()!;
+  if (inventory.changedThisFrame) {
+    rebuildInventoryUI();
+  }
+}
+```
+
+**API:**
+- `changedThisFrame` - Whether modified this frame
+- `markChanged()` - Flag as modified
+- `resetChangeTracking()` - Clear the flag (call at frame start)
+
+### FrameAware Interface
+
+Resources that need automatic per-frame lifecycle callbacks:
+
+```dart
+import 'package:fledge_ecs/fledge_ecs.dart';
+
+class InputState implements FrameAware {
+  bool _jumpPressed = false;
+  bool _jumpPressedThisFrame = false;
+
+  @override
+  void beginFrame() {
+    // Reset per-frame tracking
+    _jumpPressedThisFrame = false;
+  }
+
+  void onJumpPressed() {
+    _jumpPressed = true;
+    _jumpPressedThisFrame = true;
+  }
+
+  bool get jumpPressedThisFrame => _jumpPressedThisFrame;
+}
+```
+
+**Note:** The framework does not automatically call `beginFrame()`. Create a system to call it at frame start:
+
+```dart
+@system
+void frameResetSystem(World world) {
+  world.getResource<InputState>()?.beginFrame();
+  world.getResource<Inventory>()?.beginFrame();
+}
+```
+
+### Combining Traits
+
+Resources can use multiple patterns:
+
+```dart
+class PlayerInventory with ChangeTracking implements FrameAware {
+  final List<Item> items = [];
+  Item? lastAddedItem;
+
+  @override
+  void beginFrame() {
+    resetChangeTracking();
+    lastAddedItem = null;
+  }
+
+  void addItem(Item item) {
+    items.add(item);
+    lastAddedItem = item;
+    markChanged();
+  }
+}
+```
+
 ## Resources from Core Plugins
 
 Fledge's [core plugins](/docs/plugins/overview#core-plugins) provide common resources:
@@ -596,3 +704,4 @@ class DebugFpsSystem implements System {
 - [Events](/docs/guides/events) - Inter-system communication
 - [Systems](/docs/guides/systems) - Using resources in systems
 - [App & Plugins](/docs/guides/app-plugins) - Resource initialization
+- [Save System](/docs/plugins/save) - Persisting resources with the Saveable mixin

@@ -100,3 +100,7 @@ export 'src/material/sprite_material.dart';
 
 // Character
 export 'src/character/orientation.dart';
+
+// Transitions
+export 'src/transitions/transition_state.dart';
+export 'src/transitions/transition_systems.dart';
