@@ -14,7 +14,7 @@ dependencies:
   analyzer: ^9.0.0
   build: ^4.0.3
   source_gen: ^4.1.1
-  fledge_ecs_annotations: ^0.1.8
+  fledge_ecs_annotations: ^0.1.9
 
 dev_dependencies:
   build_runner: ^2.10.4
