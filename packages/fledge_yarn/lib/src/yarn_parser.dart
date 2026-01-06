@@ -353,7 +353,8 @@ class YarnParser {
 
       if (currentLine.startsWith('<<elseif')) {
         // Parse elseif as a nested conditional
-        final elseifMatch = RegExp(r'<<elseif\s+(.+?)>>').firstMatch(currentLine);
+        final elseifMatch =
+            RegExp(r'<<elseif\s+(.+?)>>').firstMatch(currentLine);
         if (elseifMatch != null) {
           // Create a synthetic <<if>> line and parse recursively
           final elseifCondition = elseifMatch.group(1)!;
