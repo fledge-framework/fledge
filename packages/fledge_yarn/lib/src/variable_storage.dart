@@ -44,8 +44,9 @@ class VariableStorage {
     final value = _variables[_normalize(name)];
     if (value is bool) return value;
     if (value is num) return value != 0;
-    if (value is String)
+    if (value is String) {
       return value.isNotEmpty && value.toLowerCase() != 'false';
+    }
     return defaultValue;
   }
 
