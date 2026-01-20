@@ -70,24 +70,12 @@ class MoveSystem implements System {
   SystemMeta get meta => SystemMeta(name: 'move', writes: {ComponentId.of<Position>()});
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async { /* writes Position */ }
 }
 
 class RenderSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(name: 'render', reads: {ComponentId.of<Position>()});
-
-  @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
 
   @override
   Future<void> run(World world) async { /* reads Position */ }
@@ -186,12 +174,6 @@ class AudioSystem implements System {
   SystemMeta get meta => SystemMeta(name: 'audio', reads: {ComponentId.of<AudioSource>()});
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     for (final (_, audio) in world.query1<AudioSource>().iter()) { }
   }
@@ -200,12 +182,6 @@ class AudioSystem implements System {
 class ParticleSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(name: 'particle', reads: {ComponentId.of<ParticleEmitter>()});
-
-  @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
 
   @override
   Future<void> run(World world) async {

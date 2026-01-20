@@ -45,7 +45,15 @@ class Archetypes {
   int get length => _tables.length;
 
   /// Returns the table at the given [index].
-  Table tableAt(int index) => _tables[index];
+  Table tableAt(int index) {
+    if (index < 0 || index >= _tables.length) {
+      throw RangeError(
+        'Archetype index $index is out of range [0, ${_tables.length}). '
+        'This may indicate a stale query cache.',
+      );
+    }
+    return _tables[index];
+  }
 
   /// Returns all tables.
   Iterable<Table> get tables => _tables;

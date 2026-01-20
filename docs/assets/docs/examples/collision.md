@@ -113,12 +113,6 @@ class CollisionDetectionSystem implements System {
       );
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     final entities = world.query2<Transform2D, CircleCollider>().iter().toList();
 
@@ -149,12 +143,6 @@ class HandleCollisionsSystem implements System {
         name: 'handle_collisions',
         reads: {ComponentId.of<CollisionEvent>()},
       );
-
-  @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
 
   @override
   Future<void> run(World world) async {

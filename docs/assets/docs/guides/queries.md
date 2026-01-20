@@ -68,9 +68,31 @@ final count = world.query1<Enemy>().count();
 print('Enemies remaining: $count');
 ```
 
-### Find First
+### Find First (single)
+
+Use `single()` to get the first matching entity, or `null` if none match:
 
 ```dart
+// Returns (Entity, Position)? - null if no player exists
+final result = world.query1<Position>(filter: const With<Player>()).single();
+
+if (result != null) {
+  final (entity, pos) = result;
+  print('Player at (${pos.x}, ${pos.y})');
+}
+
+// For multiple components
+final enemy = world.query2<Position, Health>(filter: const With<Enemy>()).single();
+if (enemy != null) {
+  final (entity, pos, health) = enemy;
+  // Use the enemy data
+}
+```
+
+This is cleaner than the verbose for-loop pattern:
+
+```dart
+// Verbose alternative (avoid when single() works)
 Position? findPlayer(World world) {
   for (final (_, pos) in world.query1<Position>(filter: const With<Player>()).iter()) {
     return pos;
@@ -116,12 +138,6 @@ class GoodSystem implements System {
       );
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     final query = world.query2<Position, Velocity>();
     for (final entry in query.iter()) { }
@@ -164,12 +180,6 @@ class LessEfficientSystem implements System {
       );
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     for (final (entity, pos) in world.query1<Position>().iter()) {
       if (world.has<Player>(entity)) {
@@ -186,12 +196,6 @@ class MoreEfficientSystem implements System {
         name: 'moreEfficient',
         reads: {ComponentId.of<Position>()},
       );
-
-  @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
 
   @override
   Future<void> run(World world) async {
@@ -228,12 +232,6 @@ class InteractionSystem implements System {
         name: 'interaction',
         reads: {ComponentId.of<Position>(), ComponentId.of<Player>(), ComponentId.of<Item>()},
       );
-
-  @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
 
   @override
   Future<void> run(World world) async {

@@ -132,12 +132,6 @@ class MovementSystem implements System {
       );
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     final dt = world.getResource<Time>()!.delta;
     for (final (_, pos, vel) in world.query2<Position, Velocity>().iter()) {

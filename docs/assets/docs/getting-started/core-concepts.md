@@ -120,12 +120,6 @@ class HealthRegenSystem implements System {
       );
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     for (final (entity, health) in world.query1<Health>().iter()) {
       if (health.current < health.max) {

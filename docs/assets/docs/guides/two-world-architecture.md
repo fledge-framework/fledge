@@ -545,4 +545,5 @@ for (final (_, sprite, transform) in
 - [App & Plugins](/docs/guides/app-plugins) - Plugin system overview
 - [Systems](/docs/guides/systems) - System definition
 - [Queries](/docs/guides/queries) - Querying entities
+- [2D Rendering](/docs/plugins/render) - 2D extractors and components
 - [Tiled Tilemaps](/docs/plugins/tiled) - Example of extraction with tilemaps

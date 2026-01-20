@@ -206,12 +206,6 @@ class FollowTargetSystem implements System {
       );
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     for (final (entity, pos, target) in world.query2<Position, Target>().iter()) {
       if (target.entity == null) continue;

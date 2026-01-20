@@ -102,12 +102,6 @@ class CollisionDetectionSystem implements System {
       );
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     final collisions = world.eventWriter<CollisionEvent>();
     final entities = world.query2<Position, Collider>().iter().toList();
@@ -155,12 +149,6 @@ class ExplosionSystem implements System {
       );
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     final damage = world.eventWriter<DamageEvent>();
 
@@ -201,12 +189,6 @@ class DamageHandlerSystem implements System {
       );
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     for (final event in world.eventReader<DamageEvent>().read()) {
       final health = world.get<Health>(event.target);
@@ -242,12 +224,6 @@ class ScoreHandlerSystem implements System {
         resourceWrites: {Score},
         eventReads: {ScoreEvent},
       );
-
-  @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
 
   @override
   Future<void> run(World world) async {
@@ -296,12 +272,6 @@ class ChainExplosionsSystem implements System {
       );
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     final reader = world.eventReader<ExplosionEvent>();
     final writer = world.eventWriter<ExplosionEvent>();
@@ -347,12 +317,6 @@ class SystemA implements System {
       );
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     world.eventWriter<MyEvent>().send(MyEvent()); // Written this frame
   }
@@ -364,12 +328,6 @@ class SystemB implements System {
         name: 'systemB',
         eventReads: {MyEvent},
       );
-
-  @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
 
   @override
   Future<void> run(World world) async {
@@ -455,12 +413,6 @@ class HandleStateChangeSystem implements System {
       );
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     final state = world.getResource<GameState>()!;
 
@@ -507,12 +459,6 @@ class DamageStatsSystem implements System {
         resourceWrites: {GameStats},
         eventReads: {DamageDealt},
       );
-
-  @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
 
   @override
   Future<void> run(World world) async {

@@ -270,12 +270,6 @@ class MySystem implements System {
   SystemMeta get meta => SystemMeta(name: 'mySystem', resourceReads: {Time});
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     final time = world.getResource<Time>()!;
     final delta = time.delta;      // Seconds since last frame
@@ -311,12 +305,6 @@ App().addPlugin(FrameLimiterPlugin(targetFps: 60));
 class DebugSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(name: 'debug', resourceReads: {FrameTime});
-
-  @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
 
   @override
   Future<void> run(World world) async {
@@ -423,12 +411,6 @@ class MovementSystem implements System {
         reads: {ComponentId.of<Velocity>()},
         resourceReads: {Time},
       );
-
-  @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
 
   @override
   Future<void> run(World world) async {

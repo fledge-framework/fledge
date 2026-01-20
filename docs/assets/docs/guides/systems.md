@@ -32,12 +32,6 @@ class MovementSystem implements System {
       );
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     for (final (entity, pos, vel) in world.query2<Position, Velocity>().iter()) {
       pos.x += vel.dx;
@@ -46,6 +40,75 @@ class MovementSystem implements System {
   }
 }
 ```
+
+## Alternative System Styles
+
+Beyond the basic `System` interface, Fledge provides convenience classes for common patterns.
+
+### FunctionSystem (Recommended for Simple Systems)
+
+For most systems, `FunctionSystem` is the simplest approach:
+
+```dart
+final movementSystem = FunctionSystem(
+  'movement',
+  writes: {ComponentId.of<Position>()},
+  reads: {ComponentId.of<Velocity>()},
+  run: (world) {
+    for (final (_, pos, vel) in world.query2<Position, Velocity>().iter()) {
+      pos.x += vel.dx;
+      pos.y += vel.dy;
+    }
+  },
+);
+
+// With run condition
+final pausableSystem = FunctionSystem(
+  'pausable',
+  runIf: (world) => !world.getResource<GameState>()!.isPaused,
+  run: (world) { /* ... */ },
+);
+
+// With explicit ordering
+final physicsSystem = FunctionSystem(
+  'physics',
+  after: ['input'],
+  before: ['render'],
+  run: (world) { /* ... */ },
+);
+```
+
+### SyncSystem (No Async Needed)
+
+For systems that don't need async operations, extend `SyncSystem` to avoid the `Future<void>` boilerplate:
+
+```dart
+class MovementSystem extends SyncSystem {
+  @override
+  SystemMeta get meta => SystemMeta(
+        name: 'movement',
+        writes: {ComponentId.of<Position>()},
+        reads: {ComponentId.of<Velocity>()},
+      );
+
+  @override
+  void runSync(World world) {
+    for (final (_, pos, vel) in world.query2<Position, Velocity>().iter()) {
+      pos.x += vel.dx;
+      pos.y += vel.dy;
+    }
+  }
+}
+```
+
+### When to Use Each Style
+
+| Style | Use When |
+|-------|----------|
+| `FunctionSystem` | Simple systems, quick prototyping, inline definitions |
+| `SyncSystem` | Class-based systems that don't need async |
+| `System` interface | Full control, async operations, complex lifecycle |
+| `@system` annotation | Code generation preferred, minimal boilerplate |
 
 ## System Parameters
 
@@ -76,12 +139,6 @@ class CombatSystem implements System {
         writes: {ComponentId.of<Health>()},
         reads: {ComponentId.of<Position>(), ComponentId.of<Damage>()},
       );
-
-  @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
 
   @override
   Future<void> run(World world) async {
@@ -121,12 +178,6 @@ class MySystem implements System {
         name: 'mySystem',
         reads: {ComponentId.of<Position>()},
       );
-
-  @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
 
   @override
   Future<void> run(World world) async {
@@ -212,12 +263,6 @@ class InputSystem implements System {
       );
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     for (final (_, input) in world.query1<InputReceiver>(filter: const With<Player>()).iter()) {
       // Process player input
@@ -233,12 +278,6 @@ class MovementSystem implements System {
         writes: {ComponentId.of<Position>()},
         reads: {ComponentId.of<Velocity>()},
       );
-
-  @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
 
   @override
   Future<void> run(World world) async {
@@ -257,12 +296,6 @@ class CollisionSystem implements System {
       );
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     for (final (_, pos, collider) in world.query2<Position, Collider>().iter()) {
       // Detect and resolve collisions
@@ -277,12 +310,6 @@ class RenderSystem implements System {
         name: 'render',
         reads: {ComponentId.of<Position>(), ComponentId.of<Sprite>()},
       );
-
-  @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
 
   @override
   Future<void> run(World world) async {
@@ -356,12 +383,6 @@ class CountEnemiesSystem implements System {
       );
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     final stats = world.getResource<GameStats>()!;
     var count = 0;
@@ -431,12 +452,6 @@ class PlayerFollowCameraSystem implements System {
       );
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     final playerQuery = world.query1<Position>(filter: const With<Player>());
     final cameraQuery = world.query1<Position>(filter: const With<Camera>());
@@ -493,12 +508,6 @@ class IdleToWalkTransitionSystem implements System {
       );
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     final commands = Commands();
 
@@ -514,17 +523,32 @@ class IdleToWalkTransitionSystem implements System {
 
 ## Async Systems
 
-For systems that need async operations:
+For systems that need async operations, use `AsyncFunctionSystem`:
 
 ```dart
 final loadAssetsSystem = AsyncFunctionSystem(
-  (World world) async {
+  'loadAssets',
+  run: (world) async {
     // Async file loading, network requests, etc.
     await loadTextures();
     await loadSounds();
   },
-  meta: SystemMeta(name: 'loadAssets'),
 );
+```
+
+Or implement the `System` interface directly:
+
+```dart
+class LoadAssetsSystem implements System {
+  @override
+  SystemMeta get meta => const SystemMeta(name: 'loadAssets');
+
+  @override
+  Future<void> run(World world) async {
+    await loadTextures();
+    await loadSounds();
+  }
+}
 ```
 
 ## Performance Tips
@@ -559,12 +583,6 @@ class GoodSystem implements System {
       );
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     final query = world.query1<Position>();
     for (final entry in query.iter()) { }
@@ -578,12 +596,6 @@ class BadSystem implements System {
         name: 'bad',
         reads: {ComponentId.of<Position>()},
       );
-
-  @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
 
   @override
   Future<void> run(World world) async {
@@ -616,12 +628,6 @@ class OptionalSystem implements System {
         name: 'optional',
         reads: {ComponentId.of<RareComponent>()},
       );
-
-  @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
 
   @override
   Future<void> run(World world) async {

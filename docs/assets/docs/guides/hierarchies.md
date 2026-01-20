@@ -141,12 +141,6 @@ class TransformPropagationSystem implements System {
       );
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     // Process entities with parents
     for (final (entity, localPos, parent) in

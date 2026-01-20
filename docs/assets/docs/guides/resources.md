@@ -94,12 +94,6 @@ class DisplayScoreSystem implements System {
       );
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     final score = world.getResource<Score>();
     if (score != null) {
@@ -116,12 +110,6 @@ class UpdateTimeSystem implements System {
       );
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     final time = world.getResource<Time>();
     if (time != null) {
@@ -136,12 +124,6 @@ class AddScoreSystem implements System {
         name: 'addScore',
         resourceWrites: {Score},
       );
-
-  @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
 
   @override
   Future<void> run(World world) async {
@@ -174,12 +156,6 @@ class DebugSystem implements System {
         name: 'debug',
         resourceReads: {DebugConfig},
       );
-
-  @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
 
   @override
   Future<void> run(World world) async {
@@ -250,12 +226,6 @@ class SystemA implements System {
   SystemMeta get meta => SystemMeta(name: 'systemA', resourceWrites: {Score});
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     final score = world.getResource<Score>()!;
     score.value += 10;
@@ -265,12 +235,6 @@ class SystemA implements System {
 class SystemB implements System {
   @override
   SystemMeta get meta => SystemMeta(name: 'systemB', resourceWrites: {Score});
-
-  @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
 
   @override
   Future<void> run(World world) async {
@@ -285,12 +249,6 @@ class SystemC implements System {
   SystemMeta get meta => SystemMeta(name: 'systemC', resourceReads: {Time});
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     final time = world.getResource<Time>()!;
     print(time.elapsed);
@@ -300,12 +258,6 @@ class SystemC implements System {
 class SystemD implements System {
   @override
   SystemMeta get meta => SystemMeta(name: 'systemD', resourceWrites: {Score});
-
-  @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
 
   @override
   Future<void> run(World world) async {
@@ -364,12 +316,6 @@ class MovementSystem implements System {
       );
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     final dt = world.getResource<Time>()!.delta;
     for (final (_, pos, vel) in world.query2<Position, Velocity>().iter()) {
@@ -419,12 +365,6 @@ class PlayerControlSystem implements System {
         writes: {ComponentId.of<Velocity>()},
         resourceReads: {Input},
       );
-
-  @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
 
   @override
   Future<void> run(World world) async {
@@ -480,12 +420,6 @@ class CheckGameOverSystem implements System {
         name: 'checkGameOver',
         resourceWrites: {GameState},
       );
-
-  @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
 
   @override
   Future<void> run(World world) async {
@@ -643,12 +577,6 @@ class MySystem implements System {
       );
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     final time = world.getResource<Time>()!;
     print('Delta: ${time.delta}');
@@ -684,12 +612,6 @@ class DebugFpsSystem implements System {
         name: 'debugFps',
         resourceReads: {FrameTime},
       );
-
-  @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
 
   @override
   Future<void> run(World world) async {

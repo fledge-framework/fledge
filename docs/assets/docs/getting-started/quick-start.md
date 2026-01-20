@@ -107,12 +107,6 @@ class MovementSystem implements System {
       );
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     for (final (_, pos, vel) in world.query2<Position, Velocity>().iter()) {
       pos.x += vel.dx;
@@ -127,12 +121,6 @@ class PrintPositionsSystem implements System {
         name: 'printPositions',
         reads: {ComponentId.of<Position>()},
       );
-
-  @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
 
   @override
   Future<void> run(World world) async {
@@ -336,12 +324,6 @@ class PlayerMovementSystem implements System {
       );
 
   @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
-
-  @override
   Future<void> run(World world) async {
     for (final (_, pos, vel) in world.query2<Position, Velocity>(
       filter: const With<Player>(),
@@ -358,12 +340,6 @@ class PhysicsSystem implements System {
         name: 'physics',
         writes: {ComponentId.of<Position>()},
       );
-
-  @override
-  RunCondition? get runCondition => null;
-
-  @override
-  bool shouldRun(World world) => runCondition?.call(world) ?? true;
 
   @override
   Future<void> run(World world) async {
