@@ -318,6 +318,161 @@ if (primary != null) {
 | `ContextUpdateSystem<S>` | first | Updates active context from game state |
 | `ActionResolutionSystem` | first | Resolves actions from raw input |
 
+## UI Input Architecture
+
+**Important:** When integrating Fledge input with Flutter UI, follow this pattern to keep your architecture clean and maintainable.
+
+### The Correct Pattern
+
+All input should flow through the Fledge input system. UI widgets should be **purely visual** - they render state but never handle input directly.
+
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│ InputWidget │ -> │ ActionState │ -> │   Systems   │ -> │  Resources  │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+                                             │                  │
+                                             │                  v
+                                             │           ┌─────────────┐
+                                             └─────────> │ UI Widgets  │
+                                                         │(purely visual)
+                                                         └─────────────┘
+```
+
+1. **InputWidget** captures all keyboard/mouse/gamepad input
+2. **ActionState** resource holds resolved action values
+3. **Systems** read ActionState and update game/UI resources
+4. **UI Widgets** read resources to render - they do NOT handle input
+
+### Example: Menu Navigation
+
+❌ **Wrong** - Widget handles input directly:
+
+```dart
+// DON'T DO THIS - Widget handling its own input
+class VerticalMenu extends StatefulWidget {
+  @override
+  _VerticalMenuState createState() => _VerticalMenuState();
+}
+
+class _VerticalMenuState extends State<VerticalMenu> {
+  int _selectedIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        // BAD: Widget handles input directly
+        if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+          setState(() => _selectedIndex++);
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: /* menu items */,
+    );
+  }
+}
+```
+
+✅ **Correct** - System handles input, widget renders state:
+
+```dart
+// 1. Define a resource to hold UI state
+class MenuState {
+  int selectedIndex = 0;
+  int itemCount = 4;
+  bool confirmed = false;
+
+  void moveDown() {
+    selectedIndex = (selectedIndex + 1) % itemCount;
+  }
+}
+
+// 2. System reads ActionState and updates MenuState
+class MenuInputSystem implements System {
+  @override
+  Future<void> run(World world) async {
+    final actions = world.getResource<ActionState>()!;
+    final menu = world.getResource<MenuState>()!;
+
+    final move = actions.getVector2(ActionId('menuMove'));
+    if (move != null && move.y > 0.5) {
+      menu.moveDown();
+    }
+
+    if (actions.justPressed(ActionId('confirm'))) {
+      menu.confirmed = true;
+    }
+  }
+}
+
+// 3. Widget is purely visual - reads state, no input handlers
+class VerticalMenu extends StatelessWidget {
+  final int selectedIndex;  // Passed from MenuState
+  final List<String> options;
+
+  const VerticalMenu({
+    required this.selectedIndex,
+    required this.options,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // No Focus, no onKeyEvent, no GestureDetector for navigation
+    return Column(
+      children: options.asMap().entries.map((e) {
+        return MenuItem(
+          label: e.value,
+          isSelected: e.key == selectedIndex,
+        );
+      }).toList(),
+    );
+  }
+}
+
+// 4. In your game widget, pass state to UI
+Widget build(BuildContext context) {
+  final menuState = world.getResource<MenuState>()!;
+  return VerticalMenu(
+    selectedIndex: menuState.selectedIndex,
+    options: ['New Game', 'Continue', 'Settings'],
+  );
+}
+```
+
+### Why This Pattern?
+
+1. **Single source of truth** - Input is always processed through the ECS
+2. **Testable** - Systems can be unit tested without Flutter widgets
+3. **Input context switching** - State-based context switching works automatically
+4. **Consistent** - Same input handling whether on keyboard, gamepad, or touch
+5. **No focus conflicts** - No competing Focus nodes capturing keyboard input
+
+### What About Mouse/Touch?
+
+For mouse clicks and touch, the same pattern applies. If you need clickable buttons, the system should process the click and update state:
+
+```dart
+// System handles click state
+class UIClickSystem implements System {
+  @override
+  Future<void> run(World world) async {
+    final mouse = world.getResource<MouseState>()!;
+    final uiState = world.getResource<UIState>()!;
+
+    if (mouse.justPressed(0)) {  // Left click
+      // Check if click is on a UI element
+      if (uiState.isPointInButton(mouse.x, mouse.y)) {
+        uiState.buttonClicked = true;
+      }
+    }
+  }
+}
+```
+
+For simple menus, consider making buttons navigable by keyboard/gamepad and using the confirm action for selection, rather than implementing separate click handling.
+
 ## See Also
 
 - [Plugins Overview](/docs/plugins/overview) - Plugin system introduction

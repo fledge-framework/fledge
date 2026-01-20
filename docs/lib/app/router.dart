@@ -47,8 +47,9 @@ class DocNavigation {
       pages: [
         NavPage(title: 'Introduction', path: 'introduction'),
         NavPage(title: 'Installation', path: 'installation'),
-        NavPage(title: 'Quick Start', path: 'quick-start'),
+        NavPage(title: 'Hello Fledge', path: 'hello-fledge'),
         NavPage(title: 'Core Concepts', path: 'core-concepts'),
+        NavPage(title: 'Tutorial: Building Snake', path: 'building-snake'),
       ],
     ),
     NavSection(

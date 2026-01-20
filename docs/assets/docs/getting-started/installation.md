@@ -1,150 +1,184 @@
 # Installation
 
-This guide will walk you through installing Fledge and setting up your development environment.
+Let's set up a new Fledge project. We'll create a Flutter desktop application with the core ECS packages.
 
 ## Requirements
 
-Before installing Fledge, ensure you have:
+- **Flutter** 3.10 or higher
+- **Dart** 3.0 or higher
+- A desktop platform: **Windows**, **macOS**, or **Linux**
 
-- **Dart SDK** 3.0 or higher
-- **Flutter** 3.10 or higher (for rendering)
-- A supported platform: **Windows**, **macOS**, or **Linux**
+## Create a New Project
 
-## Adding Fledge to Your Project
+First, create a new Flutter project with desktop support:
 
-### 1. Add Dependencies
+```bash
+flutter create my_game --platforms=windows,macos,linux
+cd my_game
+```
 
-Add Fledge packages to your `pubspec.yaml`:
+## Add Dependencies
+
+Open `pubspec.yaml` and add the Fledge packages:
 
 ```yaml
 dependencies:
+  flutter:
+    sdk: flutter
+
+  # Core ECS framework
   fledge_ecs: ^0.1.0
+
+  # Optional: Annotations for code generation
   fledge_ecs_annotations: ^0.1.0
 
 dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+  # Optional: Code generator (if using annotations)
   build_runner: ^2.4.0
   fledge_ecs_generator: ^0.1.0
 ```
 
-Then run:
+Then install:
 
 ```bash
 flutter pub get
 ```
 
-### 2. Configure Build Runner
+## Two Approaches: Annotations vs Plain Classes
 
-Create or update your `build.yaml` to configure code generation:
+Fledge supports two ways to define components and systems:
 
-```yaml
-targets:
-  $default:
-    builders:
-      fledge_ecs_generator|fledge_ecs:
-        enabled: true
+### 1. Annotations (Recommended for beginners)
+
+Less boilerplate, code generation handles the details:
+
+```dart
+import 'package:fledge_ecs/fledge_ecs.dart';
+import 'package:fledge_ecs_annotations/fledge_ecs_annotations.dart';
+
+part 'components.g.dart';
+
+@component
+class Position {
+  double x, y;
+  Position(this.x, this.y);
+}
+
+@system
+void movementSystem(World world) {
+  // Your logic here
+}
 ```
 
-### 3. Run Code Generation
-
-After defining your components and systems, run the build runner:
+Run code generation:
 
 ```bash
 dart run build_runner build
 ```
 
-Or use watch mode during development:
+### 2. Plain Classes (Full control)
 
-```bash
-dart run build_runner watch
+No code generation needed, explicit metadata:
+
+```dart
+import 'package:fledge_ecs/fledge_ecs.dart';
+
+// Components are just classes
+class Position {
+  double x, y;
+  Position(this.x, this.y);
+}
+
+// Systems implement the System interface
+class MovementSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+    name: 'movement',
+    writes: {ComponentId.of<Position>()},
+  );
+
+  @override
+  Future<void> run(World world) async {
+    // Your logic here
+  }
+}
 ```
 
-## Project Structure
+Both approaches are fully compatible. Use whichever you prefer!
 
-We recommend organizing your Fledge project like this:
+## Verify Installation
+
+Let's make sure everything works. Create a test file:
+
+```dart
+// lib/test_fledge.dart
+import 'package:fledge_ecs/fledge_ecs.dart';
+
+class Greeting {
+  final String message;
+  Greeting(this.message);
+}
+
+void main() {
+  final world = World();
+
+  // Spawn an entity with a component
+  final commands = world.spawn()
+    ..insert(Greeting('Hello from Fledge!'));
+  final entity = commands.entity;
+
+  // Read the component back
+  final greeting = world.get<Greeting>(entity);
+  print(greeting?.message);
+
+  print('Fledge is ready!');
+}
+```
+
+Run it:
+
+```bash
+dart run lib/test_fledge.dart
+```
+
+You should see:
+
+```
+Hello from Fledge!
+Fledge is ready!
+```
+
+## Recommended Project Structure
+
+As your game grows, organize your code like this:
 
 ```
 my_game/
 ├── lib/
-│   ├── main.dart           # App entry point
-│   ├── components/         # Component definitions
-│   │   ├── position.dart
-│   │   ├── velocity.dart
-│   │   └── components.dart # Barrel file
-│   ├── systems/            # System definitions
-│   │   ├── movement.dart
-│   │   ├── rendering.dart
-│   │   └── systems.dart    # Barrel file
-│   ├── resources/          # Global resources
-│   │   └── time.dart
-│   └── plugins/            # Game plugins
-│       └── core_plugin.dart
+│   ├── main.dart              # App entry point
+│   ├── game/
+│   │   ├── components/        # Component definitions
+│   │   │   ├── position.dart
+│   │   │   ├── velocity.dart
+│   │   │   └── components.dart    # Barrel file
+│   │   ├── systems/           # System definitions
+│   │   │   ├── movement.dart
+│   │   │   ├── collision.dart
+│   │   │   └── systems.dart       # Barrel file
+│   │   ├── resources/         # Global resources
+│   │   │   └── game_config.dart
+│   │   └── plugins/           # Game plugins
+│   │       └── game_plugin.dart
+│   └── ui/                    # Flutter widgets
+│       └── game_screen.dart
 ├── pubspec.yaml
-└── build.yaml
+└── build.yaml                 # If using code generation
 ```
 
-## Verifying Installation
+## What's Next?
 
-Create a simple test file to verify everything is working:
-
-```dart-tabs
-// @tab Annotations
-// lib/test_ecs.dart
-import 'package:fledge_ecs/fledge_ecs.dart';
-import 'package:fledge_ecs_annotations/fledge_ecs_annotations.dart';
-
-part 'test_ecs.g.dart';
-
-@component
-class TestComponent {
-  final String value;
-  TestComponent(this.value);
-}
-
-void main() {
-  final world = World();
-
-  final entityCommands = world.spawn()
-    ..insert(TestComponent('Hello, Fledge!'));
-  final entity = entityCommands.entity;
-
-  final component = world.get<TestComponent>(entity);
-  print(component?.value); // Should print: Hello, Fledge!
-
-  print('Fledge is working correctly!');
-}
-// @tab Inheritance
-// lib/test_ecs.dart
-import 'package:fledge_ecs/fledge_ecs.dart';
-
-// Components are just plain Dart classes - no annotation needed
-class TestComponent {
-  final String value;
-  TestComponent(this.value);
-}
-
-void main() {
-  final world = World();
-
-  final entityCommands = world.spawn()
-    ..insert(TestComponent('Hello, Fledge!'));
-  final entity = entityCommands.entity;
-
-  final component = world.get<TestComponent>(entity);
-  print(component?.value); // Should print: Hello, Fledge!
-
-  print('Fledge is working correctly!');
-}
-```
-
-Run the test:
-
-```bash
-dart run build_runner build  # Only needed if using annotations
-dart run lib/test_ecs.dart
-```
-
-If you see "Fledge is working correctly!", you're all set!
-
-## Next Steps
-
-Now that you have Fledge installed, continue to the [Quick Start](/docs/getting-started/quick-start) guide to build your first game.
+Your project is set up! Let's write some actual code in [Hello Fledge](/docs/getting-started/hello-fledge) where we'll get something moving on screen.
