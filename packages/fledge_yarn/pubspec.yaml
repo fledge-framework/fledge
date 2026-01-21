@@ -1,6 +1,6 @@
 name: fledge_yarn
 description: Yarn Spinner dialogue system for the Fledge ECS game framework. Parse .yarn files and run interactive dialogues.
-version: 0.1.10
+version: 0.1.11
 repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_yarn
 homepage: https://fledge-framework.dev
 issue_tracker: https://github.com/fledge-framework/fledge/issues

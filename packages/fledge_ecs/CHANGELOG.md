@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.11] - 2026-01-21
+
+## [Unreleased]
+
+### Miscellaneous
+
+- Update docs
+
+
+
 ## [0.1.10] - 2026-01-06
 
 ## [0.1.10] - 2026-01-06

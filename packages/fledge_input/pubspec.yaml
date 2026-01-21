@@ -1,6 +1,6 @@
 name: fledge_input
 description: Input handling plugin for the Fledge ECS game framework. Provides action-based input mapping with keyboard, mouse, and gamepad support.
-version: 0.1.10
+version: 0.1.11
 repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_input
 homepage: https://fledge-framework.dev
 issue_tracker: https://github.com/fledge-framework/fledge/issues
