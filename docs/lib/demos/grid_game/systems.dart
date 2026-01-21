@@ -1,7 +1,9 @@
 import 'dart:math';
 import 'dart:ui';
 
+import 'package:flutter/services.dart';
 import 'package:fledge_ecs/fledge_ecs.dart';
+import 'package:fledge_input/fledge_input.dart';
 
 import 'components.dart';
 import 'resources.dart';
@@ -9,9 +11,12 @@ import 'resources.dart';
 // Re-export Time from fledge_ecs for convenience
 export 'package:fledge_ecs/fledge_ecs.dart' show Time;
 
-/// System that moves the player based on input state.
+/// Actions for the grid game.
+enum GridActions { move }
+
+/// System that moves the player based on input actions.
 ///
-/// Reads the InputState resource, updates the Player's GridPosition,
+/// Reads the ActionState resource, updates the Player's GridPosition,
 /// and clamps to grid bounds. Supports continuous movement while
 /// direction keys are held.
 class MovementSystem extends System {
@@ -20,24 +25,46 @@ class MovementSystem extends System {
         name: 'movement',
         writes: {ComponentId.of<GridPosition>()},
         reads: {ComponentId.of<Player>()},
-        resourceReads: {InputState, GridConfig, Time},
+        resourceReads: {ActionState, MoveTimer, GridConfig, Time},
       );
 
   @override
   Future<void> run(World world) async {
-    final input = world.getResource<InputState>();
+    final actions = world.getResource<ActionState>();
+    final moveTimer = world.getResource<MoveTimer>();
     final config = world.getResource<GridConfig>();
     final time = world.getResource<Time>();
-    if (input == null || config == null || time == null) return;
+    if (actions == null ||
+        moveTimer == null ||
+        config == null ||
+        time == null) {
+      return;
+    }
 
-    // Check if movement should occur this frame
-    if (!input.tick(time.delta)) return;
+    // Read movement from arrow keys as a Vector2
+    final (mx, my) = actions.vector2Value(ActionId.fromEnum(GridActions.move));
+    final hasDirection = mx != 0 || my != 0;
+
+    // Check if movement should occur this frame (handles repeat timing)
+    if (!moveTimer.tick(time.delta, isHeld: hasDirection)) return;
+
+    // Convert to grid movement (-1, 0, or 1)
+    final dx = mx < -0.5
+        ? -1
+        : mx > 0.5
+            ? 1
+            : 0;
+    final dy = my < -0.5
+        ? -1
+        : my > 0.5
+            ? 1
+            : 0;
 
     // Find and move the player
     for (final (_, pos)
         in world.query1<GridPosition>(filter: const With<Player>()).iter()) {
-      pos.x = (pos.x + input.dx).clamp(0, config.width - 1);
-      pos.y = (pos.y + input.dy).clamp(0, config.height - 1);
+      pos.x = (pos.x + dx).clamp(0, config.width - 1);
+      pos.y = (pos.y + dy).clamp(0, config.height - 1);
     }
   }
 }
@@ -154,8 +181,8 @@ class CollectionSystem extends System {
 ///
 /// ```dart
 /// final app = App()
-///   .addPlugin(TimePlugin())
-///   .addPlugin(GridGamePlugin());
+///   ..addPlugin(TimePlugin())
+///   ..addPlugin(GridGamePlugin());
 ///
 /// // Run game loop
 /// await app.tick();
@@ -168,11 +195,21 @@ class GridGamePlugin implements Plugin {
 
   @override
   void build(App app) {
+    // Configure input mapping - bind arrow keys to movement
+    final inputMap = InputMap.builder()
+        .bindArrows(ActionId.fromEnum(GridActions.move))
+        .build();
+
+    // Add the input plugin
+    app.addPlugin(InputPlugin.simple(
+      context: InputContext(name: 'gameplay', map: inputMap),
+    ));
+
     // Insert resources
     app
         .insertResource(config)
         .insertResource(GameScore())
-        .insertResource(InputState())
+        .insertResource(MoveTimer())
         .insertResource(SpawnTimer(2.0));
 
     // Add systems in execution order

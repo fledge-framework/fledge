@@ -1,8 +1,8 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart' hide Color;
-import 'package:flutter/services.dart';
 import 'package:fledge_ecs/fledge_ecs.dart' hide State;
+import 'package:fledge_input/fledge_input.dart';
 import 'package:fledge_render/fledge_render.dart';
 
 import 'extraction.dart';
@@ -23,16 +23,18 @@ import 'grid_game_painter.dart';
 /// **Main World** (game logic):
 /// - Entities with GridPosition, Player, Collectible, TileColor
 /// - Systems: MovementSystem, SpawnSystem, CollectionSystem
-/// - Resources: GridConfig, GameScore, InputState, SpawnTimer
+/// - Resources: GridConfig, GameScore, ActionState (from InputPlugin), MoveTimer, SpawnTimer
+/// - Input handled via `fledge_input` plugin with `InputWidget` wrapper
 ///
 /// **Render World** (GPU-ready data):
 /// - ExtractedGridEntity with pre-computed pixel coordinates
 /// - ExtractedGridConfig, ExtractedScore resources
 ///
 /// Each frame:
-/// 1. Main world systems run (game logic)
-/// 2. RenderPlugin's extraction system copies data to render world
-/// 3. Painter queries only the render world
+/// 1. InputWidget captures keyboard input and updates ActionState
+/// 2. Main world systems run (game logic)
+/// 3. RenderPlugin's extraction system copies data to render world
+/// 4. Painter queries only the render world
 ///
 /// This decouples rendering from game logic, enabling:
 /// - Different render backends without changing game code
@@ -49,7 +51,6 @@ class _GridGameWidgetState extends State<GridGameWidget>
     with SingleTickerProviderStateMixin {
   late App _app;
   late AnimationController _ticker;
-  late FocusNode _focusNode;
 
   /// Convenience accessor for the main ECS world (game logic).
   World get _world => _app.world;
@@ -57,7 +58,6 @@ class _GridGameWidgetState extends State<GridGameWidget>
   @override
   void initState() {
     super.initState();
-    _focusNode = FocusNode();
     _setupGame();
     _ticker = AnimationController(
       vsync: this,
@@ -70,6 +70,7 @@ class _GridGameWidgetState extends State<GridGameWidget>
   void _setupGame() {
     // Create the app with plugins
     // RenderPlugin provides: Extractors, RenderWorld, and RenderExtractionSystem
+    // GridGamePlugin configures InputPlugin for arrow key input
     _app = App()
       ..addPlugin(TimePlugin())
       ..addPlugin(RenderPlugin())
@@ -90,27 +91,6 @@ class _GridGameWidgetState extends State<GridGameWidget>
     setState(() {});
   }
 
-  void _handleKeyEvent(KeyEvent event) {
-    final input = _world.getResource<InputState>();
-    if (input == null) return;
-
-    final isDown = event is KeyDownEvent;
-    final isUp = event is KeyUpEvent;
-
-    if (!isDown && !isUp) return;
-
-    switch (event.logicalKey) {
-      case LogicalKeyboardKey.arrowLeft:
-        input.leftHeld = isDown;
-      case LogicalKeyboardKey.arrowRight:
-        input.rightHeld = isDown;
-      case LogicalKeyboardKey.arrowUp:
-        input.upHeld = isDown;
-      case LogicalKeyboardKey.arrowDown:
-        input.downHeld = isDown;
-    }
-  }
-
   void _resetGame() {
     // Recreate the app with fresh state
     _setupGame();
@@ -120,7 +100,6 @@ class _GridGameWidgetState extends State<GridGameWidget>
   @override
   void dispose() {
     _ticker.dispose();
-    _focusNode.dispose();
     super.dispose();
   }
 
@@ -136,103 +115,83 @@ class _GridGameWidgetState extends State<GridGameWidget>
     final displayWidth = config?.totalWidth ?? mainConfig.totalWidth;
     final displayHeight = config?.totalHeight ?? mainConfig.totalHeight;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Game canvas with keyboard focus
-        Focus(
-          focusNode: _focusNode,
-          autofocus: true,
-          onKeyEvent: (node, event) {
-            _handleKeyEvent(event);
-            return KeyEventResult.handled;
-          },
-          child: GestureDetector(
-            onTap: () => _focusNode.requestFocus(),
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: _focusNode.hasFocus
-                      ? const Color(0xFF4CAF50)
-                      : const Color(0xFF424242),
-                  width: 2,
-                ),
-                borderRadius: BorderRadius.circular(8),
+    // InputWidget captures all keyboard input and injects it into the ECS world
+    return InputWidget(
+      world: _world,
+      autofocus: true,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Game canvas
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: const Color(0xFF4CAF50),
+                width: 2,
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: CustomPaint(
-                  // Pass render world to painter (not main world!)
-                  painter:
-                      renderWorld != null ? GridGamePainter(renderWorld) : null,
-                  size: Size(displayWidth, displayHeight),
-                ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: CustomPaint(
+                // Pass render world to painter (not main world!)
+                painter:
+                    renderWorld != null ? GridGamePainter(renderWorld) : null,
+                size: Size(displayWidth, displayHeight),
               ),
             ),
           ),
-        ),
 
-        const SizedBox(height: 16),
+          const SizedBox(height: 16),
 
-        // Score and controls info
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Score
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E1E2E),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                'Score: $score',
-                style: const TextStyle(
-                  color: Color(0xFFFFD700),
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+          // Score and controls info
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Score
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E1E2E),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  'Score: $score',
+                  style: const TextStyle(
+                    color: Color(0xFFFFD700),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-            ),
 
-            const SizedBox(width: 16),
+              const SizedBox(width: 16),
 
-            // Reset button
-            TextButton.icon(
-              onPressed: _resetGame,
-              icon: const Icon(Icons.refresh, size: 18),
-              label: const Text('Reset'),
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF9E9E9E),
+              // Reset button
+              TextButton.icon(
+                onPressed: _resetGame,
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Reset'),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF9E9E9E),
+                ),
               ),
-            ),
 
-            const SizedBox(width: 16),
+              const SizedBox(width: 16),
 
-            // Controls hint
-            const Text(
-              'Controls: ← ↑ ↓ →',
-              style: TextStyle(
-                color: Color(0xFF757575),
-                fontSize: 14,
+              // Controls hint
+              const Text(
+                'Controls: ← ↑ ↓ →',
+                style: TextStyle(
+                  color: Color(0xFF757575),
+                  fontSize: 14,
+                ),
               ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 8),
-
-        // Focus hint
-        if (!_focusNode.hasFocus)
-          const Text(
-            'Click the game to focus',
-            style: TextStyle(
-              color: Color(0xFF616161),
-              fontSize: 12,
-              fontStyle: FontStyle.italic,
-            ),
+            ],
           ),
-      ],
+        ],
+      ),
     );
   }
 }

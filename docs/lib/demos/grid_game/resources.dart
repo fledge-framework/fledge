@@ -37,76 +37,49 @@ class GameScore {
   void reset() => value = 0;
 }
 
-/// Input state resource - tracks held direction keys for continuous movement.
+/// Movement timer resource - manages timing for smooth continuous movement.
 ///
-/// Tracks which direction keys are currently held and manages
-/// movement timing for smooth continuous movement.
-class InputState {
-  /// Currently held directions (can hold multiple keys).
-  bool leftHeld = false;
-  bool rightHeld = false;
-  bool upHeld = false;
-  bool downHeld = false;
-
+/// Used alongside ActionState to control movement repeat rate when
+/// direction keys are held.
+class MoveTimer {
   /// Time since last movement.
-  double _moveTimer = 0;
-
-  /// Delay before first repeat (slightly longer for responsiveness).
-  final double initialDelay = 0.15;
+  double _elapsed = 0;
 
   /// Interval between movements while held.
   final double repeatInterval = 0.1;
 
-  /// Whether initial move has happened.
-  bool _initialMoveDone = false;
-
-  /// Computed movement direction from held keys.
-  int get dx {
-    if (leftHeld && !rightHeld) return -1;
-    if (rightHeld && !leftHeld) return 1;
-    return 0;
-  }
-
-  int get dy {
-    if (upHeld && !downHeld) return -1;
-    if (downHeld && !upHeld) return 1;
-    return 0;
-  }
-
-  bool get hasHeldDirection => leftHeld || rightHeld || upHeld || downHeld;
+  /// Whether any direction is currently being held.
+  bool _wasHeld = false;
 
   /// Updates timer and returns true if movement should occur.
-  bool tick(double delta) {
-    if (!hasHeldDirection) {
-      _moveTimer = 0;
-      _initialMoveDone = false;
+  ///
+  /// Pass [isHeld] = true if any direction key is currently held.
+  bool tick(double delta, {required bool isHeld}) {
+    if (!isHeld) {
+      _elapsed = 0;
+      _wasHeld = false;
       return false;
     }
 
     // Immediate movement on first press
-    if (!_initialMoveDone) {
-      _initialMoveDone = true;
-      _moveTimer = 0;
+    if (!_wasHeld) {
+      _wasHeld = true;
+      _elapsed = 0;
       return true;
     }
 
-    _moveTimer += delta;
-    final threshold = _initialMoveDone ? repeatInterval : initialDelay;
+    _elapsed += delta;
 
-    if (_moveTimer >= threshold) {
-      _moveTimer -= threshold;
+    if (_elapsed >= repeatInterval) {
+      _elapsed -= repeatInterval;
       return true;
     }
     return false;
   }
 
-  void clear() {
-    leftHeld = false;
-    rightHeld = false;
-    upHeld = false;
-    downHeld = false;
-    _moveTimer = 0;
-    _initialMoveDone = false;
+  void reset() {
+    _elapsed = 0;
+    _wasHeld = false;
   }
 }
 

@@ -3,7 +3,7 @@
 In this tutorial, we'll build a complete Snake game from scratch. You'll learn how to:
 
 - Design game entities and their components
-- Handle keyboard input
+- Use the `fledge_input` plugin for action-based input handling
 - Implement collision detection
 - Manage game state (score, game over)
 - Connect everything to Flutter for rendering
@@ -42,6 +42,16 @@ lib/
     ├── systems.dart        # Game logic
     ├── snake_plugin.dart   # Bundles everything
     └── snake_widget.dart   # Flutter integration
+```
+
+## Dependencies
+
+Make sure you have `fledge_input` added to your `pubspec.yaml`:
+
+```yaml
+dependencies:
+  fledge_ecs: ^0.1.0
+  fledge_input: ^0.1.0
 ```
 
 ## Step 1: Define Components
@@ -156,14 +166,6 @@ class GameState {
   void reset() => isGameOver = false;
 }
 
-/// Tracks current input state
-class InputState {
-  Direction? pendingDirection;
-
-  void press(Direction dir) => pendingDirection = dir;
-  void clear() => pendingDirection = null;
-}
-
 /// Timer for grid-based movement
 class MoveTimer {
   double elapsed = 0;
@@ -181,32 +183,50 @@ Systems contain all game logic. Create `lib/game/systems.dart`:
 import 'dart:math';
 
 import 'package:fledge_ecs/fledge_ecs.dart';
+import 'package:fledge_input/fledge_input.dart';
 
 import 'components.dart';
 import 'resources.dart';
 
-/// Processes keyboard input and updates snake direction
+/// Actions for our snake game
+enum SnakeActions { move, restart }
+
+/// Processes input and updates snake direction
 class InputSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
     name: 'input',
     writes: {ComponentId.of<SnakeHead>()},
-    resourceReads: {InputState, GameState},
+    resourceReads: {ActionState, GameState},
   );
 
   @override
   Future<void> run(World world) async {
-    final input = world.getResource<InputState>()!;
+    final actions = world.getResource<ActionState>()!;
     final gameState = world.getResource<GameState>()!;
 
     if (gameState.isGameOver) return;
-    if (input.pendingDirection == null) return;
 
-    for (final (_, head) in world.query1<SnakeHead>().iter()) {
-      head.setDirection(input.pendingDirection!);
+    // Read movement from WASD/arrow keys as a Vector2
+    final (mx, my) = actions.vector2Value(ActionId.fromEnum(SnakeActions.move));
+
+    // Convert vector2 input to direction
+    Direction? newDirection;
+    if (my < -0.5) {
+      newDirection = Direction.up;
+    } else if (my > 0.5) {
+      newDirection = Direction.down;
+    } else if (mx < -0.5) {
+      newDirection = Direction.left;
+    } else if (mx > 0.5) {
+      newDirection = Direction.right;
     }
 
-    input.clear();
+    if (newDirection == null) return;
+
+    for (final (_, head) in world.query1<SnakeHead>().iter()) {
+      head.setDirection(newDirection);
+    }
   }
 }
 
@@ -421,7 +441,7 @@ class CollisionSystem implements System {
 ```
 
 Each system has a single responsibility:
-- **InputSystem**: Reads keyboard input, updates snake direction
+- **InputSystem**: Reads actions from `ActionState`, updates snake direction
 - **MovementSystem**: Moves snake at fixed intervals
 - **FoodCollisionSystem**: Detects food collection, spawns new food, grows snake
 - **CollisionSystem**: Detects wall/self collision, triggers game over
@@ -433,7 +453,9 @@ The plugin bundles everything together. Create `lib/game/snake_plugin.dart`:
 ```dart
 import 'dart:math';
 
+import 'package:flutter/services.dart';
 import 'package:fledge_ecs/fledge_ecs.dart';
+import 'package:fledge_input/fledge_input.dart';
 
 import 'components.dart';
 import 'resources.dart';
@@ -446,11 +468,23 @@ class SnakePlugin implements Plugin {
   void build(App app) {
     final config = GameConfig();
 
+    // Configure input mapping - bind WASD and arrows to movement
+    final inputMap = InputMap.builder()
+      .bindWasd(ActionId.fromEnum(SnakeActions.move))
+      .bindArrows(ActionId.fromEnum(SnakeActions.move))
+      .bindKey(LogicalKeyboardKey.space, ActionId.fromEnum(SnakeActions.restart))
+      .bindKey(LogicalKeyboardKey.enter, ActionId.fromEnum(SnakeActions.restart))
+      .build();
+
+    // Add the input plugin
+    app.addPlugin(InputPlugin.simple(
+      context: InputContext(name: 'gameplay', map: inputMap),
+    ));
+
     // Register resources
     app.world.insertResource(config);
     app.world.insertResource(Score());
     app.world.insertResource(GameState());
-    app.world.insertResource(InputState());
     app.world.insertResource(MoveTimer());
 
     // Add systems in order
@@ -487,12 +521,13 @@ Now we connect everything to Flutter. Create `lib/game/snake_widget.dart`:
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:fledge_ecs/fledge_ecs.dart';
+import 'package:fledge_input/fledge_input.dart';
 
 import 'components.dart';
 import 'resources.dart';
 import 'snake_plugin.dart';
+import 'systems.dart';
 
 class SnakeGameWidget extends StatefulWidget {
   const SnakeGameWidget({super.key});
@@ -505,12 +540,10 @@ class _SnakeGameWidgetState extends State<SnakeGameWidget>
     with SingleTickerProviderStateMixin {
   late App _app;
   late AnimationController _ticker;
-  late FocusNode _focusNode;
 
   @override
   void initState() {
     super.initState();
-    _focusNode = FocusNode();
     _initGame();
     _ticker = AnimationController(
       vsync: this,
@@ -527,43 +560,23 @@ class _SnakeGameWidgetState extends State<SnakeGameWidget>
   }
 
   void _gameLoop() {
+    // Check for restart action
+    final actions = _app.world.getResource<ActionState>();
+    final gameState = _app.world.getResource<GameState>();
+    if (actions != null &&
+        gameState != null &&
+        gameState.isGameOver &&
+        actions.justPressed(ActionId.fromEnum(SnakeActions.restart))) {
+      _initGame();
+    }
+
     _app.tick();
     setState(() {});
-  }
-
-  void _handleKeyEvent(KeyEvent event) {
-    if (event is! KeyDownEvent) return;
-
-    final input = _app.world.getResource<InputState>();
-    if (input == null) return;
-
-    switch (event.logicalKey) {
-      case LogicalKeyboardKey.arrowUp:
-      case LogicalKeyboardKey.keyW:
-        input.press(Direction.up);
-      case LogicalKeyboardKey.arrowDown:
-      case LogicalKeyboardKey.keyS:
-        input.press(Direction.down);
-      case LogicalKeyboardKey.arrowLeft:
-      case LogicalKeyboardKey.keyA:
-        input.press(Direction.left);
-      case LogicalKeyboardKey.arrowRight:
-      case LogicalKeyboardKey.keyD:
-        input.press(Direction.right);
-      case LogicalKeyboardKey.space:
-      case LogicalKeyboardKey.enter:
-        _resetGame();
-    }
-  }
-
-  void _resetGame() {
-    _initGame();
   }
 
   @override
   void dispose() {
     _ticker.dispose();
-    _focusNode.dispose();
     super.dispose();
   }
 
@@ -573,75 +586,67 @@ class _SnakeGameWidgetState extends State<SnakeGameWidget>
     final score = _app.world.getResource<Score>()?.value ?? 0;
     final isGameOver = _app.world.getResource<GameState>()?.isGameOver ?? false;
 
-    return Focus(
-      focusNode: _focusNode,
+    // InputWidget captures all keyboard input and injects it into the ECS world
+    return InputWidget(
+      world: _app.world,
       autofocus: true,
-      onKeyEvent: (node, event) {
-        _handleKeyEvent(event);
-        return KeyEventResult.handled;
-      },
-      child: GestureDetector(
-        onTap: () => _focusNode.requestFocus(),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Score display
-            Container(
-              width: config.pixelWidth.toDouble(),
-              padding: const EdgeInsets.all(8),
-              color: const Color(0xFF1E1E2E),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Score: $score',
-                    style: const TextStyle(
-                      color: Color(0xFFFFD700),
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Score display
+          Container(
+            width: config.pixelWidth.toDouble(),
+            padding: const EdgeInsets.all(8),
+            color: const Color(0xFF1E1E2E),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Score: $score',
+                  style: const TextStyle(
+                    color: Color(0xFFFFD700),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (isGameOver)
+                  const Text(
+                    'GAME OVER - Press Space to restart',
+                    style: TextStyle(
+                      color: Color(0xFFFF5722),
+                      fontSize: 14,
                     ),
                   ),
-                  if (isGameOver)
-                    const Text(
-                      'GAME OVER - Press Space to restart',
-                      style: TextStyle(
-                        color: Color(0xFFFF5722),
-                        fontSize: 14,
-                      ),
-                    ),
-                ],
-              ),
+              ],
             ),
+          ),
 
-            // Game canvas
-            Container(
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: _focusNode.hasFocus
-                      ? const Color(0xFF4CAF50)
-                      : const Color(0xFF424242),
-                  width: 2,
-                ),
-              ),
-              child: CustomPaint(
-                painter: SnakeGamePainter(_app.world),
-                size: Size(
-                  config.pixelWidth.toDouble(),
-                  config.pixelHeight.toDouble(),
-                ),
+          // Game canvas
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: const Color(0xFF4CAF50),
+                width: 2,
               ),
             ),
+            child: CustomPaint(
+              painter: SnakeGamePainter(_app.world),
+              size: Size(
+                config.pixelWidth.toDouble(),
+                config.pixelHeight.toDouble(),
+              ),
+            ),
+          ),
 
-            // Controls hint
-            const Padding(
-              padding: EdgeInsets.all(8),
-              child: Text(
-                'Controls: Arrow Keys or WASD',
-                style: TextStyle(color: Color(0xFF757575)),
-              ),
+          // Controls hint
+          const Padding(
+            padding: EdgeInsets.all(8),
+            child: Text(
+              'Controls: Arrow Keys or WASD',
+              style: TextStyle(color: Color(0xFF757575)),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -767,13 +772,13 @@ Let's review the ECS architecture we created:
 | `GameConfig` | Grid size, tile size, move speed |
 | `Score` | Player's current score |
 | `GameState` | Game over flag |
-| `InputState` | Pending input direction |
+| `ActionState` | Input actions from `fledge_input` plugin |
 | `MoveTimer` | Time since last move |
 
 ### Systems (Logic)
 | System | Stage | Purpose |
 |--------|-------|---------|
-| `InputSystem` | preUpdate | Process keyboard input |
+| `InputSystem` | preUpdate | Read actions and update snake direction |
 | `MovementSystem` | update | Move snake at intervals |
 | `FoodCollisionSystem` | postUpdate | Handle food collection |
 | `CollisionSystem` | postUpdate | Detect game over conditions |

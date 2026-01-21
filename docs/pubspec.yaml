@@ -18,6 +18,10 @@ dependencies:
   fledge_ecs:
     path: ../packages/fledge_ecs
 
+  # Fledge Input
+  fledge_input:
+    path: ../packages/fledge_input
+
   # Fledge Render (for two-world architecture)
   fledge_render:
     path: ../packages/fledge_render
