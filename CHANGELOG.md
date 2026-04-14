@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.1.14] - 2026-04-14
+
+## [0.1.14] - 2026-04-14
+
+### Features
+
+- **fledge_net:** Add network packet encryption
+- **fledge_window:** Add error handling
+- **examples:** Add new drifter game demo
+
+### Miscellaneous
+
+- Update dependency definitions
+
+
+
 ## [0.1.13] - 2026-04-14
 
 ## [0.1.13] - 2026-04-14

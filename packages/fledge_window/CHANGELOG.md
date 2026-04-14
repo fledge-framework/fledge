@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.14] - 2026-04-14
+
+## [Unreleased]
+
+### Features
+
+- **fledge_window:** Add error handling
+- **examples:** Add new drifter game demo
+
+
+
 ## [0.1.13] - 2026-04-14
 
 

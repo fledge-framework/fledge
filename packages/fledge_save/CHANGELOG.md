@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.14] - 2026-04-14
+
+## [0.1.14] - 2026-04-14
+
+### Features
+
+- **fledge_net:** Add network packet encryption
+
+### Miscellaneous
+
+- Update dependency definitions
+
+
+
 ## [0.1.13] - 2026-04-14
 
 
