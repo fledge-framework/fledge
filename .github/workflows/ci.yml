@@ -128,6 +128,13 @@ jobs:
         working-directory: examples/advanced_ecs
         run: dart compile exe bin/main.dart -o advanced_ecs
 
+      # Drifter is a Flutter app, not a pure-Dart CLI. Build it for web
+      # so we catch standalone-entrypoint regressions that `build-docs`
+      # (which imports drifter as a library) wouldn't see.
+      - name: Build drifter example (web)
+        working-directory: examples/drifter
+        run: flutter build web --release
+
   build-docs:
     name: Build Docs
     runs-on: ubuntu-latest

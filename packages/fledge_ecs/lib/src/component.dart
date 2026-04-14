@@ -14,23 +14,33 @@ class ComponentId implements Comparable<ComponentId> {
   /// Registry mapping types to their component IDs.
   static final Map<Type, ComponentId> _registry = {};
 
+  /// Reverse registry: id index → the Type it was registered for. Parallel
+  /// to [_registry] so [debugName] / [toString] can render "Velocity"
+  /// instead of "ComponentId(3)" without an O(n) scan.
+  static final List<Type> _idToType = [];
+
   /// Counter for assigning new component IDs.
   static int _nextId = 0;
+
+  static ComponentId _register(Type type) {
+    final existing = _registry[type];
+    if (existing != null) return existing;
+    final id = ComponentId._(_nextId++);
+    _registry[type] = id;
+    _idToType.add(type);
+    return id;
+  }
 
   /// Gets or creates a [ComponentId] for the given type [T].
   ///
   /// The first call for a given type will assign a new ID.
   /// Subsequent calls return the same ID.
-  static ComponentId of<T>() {
-    return _registry.putIfAbsent(T, () => ComponentId._(_nextId++));
-  }
+  static ComponentId of<T>() => _register(T);
 
   /// Gets or creates a [ComponentId] for the given runtime [type].
   ///
   /// Prefer [of<T>()] when the type is known at compile time.
-  static ComponentId ofType(Type type) {
-    return _registry.putIfAbsent(type, () => ComponentId._(_nextId++));
-  }
+  static ComponentId ofType(Type type) => _register(type);
 
   /// Returns the [ComponentId] for type [T] if it has been registered.
   static ComponentId? tryOf<T>() => _registry[T];
@@ -42,8 +52,15 @@ class ComponentId implements Comparable<ComponentId> {
   @visibleForTesting
   static void resetRegistry() {
     _registry.clear();
+    _idToType.clear();
     _nextId = 0;
   }
+
+  /// The user-facing name of the component type this id was registered
+  /// for — e.g. `Velocity` instead of `ComponentId(3)`. Used in
+  /// diagnostics like `Schedule.checkOrderingAmbiguities`.
+  String get debugName =>
+      id < _idToType.length ? '${_idToType[id]}' : 'ComponentId($id)';
 
   @override
   int compareTo(ComponentId other) => id.compareTo(other.id);
@@ -56,7 +73,7 @@ class ComponentId implements Comparable<ComponentId> {
   int get hashCode => id;
 
   @override
-  String toString() => 'ComponentId($id)';
+  String toString() => debugName;
 }
 
 /// Descriptor for a component type with its metadata.

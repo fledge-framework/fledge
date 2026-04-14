@@ -247,6 +247,14 @@ class _InputWidgetState extends State<InputWidget> {
   }
 
   void _handlePointerDown(PointerDownEvent event) {
+    // Reclaim focus on every pointer-down. A no-op if we already have
+    // focus; otherwise it pulls focus back from anything up the tree
+    // that tried to steal it on this click (e.g. a `SelectableRegion`
+    // that wants to start tracking text selection).
+    if (!_focusNode.hasFocus) {
+      _focusNode.requestFocus();
+    }
+
     final mouse = _mouse;
     if (mouse == null) return;
 
@@ -296,6 +304,12 @@ class _InputWidgetState extends State<InputWidget> {
     super.dispose();
   }
 
+  /// No-op kept as a named member (rather than an inline closure in
+  /// `build`) so `GestureDetector` can register the same callback
+  /// across rebuilds — participates in the tap arena without any side
+  /// effect.
+  static void _noopTap() {}
+
   MouseCursor _getCursor() {
     return switch (_currentCursorMode) {
       CursorMode.visible => SystemMouseCursors.basic,
@@ -309,7 +323,10 @@ class _InputWidgetState extends State<InputWidget> {
     // Check for context changes and update cursor mode
     _updateCursorFromContext();
 
-    Widget child = widget.child;
+    // Games don't want text-selection semantics. Opt the entire input
+    // subtree out of any ancestor `SelectionArea` so text inside the
+    // game (HUD score, tooltips) isn't selectable.
+    Widget child = SelectionContainer.disabled(child: widget.child);
 
     // Wrap with mouse listener
     child = Listener(
@@ -326,6 +343,23 @@ class _InputWidgetState extends State<InputWidget> {
       cursor: _getCursor(),
       onEnter: widget.focusOnHover ? (_) => _focusNode.requestFocus() : null,
       onExit: _handlePointerExit,
+      child: child,
+    );
+
+    // Claim the gesture arena for taps inside the game. Without this,
+    // an ancestor `SelectableRegion` (from a `SelectionArea` used for
+    // page-level text selection in docs or a marketing site) wins the
+    // tap gesture and steals primary focus from the game on every
+    // click — the user sees the game pause and the "Click to play"
+    // overlay reappear. An empty `onTap` is enough to participate in
+    // the arena; `onTapDown` also re-claims focus in the rare case
+    // focus was lost out-of-band between pointer events.
+    child = GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: _noopTap,
+      onTapDown: (_) {
+        if (!_focusNode.hasFocus) _focusNode.requestFocus();
+      },
       child: child,
     );
 

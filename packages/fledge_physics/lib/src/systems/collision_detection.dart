@@ -41,6 +41,9 @@ class CollisionDetectionSystem implements System {
           ComponentId.of<CollisionConfig>(),
         },
         writes: {ComponentId.of<CollisionEvent>()},
+        // Detection sees transforms produced by the game's own velocity
+        // integration; resolution must clamp velocities first.
+        after: const ['collision_resolution'],
       );
 
   @override

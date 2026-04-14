@@ -166,6 +166,83 @@ class SystemStage {
     _pendingBefore.clear();
     _pendingAfter.clear();
   }
+
+  /// Scan pairs in this stage for ordering determined only by registration
+  /// order. Called by [Schedule.checkOrderingAmbiguities].
+  List<OrderingAmbiguity> _findOrderingAmbiguities() {
+    final out = <OrderingAmbiguity>[];
+    for (var i = 0; i < _systems.length; i++) {
+      final a = _systems[i].system.meta;
+      for (var j = i + 1; j < _systems.length; j++) {
+        final b = _systems[j].system.meta;
+        if (!a.conflictsWith(b)) continue;
+        if (a.before.contains(b.name) ||
+            a.after.contains(b.name) ||
+            b.before.contains(a.name) ||
+            b.after.contains(a.name)) {
+          continue;
+        }
+        out.add(OrderingAmbiguity(
+          stage: name,
+          systemA: a.name,
+          systemB: b.name,
+          reasons: _describeMetaConflict(a, b),
+        ));
+      }
+    }
+    return out;
+  }
+}
+
+/// Describe what makes two metas conflict, in user-facing language.
+List<String> _describeMetaConflict(SystemMeta a, SystemMeta b) {
+  final reasons = <String>[];
+
+  if (a.exclusive || b.exclusive) {
+    reasons.add('one side is exclusive');
+    return reasons;
+  }
+
+  for (final w in a.writes) {
+    if (b.writes.contains(w)) {
+      reasons.add('both write component $w');
+    } else if (b.reads.contains(w)) {
+      reasons.add('$w: ${a.name} writes, ${b.name} reads');
+    }
+  }
+  for (final w in b.writes) {
+    if (a.reads.contains(w)) {
+      reasons.add('$w: ${b.name} writes, ${a.name} reads');
+    }
+  }
+
+  for (final w in a.resourceWrites) {
+    if (b.resourceWrites.contains(w)) {
+      reasons.add('both write resource $w');
+    } else if (b.resourceReads.contains(w)) {
+      reasons.add('resource $w: ${a.name} writes, ${b.name} reads');
+    }
+  }
+  for (final w in b.resourceWrites) {
+    if (a.resourceReads.contains(w)) {
+      reasons.add('resource $w: ${b.name} writes, ${a.name} reads');
+    }
+  }
+
+  for (final e in a.eventWrites) {
+    if (b.eventWrites.contains(e)) {
+      reasons.add('both write event $e');
+    } else if (b.eventReads.contains(e)) {
+      reasons.add('event $e: ${a.name} writes, ${b.name} reads');
+    }
+  }
+  for (final e in b.eventWrites) {
+    if (a.eventReads.contains(e)) {
+      reasons.add('event $e: ${b.name} writes, ${a.name} reads');
+    }
+  }
+
+  return reasons;
 }
 
 /// The schedule containing all systems organized by stage.
@@ -265,4 +342,64 @@ class Schedule {
       stage.clear();
     }
   }
+
+  /// Find every pair of systems whose relative execution order is
+  /// determined purely by registration order.
+  ///
+  /// A pair is flagged when:
+  ///
+  /// 1. They live in the same stage.
+  /// 2. Their metas [SystemMeta.conflictsWith] each other (shared
+  ///    component write, write-vs-read, shared resource, etc.) — so one
+  ///    must run before the other.
+  /// 3. Neither declares an explicit [SystemMeta.before] or
+  ///    [SystemMeta.after] constraint referencing the other.
+  ///
+  /// The scheduler still produces a valid ordering (insertion order
+  /// breaks the tie), but games that rely on that order are brittle —
+  /// adding a plugin earlier in `App` setup can silently flip the pair.
+  /// This is the bug class behind "my movement system can walk through
+  /// walls because `CollisionResolutionSystem` runs first."
+  ///
+  /// Call this in debug builds or tests and treat the result as a
+  /// smell. To silence a legitimate case, add `before:` / `after:` to
+  /// one of the two systems' metas so the intent is explicit in source.
+  List<OrderingAmbiguity> checkOrderingAmbiguities() {
+    final out = <OrderingAmbiguity>[];
+    for (final stage in _stages) {
+      out.addAll(stage._findOrderingAmbiguities());
+    }
+    return out;
+  }
+}
+
+/// One pair of systems in the same stage whose relative order is only
+/// defined by registration order. See [Schedule.checkOrderingAmbiguities].
+class OrderingAmbiguity {
+  /// Stage the pair lives in.
+  final String stage;
+
+  /// First system — runs before [systemB] under the current registration.
+  final String systemA;
+
+  /// Second system — runs after [systemA] under the current registration.
+  final String systemB;
+
+  /// Human-readable reasons the scheduler had to serialise them (e.g.
+  /// "both write Velocity", "conflict on resource Time").
+  final List<String> reasons;
+
+  const OrderingAmbiguity({
+    required this.stage,
+    required this.systemA,
+    required this.systemB,
+    required this.reasons,
+  });
+
+  @override
+  String toString() => 'OrderingAmbiguity(stage=$stage): '
+      '$systemA runs before $systemB by registration order only. '
+      'Reasons: ${reasons.join('; ')}. '
+      'Add `before: [\'$systemB\']` to $systemA (or the reverse) to make '
+      'the intent explicit, or move one to a different stage.';
 }

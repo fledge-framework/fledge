@@ -1,0 +1,35 @@
+name: drifter_example
+description: >
+  End-to-end Fledge vertical slice — a minimal collect-em-up integrating
+  ECS, render_2d, input, physics, and save.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.6.0
+  flutter: ">=3.10.0"
+
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+  fledge_ecs:
+    path: ../../packages/fledge_ecs
+  fledge_render:
+    path: ../../packages/fledge_render
+  fledge_render_2d:
+    path: ../../packages/fledge_render_2d
+  fledge_input:
+    path: ../../packages/fledge_input
+  fledge_physics:
+    path: ../../packages/fledge_physics
+  fledge_tiled:
+    path: ../../packages/fledge_tiled
+  fledge_save:
+    path: ../../packages/fledge_save
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0

@@ -139,16 +139,16 @@ class WindowEventSystem implements System {
           display.size.height,
         );
         final ok = await _tryNative(
-              world,
-              'setMode',
-              () async {
-                await windowManager.setFullScreen(false);
-                await windowManager.setAsFrameless();
-                await windowManager.setHasShadow(false);
-                await windowManager.setBounds(borderlessBounds);
-              },
-              attemptedMode: mode,
-            );
+          world,
+          'setMode',
+          () async {
+            await windowManager.setFullScreen(false);
+            await windowManager.setAsFrameless();
+            await windowManager.setHasShadow(false);
+            await windowManager.setBounds(borderlessBounds);
+          },
+          attemptedMode: mode,
+        );
         if (!ok) return false;
         state.mode = WindowMode.borderless;
         state.size = display.size;
@@ -159,21 +159,21 @@ class WindowEventSystem implements System {
         final position =
             state.savedWindowedPosition ?? _centerOnDisplay(size, display);
         final ok = await _tryNative(
-              world,
-              'setMode',
-              () async {
-                await windowManager.setFullScreen(false);
-                await windowManager.setTitleBarStyle(TitleBarStyle.normal);
-                await windowManager.setAlwaysOnTop(false);
-                await windowManager.setBounds(Rect.fromLTWH(
-                  position.dx,
-                  position.dy,
-                  size.width,
-                  size.height,
-                ));
-              },
-              attemptedMode: mode,
-            );
+          world,
+          'setMode',
+          () async {
+            await windowManager.setFullScreen(false);
+            await windowManager.setTitleBarStyle(TitleBarStyle.normal);
+            await windowManager.setAlwaysOnTop(false);
+            await windowManager.setBounds(Rect.fromLTWH(
+              position.dx,
+              position.dy,
+              size.width,
+              size.height,
+            ));
+          },
+          attemptedMode: mode,
+        );
         if (!ok) return false;
         state.mode = WindowMode.windowed;
         state.size = size;

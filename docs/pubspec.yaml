@@ -26,6 +26,10 @@ dependencies:
   fledge_render:
     path: ../packages/fledge_render
 
+  # Drifter example — embedded as an interactive demo.
+  drifter_example:
+    path: ../examples/drifter
+
   # Routing
   go_router: ^17.2.1
 

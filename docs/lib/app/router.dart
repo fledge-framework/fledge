@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 
 import '../pages/demo_page.dart';
 import '../pages/docs_page.dart';
+import '../pages/drifter_page.dart';
 import '../pages/home_page.dart';
 
 final router = GoRouter(
@@ -34,6 +35,10 @@ final router = GoRouter(
     GoRoute(
       path: '/demo/grid-game',
       builder: (context, state) => const DemoPage(),
+    ),
+    GoRoute(
+      path: '/demo/drifter',
+      builder: (context, state) => const DrifterPage(),
     ),
   ],
 );
@@ -129,6 +134,7 @@ class DocNavigation {
       path: 'demos',
       pages: [
         NavPage(title: 'Grid Game', path: 'grid-game'),
+        NavPage(title: 'Drifter', path: 'drifter'),
       ],
     ),
   ];

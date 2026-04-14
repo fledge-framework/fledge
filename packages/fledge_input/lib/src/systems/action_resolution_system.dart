@@ -23,6 +23,10 @@ class ActionResolutionSystem implements System {
           InputContextRegistry
         },
         resourceWrites: {ActionState},
+        // Explicit: we need the previous-frame transition flags cleared
+        // and the begin-frame bookkeeping done before we resolve
+        // actions from raw state.
+        after: ['inputPolling'],
       );
 
   @override

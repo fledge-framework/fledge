@@ -23,6 +23,7 @@ workspace:
   - packages/fledge_net
   - examples/basic_ecs
   - examples/advanced_ecs
+  - examples/drifter
   - docs
 
 dev_dependencies:
@@ -61,6 +62,7 @@ melos:
           - fledge_window
           - fledge_tiled
           - fledge_docs
+          - drifter_example
 
     test:flutter:
       description: Run tests in Flutter packages

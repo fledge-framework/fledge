@@ -55,6 +55,10 @@ InputWidget(
 
 `InputWidget` returns `KeyEventResult.ignored` for key events that aren't bound in the active `InputMap`, so ancestor `Focus` widgets (e.g. page-level shortcut handlers like `Ctrl+K`) still receive them. Bound keys return `KeyEventResult.handled` and don't bubble.
 
+## System ordering
+
+If your movement/steering system writes a component that `fledge_physics`'s `CollisionResolutionSystem` also writes (e.g. `Velocity`), register it in `CoreStage.preUpdate` or declare `before: ['collision_resolution']`. Putting it in `CoreStage.update` next to physics silently makes the player clip through walls — the scheduler orders same-stage conflicts by registration order, and the physics plugin is usually added first. See the [physics plugin docs](https://fledge-framework.dev/docs/plugins/physics) for the full story. `App.checkScheduleOrdering()` surfaces this automatically.
+
 ## Controlling Focus (pause-on-blur)
 
 Pass a `FocusNode` in if you want to observe focus state — useful for pausing when the player clicks away:

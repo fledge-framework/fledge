@@ -85,4 +85,53 @@ void main() {
           reason: 'non-game keys must bubble to ancestor Focus handlers');
     },
   );
+
+  testWidgets(
+    'clicking a focused canvas does not pause the game — SelectionArea '
+    'must not steal focus on re-click',
+    (tester) async {
+      // Mirror the live docs scaffold: a `SelectionArea` wraps the page so
+      // prose is selectable. The outer `Focus(autofocus: true)` is what
+      // prevents InputWidget's own autofocus from succeeding on mount,
+      // so we can then deterministically tap-to-focus and verify a
+      // subsequent click does NOT lose focus. Without the InputWidget
+      // gesture-arena fix, SelectionArea's SelectableRegion would win
+      // the second tap, steal focus, and the game would re-pause.
+      await tester.pumpWidget(MaterialApp(
+        home: Focus(
+          autofocus: true,
+          onKeyEvent: (_, __) => KeyEventResult.ignored,
+          child: SelectionArea(
+            child: Scaffold(
+              body: Center(child: const GridGameWidget()),
+            ),
+          ),
+        ),
+      ));
+      await tester.pump();
+      await tester.pump();
+
+      final InputWidget inputWidget =
+          tester.widget<InputWidget>(find.byType(InputWidget));
+      final gameFocus = inputWidget.focusNode!;
+
+      // Paused at this point — outer Focus has primary focus.
+      expect(gameFocus.hasFocus, isFalse);
+      expect(find.text('Controls: ← ↑ ↓ →'), findsOneWidget);
+
+      // Tap to grab focus.
+      await tester.tap(find.byType(CustomPaint).first);
+      await tester.pump();
+      expect(gameFocus.hasFocus, isTrue,
+          reason: 'first tap should transfer focus to the game');
+
+      // Second click on the same canvas while focused — must be a
+      // no-op focus-wise. This is the scenario the InputWidget
+      // gesture-arena fix guards against.
+      await tester.tap(find.byType(CustomPaint).first);
+      await tester.pump();
+      expect(gameFocus.hasFocus, isTrue,
+          reason: 'clicking a focused canvas must not lose focus');
+    },
+  );
 }

@@ -94,6 +94,41 @@ for (final s in world.resourcesOfType<Serializable>()) {
 
 `fledge_save` uses this to auto-discover `Saveable` resources without manual registration.
 
+## Stage conventions
+
+Systems execute in the order of their stages: `first` → `preUpdate` → `update` → `postUpdate` → `last`. Within a stage, the scheduler parallelises non-conflicting systems and serialises conflicting ones. Two systems in the same stage that share a component write (or one reads what the other writes) *must* run in some order — and when that order isn't declared explicitly, the scheduler falls back to **registration order**. Changing when a plugin is added can silently reorder them.
+
+Recommended placement (mirrors Bevy's convention):
+
+| Stage | What lives here |
+|-------|-----------------|
+| `first` | Frame-start bookkeeping: input polling, action resolution, time updates |
+| `preUpdate` | Input-driven component writes (movement intent, AI steering) |
+| `update` | Core game logic; physics clamp/resolve; collision detection |
+| `postUpdate` | Reactions to the update stage |
+| `last` | Cleanup, render extraction |
+
+When two systems in the same stage conflict, declare the order explicitly:
+
+```dart
+SystemMeta(
+  name: 'my_movement',
+  writes: {ComponentId.of<Velocity>()},
+  before: const ['collision_resolution'], // or: after: [...]
+)
+```
+
+Run `App.checkScheduleOrdering()` in a test or debug boot path to flag every same-stage conflict that currently relies on registration order:
+
+```dart
+final app = buildApp();
+for (final issue in app.checkScheduleOrdering()) {
+  // e.g. OrderingAmbiguity(stage=update): my_movement runs before
+  //      collision_resolution by registration order only. Reasons:
+  //      both write component Velocity. Add `before: …` …
+}
+```
+
 ## Documentation
 
 - [Getting Started Guide](https://fledge-framework.dev/docs/getting-started)

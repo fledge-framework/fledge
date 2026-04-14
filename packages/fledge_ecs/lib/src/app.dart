@@ -293,6 +293,35 @@ class App {
     _states.applyTransitions();
   }
 
+  /// Walk the schedule for pairs of systems whose relative order is
+  /// determined only by registration order (i.e. they conflict but
+  /// neither has an explicit `before:` / `after:` constraint on the
+  /// other). This is the bug class behind subtle physics / input /
+  /// render issues like "my movement system runs after collision
+  /// resolution and the player walks through walls."
+  ///
+  /// Intended for use in tests or a debug-build boot path:
+  ///
+  /// ```dart
+  /// void main() {
+  ///   final app = buildApp();
+  ///   assert(() {
+  ///     final issues = app.checkScheduleOrdering();
+  ///     if (issues.isNotEmpty) {
+  ///       // ignore: avoid_print
+  ///       issues.forEach(print);
+  ///     }
+  ///     return true;
+  ///   }());
+  ///   runApp(GameWidget(app: app));
+  /// }
+  /// ```
+  ///
+  /// Returns an empty list when every same-stage conflict has an
+  /// explicit ordering.
+  List<OrderingAmbiguity> checkScheduleOrdering() =>
+      schedule.checkOrderingAmbiguities();
+
   /// Stops the running game loop.
   ///
   /// The loop will exit after the current frame completes.

@@ -63,8 +63,7 @@ class WindowInitSystem implements System {
     try {
       final screenDisplays = await screenRetriever.getAllDisplays();
       final primaryDisplay = await screenRetriever.getPrimaryDisplay();
-      final result =
-          _buildDisplayList(screenDisplays, primaryDisplay.id);
+      final result = _buildDisplayList(screenDisplays, primaryDisplay.id);
       displays = result.$1;
       primaryIndex = result.$2;
     } catch (e) {
@@ -86,8 +85,8 @@ class WindowInitSystem implements System {
 
     // Non-critical: title + size constraints. Reported on failure, but we
     // keep going so the window still appears.
-    await _tryNative(world, 'setTitle',
-        () => windowManager.setTitle(config.title));
+    await _tryNative(
+        world, 'setTitle', () => windowManager.setTitle(config.title));
 
     if (config.minSize != null) {
       await _tryNative(
@@ -119,8 +118,8 @@ class WindowInitSystem implements System {
     }
 
     final windowState = world.getResource<WindowState>()!;
-    final modeOk =
-        await _applyMode(world, config.mode, targetDisplay, windowState, config);
+    final modeOk = await _applyMode(
+        world, config.mode, targetDisplay, windowState, config);
 
     // Show + focus. Non-critical in the sense that init doesn't abort, but
     // we do want to reflect actual success in the state.

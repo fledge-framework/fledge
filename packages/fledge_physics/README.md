@@ -130,13 +130,41 @@ world.spawn()
 
 ## Systems
 
-The `PhysicsPlugin` adds these systems:
+The `PhysicsPlugin` adds these systems (registered names are snake_case):
 
-| System | Stage | Description |
-|--------|-------|-------------|
-| `CollisionResolutionSystem` | update | Adjusts velocity to prevent solid collisions |
-| `CollisionDetectionSystem` | update | Generates `CollisionEvent` for overlapping entities |
-| `CollisionCleanupSystem` | last | Removes `CollisionEvent` at end of frame |
+| System | Registered name | Stage | Description |
+|--------|-----------------|-------|-------------|
+| `CollisionResolutionSystem` | `collision_resolution` | `update` | Clamps each `Velocity` so the next move doesn't penetrate a solid |
+| `CollisionDetectionSystem`  | `collision_detection`  | `update` | Emits `CollisionEvent` for overlapping pairs (runs after resolution) |
+| `CollisionCleanupSystem`    | `collision_cleanup`    | `last`   | Removes `CollisionEvent` at end of frame |
+
+## System ordering
+
+**Put anything that writes `Velocity` — your input system, AI steering, knockback, anything — in `CoreStage.preUpdate` or declare `before: ['collision_resolution']`.**
+
+The scheduler serialises systems that conflict on the same component and breaks ties by *registration order* within a stage. `PhysicsPlugin` is typically registered early in `App` setup, so `collision_resolution` lands first. If your movement system shares `CoreStage.update` with physics and doesn't declare explicit ordering, it ends up running *after* resolution — meaning physics clamps **last frame's** velocity, then your movement overwrites it, then integration pushes the player through the wall. Everything compiles; everything analyses; `flutter test` passes; the player just clips right through the level.
+
+Two ways to avoid it:
+
+```dart
+// Option A — put movement in preUpdate (recommended).
+app.addSystem(MyMovementSystem(), stage: CoreStage.preUpdate);
+```
+
+```dart
+// Option B — stay in update but declare the ordering explicitly.
+class MyMovementSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+    name: 'my_movement',
+    writes: {ComponentId.of<Velocity>()},
+    before: const ['collision_resolution'],
+  );
+  // ...
+}
+```
+
+Use `App.checkScheduleOrdering()` (from `fledge_ecs`) in a test or debug boot path to flag this class of bug automatically — it lists every same-stage conflict that relies on registration order.
 
 ## Documentation
 
