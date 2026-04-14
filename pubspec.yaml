@@ -53,6 +53,10 @@ melos:
       run: melos exec -- dart test
       packageFilters:
         dirExists: test
+        # Flutter packages need `flutter test`, not `dart test` (flutter_test
+        # lives under the Flutter SDK). Every package that declares a
+        # `flutter: sdk: flutter` dependency belongs here; `test:flutter`
+        # picks them up via `dependsOn: flutter` below.
         ignore:
           - fledge_render
           - fledge_render_2d
@@ -61,6 +65,8 @@ melos:
           - fledge_input
           - fledge_window
           - fledge_tiled
+          - fledge_save
+          - fledge_yarn
           - fledge_docs
           - drifter_example
 
