@@ -1,6 +1,6 @@
 name: fledge_net
 description: Networking components for Fledge - peer-to-peer multiplayer, state sync, and input prediction.
-version: 0.1.12
+version: 0.1.13
 repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_net
 homepage: https://fledge-framework.dev
 issue_tracker: https://github.com/fledge-framework/fledge/issues
