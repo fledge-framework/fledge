@@ -164,19 +164,28 @@ Branch dialogue based on conditions:
 
 ### Supported Operators
 
-| Operator | Description |
-|----------|-------------|
-| `==` | Equals |
-| `!=` | Not equals |
-| `<` | Less than |
-| `<=` | Less than or equal |
-| `>` | Greater than |
-| `>=` | Greater than or equal |
-| `and` | Logical AND |
-| `or` | Logical OR |
-| `not` | Logical NOT |
+Expressions use a real recursive-descent parser with standard precedence (low → high):
 
-> **Note:** Arithmetic operators (`+`, `-`, `*`, `/`) in condition expressions have a known precedence bug — expressions like `1 + 2 * 3` may not evaluate correctly. Comparisons and boolean logic work as expected. Arithmetic in `<<set>>` commands (e.g., `<<set $gold += 50>>`) is unaffected.
+| Precedence | Operators | Description |
+|------------|-----------|-------------|
+| 1 (lowest) | `or` | Logical OR (short-circuits) |
+| 2 | `and` | Logical AND (short-circuits) |
+| 3 | `not` | Logical NOT |
+| 4 | `==` `!=` `<` `<=` `>` `>=` | Comparisons |
+| 5 | `+` `-` | Addition / subtraction (also string concat when either side is a string) |
+| 6 | `*` `/` `%` | Multiplication / division / modulo |
+| 7 | unary `-` `+` | Negation |
+| 8 (highest) | `(` `)` | Parentheses for grouping |
+
+Examples:
+
+```yarn
+<<if $count > 1 + 2 * 3>>        // evaluates to 7 (multiplication first)
+<<if ($hp + 10) * 2 <= $maxHp>>  // parentheses force order
+<<if $hasKey and not $doorLocked>>
+```
+
+Arithmetic works everywhere — conditions, `<<set>>`, and inline expressions. Malformed expressions return `false` from conditions / no-op from `<<set>>` so a typo doesn't crash dialogue mid-run. Use `ExpressionEvaluator` directly if you want hard errors.
 
 ## Variables
 

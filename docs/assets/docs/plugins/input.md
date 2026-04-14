@@ -279,6 +279,27 @@ InputWidget(
 
 Place it at the root of your game widget tree to ensure all input is captured.
 
+### Key event bubbling
+
+`InputWidget.onKeyEvent` returns `KeyEventResult.handled` only for keys that are bound in the active `InputMap`. Unbound keys return `KeyEventResult.ignored`, so they bubble up through the `Focus` tree to ancestor handlers — page-level shortcuts like `Ctrl+K` or `/` keep working even while the game owns focus.
+
+### External FocusNode
+
+Pass a `focusNode` in if you need to observe focus changes from outside the widget (e.g. to pause the game when it loses focus and show a click-to-play overlay):
+
+```dart
+final gameFocus = FocusNode()..addListener(onFocusChanged);
+
+InputWidget(
+  world: app.world,
+  focusNode: gameFocus,      // caller owns + disposes the node
+  autofocus: true,
+  child: GameWidget(...),
+)
+```
+
+If you don't pass a `focusNode`, `InputWidget` creates and disposes its own. If you do pass one, you own its lifecycle. See the grid-game demo (`docs/lib/demos/grid_game/grid_game_widget.dart`) for a full pause-on-blur implementation.
+
 ## Cursor Management
 
 The input plugin manages cursor visibility and pointer lock through `CursorMode`:

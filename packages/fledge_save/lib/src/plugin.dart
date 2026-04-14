@@ -6,8 +6,9 @@ import 'traits/saveable.dart';
 
 /// Plugin for save/load functionality.
 ///
-/// Registers the [SaveManager] resource and provides methods to
-/// register saveable resources.
+/// Registers the [SaveManager] resource. Any resource that mixes in
+/// [Saveable] and is inserted into the world is auto-discovered at save
+/// time — no manual registration required.
 ///
 /// ## Usage
 ///
@@ -19,10 +20,14 @@ import 'traits/saveable.dart';
 ///   ),
 /// ));
 ///
-/// // Register saveable resources
-/// final savePlugin = app.getPlugin<SavePlugin>();
-/// savePlugin.registerSaveable(world.getResource<Inventory>()!);
-/// savePlugin.registerSaveable(world.getResource<Progress>()!);
+/// // Saveable resources are auto-discovered from the world:
+/// app.insertResource(Inventory());   // mixes in Saveable
+/// app.insertResource(Progress());    // mixes in Saveable
+///
+/// // Manual registration is still supported for Saveable objects that
+/// // aren't stored as world resources:
+/// final savePlugin = SavePlugin();
+/// savePlugin.registerSaveable(someOtherSaveableObject);
 /// ```
 class SavePlugin implements Plugin {
   /// Configuration for save behavior.
@@ -75,7 +80,13 @@ class SavePlugin implements Plugin {
   }
 }
 
-/// SaveManager that uses plugin-registered saveables.
+/// SaveManager that merges auto-discovered [Saveable] resources in the
+/// world with any explicitly registered via [SavePlugin.registerSaveable].
+///
+/// Auto-discovery handles the common case (a resource mixes in `Saveable`
+/// and is inserted into the world). Manual registration is kept for
+/// objects that aren't stored as world resources — e.g. a singleton owned
+/// by the plugin itself.
 class SaveManagerWithSaveables extends SaveManager {
   final List<Saveable> Function() _getSaveables;
 
@@ -86,6 +97,14 @@ class SaveManagerWithSaveables extends SaveManager {
 
   @override
   Iterable<Saveable> getSaveableResources(World world) {
-    return _getSaveables();
+    final seen = <Saveable>{};
+    final out = <Saveable>[];
+    for (final s in world.resourcesOfType<Saveable>()) {
+      if (seen.add(s)) out.add(s);
+    }
+    for (final s in _getSaveables()) {
+      if (seen.add(s)) out.add(s);
+    }
+    return out;
   }
 }

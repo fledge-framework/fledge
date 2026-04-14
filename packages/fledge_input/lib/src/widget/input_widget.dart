@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:fledge_ecs/fledge_ecs.dart' hide State;
 import 'package:gamepads/gamepads.dart';
 
+import '../action/input_binding.dart';
 import '../context/context_registry.dart';
 import '../cursor/cursor_mode.dart';
 import '../cursor/cursor_state.dart';
@@ -51,6 +52,13 @@ class InputWidget extends StatefulWidget {
   /// [CursorMode.hidden] (cursor hidden but no raw deltas).
   final PointerLockDelegate? pointerLockDelegate;
 
+  /// Optional externally-owned [FocusNode].
+  ///
+  /// Provide one to observe focus changes (e.g. to pause the game when the
+  /// widget loses focus) or to programmatically request focus from a parent.
+  /// When omitted, the widget creates and disposes its own node.
+  final FocusNode? focusNode;
+
   const InputWidget({
     super.key,
     required this.world,
@@ -59,6 +67,7 @@ class InputWidget extends StatefulWidget {
     this.enableGamepad = true,
     this.focusOnHover = true,
     this.pointerLockDelegate,
+    this.focusNode,
   });
 
   @override
@@ -66,7 +75,8 @@ class InputWidget extends StatefulWidget {
 }
 
 class _InputWidgetState extends State<InputWidget> {
-  final FocusNode _focusNode = FocusNode();
+  late final FocusNode _focusNode = widget.focusNode ?? FocusNode();
+  late final bool _ownsFocusNode = widget.focusNode == null;
   StreamSubscription<GamepadEvent>? _gamepadSubscription;
 
   /// Pointer lock stream subscription for FPS-style mouse capture.
@@ -202,7 +212,30 @@ class _InputWidgetState extends State<InputWidget> {
     }
     // Note: KeyRepeatEvent doesn't change pressed state
 
-    return KeyEventResult.handled;
+    // Only consume keys that are bound in the active input map. Unbound keys
+    // bubble up so ancestor Focus handlers (e.g. page-level shortcuts like
+    // Ctrl+K) still work while the game has focus.
+    return _isKeyBound(key) ? KeyEventResult.handled : KeyEventResult.ignored;
+  }
+
+  bool _isKeyBound(LogicalKeyboardKey key) {
+    final map = _contextRegistry?.activeMap;
+    if (map == null) return false;
+    for (final binding in map.bindings) {
+      final source = binding.source;
+      if (source is KeyboardBinding && source.key == key) return true;
+    }
+    for (final composite in map.compositeBindings) {
+      for (final source in [
+        composite.up,
+        composite.down,
+        composite.left,
+        composite.right,
+      ]) {
+        if (source is KeyboardBinding && source.key == key) return true;
+      }
+    }
+    return false;
   }
 
   void _handlePointerHover(PointerHoverEvent event) {
@@ -253,7 +286,7 @@ class _InputWidgetState extends State<InputWidget> {
 
   @override
   void dispose() {
-    _focusNode.dispose();
+    if (_ownsFocusNode) _focusNode.dispose();
     _gamepadSubscription?.cancel();
     _stopPointerLock();
     final cursor = _cursor;

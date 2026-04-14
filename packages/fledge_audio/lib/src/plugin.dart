@@ -6,6 +6,7 @@ import 'events/audio_events.dart';
 import 'resources/audio_channels.dart';
 import 'systems/audio_init_system.dart';
 import 'systems/audio_event_system.dart';
+import 'systems/channel_fade_system.dart';
 import 'systems/spatial_audio_system.dart';
 import 'systems/music_crossfade_system.dart';
 import 'systems/audio_cleanup_system.dart';
@@ -104,6 +105,10 @@ class AudioPlugin implements Plugin {
     // after SoLoud is initialized
     app.addSystem(AudioInitSystem(config), stage: CoreStage.first);
     app.addSystem(AudioEventSystem(), stage: CoreStage.first);
+
+    // Advance any in-progress channel volume fades before consumers read
+    // effective volume.
+    app.addSystem(ChannelFadeSystem(), stage: CoreStage.update);
 
     if (config.spatialConfig.enabled) {
       app.addSystem(SpatialAudioSystem(), stage: CoreStage.update);

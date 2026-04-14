@@ -51,6 +51,7 @@ class _GridGameWidgetState extends State<GridGameWidget>
     with SingleTickerProviderStateMixin {
   late App _app;
   late AnimationController _ticker;
+  late final FocusNode _focusNode = FocusNode()..addListener(_onFocusChanged);
 
   /// Convenience accessor for the main ECS world (game logic).
   World get _world => _app.world;
@@ -62,9 +63,19 @@ class _GridGameWidgetState extends State<GridGameWidget>
     _ticker = AnimationController(
       vsync: this,
       duration: const Duration(hours: 1),
-    )
-      ..addListener(_gameLoop)
-      ..repeat();
+    )..addListener(_gameLoop);
+    // The ticker only runs while the InputWidget has focus. _onFocusChanged
+    // starts/stops it; the overlay invites the user to click to focus.
+  }
+
+  void _onFocusChanged() {
+    final hasFocus = _focusNode.hasFocus;
+    if (hasFocus && !_ticker.isAnimating) {
+      _ticker.repeat();
+    } else if (!hasFocus && _ticker.isAnimating) {
+      _ticker.stop();
+    }
+    setState(() {});
   }
 
   void _setupGame() {
@@ -100,6 +111,7 @@ class _GridGameWidgetState extends State<GridGameWidget>
   @override
   void dispose() {
     _ticker.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -115,9 +127,12 @@ class _GridGameWidgetState extends State<GridGameWidget>
     final displayWidth = config?.totalWidth ?? mainConfig.totalWidth;
     final displayHeight = config?.totalHeight ?? mainConfig.totalHeight;
 
+    final isPaused = !_focusNode.hasFocus;
+
     // InputWidget captures all keyboard input and injects it into the ECS world
     return InputWidget(
       world: _world,
+      focusNode: _focusNode,
       autofocus: true,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -133,11 +148,34 @@ class _GridGameWidgetState extends State<GridGameWidget>
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(6),
-              child: CustomPaint(
-                // Pass render world to painter (not main world!)
-                painter:
-                    renderWorld != null ? GridGamePainter(renderWorld) : null,
-                size: Size(displayWidth, displayHeight),
+              child: Stack(
+                children: [
+                  CustomPaint(
+                    // Pass render world to painter (not main world!)
+                    painter: renderWorld != null
+                        ? GridGamePainter(renderWorld)
+                        : null,
+                    size: Size(displayWidth, displayHeight),
+                  ),
+                  if (isPaused)
+                    Positioned.fill(
+                      child: GestureDetector(
+                        onTap: _focusNode.requestFocus,
+                        child: Container(
+                          color: const Color(0xCC000000),
+                          alignment: Alignment.center,
+                          child: const Text(
+                            'Click to play',
+                            style: TextStyle(
+                              color: Color(0xFFFFFFFF),
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),

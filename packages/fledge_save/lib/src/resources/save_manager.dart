@@ -287,24 +287,10 @@ class SaveManager {
 
   /// Get all Saveable resources.
   ///
-  /// Override this in subclasses to provide custom saveable discovery.
-  /// Default implementation returns empty - use [SaveManagerWithSaveables]
-  /// or register saveables via [SavePlugin].
+  /// Default implementation auto-discovers any resource in [world] that
+  /// mixes in [Saveable]. Override in subclasses to merge with manually
+  /// registered saveables (see [SaveManagerWithSaveables]).
   Iterable<Saveable> getSaveableResources(World world) {
-    // Default: return empty, games use SavePlugin to register saveables
-    return const [];
-  }
-}
-
-/// Extension to get resources of a specific type from World.
-extension SaveableWorldExtension on World {
-  /// Get all resources that implement the given type.
-  ///
-  /// This is used by SaveManager to find all Saveable resources.
-  Iterable<T> getResourcesOfType<T>() {
-    // This requires the World to track resource types
-    // For now, return empty - games will need to register saveables
-    // TODO: Implement proper resource type iteration in fledge_ecs
-    return <T>[];
+    return world.resourcesOfType<Saveable>();
   }
 }

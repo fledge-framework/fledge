@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:fledge_ecs/fledge_ecs.dart';
+import 'package:fledge_render_2d/fledge_render_2d.dart';
 
 import '../components/audio_listener.dart';
 import '../components/audio_source.dart';
@@ -11,11 +12,12 @@ import '../assets/audio_assets.dart';
 
 /// System that updates spatial audio based on entity positions.
 ///
-/// Reads AudioListener and AudioSource components along with
-/// position data to calculate panning and volume falloff.
+/// Reads `AudioListener` + `Transform2D` to find the active listener, and
+/// `AudioSource` + `Transform2D` for every audio emitter. Distance →
+/// attenuated volume; lateral offset → stereo pan.
 ///
-/// Note: This system expects entities to have a position accessible
-/// via a 'position' field or similar. Adjust based on your transform system.
+/// Entities without a `Transform2D` are treated as positioned at the
+/// listener (no falloff, centred pan), which matches the non-spatial path.
 class SpatialAudioSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
@@ -23,6 +25,7 @@ class SpatialAudioSystem implements System {
         reads: {
           ComponentId.of<AudioListener>(),
           ComponentId.of<AudioSource>(),
+          ComponentId.of<Transform2D>(),
         },
         writes: {ComponentId.of<AudioSource>()},
         resourceReads: {SpatialAudioConfig, VolumeChannels, AudioAssets},
@@ -47,30 +50,26 @@ class SpatialAudioSystem implements System {
     final assets = world.getResource<AudioAssets>()!;
     final soloud = state.soloud;
 
-    // Find the active listener position
-    // Note: In a full integration, this would read from Transform2D or similar
-    (double x, double y)? listenerPos;
-
-    for (final (_, listener) in world.query1<AudioListener>().iter()) {
-      if (listener.isActive) {
-        // TODO: Get position from entity's transform component
-        // For now, default to origin - users should extend this
-        listenerPos = (0.0, 0.0);
-        break;
-      }
+    // Find the first active listener that has a Transform2D. Listeners
+    // without a transform are ignored — spatial audio needs a position.
+    (double, double)? listenerPos;
+    for (final (_, listener, transform)
+        in world.query2<AudioListener, Transform2D>().iter()) {
+      if (!listener.isActive) continue;
+      listenerPos = (transform.translation.x, transform.translation.y);
+      break;
     }
-
     if (listenerPos == null) return;
 
-    // Update all audio sources
-    for (final (_, source) in world.query1<AudioSource>().iter()) {
-      // Handle autoPlay for sources that haven't started
+    for (final (_, source, transform)
+        in world.query2<AudioSource, Transform2D>().iter()) {
+      // Auto-play sources that haven't started yet.
       if (source.autoPlay && !source.hasStarted && source.soundKey != null) {
         final sound = assets.getSound(source.soundKey!);
         if (sound != null) {
           final handle = await soloud.play(
             sound.source,
-            volume: 0.0, // Will be updated below
+            volume: 0.0, // updated below
             looping: source.looping,
           );
           source.handle = handle;
@@ -85,18 +84,14 @@ class SpatialAudioSystem implements System {
         continue;
       }
 
-      // TODO: Get position from entity's transform component
-      // For now, use (0, 0) - users should extend this
-      const sourcePos = (0.0, 0.0);
-
+      final sourcePos = (transform.translation.x, transform.translation.y);
       final dx = sourcePos.$1 - listenerPos.$1;
       final dy = sourcePos.$2 - listenerPos.$2;
       final distance = sqrt(dx * dx + dy * dy);
 
-      // Calculate volume falloff
       final maxDist = source.maxDistance ?? config.maxDistance;
       final refDist = source.referenceDistance ?? config.referenceDistance;
-      final attenuation = _calculateAttenuation(
+      final attenuation = calculateAttenuation(
         distance,
         refDist,
         maxDist,
@@ -106,7 +101,7 @@ class SpatialAudioSystem implements System {
       final channelVolume = channels.getEffectiveVolume(source.channel);
       final finalVolume = source.volume * attenuation * channelVolume;
 
-      // Calculate panning (2D: left/right based on x)
+      // Pan: lateral offset normalized to [-maxPan, maxPan].
       final pan = (dx / maxDist).clamp(-config.maxPan, config.maxPan);
 
       soloud.setVolume(source.handle!, finalVolume);
@@ -114,7 +109,10 @@ class SpatialAudioSystem implements System {
     }
   }
 
-  double _calculateAttenuation(
+  /// Linear falloff from [refDistance] (full volume) to [maxDistance] (silent).
+  ///
+  /// Exposed for tests.
+  static double calculateAttenuation(
     double distance,
     double refDistance,
     double maxDistance,
@@ -122,10 +120,8 @@ class SpatialAudioSystem implements System {
   ) {
     if (distance <= refDistance) return 1.0;
     if (distance >= maxDistance) return 0.0;
-
-    // Linear falloff
     final range = maxDistance - refDistance;
     final distFromRef = distance - refDistance;
-    return 1.0 - (distFromRef / range) * rolloff;
+    return (1.0 - (distFromRef / range) * rolloff).clamp(0.0, 1.0);
   }
 }

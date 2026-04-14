@@ -1,6 +1,6 @@
 # Save System
 
-The `fledge_save` package provides a save/load system for persisting game state. It features manual resource registration via the `Saveable` mixin, file-based storage with versioning, and a request-based save pattern for ECS-to-Flutter bridging.
+The `fledge_save` package provides a save/load system for persisting game state. Any resource that mixes in `Saveable` and is inserted into the world is auto-discovered at save time — no manual registration needed for the common case. File-based storage with versioning and a request-based save pattern for ECS-to-Flutter bridging round out the package.
 
 ## Installation
 
@@ -36,13 +36,11 @@ class Inventory with Saveable {
 
 // 2. Set up the save system
 void main() async {
-  final savePlugin = SavePlugin(
-    config: SaveConfig(gameDirectory: 'MyGame'),
-  );
-  savePlugin.registerSaveable(Inventory());
-
   final app = App()
-    .addPlugin(savePlugin);
+    ..addPlugin(SavePlugin(
+      config: SaveConfig(gameDirectory: 'MyGame'),
+    ))
+    ..insertResource(Inventory()); // auto-discovered as Saveable
 
   await app.tick();
 
@@ -54,6 +52,8 @@ void main() async {
   await saveManager.load(app.world, slotName: 'slot1');
 }
 ```
+
+> **Manual registration** (`SavePlugin.registerSaveable`) is still available for `Saveable` objects that live *outside* the world's resource table — e.g. a singleton you manage yourself. World resources are picked up automatically.
 
 ## The Saveable Mixin
 

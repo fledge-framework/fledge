@@ -73,6 +73,19 @@ class Resources {
 
   /// The number of resources.
   int get length => _resources.length;
+
+  /// Every stored resource value, in insertion order.
+  ///
+  /// Iteration does not hand out type information — use [whereType] when you
+  /// want to filter by a specific interface or mixin.
+  Iterable<dynamic> get values => _resources.values;
+
+  /// Every stored resource that is an instance of [T].
+  ///
+  /// Useful for interface- or mixin-based discovery (e.g. enumerating all
+  /// resources that implement a `Saveable` mixin). `T` can be any type; the
+  /// runtime type check uses `is T`.
+  Iterable<T> whereType<T>() => _resources.values.whereType<T>();
 }
 
 /// Read-only accessor for a resource.

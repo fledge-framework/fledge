@@ -30,8 +30,8 @@ class AudioEventSystem implements System {
           AudioResumed,
           AudioAssetLoaded,
         },
-        resourceReads: {AudioAssets, VolumeChannels, SpatialAudioConfig},
-        resourceWrites: {AudioState},
+        resourceReads: {AudioAssets, SpatialAudioConfig},
+        resourceWrites: {AudioState, VolumeChannels},
       );
 
   @override
@@ -245,8 +245,12 @@ class AudioEventSystem implements System {
     SetChannelVolumeRequest request,
     VolumeChannels channels,
   ) {
-    // TODO: Implement fade if fadeDuration is set
-    channels.setVolume(request.channel, request.volume);
+    final fade = request.fadeDuration;
+    if (fade != null) {
+      channels.fadeTo(request.channel, request.volume, fade);
+    } else {
+      channels.setVolume(request.channel, request.volume);
+    }
   }
 
   Future<void> _handlePreload(

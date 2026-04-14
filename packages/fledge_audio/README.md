@@ -65,18 +65,24 @@ The audio system automatically adjusts volume and panning based on the listener'
 
 ## Volume Channels
 
-Control volume by category:
+Control volume by category (`master`, `music`, `sfx`, `voice`, `ambient`):
 
 ```dart
-final channels = world.getResource<AudioChannels>()!;
+final channels = world.getResource<VolumeChannels>()!;
 
-// Set individual channel volumes (0.0 to 1.0)
-channels.master = 0.8;
-channels.music = 0.6;
-channels.sfx = 1.0;
-channels.voice = 1.0;
-channels.ambient = 0.5;
+// Instant set (0.0 to 1.0)
+channels.setVolume(AudioChannel.music, 0.6);
+channels.setVolume(AudioChannel.sfx, 1.0);
+
+// Linear fade over a duration
+channels.fadeTo(
+  AudioChannel.music,
+  0.2,
+  const Duration(seconds: 2),
+);
 ```
+
+`ChannelFadeSystem` (registered automatically by `AudioPlugin`) advances every active fade once per frame. `setVolume` cancels any in-progress fade and snaps to the target. You can also issue fades via events: `world.eventWriter<SetChannelVolumeRequest>().send(SetChannelVolumeRequest(AudioChannel.music, 0.2, fadeDuration: Duration(seconds: 2)))`.
 
 ## Documentation
 

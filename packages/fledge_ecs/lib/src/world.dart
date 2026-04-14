@@ -416,6 +416,20 @@ class World {
     return resources.contains<T>();
   }
 
+  /// Every resource currently stored in the world that is an instance of [T].
+  ///
+  /// Unlike [getResource], which looks up by the resource's declared Dart
+  /// type, this scans every inserted resource and uses `is T` to filter.
+  /// Useful for interface- or mixin-based discovery — e.g. finding every
+  /// resource mixed in with `Saveable` regardless of concrete type.
+  ///
+  /// ```dart
+  /// for (final saveable in world.resourcesOfType<Saveable>()) {
+  ///   save(saveable.toSaveJson());
+  /// }
+  /// ```
+  Iterable<T> resourcesOfType<T>() => resources.whereType<T>();
+
   // ===== Event Methods =====
 
   /// Registers an event type for use in the world.

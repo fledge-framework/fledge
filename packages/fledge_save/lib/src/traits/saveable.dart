@@ -1,8 +1,9 @@
 /// Mixin for resources that participate in save/load operations.
 ///
-/// Implement this mixin on any resource that should be persisted.
-/// The [SaveManager] will automatically discover and serialize all
-/// resources implementing [Saveable] when saving the game.
+/// Mix this into any resource that should be persisted, then insert the
+/// resource into the world with `world.insertResource(...)`. The
+/// `SaveManager` scans the world for every resource that is a `Saveable`
+/// at save time — no manual registration required.
 ///
 /// Example:
 /// ```dart

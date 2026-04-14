@@ -11,6 +11,20 @@ class AnotherResource {
   AnotherResource(this.name);
 }
 
+mixin _Saveable {
+  String get key;
+}
+
+class _SaveableA with _Saveable {
+  @override
+  String get key => 'a';
+}
+
+class _SaveableB with _Saveable {
+  @override
+  String get key => 'b';
+}
+
 void main() {
   group('Resources', () {
     late Resources resources;
@@ -88,6 +102,34 @@ void main() {
       expect(resources.length, equals(0));
       expect(resources.get<TestResource>(), isNull);
       expect(resources.get<AnotherResource>(), isNull);
+    });
+
+    test('values enumerates every inserted resource', () {
+      final a = TestResource(1);
+      final b = AnotherResource('hello');
+      resources.insert(a);
+      resources.insert(b);
+
+      expect(resources.values, containsAll([a, b]));
+      expect(resources.values.length, 2);
+    });
+
+    test('whereType filters by interface/mixin', () {
+      resources.insert(TestResource(1));
+      resources.insert(AnotherResource('x'));
+      final a = _SaveableA();
+      final b = _SaveableB();
+      resources.insert(a);
+      resources.insert(b);
+
+      final saveables = resources.whereType<_Saveable>().toList();
+      expect(saveables, containsAll([a, b]));
+      expect(saveables.length, 2);
+    });
+
+    test('whereType returns empty when no matches', () {
+      resources.insert(TestResource(1));
+      expect(resources.whereType<_Saveable>(), isEmpty);
     });
   });
 
@@ -169,6 +211,19 @@ void main() {
       expect(removed, isNotNull);
       expect(removed!.value, equals(42));
       expect(world.hasResource<TestResource>(), isFalse);
+    });
+
+    test('resourcesOfType finds every resource with a matching mixin', () {
+      final a = _SaveableA();
+      final b = _SaveableB();
+      world.insertResource(TestResource(1));
+      world.insertResource(a);
+      world.insertResource(b);
+
+      final saveables = world.resourcesOfType<_Saveable>().toList();
+      expect(saveables, containsAll([a, b]));
+      expect(saveables.length, 2);
+      expect(world.resourcesOfType<AnotherResource>(), isEmpty);
     });
   });
 }

@@ -9,7 +9,7 @@ Networking components for the [Fledge](https://fledge-framework.dev) game framew
 - **Reliable delivery** — critical packets (connect, disconnect, RPC, spawn/despawn) are retransmitted until acknowledged
 - **Delta compression** — bitmask-based field change detection, only modified fields are sent
 - **Authentication** — password or custom authenticator callback during connection handshake
-- **Encryption** — pluggable packet encryption (XOR-based, replaceable with AES-GCM)
+- **Encryption** — authenticated AES-256-GCM per-packet via `package:pointycastle`, with the 6-byte routing header bound in as AAD (pre-shared key; see [net.md](https://fledge-framework.dev/docs/plugins/net) for key distribution)
 - **Congestion control** — AIMD algorithm with RTT-adaptive retransmit timeout
 - **Interest management** — radius-based spatial filtering for selective state broadcast
 - **Authority model** — entity ownership tracking with authority transfer

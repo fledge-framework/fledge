@@ -18,7 +18,13 @@ environment:
   flutter: ">=1.17.0"
 
 dependencies:
+  flutter:
+    sdk: flutter
   fledge_ecs: ^0.1.9
   path_provider: ^2.1.0
   meta: ^1.17.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
 

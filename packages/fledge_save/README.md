@@ -6,10 +6,10 @@ Save/load system for [Fledge](https://fledge-framework.dev) games. Resource seri
 
 ## Features
 
-- **Saveable Mixin**: Resources implement `Saveable` to participate in saves
-- **Automatic Discovery**: SaveManager finds and serializes all registered saveables
-- **Version Migration**: Track save format versions for backwards compatibility
-- **Request Pattern**: ECS systems request saves, Flutter layer processes them
+- **Saveable Mixin**: Resources mix in `Saveable` to participate in saves
+- **Auto-Discovery**: Any `Saveable` inserted into the world is picked up automatically — no manual registration
+- **Version Tracking**: Save format versions stored for future migration work
+- **Request Pattern**: ECS systems request saves, the Flutter layer processes them async
 - **Slot-Based Storage**: Multiple save slots with timestamps and metadata
 
 ## Installation
@@ -49,17 +49,19 @@ void main() async {
   final app = App()
     ..addPlugin(SavePlugin(
       config: SaveConfig(gameDirectory: 'MyGame'),
-      saveables: [Inventory()],
-    ));
+    ))
+    ..insertResource(Inventory()); // auto-discovered as Saveable
 
   await app.tick();
 
   // 3. Save/load
   final saveManager = app.world.getResource<SaveManager>()!;
-  await saveManager.save(app.world, 'slot1');
-  await saveManager.load(app.world, 'slot1');
+  await saveManager.save(app.world, slotName: 'slot1');
+  await saveManager.load(app.world, slotName: 'slot1');
 }
 ```
+
+Need to persist a `Saveable` that isn't stored as a world resource? Call `SavePlugin.registerSaveable(theObject)` — those are merged with the auto-discovered set (deduped by identity).
 
 ## The Saveable Mixin
 

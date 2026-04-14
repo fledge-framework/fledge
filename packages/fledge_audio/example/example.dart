@@ -21,9 +21,16 @@ void main() async {
   // Play music with crossfade
   // app.world.playMusic('theme', crossfade: Duration(seconds: 2));
 
-  // Control volume channels
+  // Control volume channels (instant)
   // app.world.setVolume(AudioChannel.master, 0.8);
   // app.world.setVolume(AudioChannel.music, 0.6);
+
+  // Or fade over time — ChannelFadeSystem drives the ramp each frame.
+  // app.world.setVolume(
+  //   AudioChannel.music,
+  //   0.2,
+  //   fade: const Duration(seconds: 2),
+  // );
 
   // For spatial audio, add components to entities:
   // world.spawn()

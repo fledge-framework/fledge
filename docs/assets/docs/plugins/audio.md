@@ -180,7 +180,26 @@ world.setVolume(AudioChannel.sfx, 1.0);
 final musicVolume = world.getVolume(AudioChannel.music);
 ```
 
-> **Note:** Volume fading (gradual transitions) is planned but not yet implemented. The `setVolume()` API accepts a `fade` parameter, but it currently applies the volume change immediately.
+### Fading Volume
+
+Pass a non-null `fade` duration to ramp the volume linearly to the target:
+
+```dart
+world.setVolume(
+  AudioChannel.music,
+  0.2,
+  fade: const Duration(seconds: 2),
+);
+```
+
+`ChannelFadeSystem` (registered automatically by `AudioPlugin`) advances every active fade each frame. The fade starts from the channel's current volume, so redirecting mid-ramp picks up from wherever the previous fade left off. `setVolume` without a `fade` cancels any in-flight fade and snaps to the target.
+
+If you hold a `VolumeChannels` reference directly, the same API lives on the resource:
+
+```dart
+final channels = world.getResource<VolumeChannels>()!;
+channels.fadeTo(AudioChannel.sfx, 0.0, const Duration(milliseconds: 500));
+```
 
 ## Pause and Resume
 
@@ -270,7 +289,19 @@ AudioPlugin(config: AudioConfig(
 ))
 ```
 
-> **Note:** Spatial audio positioning via `Transform2D` is not yet fully integrated. The `SpatialAudioSystem` currently uses hardcoded origin positions. Spatial config (distance falloff, panning) is wired up, but entity positions are not yet read from `Transform2D` components.
+`SpatialAudioSystem` reads positions from `Transform2D` (from `fledge_render_2d`). Attach a `Transform2D` to any entity that has an `AudioListener` or `AudioSource`:
+
+```dart
+world.spawn()
+  ..insert(Transform2D.from(playerX, playerY))
+  ..insert(AudioListener());
+
+world.spawn()
+  ..insert(Transform2D.from(100, 50))
+  ..insert(AudioSource(soundKey: 'engine', looping: true, autoPlay: true));
+```
+
+The system computes linear distance attenuation (full volume inside `referenceDistance`, silent at `maxDistance`, linear falloff between) and stereo pan from the lateral offset (`(dx / maxDistance).clamp(-maxPan, maxPan)`). Listeners or sources without a `Transform2D` are ignored — spatial audio requires a position.
 
 ## Configuration
 

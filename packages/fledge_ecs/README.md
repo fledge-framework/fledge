@@ -74,6 +74,26 @@ void main() async {
 }
 ```
 
+## Interface-based resource discovery
+
+Iterate every resource that satisfies a given interface or mixin with `World.resourcesOfType<T>()`:
+
+```dart
+mixin Serializable {
+  Map<String, dynamic> toJson();
+}
+
+world.insertResource(Inventory());    // Serializable
+world.insertResource(Progress());     // Serializable
+world.insertResource(Time());         // not Serializable
+
+for (final s in world.resourcesOfType<Serializable>()) {
+  print(s.toJson());
+}
+```
+
+`fledge_save` uses this to auto-discover `Saveable` resources without manual registration.
+
 ## Documentation
 
 - [Getting Started Guide](https://fledge-framework.dev/docs/getting-started)

@@ -90,7 +90,7 @@ export 'src/plugin.dart';
 export 'src/config/save_config.dart';
 
 // Resources
-export 'src/resources/save_manager.dart' hide SaveableWorldExtension;
+export 'src/resources/save_manager.dart';
 
 // Traits
 export 'src/traits/saveable.dart';

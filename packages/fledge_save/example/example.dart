@@ -47,16 +47,15 @@ void main() async {
         ..level = 5
         ..experience = 1250;
 
-  // Set up app with save plugin
-  final savePlugin = SavePlugin(
-    config: const SaveConfig(gameDirectory: 'ExampleGame'),
-  );
-
-  final app = App()..addPlugin(savePlugin);
-
-  // Register saveables after adding the plugin
-  savePlugin.registerSaveable(inventory);
-  savePlugin.registerSaveable(progress);
+  // Set up app with save plugin. Any resource that mixes in Saveable is
+  // auto-discovered — no manual registerSaveable() needed for world resources.
+  final app =
+      App()
+        ..addPlugin(
+          SavePlugin(config: const SaveConfig(gameDirectory: 'ExampleGame')),
+        )
+        ..insertResource(inventory)
+        ..insertResource(progress);
 
   // Initialize
   await app.tick();

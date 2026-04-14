@@ -51,102 +51,187 @@ class _MockTransport implements Transport {
   }
 }
 
+Uint8List _samplePacket() => Uint8List.fromList([
+      0x46, 0x4C, 0x45, 0x47, // magic
+      0x01, // version
+      0x01, // type
+      // encrypted region
+      10, 20, 30, 40, 50, 60, 70, 80, 90, 100,
+    ]);
+
+const _addr = NetAddress('10.0.0.1', 8080);
+
 void main() {
   group('EncryptedTransport', () {
-    test('generateKey returns 32 bytes', () {
-      final key = EncryptedTransport.generateKey();
-      expect(key.length, 32);
+    test('generateKey returns 32 random bytes', () {
+      final a = EncryptedTransport.generateKey();
+      final b = EncryptedTransport.generateKey();
+      expect(a.length, 32);
+      expect(b.length, 32);
+      expect(a, isNot(equals(b)),
+          reason: 'two random keys should essentially never collide');
     });
 
-    test('encrypt then decrypt returns original data', () async {
+    test('encrypt → decrypt round-trip returns original data', () async {
       final key = EncryptedTransport.generateKey();
       final inner = _MockTransport();
       final transport = EncryptedTransport(inner: inner, sharedKey: key);
 
-      // Build a realistic packet: 6+ bytes so encryption kicks in.
-      // First 6 bytes are plaintext header, rest is encrypted.
-      final original = Uint8List.fromList([
-        0x46, 0x4C, 0x45, 0x47, // magic
-        0x01, // version
-        0x01, // type
-        // payload bytes (encrypted region)
-        10, 20, 30, 40, 50, 60, 70, 80,
-      ]);
+      final original = _samplePacket();
+      await transport.send(_addr, original);
 
-      const addr = NetAddress('10.0.0.1', 8080);
-      await transport.send(addr, original);
-
-      // The inner transport received encrypted data.
-      final encrypted = inner.lastSentData!;
-
-      // Now simulate receiving that encrypted data back.
-      inner.enqueueReceive(Uint8List.fromList(encrypted));
+      inner.enqueueReceive(Uint8List.fromList(inner.lastSentData!));
       final received = transport.receive();
 
       expect(received.length, 1);
       expect(received[0].data, equals(original));
     });
 
-    test('encrypted data differs from original', () async {
+    test('wire format: header stays plaintext, payload grows by nonce+tag',
+        () async {
       final key = EncryptedTransport.generateKey();
       final inner = _MockTransport();
       final transport = EncryptedTransport(inner: inner, sharedKey: key);
 
-      final original = Uint8List.fromList([
-        0x46, 0x4C, 0x45, 0x47, 0x01, 0x01, // header
-        10, 20, 30, 40, 50, 60, 70, 80, // payload
-      ]);
+      final original = _samplePacket();
+      await transport.send(_addr, original);
 
-      const addr = NetAddress('10.0.0.1', 8080);
-      await transport.send(addr, original);
+      final wire = inner.lastSentData!;
+      expect(
+        wire.sublist(0, EncryptedTransport.plaintextHeaderBytes),
+        equals(original.sublist(0, EncryptedTransport.plaintextHeaderBytes)),
+        reason: 'plaintext header must be preserved for routing',
+      );
+      expect(
+        wire.length,
+        original.length + EncryptedTransport.overheadBytes,
+        reason: 'wire packet = original + 12B nonce + 16B tag',
+      );
+    });
 
-      final encrypted = inner.lastSentData!;
+    test('nonce is unique across sends with the same key', () async {
+      final key = EncryptedTransport.generateKey();
+      final inner = _MockTransport();
+      final transport = EncryptedTransport(inner: inner, sharedKey: key);
 
-      // The first 6 bytes (plaintext header) should be the same.
-      expect(encrypted.sublist(0, 6), equals(original.sublist(0, 6)));
+      final nonces = <String>{};
+      for (var i = 0; i < 32; i++) {
+        await transport.send(_addr, _samplePacket());
+        final wire = inner.lastSentData!;
+        final nonce = wire.sublist(
+          EncryptedTransport.plaintextHeaderBytes,
+          EncryptedTransport.plaintextHeaderBytes +
+              EncryptedTransport.nonceBytes,
+        );
+        nonces.add(String.fromCharCodes(nonce));
+      }
+      expect(nonces.length, 32, reason: 'every packet must use a fresh nonce');
+    });
 
-      // The encrypted region should differ from the original
-      // (unless the key happens to be all zeros, which is astronomically unlikely).
-      final encryptedPayload = encrypted.sublist(6);
-      final originalPayload = original.sublist(6);
-      expect(encryptedPayload, isNot(equals(originalPayload)));
+    test('tampered ciphertext fails auth and is dropped', () async {
+      final key = EncryptedTransport.generateKey();
+      final inner = _MockTransport();
+      final transport = EncryptedTransport(inner: inner, sharedKey: key);
+
+      await transport.send(_addr, _samplePacket());
+      final wire = Uint8List.fromList(inner.lastSentData!);
+
+      // Flip a bit in the ciphertext region (after header + nonce).
+      final ciphertextStart = EncryptedTransport.plaintextHeaderBytes +
+          EncryptedTransport.nonceBytes;
+      wire[ciphertextStart] ^= 0x01;
+
+      inner.enqueueReceive(wire);
+      final received = transport.receive();
+      expect(received, isEmpty,
+          reason: 'GCM auth tag mismatch must cause the packet to be dropped');
+    });
+
+    test('tampered header fails auth (header is AAD)', () async {
+      final key = EncryptedTransport.generateKey();
+      final inner = _MockTransport();
+      final transport = EncryptedTransport(inner: inner, sharedKey: key);
+
+      await transport.send(_addr, _samplePacket());
+      final wire = Uint8List.fromList(inner.lastSentData!);
+
+      // Flip a bit in the plaintext header — even though it's "plaintext", it's
+      // bound into the auth tag as AAD, so tampering must be detected.
+      wire[0] ^= 0x01;
+
+      inner.enqueueReceive(wire);
+      expect(transport.receive(), isEmpty);
+    });
+
+    test('truncated packet (missing tag bytes) is dropped', () async {
+      final key = EncryptedTransport.generateKey();
+      final inner = _MockTransport();
+      final transport = EncryptedTransport(inner: inner, sharedKey: key);
+
+      await transport.send(_addr, _samplePacket());
+      final wire = inner.lastSentData!;
+
+      // Drop the last 4 bytes of the auth tag.
+      inner
+          .enqueueReceive(Uint8List.fromList(wire.sublist(0, wire.length - 4)));
+      expect(transport.receive(), isEmpty);
+    });
+
+    test('packets encrypted under a different key cannot be decrypted',
+        () async {
+      final sender = EncryptedTransport(
+        inner: _MockTransport(),
+        sharedKey: EncryptedTransport.generateKey(),
+      );
+
+      final receiverInner = _MockTransport();
+      final receiver = EncryptedTransport(
+        inner: receiverInner,
+        sharedKey: EncryptedTransport.generateKey(),
+      );
+
+      // Encrypt with sender's key, try to decrypt with receiver's key.
+      final senderInner = sender.inner as _MockTransport;
+      await sender.send(_addr, _samplePacket());
+      receiverInner.enqueueReceive(senderInner.lastSentData!);
+
+      expect(receiver.receive(), isEmpty);
     });
 
     test('without a key, data passes through unchanged', () async {
       final inner = _MockTransport();
       final transport = EncryptedTransport(inner: inner, sharedKey: null);
 
-      final original = Uint8List.fromList([
-        0x46,
-        0x4C,
-        0x45,
-        0x47,
-        0x01,
-        0x01,
-        10,
-        20,
-        30,
-        40,
-      ]);
-
-      const addr = NetAddress('10.0.0.1', 8080);
-      await transport.send(addr, original);
-
+      final original = _samplePacket();
+      await transport.send(_addr, original);
       expect(inner.lastSentData, equals(original));
+
+      inner.enqueueReceive(original);
+      final received = transport.receive();
+      expect(received.length, 1);
+      expect(received[0].data, equals(original));
     });
 
-    test('data shorter than header bytes passes through unchanged', () async {
+    test('data with only a header (no payload) passes through unchanged',
+        () async {
       final key = EncryptedTransport.generateKey();
       final inner = _MockTransport();
       final transport = EncryptedTransport(inner: inner, sharedKey: key);
 
-      // Only 4 bytes — shorter than the 6-byte plaintext header threshold.
-      final shortData = Uint8List.fromList([1, 2, 3, 4]);
+      // Exactly 6 bytes — no payload to encrypt.
+      final headerOnly =
+          Uint8List.fromList([0x46, 0x4C, 0x45, 0x47, 0x01, 0x01]);
+      await transport.send(_addr, headerOnly);
+      expect(inner.lastSentData, equals(headerOnly));
+    });
 
-      const addr = NetAddress('10.0.0.1', 8080);
-      await transport.send(addr, shortData);
-
-      expect(inner.lastSentData, equals(shortData));
+    test('setting a non-32-byte key throws', () {
+      final transport =
+          EncryptedTransport(inner: _MockTransport(), sharedKey: null);
+      expect(
+        () => transport.sharedKey = Uint8List(16),
+        throwsArgumentError,
+      );
     });
   });
 }

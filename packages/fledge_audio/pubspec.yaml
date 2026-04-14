@@ -13,6 +13,7 @@ resolution: workspace
 
 dependencies:
   fledge_ecs: ^0.1.9
+  fledge_render_2d: ^0.1.9
   flutter:
     sdk: flutter
   flutter_soloud: ^3.4.8

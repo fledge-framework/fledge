@@ -1,3 +1,5 @@
+import 'expression.dart';
+
 /// Storage for Yarn dialogue variables.
 ///
 /// Variables in Yarn are prefixed with `$` (e.g., `$hasKey`, `$friendship`).
@@ -15,6 +17,8 @@
 /// ```
 class VariableStorage {
   final Map<String, dynamic> _variables = {};
+  late final ExpressionEvaluator _evaluator =
+      ExpressionEvaluator((name) => _variables[_normalize(name)]);
 
   /// All variable names in storage.
   Iterable<String> get variableNames => _variables.keys;
@@ -109,153 +113,38 @@ class VariableStorage {
     return name.startsWith('\$') ? name.substring(1) : name;
   }
 
-  /// Evaluate a simple expression and return the result.
+  /// Evaluate a Yarn expression and return its boolean result.
   ///
   /// Supports:
   /// - Variable references: `$varName`
+  /// - Arithmetic: `+`, `-`, `*`, `/`, `%` (with standard precedence)
   /// - Comparisons: `==`, `!=`, `<`, `>`, `<=`, `>=`
   /// - Boolean operators: `and`, `or`, `not`
-  /// - Literals: numbers, strings, `true`, `false`
+  /// - Literals: numbers, strings, `true`, `false`, `null`
+  /// - Parentheses for grouping
+  ///
+  /// Malformed expressions return `false` rather than throwing, matching the
+  /// tolerant behaviour of the previous evaluator. Use [ExpressionEvaluator]
+  /// directly when you want hard failures.
   bool evaluateCondition(String expression) {
-    expression = expression.trim();
-
-    // Handle 'not' prefix
-    if (expression.startsWith('not ')) {
-      return !evaluateCondition(expression.substring(4));
+    try {
+      return _evaluator.evaluateBool(expression);
+    } on FormatException {
+      return false;
     }
-
-    // Handle 'or' first (lower precedence = outer operation)
-    // This ensures correct precedence: not > and > or
-    final orIndex = expression.indexOf(' or ');
-    if (orIndex > 0) {
-      final left = expression.substring(0, orIndex);
-      final right = expression.substring(orIndex + 4);
-      return evaluateCondition(left) || evaluateCondition(right);
-    }
-
-    // Handle 'and' (higher precedence than 'or')
-    final andIndex = expression.indexOf(' and ');
-    if (andIndex > 0) {
-      final left = expression.substring(0, andIndex);
-      final right = expression.substring(andIndex + 5);
-      return evaluateCondition(left) && evaluateCondition(right);
-    }
-
-    // Handle comparisons
-    for (final op in ['==', '!=', '>=', '<=', '>', '<']) {
-      final opIndex = expression.indexOf(op);
-      if (opIndex > 0) {
-        final left = _evaluateValue(expression.substring(0, opIndex).trim());
-        final right =
-            _evaluateValue(expression.substring(opIndex + op.length).trim());
-        return _compare(left, right, op);
-      }
-    }
-
-    // Single value (truthy check)
-    final value = _evaluateValue(expression);
-    if (value is bool) return value;
-    if (value is num) return value != 0;
-    if (value is String) return value.isNotEmpty;
-    return false;
   }
 
-  dynamic _evaluateValue(String expr) {
-    expr = expr.trim();
-
-    // Boolean literals
-    if (expr == 'true') return true;
-    if (expr == 'false') return false;
-
-    // Variable reference
-    if (expr.startsWith('\$')) {
-      return getValue(expr);
-    }
-
-    // Number
-    final num? number = num.tryParse(expr);
-    if (number != null) return number;
-
-    // Quoted string
-    if ((expr.startsWith('"') && expr.endsWith('"')) ||
-        (expr.startsWith("'") && expr.endsWith("'"))) {
-      return expr.substring(1, expr.length - 1);
-    }
-
-    // Unquoted string
-    return expr;
-  }
-
-  bool _compare(dynamic left, dynamic right, String op) {
-    // Null handling
-    if (left == null || right == null) {
-      return switch (op) {
-        '==' => left == right,
-        '!=' => left != right,
-        _ => false,
-      };
-    }
-
-    // Number comparison
-    if (left is num && right is num) {
-      return switch (op) {
-        '==' => left == right,
-        '!=' => left != right,
-        '<' => left < right,
-        '>' => left > right,
-        '<=' => left <= right,
-        '>=' => left >= right,
-        _ => false,
-      };
-    }
-
-    // String comparison
-    final leftStr = left.toString();
-    final rightStr = right.toString();
-    return switch (op) {
-      '==' => leftStr == rightStr,
-      '!=' => leftStr != rightStr,
-      '<' => leftStr.compareTo(rightStr) < 0,
-      '>' => leftStr.compareTo(rightStr) > 0,
-      '<=' => leftStr.compareTo(rightStr) <= 0,
-      '>=' => leftStr.compareTo(rightStr) >= 0,
-      _ => false,
-    };
-  }
-
-  /// Execute a set command (e.g., `$var = value`, `$var += 5`).
+  /// Execute a set command (e.g., `$var = value`, `$var += 5`, `$var = $a * 2`).
+  ///
+  /// Malformed expressions are silently ignored.
   void executeSet(String expression) {
-    expression = expression.trim();
-
-    // Handle compound operators
-    for (final op in ['+=', '-=', '*=', '/=']) {
-      final opIndex = expression.indexOf(op);
-      if (opIndex > 0) {
-        final varName = expression.substring(0, opIndex).trim();
-        final value = _evaluateValue(expression.substring(opIndex + 2).trim());
-        final current = getNumber(varName);
-
-        // Validate that value is numeric for compound operations
-        if (value is! num) return;
-
-        final newValue = switch (op) {
-          '+=' => current + value,
-          '-=' => current - value,
-          '*=' => current * value,
-          '/=' => current / value,
-          _ => current,
-        };
-        setNumber(varName, newValue);
-        return;
-      }
-    }
-
-    // Simple assignment
-    final eqIndex = expression.indexOf('=');
-    if (eqIndex > 0) {
-      final varName = expression.substring(0, eqIndex).trim();
-      final value = _evaluateValue(expression.substring(eqIndex + 1).trim());
-      setValue(varName, value);
+    try {
+      _evaluator.executeSet(expression, (name, value) {
+        _variables[_normalize(name)] = value;
+      });
+    } on FormatException {
+      // Intentionally swallowed — matches the tolerant semantics of the
+      // previous evaluator. Malformed scripts will simply not update state.
     }
   }
 }

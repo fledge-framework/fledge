@@ -53,6 +53,40 @@ InputWidget(
 )
 ```
 
+`InputWidget` returns `KeyEventResult.ignored` for key events that aren't bound in the active `InputMap`, so ancestor `Focus` widgets (e.g. page-level shortcut handlers like `Ctrl+K`) still receive them. Bound keys return `KeyEventResult.handled` and don't bubble.
+
+## Controlling Focus (pause-on-blur)
+
+Pass a `FocusNode` in if you want to observe focus state — useful for pausing when the player clicks away:
+
+```dart
+class _GameState extends State<Game> {
+  late final FocusNode _focus = FocusNode()..addListener(_onFocusChanged);
+  bool _paused = true;
+
+  void _onFocusChanged() => setState(() => _paused = !_focus.hasFocus);
+
+  @override
+  Widget build(BuildContext context) {
+    return InputWidget(
+      world: app.world,
+      focusNode: _focus,
+      autofocus: true,
+      child: Stack(children: [
+        GameCanvas(),
+        if (_paused)
+          GestureDetector(
+            onTap: _focus.requestFocus,
+            child: const _ClickToPlayOverlay(),
+          ),
+      ]),
+    );
+  }
+}
+```
+
+`InputWidget` disposes its internal `FocusNode` only when it created one itself — nodes you pass in you own and must dispose.
+
 ## Reading Input in Systems
 
 ```dart

@@ -341,23 +341,30 @@ NetworkConfig(
 
 ## Encryption
 
-Wrap your transport with `EncryptedTransport` for packet encryption:
+Wrap your transport with `EncryptedTransport` for authenticated per-packet encryption:
 
 ```dart
 final inner = UdpTransport();
 final transport = EncryptedTransport(
   inner: inner,
-  sharedKey: EncryptedTransport.generateKey(),
+  sharedKey: EncryptedTransport.generateKey(), // 32 random bytes
 );
 ```
 
-The first 6 bytes (magic, version, type) remain in plaintext for routing. The rest of the packet is encrypted. Enable via `NetworkConfig`:
+`EncryptedTransport` uses AES-256-GCM (via `package:pointycastle`). The wire format per packet is:
 
-```dart
-NetworkConfig(enableEncryption: true)
+```
+[ 6 bytes  ] plaintext header (magic + version + type) — kept readable for routing
+[ 12 bytes ] random GCM nonce
+[ N bytes  ] ciphertext (sequence, ack, ackBits, timestamp, payload)
+[ 16 bytes ] GCM authentication tag
 ```
 
-> **Note:** The current implementation uses XOR-based encryption for lightweight obfuscation. For production security, replace with AES-GCM from `package:cryptography`.
+The 6-byte header is bound into the auth tag as AAD, so tampering with it is detected. Packets that fail verification (wrong key, flipped bit, truncated tag) are silently dropped by the receiver.
+
+`sharedKey` must be exactly 32 bytes (AES-256). The setter throws `ArgumentError` on other lengths. Setting it to `null` disables encryption and passes traffic through unchanged.
+
+> **Key distribution:** the key is pre-shared — both host and client must be configured with the same 32 bytes before any encrypted traffic flows. A proper key-exchange handshake (ECDH during connect) is on the roadmap; until then, distribute the key via your own out-of-band mechanism (config, login response, etc.).
 
 ## Congestion Control
 
