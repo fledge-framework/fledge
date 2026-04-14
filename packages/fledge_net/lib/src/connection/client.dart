@@ -125,8 +125,8 @@ class NetworkClient {
       await _sendConnect();
 
       // Wait for response or timeout
-      final result = await _connectCompleter!.future
-          .timeout(connectionTimeout, onTimeout: () {
+      final result = await _connectCompleter!.future.timeout(connectionTimeout,
+          onTimeout: () {
         _setState(ClientState.failed, 'Connection timeout');
         return false;
       });

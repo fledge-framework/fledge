@@ -53,6 +53,8 @@ This two-phase approach ensures:
 - You still receive events for touching walls (detection)
 - Trigger zones generate events without blocking (sensors)
 
+The resolution system uses **wall-sliding**: when an entity is blocked diagonally, it allows movement along the unblocked axis. For example, walking into a wall at an angle will slide along the wall rather than stopping completely.
+
 ### Static vs Dynamic Entities
 
 Entities are classified by whether they have a `Velocity` component:
@@ -103,6 +105,8 @@ Two entities collide when both conditions are met:
 |-------|-----------|-------------|
 | `solid` | 0x0001 | Static geometry, walls |
 | `trigger` | 0x0002 | Trigger zones, sensors |
+| `all` | 0xFFFFFFFF | Collides with everything (default) |
+| `none` | 0x0000 | Collides with nothing |
 | `gameLayersStart` | 0x0100 | First available game-specific layer |
 
 ### Defining Game Layers
@@ -213,9 +217,9 @@ class TriggerZone {
 class TriggerSystem implements System {
   @override
   Future<void> run(World world) async {
-    for (final (_, _, collision, trigger)
-        in world.query3<Player, CollisionEvent, TriggerZone>().iter()) {
-      if (!trigger.hasTriggered) {
+    for (final (_, collision, trigger)
+        in world.query2<CollisionEvent, TriggerZone>().iter()) {
+      if (!trigger.hasTriggered && world.has<Player>(collision.other)) {
         trigger.hasTriggered = true;
         // Do one-time action
       }
@@ -293,6 +297,17 @@ App()
   .addPlugin(PhysicsPlugin());
 ```
 
+### Disabling Resolution
+
+To disable collision resolution (e.g., for debug/ghost mode) while still receiving collision events:
+
+```dart
+App()
+  .addPlugin(PhysicsPlugin(
+    config: PhysicsConfig(enableResolution: false),
+  ));
+```
+
 ### Custom System Registration
 
 For more control, add systems manually:
@@ -346,6 +361,10 @@ Movement data for dynamic entities:
 | `CollisionResolutionSystem` | update | Adjusts velocity to prevent solid collisions |
 | `CollisionDetectionSystem` | update | Generates CollisionEvent for overlapping entities |
 | `CollisionCleanupSystem` | last | Removes CollisionEvent at end of frame |
+
+## Performance Notes
+
+Collision detection uses an O(n²) broad-phase check (AABB overlap) followed by narrow-phase shape intersection. This is suitable for small-to-medium entity counts. No spatial partitioning is implemented yet — for games with many collidable entities, consider reducing the number of active colliders or using collision layers to limit pair checks.
 
 ## See Also
 

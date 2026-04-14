@@ -164,7 +164,7 @@ InputMap.builder()
 
 ### Multiple Bindings
 
-The same action can have multiple bindings - the first active input wins:
+The same action can have multiple bindings. For button actions, the highest-priority phase wins (`justPressed` > `held` > `justReleased` > `up`). For axis actions, values from all active bindings are summed:
 
 ```dart
 InputMap.builder()
@@ -210,8 +210,8 @@ final pauseMap = InputMap.builder()
 final inputPlugin = InputPlugin<GameState>(
   contexts: [
     InputContext(name: 'menu', map: menuMap),
-    InputContext(name: 'gameplay', map: gameplayMap),
-    InputContext(name: 'pause', map: pauseMap),
+    InputContext(name: 'gameplay', map: gameplayMap, priority: 1),
+    InputContext(name: 'pause', map: pauseMap, priority: 2),
   ],
   stateBindings: {
     GameState.menu: 'menu',
@@ -230,6 +230,39 @@ await App()
 
 When the game state changes, the active input context automatically switches.
 
+### Manual Context Switching
+
+For temporary overlays like chat or inventory, use the context stack directly:
+
+```dart
+final registry = world.getResource<InputContextRegistry>()!;
+
+// Push a temporary context (takes priority over state-based context)
+registry.push('inventory');
+
+// Pop when done
+registry.pop();
+
+// Or clear all manual overrides
+registry.clearManualStack();
+```
+
+The manual stack takes precedence over state-based bindings. When the stack is empty, the state-based context resumes.
+
+## Plugin Configuration
+
+Customize input behavior with `InputPluginConfig`:
+
+```dart
+final inputPlugin = InputPlugin.simple(
+  context: InputContext(name: 'default', map: inputMap),
+  config: InputPluginConfig(
+    defaultDeadzone: 0.1,      // Default deadzone for analog inputs
+    consumeKeyEvents: true,    // Whether to consume handled key events
+  ),
+);
+```
+
 ## InputWidget
 
 The `InputWidget` is a Flutter widget that captures all input and injects it into the ECS world:
@@ -245,6 +278,62 @@ InputWidget(
 ```
 
 Place it at the root of your game widget tree to ensure all input is captured.
+
+## Cursor Management
+
+The input plugin manages cursor visibility and pointer lock through `CursorMode`:
+
+| Mode | Description |
+|------|-------------|
+| `visible` | Cursor is visible and moves freely (default) |
+| `hidden` | Cursor is hidden but still tracks position |
+| `locked` | Cursor is hidden and captured for relative movement (FPS-style) |
+
+### Per-Context Cursor Mode
+
+Set the cursor mode on an `InputContext` so it changes automatically with context switches:
+
+```dart
+InputContext(
+  name: 'gameplay',
+  map: gameplayMap,
+  cursorMode: CursorMode.locked,  // Lock cursor during gameplay
+)
+
+InputContext(
+  name: 'menu',
+  map: menuMap,
+  cursorMode: CursorMode.visible,  // Show cursor in menus
+)
+```
+
+### Manual Override
+
+Temporarily override the cursor mode via the `CursorState` resource:
+
+```dart
+final cursor = world.getResource<CursorState>()!;
+
+// Override cursor mode (takes priority over context-based mode)
+cursor.requestMode(CursorMode.visible);
+
+// Clear override and return to context-based mode
+cursor.clearOverride();
+```
+
+### Pointer Lock
+
+For FPS-style mouse capture, provide a `PointerLockDelegate` to `InputWidget`:
+
+```dart
+InputWidget(
+  world: app.world,
+  pointerLockDelegate: myPointerLockDelegate,
+  child: GameWidget(app: app),
+)
+```
+
+When the cursor mode is `locked`, the delegate captures the mouse and streams movement deltas via `MouseState.deltaX` / `MouseState.deltaY`.
 
 ## Reading Input in Systems
 
@@ -309,6 +398,7 @@ if (primary != null) {
 | `MouseState` | Mouse position, buttons, scroll |
 | `GamepadState` | All connected gamepads |
 | `InputContextRegistry` | Manages input contexts |
+| `CursorState` | Cursor visibility and lock mode |
 
 ## Systems Reference
 
@@ -317,6 +407,7 @@ if (primary != null) {
 | `InputPollingSystem` | first | Updates raw input frame state |
 | `ContextUpdateSystem<S>` | first | Updates active context from game state |
 | `ActionResolutionSystem` | first | Resolves actions from raw input |
+| `InputFrameEndSystem` | last | Clears input transition flags |
 
 ## UI Input Architecture
 

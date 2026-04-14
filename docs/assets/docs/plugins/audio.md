@@ -180,6 +180,8 @@ world.setVolume(AudioChannel.sfx, 1.0);
 final musicVolume = world.getVolume(AudioChannel.music);
 ```
 
+> **Note:** Volume fading (gradual transitions) is planned but not yet implemented. The `setVolume()` API accepts a `fade` parameter, but it currently applies the volume change immediately.
+
 ## Pause and Resume
 
 ### Global Pause
@@ -245,6 +247,7 @@ AudioSource(
   looping: true,             // Loop the sound
   autoPlay: true,            // Start playing automatically
   volume: 1.0,               // Base volume
+  playbackSpeed: 1.0,       // Speed multiplier
   channel: AudioChannel.sfx, // Volume channel
   maxDistance: 500.0,        // Override config max distance
   referenceDistance: 50.0,   // Override config reference distance
@@ -266,6 +269,8 @@ AudioPlugin(config: AudioConfig(
   ),
 ))
 ```
+
+> **Note:** Spatial audio positioning via `Transform2D` is not yet fully integrated. The `SpatialAudioSystem` currently uses hardcoded origin positions. Spatial config (distance falloff, panning) is wired up, but entity positions are not yet read from `Transform2D` components.
 
 ## Configuration
 
@@ -294,6 +299,7 @@ AudioPlugin(config: AudioConfig(
     voice: 1.0,
     ambient: 0.8,
   ),
+  maxConcurrentSounds: 32, // Max simultaneous sounds (default: 32)
   pauseOnFocusLoss: true,  // Auto-pause when window loses focus
   spatialConfig: SpatialAudioConfig(
     enabled: true,
@@ -358,7 +364,7 @@ for (final event in world.eventReader<MusicChanged>().read()) {
 
 ```dart
 for (final event in world.eventReader<AudioFailed>().read()) {
-  print('Audio error for ${event.key}: ${event.reason}');
+  print('Audio error for ${event.key}: ${event.error}');
 }
 ```
 

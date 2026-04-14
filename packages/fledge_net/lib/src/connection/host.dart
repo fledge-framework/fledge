@@ -64,7 +64,8 @@ class NetworkHost {
 
   /// Event controllers.
   final _connectController = StreamController<PeerConnectedEvent>.broadcast();
-  final _disconnectController = StreamController<PeerDisconnectedEvent>.broadcast();
+  final _disconnectController =
+      StreamController<PeerDisconnectedEvent>.broadcast();
   final _dataController = StreamController<PeerDataEvent>.broadcast();
 
   NetworkHost({
@@ -84,7 +85,8 @@ class NetworkHost {
   Stream<PeerConnectedEvent> get onPeerConnected => _connectController.stream;
 
   /// Stream of peer disconnect events.
-  Stream<PeerDisconnectedEvent> get onPeerDisconnected => _disconnectController.stream;
+  Stream<PeerDisconnectedEvent> get onPeerDisconnected =>
+      _disconnectController.stream;
 
   /// Stream of data received from peers.
   Stream<PeerDataEvent> get onData => _dataController.stream;
@@ -154,7 +156,8 @@ class NetworkHost {
   }
 
   /// Broadcast data to all peers except one.
-  Future<void> broadcastExcept(int excludeId, PacketType type, Uint8List data) async {
+  Future<void> broadcastExcept(
+      int excludeId, PacketType type, Uint8List data) async {
     for (final peer in _peers.values) {
       if (peer.isConnected && peer.id != excludeId) {
         await _sendToPeer(peer, type, data);
@@ -225,7 +228,7 @@ class NetworkHost {
         _sendPong(peer, packet.header.timestamp);
 
       case PacketType.pong:
-        // RTT already updated above
+      // RTT already updated above
 
       default:
         // Forward to game logic
@@ -258,7 +261,8 @@ class NetworkHost {
     _disconnectController.add(PeerDisconnectedEvent(peer, reason));
   }
 
-  Future<void> _sendToPeer(Peer peer, PacketType type, Uint8List payload) async {
+  Future<void> _sendToPeer(
+      Peer peer, PacketType type, Uint8List payload) async {
     final header = PacketHeader(
       type: type,
       sequence: peer.nextSequence,

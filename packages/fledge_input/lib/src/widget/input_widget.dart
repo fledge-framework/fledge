@@ -107,7 +107,8 @@ class _InputWidgetState extends State<InputWidget> {
       // Handle pointer lock state changes
       if (mode == CursorMode.locked && previousMode != CursorMode.locked) {
         _startPointerLock();
-      } else if (mode != CursorMode.locked && previousMode == CursorMode.locked) {
+      } else if (mode != CursorMode.locked &&
+          previousMode == CursorMode.locked) {
         _stopPointerLock();
       }
     }

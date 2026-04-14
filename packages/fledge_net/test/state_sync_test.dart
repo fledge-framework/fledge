@@ -62,8 +62,14 @@ void main() {
     });
 
     test('lerp interpolates at t=0', () {
-      final a = TransformNetworkState()..x = 0..y = 0..z = 0;
-      final b = TransformNetworkState()..x = 10..y = 20..z = 30;
+      final a = TransformNetworkState()
+        ..x = 0
+        ..y = 0
+        ..z = 0;
+      final b = TransformNetworkState()
+        ..x = 10
+        ..y = 20
+        ..z = 30;
 
       a.lerp(b, 0.0);
       expect(a.x, closeTo(0.0, 0.001));
@@ -72,8 +78,14 @@ void main() {
     });
 
     test('lerp interpolates at t=1', () {
-      final a = TransformNetworkState()..x = 0..y = 0..z = 0;
-      final b = TransformNetworkState()..x = 10..y = 20..z = 30;
+      final a = TransformNetworkState()
+        ..x = 0
+        ..y = 0
+        ..z = 0;
+      final b = TransformNetworkState()
+        ..x = 10
+        ..y = 20
+        ..z = 30;
 
       a.lerp(b, 1.0);
       expect(a.x, closeTo(10.0, 0.001));
@@ -83,11 +95,21 @@ void main() {
 
     test('lerp interpolates at t=0.5', () {
       final a = TransformNetworkState()
-        ..x = 0..y = 0..z = 0
-        ..rotX = 0..rotY = 0..rotZ = 0..rotW = 1;
+        ..x = 0
+        ..y = 0
+        ..z = 0
+        ..rotX = 0
+        ..rotY = 0
+        ..rotZ = 0
+        ..rotW = 1;
       final b = TransformNetworkState()
-        ..x = 10..y = 20..z = 30
-        ..rotX = 0..rotY = 0..rotZ = 0..rotW = 1;
+        ..x = 10
+        ..y = 20
+        ..z = 30
+        ..rotX = 0
+        ..rotY = 0
+        ..rotZ = 0
+        ..rotW = 1;
 
       a.lerp(b, 0.5);
       expect(a.x, closeTo(5.0, 0.001));
@@ -96,7 +118,10 @@ void main() {
     });
 
     test('createDelta returns serialized state', () {
-      final state = TransformNetworkState()..x = 5..y = 10..z = 15;
+      final state = TransformNetworkState()
+        ..x = 5
+        ..y = 10
+        ..z = 15;
       final delta = state.createDelta(TransformNetworkState());
       expect(delta, isNotNull);
       expect(delta!.isNotEmpty, true);
@@ -104,8 +129,13 @@ void main() {
 
     test('applyDelta restores state', () {
       final original = TransformNetworkState()
-        ..x = 7..y = 14..z = 21
-        ..rotX = 0..rotY = 0..rotZ = 0..rotW = 1;
+        ..x = 7
+        ..y = 14
+        ..z = 21
+        ..rotX = 0
+        ..rotY = 0
+        ..rotZ = 0
+        ..rotW = 1;
       final delta = original.createDelta(TransformNetworkState())!;
 
       final restored = TransformNetworkState();
@@ -261,7 +291,10 @@ void main() {
     test('auto-populates timestamp', () {
       final before = DateTime.now();
       final snapshot = StateSnapshot(tick: 1, state: TransformNetworkState());
-      expect(snapshot.timestamp.isAfter(before.subtract(const Duration(milliseconds: 1))), true);
+      expect(
+          snapshot.timestamp
+              .isAfter(before.subtract(const Duration(milliseconds: 1))),
+          true);
     });
 
     test('accepts explicit timestamp', () {

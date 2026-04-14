@@ -177,7 +177,10 @@ void main() {
         ownerId: 0,
         initialState: {},
       );
-      expect(spawn.requestTime.isAfter(before.subtract(const Duration(milliseconds: 1))), true);
+      expect(
+          spawn.requestTime
+              .isAfter(before.subtract(const Duration(milliseconds: 1))),
+          true);
     });
   });
 
@@ -190,7 +193,10 @@ void main() {
     test('auto-populates requestTime', () {
       final before = DateTime.now();
       final despawn = PendingDespawn(netId: 1);
-      expect(despawn.requestTime.isAfter(before.subtract(const Duration(milliseconds: 1))), true);
+      expect(
+          despawn.requestTime
+              .isAfter(before.subtract(const Duration(milliseconds: 1))),
+          true);
     });
   });
 }

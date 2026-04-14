@@ -396,7 +396,8 @@ void main() {
       final peerId = host.peers.first.id;
       hostTransport.sentPackets.clear();
 
-      await host.sendTo(peerId, PacketType.stateUpdate, Uint8List.fromList([1]));
+      await host.sendTo(
+          peerId, PacketType.stateUpdate, Uint8List.fromList([1]));
       expect(hostTransport.sentPackets.length, 1);
     });
 
