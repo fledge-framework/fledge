@@ -27,7 +27,7 @@ dependencies:
     path: ../packages/fledge_render
 
   # Routing
-  go_router: ^14.0.0
+  go_router: ^17.2.1
 
   # Markdown rendering
   flutter_markdown: ^0.7.0
@@ -41,7 +41,7 @@ dependencies:
   url_launcher: ^6.2.0
 
   # Google Fonts for clean typography
-  google_fonts: ^6.1.0
+  google_fonts: ^8.0.2
 
 dev_dependencies:
   flutter_test:

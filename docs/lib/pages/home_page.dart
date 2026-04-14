@@ -7,7 +7,7 @@ import '../app/theme.dart';
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
-  static const _githubUrl = 'https://github.com/mattrltrent/fledge';
+  static const _githubUrl = 'https://github.com/fledge-framework/fledge';
   static const _pubDevUrl = 'https://pub.dev/packages/fledge_ecs';
 
   Future<void> _launchUrl(String url) async {
@@ -69,7 +69,7 @@ class HomePage extends StatelessWidget {
               ),
             ),
             child: Text(
-              'v0.1.10 - Early Preview',
+              'v0.1.11 - Early Preview',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: Colors.white.withValues(alpha: 0.9),
                 fontWeight: FontWeight.w500,

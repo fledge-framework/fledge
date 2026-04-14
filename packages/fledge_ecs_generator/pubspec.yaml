@@ -11,7 +11,7 @@ environment:
 resolution: workspace
 
 dependencies:
-  analyzer: ^9.0.0
+  analyzer: ^10.0.1
   build: ^4.0.3
   source_gen: ^4.1.1
   fledge_ecs_annotations: ^0.1.9

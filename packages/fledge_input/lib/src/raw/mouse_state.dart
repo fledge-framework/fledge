@@ -12,9 +12,19 @@ class MouseState {
   double _prevX = 0;
   double _prevY = 0;
 
+  /// Raw delta from pointer lock (accumulated until frame end).
+  double _lockedDeltaX = 0;
+  double _lockedDeltaY = 0;
+
+  /// Whether we're receiving locked pointer deltas.
+  bool _hasLockedDelta = false;
+
   /// Mouse movement delta this frame.
-  double get deltaX => x - _prevX;
-  double get deltaY => y - _prevY;
+  ///
+  /// When pointer is locked, returns raw delta from pointer lock.
+  /// Otherwise, returns position-based delta.
+  double get deltaX => _hasLockedDelta ? _lockedDeltaX : (x - _prevX);
+  double get deltaY => _hasLockedDelta ? _lockedDeltaY : (y - _prevY);
 
   /// Scroll delta this frame (reset each frame).
   double scrollX = 0;
@@ -32,6 +42,16 @@ class MouseState {
   void onMove(double newX, double newY) {
     x = newX;
     y = newY;
+  }
+
+  /// Called by InputWidget when receiving raw deltas from pointer lock.
+  ///
+  /// These deltas are accumulated and used instead of position-based
+  /// deltas when pointer lock is active.
+  void onLockedDelta(double dx, double dy) {
+    _lockedDeltaX += dx;
+    _lockedDeltaY += dy;
+    _hasLockedDelta = true;
   }
 
   /// Called by InputWidget on mouse button down.
@@ -88,6 +108,10 @@ class MouseState {
     _prevY = y;
     scrollX = 0;
     scrollY = 0;
+    // Clear locked deltas from previous frame
+    _lockedDeltaX = 0;
+    _lockedDeltaY = 0;
+    _hasLockedDelta = false;
     for (final state in _buttons.values) {
       state.beginFrame();
     }
@@ -106,6 +130,9 @@ class MouseState {
     y = 0;
     _prevX = 0;
     _prevY = 0;
+    _lockedDeltaX = 0;
+    _lockedDeltaY = 0;
+    _hasLockedDelta = false;
     scrollX = 0;
     scrollY = 0;
     _buttons.clear();

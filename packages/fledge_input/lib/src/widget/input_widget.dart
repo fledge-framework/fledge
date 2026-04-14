@@ -6,6 +6,10 @@ import 'package:flutter/services.dart';
 import 'package:fledge_ecs/fledge_ecs.dart' hide State;
 import 'package:gamepads/gamepads.dart';
 
+import '../context/context_registry.dart';
+import '../cursor/cursor_mode.dart';
+import '../cursor/cursor_state.dart';
+import '../cursor/pointer_lock_delegate.dart';
 import '../raw/keyboard_state.dart';
 import '../raw/mouse_state.dart';
 import '../raw/gamepad_state.dart';
@@ -40,6 +44,13 @@ class InputWidget extends StatefulWidget {
   /// Whether to request focus when mouse enters the widget.
   final bool focusOnHover;
 
+  /// Optional delegate for pointer lock (FPS-style mouse capture).
+  ///
+  /// Provide a [PointerLockDelegate] implementation to enable
+  /// [CursorMode.locked]. Without this, locked mode behaves like
+  /// [CursorMode.hidden] (cursor hidden but no raw deltas).
+  final PointerLockDelegate? pointerLockDelegate;
+
   const InputWidget({
     super.key,
     required this.world,
@@ -47,6 +58,7 @@ class InputWidget extends StatefulWidget {
     this.autofocus = true,
     this.enableGamepad = true,
     this.focusOnHover = true,
+    this.pointerLockDelegate,
   });
 
   @override
@@ -57,14 +69,91 @@ class _InputWidgetState extends State<InputWidget> {
   final FocusNode _focusNode = FocusNode();
   StreamSubscription<GamepadEvent>? _gamepadSubscription;
 
+  /// Pointer lock stream subscription for FPS-style mouse capture.
+  StreamSubscription<PointerLockDelta>? _pointerLockSubscription;
+
   KeyboardState? get _keyboard => widget.world.getResource<KeyboardState>();
   MouseState? get _mouse => widget.world.getResource<MouseState>();
   GamepadState? get _gamepad => widget.world.getResource<GamepadState>();
+  CursorState? get _cursor => widget.world.getResource<CursorState>();
+  InputContextRegistry? get _contextRegistry =>
+      widget.world.getResource<InputContextRegistry>();
+
+  CursorMode _currentCursorMode = CursorMode.visible;
+  String? _lastContextName;
 
   @override
   void initState() {
     super.initState();
     _initializeGamepads();
+    _initializeCursor();
+  }
+
+  void _initializeCursor() {
+    final cursor = _cursor;
+    if (cursor != null) {
+      cursor.onModeChanged = _onCursorModeChanged;
+      _currentCursorMode = cursor.mode;
+    }
+  }
+
+  void _onCursorModeChanged(CursorMode mode) {
+    if (mounted) {
+      final previousMode = _currentCursorMode;
+      setState(() {
+        _currentCursorMode = mode;
+      });
+
+      // Handle pointer lock state changes
+      if (mode == CursorMode.locked && previousMode != CursorMode.locked) {
+        _startPointerLock();
+      } else if (mode != CursorMode.locked && previousMode == CursorMode.locked) {
+        _stopPointerLock();
+      }
+    }
+  }
+
+  void _updateCursorFromContext() {
+    final registry = _contextRegistry;
+    final cursor = _cursor;
+    if (registry == null || cursor == null) return;
+
+    final contextName = registry.activeContextName;
+    if (contextName != _lastContextName) {
+      _lastContextName = contextName;
+      final context = registry.activeContext;
+      if (context != null) {
+        cursor.updateFromContext(context.cursorMode);
+      }
+    }
+  }
+
+  void _startPointerLock() {
+    if (_pointerLockSubscription != null) return;
+
+    final delegate = widget.pointerLockDelegate;
+    if (delegate == null) {
+      // No pointer lock delegate provided; locked mode will behave like hidden
+      return;
+    }
+
+    try {
+      final stream = delegate.start();
+      _pointerLockSubscription = stream.listen((event) {
+        final mouse = _mouse;
+        if (mouse != null) {
+          mouse.onLockedDelta(event.dx, event.dy);
+        }
+      });
+    } catch (e) {
+      debugPrint('Pointer lock not available: $e');
+    }
+  }
+
+  void _stopPointerLock() {
+    _pointerLockSubscription?.cancel();
+    _pointerLockSubscription = null;
+    widget.pointerLockDelegate?.stop();
   }
 
   void _initializeGamepads() {
@@ -165,11 +254,27 @@ class _InputWidgetState extends State<InputWidget> {
   void dispose() {
     _focusNode.dispose();
     _gamepadSubscription?.cancel();
+    _stopPointerLock();
+    final cursor = _cursor;
+    if (cursor != null) {
+      cursor.onModeChanged = null;
+    }
     super.dispose();
+  }
+
+  MouseCursor _getCursor() {
+    return switch (_currentCursorMode) {
+      CursorMode.visible => SystemMouseCursors.basic,
+      CursorMode.hidden => SystemMouseCursors.none,
+      CursorMode.locked => SystemMouseCursors.none,
+    };
   }
 
   @override
   Widget build(BuildContext context) {
+    // Check for context changes and update cursor mode
+    _updateCursorFromContext();
+
     Widget child = widget.child;
 
     // Wrap with mouse listener
@@ -182,14 +287,13 @@ class _InputWidgetState extends State<InputWidget> {
       child: child,
     );
 
-    // Add mouse region for hover focus
-    if (widget.focusOnHover) {
-      child = MouseRegion(
-        onEnter: (_) => _focusNode.requestFocus(),
-        onExit: _handlePointerExit,
-        child: child,
-      );
-    }
+    // Add mouse region for hover focus and cursor control
+    child = MouseRegion(
+      cursor: _getCursor(),
+      onEnter: widget.focusOnHover ? (_) => _focusNode.requestFocus() : null,
+      onExit: _handlePointerExit,
+      child: child,
+    );
 
     // Wrap with keyboard focus
     child = Focus(

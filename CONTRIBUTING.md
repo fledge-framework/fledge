@@ -18,7 +18,7 @@ Please be respectful and constructive in all interactions. We want Fledge to be 
 
 1. Fork and clone the repository:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/fledge.git
+   git clone https://github.com/fledge-framework/fledge.git
    cd fledge
    ```
 

@@ -1,4 +1,5 @@
 import '../action/input_map.dart';
+import '../cursor/cursor_mode.dart';
 
 /// An input context that can be activated based on game state.
 ///
@@ -14,12 +15,20 @@ class InputContext {
   /// Priority when multiple contexts are active (higher = preferred).
   final int priority;
 
+  /// Cursor mode when this context is active.
+  ///
+  /// - [CursorMode.visible]: Normal cursor for menus/UI
+  /// - [CursorMode.hidden]: Hidden cursor but tracks position
+  /// - [CursorMode.locked]: Hidden cursor with relative movement (FPS games)
+  final CursorMode cursorMode;
+
   const InputContext({
     required this.name,
     required this.map,
     this.priority = 0,
+    this.cursorMode = CursorMode.visible,
   });
 
   @override
-  String toString() => 'InputContext($name)';
+  String toString() => 'InputContext($name, cursor: $cursorMode)';
 }

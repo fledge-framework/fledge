@@ -78,8 +78,8 @@ class WindowPlugin implements Plugin {
   /// ```dart
   /// WindowPlugin(config: WindowConfig.fullscreen(title: title))
   /// ```
-  const WindowPlugin.fullscreen({String title = 'Fledge Game'})
-      : config = const WindowConfig.fullscreen();
+  WindowPlugin.fullscreen({String title = 'Fledge Game'})
+      : config = WindowConfig.fullscreen(title: title);
 
   /// Creates a borderless windowed plugin.
   ///
@@ -87,8 +87,8 @@ class WindowPlugin implements Plugin {
   /// ```dart
   /// WindowPlugin(config: WindowConfig.borderless(title: title))
   /// ```
-  const WindowPlugin.borderless({String title = 'Fledge Game'})
-      : config = const WindowConfig.borderless();
+  WindowPlugin.borderless({String title = 'Fledge Game'})
+      : config = WindowConfig.borderless(title: title);
 
   /// Creates a windowed plugin with optional size.
   factory WindowPlugin.windowed({

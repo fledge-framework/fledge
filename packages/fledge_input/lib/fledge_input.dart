@@ -101,6 +101,11 @@ export 'src/action/input_map.dart';
 export 'src/context/input_context.dart';
 export 'src/context/context_registry.dart';
 
+// Cursor
+export 'src/cursor/cursor_mode.dart';
+export 'src/cursor/cursor_state.dart';
+export 'src/cursor/pointer_lock_delegate.dart';
+
 // Raw input
 export 'src/raw/keyboard_state.dart';
 export 'src/raw/mouse_state.dart';

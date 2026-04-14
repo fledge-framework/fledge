@@ -89,6 +89,7 @@ class DocNavigation {
         NavPage(title: 'Game Time', path: 'time'),
         NavPage(title: 'Tiled Tilemaps', path: 'tiled'),
         NavPage(title: 'Yarn Dialogue', path: 'yarn'),
+        NavPage(title: 'Networking', path: 'net'),
       ],
     ),
     NavSection(

@@ -20,6 +20,7 @@ workspace:
   - packages/fledge_yarn
   - packages/fledge_save
   - packages/fledge_time
+  - packages/fledge_net
   - examples/basic_ecs
   - examples/advanced_ecs
   - docs
@@ -28,10 +29,9 @@ dev_dependencies:
   melos: ^7.3.0
 
 # Override conflicting dependencies to allow workspace resolution
+# flutter_test pins test_api 0.7.7 but analyzer 10.x requires test_api 0.7.11+
 dependency_overrides:
-  # Override test_api to allow test 1.27.0+ which is compatible with analyzer 9.x
-  # flutter_test pins 0.7.7 but we need 0.7.8 for test 1.27.0+
-  test_api: ^0.7.8
+  test_api: ^0.7.11
 
 melos:
   name: fledge

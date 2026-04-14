@@ -38,7 +38,7 @@ class Inventory with Saveable {
 void main() async {
   final app = App()
     .addPlugin(SavePlugin(
-      config: SaveConfig(saveDirectory: 'MyGame'),
+      config: SaveConfig(gameDirectory: 'MyGame'),
       saveables: [Inventory()],  // Register saveable resources
     ));
 
@@ -120,7 +120,7 @@ Configure save system behavior:
 
 ```dart
 SaveConfig(
-  saveDirectory: 'MyGame',  // Subdirectory in app documents
+  gameDirectory: 'MyGame',  // Subdirectory in app documents
   formatVersion: 1,         // Increment for breaking changes
   compressSaves: false,     // Optional gzip compression
 )
@@ -152,7 +152,7 @@ final hasSave = await saveManager.hasSaveFile('slot1');
 // List all save slots
 final slots = await saveManager.listSaveSlots();
 for (final slot in slots) {
-  print('${slot.name}: saved ${slot.timestamp}');
+  print('${slot.slotName}: saved ${slot.timestamp}');
 }
 ```
 
@@ -268,7 +268,7 @@ The `SavePlugin` sets up the save system:
 App()
   .addPlugin(SavePlugin(
     config: SaveConfig(
-      saveDirectory: 'MyGame',
+      gameDirectory: 'MyGame',
       formatVersion: 1,
     ),
     saveables: [
@@ -369,7 +369,7 @@ const saveFormatVersion = 2;
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `saveDirectory` | `String` | Subdirectory for saves (default: 'saves') |
+| `gameDirectory` | `String` | Subdirectory for saves (default: 'saves') |
 | `formatVersion` | `int` | Save format version for migration |
 | `compressSaves` | `bool` | Enable gzip compression |
 
@@ -389,7 +389,7 @@ const saveFormatVersion = 2;
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `name` | `String` | Slot name |
+| `slotName` | `String` | Slot name |
 | `timestamp` | `DateTime` | When the save was created |
 | `metadata` | `Map<String, dynamic>?` | Custom metadata |
 

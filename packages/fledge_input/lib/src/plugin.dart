@@ -3,6 +3,7 @@ import 'package:fledge_ecs/fledge_ecs.dart';
 import 'action/action_state.dart';
 import 'context/context_registry.dart';
 import 'context/input_context.dart';
+import 'cursor/cursor_state.dart';
 import 'raw/keyboard_state.dart';
 import 'raw/mouse_state.dart';
 import 'raw/gamepad_state.dart';
@@ -102,7 +103,8 @@ class InputPlugin<S extends Enum> implements Plugin {
         .insertResource(KeyboardState())
         .insertResource(MouseState())
         .insertResource(GamepadState())
-        .insertResource(ActionState());
+        .insertResource(ActionState())
+        .insertResource(CursorState());
 
     // Set up context registry
     final registry = InputContextRegistry();
