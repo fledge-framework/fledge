@@ -84,6 +84,60 @@ class RenderSystem implements System {
 
 Explicit ordering constraints combine with automatic conflict detection.
 
+### Registration order breaks ties — and it's a trap
+
+When two systems in the same stage conflict (shared component write, or one writes what the other reads) and **neither declares `before:` / `after:`**, the scheduler still has to pick an order. It breaks the tie by the order the systems were registered with the `App`.
+
+That's fine when the order happens to be what you want. The failure mode is when it's *not* — and the most common case is a new movement/AI/steering system that writes `Velocity` being registered *after* the physics plugin's `collision_resolution` (which also writes `Velocity`):
+
+```
+collision_resolution runs first  → clamps last frame's velocity
+input/movement runs second       → overwrites with a wall-ward velocity
+velocity integration             → pushes the entity through the wall
+```
+
+Everything compiles, every test passes, the player silently clips through walls.
+
+Two fixes:
+
+```dart
+// Option A — put the movement system in an earlier stage. Stage
+// boundaries always beat intra-stage ordering.
+app.addSystem(MyMovementSystem(), stage: CoreStage.preUpdate);
+
+// Option B — stay in update but say so explicitly.
+class MyMovementSystem implements System {
+  @override
+  SystemMeta get meta => SystemMeta(
+    name: 'my_movement',
+    writes: {ComponentId.of<Velocity>()},
+    before: const ['collision_resolution'],
+  );
+  // ...
+}
+```
+
+### Catching this automatically
+
+Call `App.checkScheduleOrdering()` in a test or a debug-only boot path. It walks every stage for pairs of systems that conflict but have no explicit `before:`/`after:` between them, and returns a list describing each one with a ready-to-paste fix:
+
+```dart
+void main() {
+  final app = buildApp();
+  assert(() {
+    final issues = app.checkScheduleOrdering();
+    if (issues.isNotEmpty) {
+      // ignore: avoid_print
+      issues.forEach(print);
+    }
+    return issues.isEmpty;
+  }());
+  runApp(MyGame(app: app));
+}
+```
+
+Each returned `OrderingAmbiguity` names both systems, the stage they're in, what they conflict on (e.g. `both write component Velocity`, `resource Time: A writes, B reads`), and the explicit constraint you'd add to fix it. A clean run returns an empty list.
+
 ## System Sets
 
 Group related systems and configure their ordering together:
@@ -192,17 +246,21 @@ class ParticleSystem implements System {
 
 ## Debugging Order
 
-The schedule logs system execution order in debug mode:
+Use `App.checkScheduleOrdering()` to find pairs of same-stage systems whose order is determined only by registration order (i.e. neither side declares `before:` / `after:` on the other). See the "Registration order breaks ties — and it's a trap" section above for the full pattern.
 
 ```dart
-// Enable debug logging
-app.debugSystems = true;
-
-// Output:
-// [Schedule] Running: input
-// [Schedule] Running: movement (after: input)
-// [Schedule] Running: physics (after: movement)
+for (final issue in app.checkScheduleOrdering()) {
+  print(issue);
+  // OrderingAmbiguity(stage=update): my_movement runs before
+  //   collision_resolution by registration order only.
+  //   Reasons: both write component Velocity. Add
+  //   `before: ['collision_resolution']` to my_movement
+  //   (or the reverse) to make the intent explicit, or
+  //   move one to a different stage.
+}
 ```
+
+Run it in a test (`expect(app.checkScheduleOrdering(), isEmpty)`) or guard it behind `assert` in a debug boot path. The diagnostic is the same one `examples/drifter/test/schedule_ordering_test.dart` uses to pin down its own schedule.
 
 ## See Also
 
