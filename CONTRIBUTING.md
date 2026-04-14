@@ -10,8 +10,8 @@ Please be respectful and constructive in all interactions. We want Fledge to be 
 
 ### Prerequisites
 
-- [Dart SDK](https://dart.dev/get-dart) (3.0.0 or higher)
-- [Flutter SDK](https://flutter.dev/docs/get-started/install) (3.0.0 or higher)
+- [Dart SDK](https://dart.dev/get-dart) (3.6.0 or higher)
+- [Flutter SDK](https://flutter.dev/docs/get-started/install) (3.38.0 or higher)
 - [Melos](https://melos.invertase.dev/) for monorepo management
 
 ### Setting Up the Development Environment
@@ -189,7 +189,6 @@ Closes #123
 |---------|-------------|
 | `fledge_render` | Core render infrastructure |
 | `fledge_render_2d` | 2D rendering components |
-| `fledge_render_flutter` | Flutter integration |
 
 ### Plugin Packages
 
@@ -199,6 +198,11 @@ Closes #123
 | `fledge_input` | Input handling |
 | `fledge_window` | Window management |
 | `fledge_tiled` | Tiled map integration |
+| `fledge_yarn` | Yarn Spinner dialogue |
+| `fledge_physics` | Physics and collision |
+| `fledge_save` | Save/load system |
+| `fledge_time` | Game calendar and time |
+| `fledge_net` | Multiplayer networking |
 
 ### Dependency Order
 
@@ -207,10 +211,9 @@ When making changes that affect multiple packages, be aware of the dependency or
 2. `fledge_ecs`
 3. `fledge_render`
 4. `fledge_render_2d`
-5. `fledge_render_flutter`
-6. `fledge_input`, `fledge_audio`, `fledge_window` (parallel)
-7. `fledge_tiled`
-8. `fledge_ecs_generator`
+5. `fledge_input`, `fledge_audio`, `fledge_window` (parallel)
+6. `fledge_tiled`, `fledge_physics`, `fledge_yarn`, `fledge_save`, `fledge_time`, `fledge_net` (parallel)
+7. `fledge_ecs_generator`
 
 ## Adding New Features
 

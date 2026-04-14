@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:fledge_ecs/fledge_ecs.dart';
 
 import 'sync/network_identity.dart';
@@ -28,11 +30,35 @@ class NetworkConfig {
   /// Interpolation delay (ms).
   double interpolationDelay;
 
+  /// Optional server password for authentication.
+  String? serverPassword;
+
+  /// Custom authenticator callback.
+  ///
+  /// Called when a client connects. Return `true` to accept, `false` to reject.
+  /// The [clientId] is the identifier sent by the client, and [credentials]
+  /// contains any additional authentication data.
+  Future<bool> Function(String clientId, Uint8List credentials)? authenticator;
+
+  /// Whether to enable packet encryption.
+  bool enableEncryption;
+
+  /// Interest radius for spatial filtering.
+  ///
+  /// If null, all entities are broadcast to all clients (default).
+  /// If set, only entities within this radius of a peer's owned entity
+  /// are synchronized to that peer.
+  double? interestRadius;
+
   NetworkConfig({
     this.mode = NetworkMode.offline,
     this.tickRate = 60,
     this.syncRate = 20,
     this.interpolationDelay = 100,
+    this.serverPassword,
+    this.authenticator,
+    this.enableEncryption = false,
+    this.interestRadius,
   });
 }
 

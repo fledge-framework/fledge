@@ -2,7 +2,7 @@
 
 The `fledge_net` package provides multiplayer networking for Fledge games. It includes a UDP transport layer, a host/client connection model, entity state synchronization, and client-side input prediction.
 
-> **Early Stage** — This package is functional but has known limitations. Delta compression is stubbed (full state is sent each update) and reliable delivery is not yet enforced. See [Limitations](#limitations) below.
+> This package includes reliable delivery, delta compression, authentication, encryption, congestion control, interest management, and authority tracking. See the feature sections below for details.
 
 ## Installation
 
@@ -296,19 +296,121 @@ Resources inserted:
 
 You create your own systems to drive the host/client, poll for data, and sync state.
 
-## Limitations
+## Reliable Delivery
 
-This package is at **Early Stage** maturity. Known limitations:
+Critical packet types (`connect`, `disconnect`, `entitySpawn`, `entityDespawn`, `rpc`) are automatically retransmitted until acknowledged. State updates and input are sent unreliably (latest-wins).
 
-| Priority | Limitation |
-|----------|-----------|
-| **P1** | Delta compression is stubbed — every state update sends the full transform (28 bytes per entity). Not viable for large player counts. |
-| **P1** | Reliable delivery is not enforced — ack/retransmit logic exists but critical packets (RPC, spawn/despawn) may be dropped. |
-| **P2** | No encryption — all packets are plaintext. |
-| **P2** | No authentication — no handshake validation. |
-| **P2** | No congestion control — no rate limiting or bandwidth throttling. |
-| **P3** | No interest management — all clients receive all entity state. |
-| **P3** | Host-only authority — no client-authoritative or shared authority model. |
+Retransmit timeout scales with RTT: `max(100ms, rtt * 2.0)`. Packets are dropped after 10 retransmit attempts.
+
+```dart
+// Check if a packet type is reliable
+PacketType.rpc.isReliable;          // true
+PacketType.stateUpdate.isReliable;  // false
+```
+
+## Authentication
+
+The host can validate client connections via a password or custom authenticator:
+
+```dart
+final host = NetworkHost(
+  transport: UdpTransport(),
+  authenticator: (clientId, credentials) async {
+    final password = String.fromCharCodes(credentials);
+    return password == 'secret';
+  },
+);
+```
+
+Clients pass credentials during connect:
+
+```dart
+final passwordBytes = Uint8List.fromList(utf8.encode('secret'));
+await client.connect('192.168.1.100', 7777, credentials: passwordBytes);
+```
+
+Configure via `NetworkConfig`:
+
+```dart
+NetworkConfig(
+  mode: NetworkMode.host,
+  serverPassword: 'secret',
+  authenticator: myCustomAuthenticator,
+)
+```
+
+## Encryption
+
+Wrap your transport with `EncryptedTransport` for packet encryption:
+
+```dart
+final inner = UdpTransport();
+final transport = EncryptedTransport(
+  inner: inner,
+  sharedKey: EncryptedTransport.generateKey(),
+);
+```
+
+The first 6 bytes (magic, version, type) remain in plaintext for routing. The rest of the packet is encrypted. Enable via `NetworkConfig`:
+
+```dart
+NetworkConfig(enableEncryption: true)
+```
+
+> **Note:** The current implementation uses XOR-based encryption for lightweight obfuscation. For production security, replace with AES-GCM from `package:cryptography`.
+
+## Congestion Control
+
+Each peer has a `CongestionController` using AIMD (Additive Increase, Multiplicative Decrease):
+
+- On ack: window increases gradually
+- On packet loss: window halves (minimum 1200 bytes)
+- Maximum window: 256 KB
+
+Retransmit timeout is RTT-adaptive: `max(100ms, rtt * 2.0)`.
+
+## Interest Management
+
+Use `InterestManager` for radius-based entity filtering:
+
+```dart
+final interest = InterestManager(
+  relevanceRadius: 500,
+  positionGetter: (world, entity) {
+    final pos = world.get<Transform2D>(entity)!;
+    return (pos.translation.x, pos.translation.y);
+  },
+);
+
+// Get relevant entities for a peer
+final relevant = interest.getRelevantEntities(peerId, world, registry);
+```
+
+Entities beyond `relevanceRadius` from a peer's owned entity are excluded. Configure via `NetworkConfig`:
+
+```dart
+NetworkConfig(interestRadius: 500)
+```
+
+## Authority Model
+
+`NetworkIdentity` tracks entity ownership:
+
+```dart
+final identity = NetworkIdentity(
+  netId: registry.generateNetId(),
+  ownerId: peerId,      // Which peer owns this entity
+  hasAuthority: true,    // Whether this instance can modify it
+);
+
+// Check ownership
+identity.isOwnedBy(peerId);  // true
+
+// Transfer ownership
+identity.transferAuthority(newOwnerId, localAuthority: false);
+```
+
+The host should validate that clients only send updates for entities they own (`ownerId == peer.id`).
 
 ## API Reference
 
@@ -320,6 +422,10 @@ This package is at **Early Stage** maturity. Known limitations:
 | `tickRate` | `int` | Server simulation rate in Hz (default: 60) |
 | `syncRate` | `int` | State broadcast rate in Hz (default: 20) |
 | `interpolationDelay` | `double` | Client interpolation delay in ms (default: 100) |
+| `serverPassword` | `String?` | Password for client authentication |
+| `authenticator` | `Function?` | Custom authentication callback |
+| `enableEncryption` | `bool` | Enable packet encryption (default: false) |
+| `interestRadius` | `double?` | Spatial filtering radius (null = broadcast all) |
 
 ### NetworkHost
 
@@ -337,7 +443,7 @@ This package is at **Early Stage** maturity. Known limitations:
 
 | Method | Description |
 |--------|-------------|
-| `connect(host, port)` | Connect to a host |
+| `connect(host, port, {credentials})` | Connect to a host with optional auth |
 | `disconnect()` | Disconnect from host |
 | `update()` | Process pings and timeouts |
 | `send(type, data)` | Send data to host |
@@ -352,6 +458,8 @@ This package is at **Early Stage** maturity. Known limitations:
 | `ownerId` | `int` | Owning peer (0 = host) |
 | `hasAuthority` | `bool` | Whether this instance can modify |
 | `spawnType` | `String?` | Type identifier for remote spawning |
+| `isOwnedBy(peerId)` | `bool` | Check if peer owns this entity |
+| `transferAuthority(newOwnerId)` | `void` | Transfer ownership to another peer |
 
 ## See Also
 

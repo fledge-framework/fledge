@@ -19,6 +19,9 @@ Fledge brings the power of modern ECS architecture to Flutter, enabling you to b
 - **Tiled Integration** - Load and render TMX/TSX tilemaps
 - **Yarn Dialogue** - Branching dialogue with variables and commands
 - **Physics & Collision** - Layer-based collision detection and resolution
+- **Save System** - File-based save/load with versioning
+- **Game Time** - Calendar system with day/night cycles and seasons
+- **Multiplayer Networking** - Host/client architecture with state sync and input prediction
 
 ## Packages
 
@@ -29,13 +32,15 @@ Fledge brings the power of modern ECS architecture to Flutter, enabling you to b
 | [fledge_ecs_generator](packages/fledge_ecs_generator) | Code generator for components/systems | [![pub](https://img.shields.io/pub/v/fledge_ecs_generator.svg)](https://pub.dev/packages/fledge_ecs_generator) |
 | [fledge_render](packages/fledge_render) | Render infrastructure (RenderPlugin, RenderLayer) | [![pub](https://img.shields.io/pub/v/fledge_render.svg)](https://pub.dev/packages/fledge_render) |
 | [fledge_render_2d](packages/fledge_render_2d) | 2D rendering components | [![pub](https://img.shields.io/pub/v/fledge_render_2d.svg)](https://pub.dev/packages/fledge_render_2d) |
-| ~~fledge_render_flutter~~ | *Deprecated - merged into fledge_render* | - |
 | [fledge_input](packages/fledge_input) | Action-based input handling | [![pub](https://img.shields.io/pub/v/fledge_input.svg)](https://pub.dev/packages/fledge_input) |
 | [fledge_audio](packages/fledge_audio) | Music and sound effects | [![pub](https://img.shields.io/pub/v/fledge_audio.svg)](https://pub.dev/packages/fledge_audio) |
 | [fledge_window](packages/fledge_window) | Window management | [![pub](https://img.shields.io/pub/v/fledge_window.svg)](https://pub.dev/packages/fledge_window) |
 | [fledge_tiled](packages/fledge_tiled) | Tiled tilemap support | [![pub](https://img.shields.io/pub/v/fledge_tiled.svg)](https://pub.dev/packages/fledge_tiled) |
 | [fledge_yarn](packages/fledge_yarn) | Yarn Spinner dialogue system | [![pub](https://img.shields.io/pub/v/fledge_yarn.svg)](https://pub.dev/packages/fledge_yarn) |
 | [fledge_physics](packages/fledge_physics) | Physics and collision detection | [![pub](https://img.shields.io/pub/v/fledge_physics.svg)](https://pub.dev/packages/fledge_physics) |
+| [fledge_save](packages/fledge_save) | Save/load system with versioning | [![pub](https://img.shields.io/pub/v/fledge_save.svg)](https://pub.dev/packages/fledge_save) |
+| [fledge_time](packages/fledge_time) | Game calendar and day/night cycles | [![pub](https://img.shields.io/pub/v/fledge_time.svg)](https://pub.dev/packages/fledge_time) |
+| [fledge_net](packages/fledge_net) | Multiplayer networking | [![pub](https://img.shields.io/pub/v/fledge_net.svg)](https://pub.dev/packages/fledge_net) |
 
 ## Quick Start
 

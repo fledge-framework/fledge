@@ -72,6 +72,7 @@ library;
 // Transport
 export 'src/transport/transport.dart';
 export 'src/transport/udp_transport.dart';
+export 'src/transport/encrypted_transport.dart';
 
 // Protocol
 export 'src/protocol/packet.dart';
@@ -83,6 +84,7 @@ export 'src/connection/peer.dart';
 
 // Sync
 export 'src/sync/input_sync.dart';
+export 'src/sync/interest_manager.dart';
 export 'src/sync/network_identity.dart';
 export 'src/sync/state_sync.dart';
 

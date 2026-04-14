@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:typed_data';
 
 import '../protocol/packet.dart';
@@ -67,6 +68,12 @@ class NetworkClient {
   /// Round-trip time in milliseconds.
   double rtt = 0;
 
+  /// Pending reliable packets waiting for acknowledgment.
+  final Queue<_ClientPendingPacket> _pendingReliable = Queue();
+
+  /// Maximum retransmit attempts before dropping.
+  static const int _maxRetransmits = 10;
+
   /// Time of last received packet.
   DateTime _lastReceiveTime = DateTime.now();
 
@@ -104,8 +111,15 @@ class NetworkClient {
   /// Host address.
   NetAddress? get hostAddress => _hostAddress;
 
+  /// Credentials to send during connection handshake.
+  Uint8List? _credentials;
+
   /// Connect to a host.
-  Future<bool> connect(String host, int port) async {
+  ///
+  /// Optionally provide [credentials] for authentication (e.g., password hash,
+  /// token). The host's authenticator callback receives these credentials.
+  Future<bool> connect(String host, int port, {Uint8List? credentials}) async {
+    _credentials = credentials;
     if (_state != ClientState.disconnected) {
       throw StateError('Client not disconnected');
     }
@@ -180,6 +194,9 @@ class NetworkClient {
       _sendPing();
       _lastPingTime = now;
     }
+
+    // Retransmit reliable packets
+    _retransmitReliable();
   }
 
   void _setState(ClientState newState, [String? reason]) {
@@ -202,6 +219,7 @@ class NetworkClient {
 
     // Update sequence tracking
     _processReceivedSequence(packet.header.sequence);
+    _processAck(packet.header.ack, packet.header.ackBits);
 
     // Handle packet type
     switch (packet.header.type) {
@@ -282,12 +300,58 @@ class NetworkClient {
     );
 
     final packet = Packet(header: header, payload: payload);
-    await transport.send(_hostAddress!, packet.toBytes());
+    final data = packet.toBytes();
+    await transport.send(_hostAddress!, data);
+
+    // Queue reliable packets for retransmission
+    if (type.isReliable) {
+      _pendingReliable.add(_ClientPendingPacket(
+        sequence: header.sequence,
+        data: data,
+        sentTime: DateTime.now(),
+      ));
+    }
+  }
+
+  void _processAck(int ack, int ackBits) {
+    _pendingReliable.removeWhere((pending) {
+      if (pending.sequence == ack) return true;
+      final diff = (ack - pending.sequence) & 0xFFFF;
+      if (diff > 0 && diff <= 32) {
+        final bit = 1 << (diff - 1);
+        if ((ackBits & bit) != 0) return true;
+      }
+      return false;
+    });
+  }
+
+  void _retransmitReliable() {
+    final now = DateTime.now();
+    final timeout = rtt > 0
+        ? Duration(milliseconds: (rtt * 2.0).clamp(100, 5000).toInt())
+        : const Duration(milliseconds: 100);
+
+    _pendingReliable.removeWhere((p) => p.retransmitCount >= _maxRetransmits);
+
+    for (final pending in _pendingReliable) {
+      if (now.difference(pending.sentTime) > timeout) {
+        pending.sentTime = now;
+        pending.retransmitCount++;
+        if (_hostAddress != null) {
+          transport.send(_hostAddress!, pending.data);
+        }
+      }
+    }
   }
 
   Future<void> _sendConnect() async {
     final builder = PacketBuilder()
       ..writeString('FledgeClient'); // Client identifier
+    if (_credentials != null) {
+      builder.writeBytes(_credentials!);
+    } else {
+      builder.writeInt16(0); // No credentials
+    }
     await _sendToHost(PacketType.connect, builder.build());
   }
 
@@ -312,4 +376,17 @@ class NetworkClient {
     return ((seq1 > seq2) && (seq1 - seq2 <= 32768)) ||
         ((seq1 < seq2) && (seq2 - seq1 > 32768));
   }
+}
+
+class _ClientPendingPacket {
+  final int sequence;
+  final Uint8List data;
+  DateTime sentTime;
+  int retransmitCount = 0;
+
+  _ClientPendingPacket({
+    required this.sequence,
+    required this.data,
+    required this.sentTime,
+  });
 }

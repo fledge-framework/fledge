@@ -41,6 +41,16 @@ enum PacketType {
   final int value;
   const PacketType(this.value);
 
+  /// Whether this packet type requires reliable delivery.
+  ///
+  /// Reliable packets are retransmitted until acknowledged.
+  /// State updates and input are unreliable (sent frequently, latest-wins).
+  bool get isReliable => switch (this) {
+        connect || connectAccepted || connectRejected || disconnect => true,
+        entitySpawn || entityDespawn || rpc => true,
+        _ => false,
+      };
+
   static PacketType? fromValue(int value) {
     for (final type in PacketType.values) {
       if (type.value == value) return type;

@@ -22,6 +22,18 @@ class NetworkIdentity {
     this.hasAuthority = false,
     this.spawnType,
   });
+
+  /// Check if a given peer owns this entity.
+  bool isOwnedBy(int peerId) => ownerId == peerId;
+
+  /// Transfer authority to a new owner.
+  ///
+  /// Sets [ownerId] and updates [hasAuthority] based on whether the
+  /// transfer is to the local instance.
+  void transferAuthority(int newOwnerId, {bool localAuthority = false}) {
+    ownerId = newOwnerId;
+    hasAuthority = localAuthority;
+  }
 }
 
 /// Tracks which components should be synchronized.

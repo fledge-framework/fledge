@@ -107,6 +107,7 @@ First-party plugins are distributed as separate packages and extend Fledge with 
 | [Yarn Dialogue](/docs/plugins/yarn) | `fledge_yarn` | Yarn Spinner dialogue system for branching narratives |
 | [Save System](/docs/plugins/save) | `fledge_save` | Save/load with resource serialization via Saveable mixin |
 | [Game Time](/docs/plugins/time) | `fledge_time` | In-game calendar, day/night, seasons, and time events |
+| [Networking](/docs/plugins/net) | `fledge_net` | Multiplayer networking with host/client, state sync, and input prediction |
 
 ## Creating Custom Plugins
 

@@ -47,6 +47,10 @@ class NetworkHost {
   /// Retransmit timeout for reliable packets.
   final Duration retransmitTimeout;
 
+  /// Optional authenticator for validating client connections.
+  final Future<bool> Function(String clientId, Uint8List credentials)?
+      authenticator;
+
   /// Room code for joining (generated on creation).
   late final String roomCode;
 
@@ -73,6 +77,7 @@ class NetworkHost {
     this.maxPeers = 8,
     this.connectionTimeout = const Duration(seconds: 10),
     this.retransmitTimeout = const Duration(milliseconds: 100),
+    this.authenticator,
   }) {
     // Generate random room code
     final random = Random.secure();
@@ -198,12 +203,29 @@ class NetworkHost {
       }
 
       if (_peers.length >= maxPeers) {
-        // Reject - server full
         _sendReject(received.source, 'Server full');
         return;
       }
 
-      // Accept new connection
+      // Extract client identifier and credentials
+      final reader = PacketReader(packet.payload);
+      final clientId = reader.readString();
+      final credentials = reader.hasMore ? reader.readBytes() : Uint8List(0);
+
+      // Authenticate if authenticator is set
+      if (authenticator != null) {
+        authenticator!(clientId, credentials).then((accepted) {
+          if (accepted) {
+            final newPeer = _createPeer(received.source);
+            _sendAccept(newPeer);
+          } else {
+            _sendReject(received.source, 'Authentication failed');
+          }
+        });
+        return;
+      }
+
+      // Accept new connection (no authentication configured)
       peer = _createPeer(received.source);
       _sendAccept(peer);
       return;
@@ -275,6 +297,11 @@ class NetworkHost {
 
     await transport.send(peer.address, data);
     peer.lastSendTime = DateTime.now();
+
+    // Queue reliable packets for retransmission
+    if (type.isReliable) {
+      peer.addPendingReliable(header.sequence, data);
+    }
   }
 
   Future<void> _sendReject(NetAddress address, String reason) async {

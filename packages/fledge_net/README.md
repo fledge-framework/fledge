@@ -1,19 +1,20 @@
 # fledge_net
 
-Networking components for the [Fledge](https://fledge-framework.dev) game framework — peer-to-peer multiplayer, state synchronization, and input prediction.
+Networking components for the [Fledge](https://fledge-framework.dev) game framework — multiplayer with host/client architecture, state synchronization, and input prediction.
 
 ## Features
 
-- **Transport abstraction** — UDP-based with pluggable backends
+- **Transport abstraction** — UDP-based with pluggable backends and encrypted transport wrapper
 - **Host/client architecture** — authoritative server model with connection management
-- **Protocol layer** — packet framing, sequencing, and ack tracking
-- **State synchronization** — host broadcasts world state to clients
+- **Reliable delivery** — critical packets (connect, disconnect, RPC, spawn/despawn) are retransmitted until acknowledged
+- **Delta compression** — bitmask-based field change detection, only modified fields are sent
+- **Authentication** — password or custom authenticator callback during connection handshake
+- **Encryption** — pluggable packet encryption (XOR-based, replaceable with AES-GCM)
+- **Congestion control** — AIMD algorithm with RTT-adaptive retransmit timeout
+- **Interest management** — radius-based spatial filtering for selective state broadcast
+- **Authority model** — entity ownership tracking with authority transfer
+- **State synchronization** — host broadcasts world state to clients with interpolation
 - **Input prediction** — client-side prediction with server reconciliation
-- **Network identity** — entity replication with ownership tracking
-
-## Status
-
-**Early Stage** — functional for prototyping but not production-ready. See [limitations](https://fledge-framework.dev/docs/plugins/net#limitations) in the documentation.
 
 ## Quick Start
 

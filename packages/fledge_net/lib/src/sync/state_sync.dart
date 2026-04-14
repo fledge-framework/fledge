@@ -49,17 +49,62 @@ class TransformNetworkState implements NetworkState {
     rotW = reader.readFloat32();
   }
 
+  /// Epsilon threshold for detecting meaningful changes.
+  static const double _epsilon = 0.001;
+
+  // Bitmask field indices for delta encoding.
+  static const int _bitX = 1 << 0;
+  static const int _bitY = 1 << 1;
+  static const int _bitZ = 1 << 2;
+  static const int _bitRotX = 1 << 3;
+  static const int _bitRotY = 1 << 4;
+  static const int _bitRotZ = 1 << 5;
+  static const int _bitRotW = 1 << 6;
+
   @override
   Uint8List? createDelta(NetworkState other) {
-    // Full state for now (no delta compression)
-    final builder = PacketBuilder();
-    serialize(builder);
+    if (other is! TransformNetworkState) {
+      // Can't delta against a different type — send full state
+      final builder = PacketBuilder()..writeByte(0x7F); // all bits set
+      serialize(builder);
+      return builder.build();
+    }
+
+    // Compare fields and build bitmask
+    int mask = 0;
+    if ((x - other.x).abs() > _epsilon) mask |= _bitX;
+    if ((y - other.y).abs() > _epsilon) mask |= _bitY;
+    if ((z - other.z).abs() > _epsilon) mask |= _bitZ;
+    if ((rotX - other.rotX).abs() > _epsilon) mask |= _bitRotX;
+    if ((rotY - other.rotY).abs() > _epsilon) mask |= _bitRotY;
+    if ((rotZ - other.rotZ).abs() > _epsilon) mask |= _bitRotZ;
+    if ((rotW - other.rotW).abs() > _epsilon) mask |= _bitRotW;
+
+    if (mask == 0) return null; // Nothing changed
+
+    final builder = PacketBuilder()..writeByte(mask);
+    if (mask & _bitX != 0) builder.writeFloat32(x);
+    if (mask & _bitY != 0) builder.writeFloat32(y);
+    if (mask & _bitZ != 0) builder.writeFloat32(z);
+    if (mask & _bitRotX != 0) builder.writeFloat32(rotX);
+    if (mask & _bitRotY != 0) builder.writeFloat32(rotY);
+    if (mask & _bitRotZ != 0) builder.writeFloat32(rotZ);
+    if (mask & _bitRotW != 0) builder.writeFloat32(rotW);
     return builder.build();
   }
 
   @override
   void applyDelta(Uint8List delta) {
-    deserialize(PacketReader(delta));
+    final reader = PacketReader(delta);
+    final mask = reader.readByte();
+
+    if (mask & _bitX != 0) x = reader.readFloat32();
+    if (mask & _bitY != 0) y = reader.readFloat32();
+    if (mask & _bitZ != 0) z = reader.readFloat32();
+    if (mask & _bitRotX != 0) rotX = reader.readFloat32();
+    if (mask & _bitRotY != 0) rotY = reader.readFloat32();
+    if (mask & _bitRotZ != 0) rotZ = reader.readFloat32();
+    if (mask & _bitRotW != 0) rotW = reader.readFloat32();
   }
 
   /// Copy values from another state.
