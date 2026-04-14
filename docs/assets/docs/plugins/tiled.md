@@ -191,7 +191,7 @@ Both types can be generated automatically via `TilemapSpawnConfig`.
 
 #### Object Layer Collisions
 
-Collision shapes from object layers are automatically created when spawning object entities with `createColliders: true` (the default):
+Collision shapes from object layers are automatically created when spawning object entities with `createCollider: true` (the default):
 
 ```dart
 SpawnTilemapEvent(
@@ -358,11 +358,6 @@ grid.setBlocked(10, 20);
 
 // Mark tiles as walkable
 grid.setWalkable(10, 20);
-
-// Check bounds
-if (grid.isInBounds(x, y)) {
-  // Safe to query this tile
-}
 ```
 
 ### Extracting Collision Data
@@ -485,7 +480,7 @@ The `PathResult` class contains:
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `maxIterations` | `int` | `10000` | Maximum A* iterations before giving up |
-| `allowDiagonal` | `bool` | `false` | Allow 8-directional movement instead of 4 |
+| `allowDiagonal` | `bool` | `true` | Allow 8-directional movement instead of 4 |
 | `allowCornerCutting` | `bool` | `false` | Allow diagonal moves through corners (requires `allowDiagonal`) |
 
 ### Use Cases

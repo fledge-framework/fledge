@@ -52,7 +52,7 @@ CalendarConfig(
   daysPerWeek: 7,            // Days in a week
   daysPerSeason: 28,         // Days per season
   seasonsPerYear: 4,         // Seasons per year
-  realSecondsPerGameMinute: 0.7,  // Time scale
+  realSecondsPerGameMinute: 7.0,  // Time scale (~3 hours real time per game day)
   dayStartHour: 6,           // When day "starts" (for calculations)
   defaultCurfewHour: 26,     // Curfew at 2 AM (optional)
   dayNames: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
@@ -79,6 +79,9 @@ CalendarConfig.rpg()
 
 // Real-time (1:1 with wall clock)
 CalendarConfig.realTime()
+
+// Fast (for testing - ~2 minutes per game day)
+CalendarConfig.fast()
 
 // Custom
 CalendarConfig(
@@ -251,17 +254,17 @@ app.addEvent<CurfewTriggeredEvent>();
 @system
 void handleTimeEvents(World world) {
   // Process hour changes
-  for (final event in world.getEvents<HourChangedEvent>()) {
+  for (final event in world.eventReader<HourChangedEvent>().read()) {
     print('Hour changed: ${event.oldHour} -> ${event.newHour}');
   }
 
   // Process day changes
-  for (final event in world.getEvents<DayChangedEvent>()) {
+  for (final event in world.eventReader<DayChangedEvent>().read()) {
     print('Day changed: ${event.oldDay} -> ${event.newDay}');
   }
 
   // Process curfew events
-  for (final event in world.getEvents<CurfewTriggeredEvent>()) {
+  for (final event in world.eventReader<CurfewTriggeredEvent>().read()) {
     print('Curfew triggered at hour ${event.hour}');
     triggerPassOutSequence();
   }
@@ -296,8 +299,7 @@ The plugin handles setup automatically:
 GameTimePlugin(
   config: CalendarConfig.farmingSim(),
   initialDay: 1,     // Starting day
-  initialHour: 6,    // Starting hour
-  paused: false,     // Start paused?
+  initialHour: 6,    // Starting hour (defaults to config.dayStartHour)
 )
 ```
 
@@ -423,7 +425,7 @@ time.loadFromJson(json);
 | `daysPerWeek` | `int` | 7 | Days in a week |
 | `daysPerSeason` | `int` | 28 | Days per season |
 | `seasonsPerYear` | `int` | 4 | Seasons per year |
-| `realSecondsPerGameMinute` | `double` | 0.7 | Time scale |
+| `realSecondsPerGameMinute` | `double` | 7.0 | Time scale |
 | `dayStartHour` | `int` | 6 | Hour when "day" begins |
 | `defaultCurfewHour` | `int?` | null | Default curfew hour (null = disabled) |
 | `dayNames` | `List<String>?` | null | Custom day names |
@@ -470,7 +472,7 @@ time.loadFromJson(json);
 | Event | Properties |
 |-------|------------|
 | `HourChangedEvent` | `oldHour`, `newHour` |
-| `DayChangedEvent` | `oldDay`, `newDay` |
+| `DayChangedEvent` | `oldDay`, `newDay`, `dayOfWeek` |
 | `SeasonChangedEvent` | `oldSeason`, `newSeason` |
 | `YearChangedEvent` | `oldYear`, `newYear` |
 | `CurfewTriggeredEvent` | `hour`, `curfewHour` |

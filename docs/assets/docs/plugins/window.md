@@ -115,6 +115,12 @@ world.setWindowSize(Size(1920, 1080));
 world.setWindowPosition(Offset(100, 100));
 ```
 
+### Close Application
+
+```dart
+await app.close();  // Gracefully closes the application
+```
+
 ## Responding to Window Events
 
 ### Mode Changes
@@ -163,6 +169,9 @@ if (state != null) {
   print('Focused: ${state.isFocused}');
   print('Visible: ${state.isVisible}');
   print('Display: ${state.displayIndex}');
+  print('Minimized: ${state.isMinimized}');
+  print('Maximized: ${state.isMaximized}');
+  print('Full display: ${state.isFullDisplay}');  // true if fullscreen or borderless
 }
 ```
 

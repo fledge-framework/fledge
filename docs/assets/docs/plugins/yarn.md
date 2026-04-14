@@ -176,6 +176,8 @@ Branch dialogue based on conditions:
 | `or` | Logical OR |
 | `not` | Logical NOT |
 
+> **Note:** Arithmetic operators (`+`, `-`, `*`, `/`) in condition expressions have a known precedence bug — expressions like `1 + 2 * 3` may not evaluate correctly. Comparisons and boolean logic work as expected. Arithmetic in `<<set>>` commands (e.g., `<<set $gold += 50>>`) is unaffected.
+
 ## Variables
 
 ### Setting Variables
@@ -372,10 +374,10 @@ void npcInteractionSystem(World world) {
 
 | Class | Description |
 |-------|-------------|
-| `DialogueRunner` | Runtime execution engine |
+| `DialogueRunner` | Runtime execution engine (`nodeHistory`, `reset()`) |
 | `DialogueLine` | A line of dialogue with character and text |
 | `Choice` | A selectable choice option |
-| `YarnNode` | A parsed dialogue node |
+| `YarnNode` | A parsed dialogue node (`hasTag()`, `getHeader()`) |
 
 ## Yarn Syntax Summary
 

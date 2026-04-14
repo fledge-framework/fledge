@@ -1,6 +1,6 @@
 # Save System
 
-The `fledge_save` package provides a save/load system for persisting game state. It features automatic resource discovery via the `Saveable` mixin, file-based storage with versioning, and an optional auto-save system.
+The `fledge_save` package provides a save/load system for persisting game state. It features manual resource registration via the `Saveable` mixin, file-based storage with versioning, and a request-based save pattern for ECS-to-Flutter bridging.
 
 ## Installation
 
@@ -36,20 +36,22 @@ class Inventory with Saveable {
 
 // 2. Set up the save system
 void main() async {
+  final savePlugin = SavePlugin(
+    config: SaveConfig(gameDirectory: 'MyGame'),
+  );
+  savePlugin.registerSaveable(Inventory());
+
   final app = App()
-    .addPlugin(SavePlugin(
-      config: SaveConfig(gameDirectory: 'MyGame'),
-      saveables: [Inventory()],  // Register saveable resources
-    ));
+    .addPlugin(savePlugin);
 
   await app.tick();
 
   // Save the game
   final saveManager = app.world.getResource<SaveManager>()!;
-  await saveManager.save(app.world, 'slot1');
+  await saveManager.save(app.world, slotName: 'slot1');
 
   // Load the game
-  await saveManager.load(app.world, 'slot1');
+  await saveManager.load(app.world, slotName: 'slot1');
 }
 ```
 
@@ -120,15 +122,15 @@ Configure save system behavior:
 
 ```dart
 SaveConfig(
-  gameDirectory: 'MyGame',  // Subdirectory in app documents
-  formatVersion: 1,         // Increment for breaking changes
-  compressSaves: false,     // Optional gzip compression
+  gameDirectory: 'MyGame',  // Subdirectory in app documents (default: 'saves')
+  formatVersion: 1,         // Increment for breaking changes (default: 1)
+  defaultSlot: 'save',      // Default slot name when none specified (default: 'save')
 )
 ```
 
 ### Version Migration
 
-The `formatVersion` helps manage breaking changes:
+The `formatVersion` helps manage breaking changes. During load, saves with a version higher than the current `formatVersion` are rejected (can't load from future versions).
 
 ```dart
 // When loading, check version and migrate if needed
@@ -141,6 +143,15 @@ if (saveData['version'] < currentVersion) {
 
 The `SaveManager` resource handles file I/O and coordinates saves across resources.
 
+### Initialization
+
+Call `initialize()` during startup to check for existing save files:
+
+```dart
+final saveManager = world.getResource<SaveManager>()!;
+await saveManager.initialize();
+```
+
 ### Checking for Save Files
 
 ```dart
@@ -149,7 +160,7 @@ final saveManager = world.getResource<SaveManager>()!;
 // Check if a specific slot has a save
 final hasSave = await saveManager.hasSaveFile('slot1');
 
-// List all save slots
+// List all save slots (sorted by timestamp, newest first)
 final slots = await saveManager.listSaveSlots();
 for (final slot in slots) {
   print('${slot.slotName}: saved ${slot.timestamp}');
@@ -159,13 +170,16 @@ for (final slot in slots) {
 ### Saving
 
 ```dart
-// Basic save
-final success = await saveManager.save(world, 'slot1');
+// Basic save (uses default slot)
+final success = await saveManager.save(world);
+
+// Save to a specific slot
+final success = await saveManager.save(world, slotName: 'slot1');
 
 // Save with metadata (e.g., player location, screenshot path)
 final success = await saveManager.save(
   world,
-  'slot1',
+  slotName: 'slot1',
   metadata: {
     'playerX': 100,
     'playerY': 200,
@@ -177,10 +191,10 @@ final success = await saveManager.save(
 ### Loading
 
 ```dart
-final success = await saveManager.load(world, 'slot1');
+final metadata = await saveManager.load(world, slotName: 'slot1');
 
-if (success) {
-  // Resources have been restored
+if (metadata != null) {
+  // Resources have been restored, metadata contains save metadata
   final inventory = world.getResource<Inventory>()!;
   print('Loaded ${inventory.items.length} items');
 }
@@ -205,7 +219,7 @@ void checkpointSystem(World world) {
 
   // Player reached checkpoint
   if (reachedCheckpoint) {
-    saveManager.requestSave(additionalData: {
+    saveManager.requestSave(metadata: {
       'checkpoint': 'forest_entrance',
     });
   }
@@ -217,11 +231,11 @@ void gameLoop() {
 
   final saveManager = app.world.getResource<SaveManager>()!;
   if (saveManager.saveRequested) {
-    final data = saveManager.pendingSaveData;
+    final data = saveManager.pendingMetadata;
     saveManager.clearSaveRequest();
 
     // Perform async save
-    saveManager.save(app.world, 'autosave', metadata: data);
+    saveManager.save(app.world, slotName: 'autosave', metadata: data);
   }
 }
 ```
@@ -233,10 +247,9 @@ Save files are stored as JSON in the application documents directory:
 ```
 Documents/
   MyGame/
-    saves/
-      slot1.json
-      slot2.json
-      autosave.json
+    slot1.json
+    slot2.json
+    autosave.json
 ```
 
 ### File Structure
@@ -249,13 +262,15 @@ Documents/
     "playerX": 100,
     "playerY": 200
   },
-  "inventory": {
-    "items": ["sword", "shield", "potion"]
-  },
-  "progress": {
-    "level": 5,
-    "experience": 1250,
-    "completedQuests": ["intro", "forest_rescue"]
+  "resources": {
+    "inventory": {
+      "items": ["sword", "shield", "potion"]
+    },
+    "progress": {
+      "level": 5,
+      "experience": 1250,
+      "completedQuests": ["intro", "forest_rescue"]
+    }
   }
 }
 ```
@@ -265,18 +280,20 @@ Documents/
 The `SavePlugin` sets up the save system:
 
 ```dart
+final savePlugin = SavePlugin(
+  config: SaveConfig(
+    gameDirectory: 'MyGame',
+    formatVersion: 1,
+  ),
+);
+
+// Register saveable resources
+savePlugin.registerSaveable(PlayerProgress());
+savePlugin.registerSaveable(Inventory());
+savePlugin.registerSaveable(Settings());
+
 App()
-  .addPlugin(SavePlugin(
-    config: SaveConfig(
-      gameDirectory: 'MyGame',
-      formatVersion: 1,
-    ),
-    saveables: [
-      PlayerProgress(),
-      Inventory(),
-      Settings(),
-    ],
-  ));
+  .addPlugin(savePlugin);
 ```
 
 ### Custom SaveManager
@@ -285,16 +302,16 @@ For games needing custom save logic (e.g., cloud saves), extend `SaveManager`:
 
 ```dart
 class CloudSaveManager extends SaveManager {
-  CloudSaveManager(super.config);
+  CloudSaveManager({required super.config});
 
   @override
-  Future<bool> save(World world, String slotName, {Map<String, dynamic>? metadata}) async {
+  Future<bool> save(World world, {String? slotName, Map<String, dynamic>? metadata}) async {
     // Save locally first
-    final success = await super.save(world, slotName, metadata: metadata);
+    final success = await super.save(world, slotName: slotName, metadata: metadata);
 
     // Then sync to cloud
     if (success) {
-      await uploadToCloud(slotName);
+      await uploadToCloud(slotName ?? config.defaultSlot);
     }
 
     return success;
@@ -369,20 +386,21 @@ const saveFormatVersion = 2;
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `gameDirectory` | `String` | Subdirectory for saves (default: 'saves') |
-| `formatVersion` | `int` | Save format version for migration |
-| `compressSaves` | `bool` | Enable gzip compression |
+| `gameDirectory` | `String` | Subdirectory for saves (default: `'saves'`) |
+| `formatVersion` | `int` | Save format version for migration (default: `1`) |
+| `defaultSlot` | `String` | Default slot name when none specified (default: `'save'`) |
 
 ### SaveManager
 
 | Method | Description |
 |--------|-------------|
-| `save(world, slotName, {metadata})` | Save game state to a slot |
-| `load(world, slotName)` | Load game state from a slot |
-| `deleteSave(slotName)` | Delete a save file |
-| `hasSaveFile(slotName)` | Check if save exists |
-| `listSaveSlots()` | List all save slots |
-| `requestSave({additionalData})` | Request a save (for event-driven saves) |
+| `initialize()` | Check for existing saves and cache slot info |
+| `save(world, {slotName, metadata})` | Save game state to a slot |
+| `load(world, {slotName})` | Load game state from a slot (returns metadata or null) |
+| `deleteSave([slotName])` | Delete a save file |
+| `hasSaveFile([slotName])` | Check if save exists |
+| `listSaveSlots()` | List all save slots (newest first) |
+| `requestSave({metadata})` | Request a save (for event-driven saves) |
 | `clearSaveRequest()` | Clear pending save request |
 
 ### SaveSlotInfo
@@ -391,7 +409,8 @@ const saveFormatVersion = 2;
 |----------|------|-------------|
 | `slotName` | `String` | Slot name |
 | `timestamp` | `DateTime` | When the save was created |
-| `metadata` | `Map<String, dynamic>?` | Custom metadata |
+| `formatVersion` | `int` | Save format version |
+| `metadata` | `Map<String, dynamic>` | Custom metadata (default: `{}`) |
 
 ## See Also
 
