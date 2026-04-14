@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.1.12] - 2026-04-14
+
+## [0.1.12] - 2026-04-14
+
+### Features
+
+- **fledge_net:** Create net package
+
+### Miscellaneous
+
+- Use fledge input handling in docs
+- Resolve analysis issues
+- Update github workflow for new package
+
+
+
 ## [0.1.11] - 2026-01-21
 
 ## [0.1.11] - 2026-01-20
