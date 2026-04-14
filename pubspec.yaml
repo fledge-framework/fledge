@@ -11,7 +11,7 @@ workspace:
   - packages/fledge_ecs_generator
   - packages/fledge_render
   - packages/fledge_render_2d
-  - packages/fledge_render_flutter
+
   - packages/fledge_audio
   - packages/fledge_input
   - packages/fledge_window
@@ -29,9 +29,10 @@ dev_dependencies:
   melos: ^7.3.0
 
 # Override conflicting dependencies to allow workspace resolution
-# flutter_test pins test_api 0.7.7 but analyzer 10.x requires test_api 0.7.11+
+# flutter_test pins test_api and meta to older versions than analyzer 12.x requires
 dependency_overrides:
   test_api: ^0.7.11
+  meta: ^1.18.0
 
 melos:
   name: fledge
@@ -54,7 +55,7 @@ melos:
         ignore:
           - fledge_render
           - fledge_render_2d
-          - fledge_render_flutter
+
           - fledge_audio
           - fledge_input
           - fledge_window

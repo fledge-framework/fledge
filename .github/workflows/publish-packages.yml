@@ -98,20 +98,20 @@ jobs:
           DATE=$(date +%Y-%m-%d)
 
           PACKAGES=(
-            "fledge_ecs_annotations"
+            "fledge_audio"
             "fledge_ecs"
+            "fledge_ecs_annotations"
             "fledge_ecs_generator"
+            "fledge_input"
+            "fledge_net"
+            "fledge_physics"
             "fledge_render"
             "fledge_render_2d"
-            "fledge_render_flutter"
-            "fledge_audio"
-            "fledge_window"
-            "fledge_input"
-            "fledge_tiled"
-            "fledge_yarn"
-            "fledge_physics"
             "fledge_save"
+            "fledge_tiled"
             "fledge_time"
+            "fledge_window"
+            "fledge_yarn"
           )
 
           for pkg in "${PACKAGES[@]}"; do
@@ -189,20 +189,20 @@ jobs:
         run: |
           # Publish in dependency order
           PACKAGES=(
-            "fledge_ecs_annotations"
+            "fledge_audio"
             "fledge_ecs"
+            "fledge_ecs_annotations"
             "fledge_ecs_generator"
+            "fledge_input"
+            "fledge_net"
+            "fledge_physics"
             "fledge_render"
             "fledge_render_2d"
-            "fledge_render_flutter"
-            "fledge_audio"
-            "fledge_window"
-            "fledge_input"
-            "fledge_tiled"
-            "fledge_yarn"
-            "fledge_physics"
             "fledge_save"
+            "fledge_tiled"
             "fledge_time"
+            "fledge_window"
+            "fledge_yarn"
           )
 
           for pkg in "${PACKAGES[@]}"; do

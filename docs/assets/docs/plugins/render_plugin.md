@@ -89,6 +89,22 @@ class ParticleExtractor extends Extractor {
 }
 ```
 
+### ComponentExtractor (Convenience)
+
+For simple one-component extractions, use `ComponentExtractor` instead of writing a full subclass:
+
+```dart
+extractors.register(ComponentExtractor<Sprite, ExtractedSprite>(
+  (world, entity, sprite) => ExtractedSprite(
+    x: world.get<Position>(entity)!.x,
+    y: world.get<Position>(entity)!.y,
+    textureKey: sprite.textureKey,
+  ),
+));
+```
+
+You can also pass an optional `filter` parameter to narrow the query.
+
 ### Extracted Data Types
 
 Use `ExtractedData` mixin for render-world components:
@@ -312,13 +328,59 @@ graph.execute(renderContext);
 | `RenderStage.render` | Execute GPU commands |
 | `RenderStage.cleanup` | Release temporary resources |
 
+## Render Schedule
+
+For organizing render work into stages, use `RenderSchedule`:
+
+```dart
+final schedule = RenderSchedule();
+
+// Add systems to specific stages
+schedule.addSyncSystem(RenderStage.prepare, 'loadTextures', (mainWorld, renderWorld) {
+  // Prepare GPU resources
+});
+
+schedule.addFunctionSystem(RenderStage.render, 'drawSprites', (mainWorld, renderWorld) async {
+  // Execute draw calls
+});
+
+// Run all stages in order: extract → prepare → queue → render → cleanup
+await schedule.run(mainWorld, renderWorld);
+```
+
+You can also create reusable render systems by implementing `RenderSystem`, or use the `FunctionRenderSystem` / `SyncRenderSystem` wrappers.
+
+## Render Context and Capabilities
+
+`RenderContext` provides frame-level information for render nodes:
+
+```dart
+abstract class RenderContext {
+  RenderSize get screenSize;   // Render target size in logical pixels
+  int get frameNumber;         // Current frame number
+  double get deltaTime;        // Seconds since last frame
+  double get totalTime;        // Total seconds since rendering started
+}
+```
+
+`RenderCapabilities` describes what the current backend supports:
+
+```dart
+// Canvas API backend (default)
+RenderCapabilities.canvas
+// supportsShaders: false, maxTextureSize: 4096, maxBatchSize: 1000
+
+// flutter_gpu backend
+RenderCapabilities.gpu
+// supportsShaders: true, supportsInstancing: true, maxTextureSize: 8192, maxBatchSize: 10000
+```
+
 ## Resources Reference
 
 | Resource | Description |
 |----------|-------------|
 | `RenderWorld` | Separate world for render data |
 | `Extractors` | Registry of data extractors |
-| `RenderGraph` | DAG-based render pipeline |
 
 ## Layers Reference
 

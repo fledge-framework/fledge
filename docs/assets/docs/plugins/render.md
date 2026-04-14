@@ -93,7 +93,6 @@ transform.setUniformScale(2.0);       // Set scale uniformly
 // Read-only - computed by TransformPropagateSystem
 final global = entity.get<GlobalTransform2D>()!;
 print('World position: (${global.x}, ${global.y})');
-print('Rotation: ${global.rotation}');
 
 // Get as matrix for rendering
 final matrix = global.matrix;
@@ -206,6 +205,51 @@ OrthographicProjection(
 ```
 
 The viewport width is calculated automatically from the aspect ratio.
+
+### Scaling Modes
+
+Control how the projection adapts to different screen sizes:
+
+```dart
+OrthographicProjection(
+  scalingMode: ScalingMode.fixedHeight,  // Default
+  viewportHeight: 20,
+)
+```
+
+| Mode | Description |
+|------|-------------|
+| `fixedHeight` | Fixed viewport height, width adjusts to aspect ratio (default) |
+| `fixedWidth` | Fixed viewport width, height adjusts to aspect ratio |
+| `fixedVertical` | Same as `fixedHeight` |
+| `none` | No automatic scaling |
+
+### Pixel-Perfect Rendering
+
+For pixel art games where one world unit should equal one screen pixel:
+
+```dart
+world.spawn()
+  ..insert(Transform2D.from(0, 0))
+  ..insert(GlobalTransform2D())
+  ..insert(Camera2D(
+    projection: OrthographicProjection.pixelPerfect(),
+    pixelPerfect: true,
+  ));
+```
+
+Use the snap utilities to prevent sub-pixel rendering artifacts:
+
+```dart
+// Snap a position to the nearest pixel
+final snapped = snapVector2ToPixel(position);
+
+// Or use the extension method
+final snapped = position.snappedToPixel;
+
+// Snap in place
+position.snapToPixel();
+```
 
 ### Following a Target
 
@@ -506,6 +550,28 @@ world.spawn()
   ));
 ```
 
+### AtlasSprite Component
+
+For entities using atlas-based sprites, use `AtlasSprite` instead of `Sprite`:
+
+```dart
+world.spawn()
+  ..insert(Transform2D.from(100, 200))
+  ..insert(GlobalTransform2D())
+  ..insert(AtlasSprite(
+    atlas: atlas,
+    index: 0,
+    color: Color(0xFFFFFFFF),
+    flipX: false,
+    flipY: false,
+  ));
+
+// Change sprite by name
+entity.get<AtlasSprite>()!.setByName('jump');
+```
+
+`AtlasSprite` is the component used by `AnimationPlayer` — animation updates change the `index` to show different frames. Register `AtlasSpriteExtractor` to extract these to the render world.
+
 ## Animation
 
 Animate sprites with frame-based animation clips. Animation frames reference sprite indices in a texture atlas.
@@ -583,6 +649,119 @@ print(player.progress);          // 0.0 to 1.0
 ```
 
 Add `AnimateSystemWithResource` to your app to update sprite source rects each frame (uses `Time` resource for delta time).
+
+## Character Orientation
+
+The `Orientation` component tracks which direction a character is facing, useful for selecting directional animation clips.
+
+### Direction Enum
+
+| Value | Description |
+|-------|-------------|
+| `right` | Facing right (+X) |
+| `up` | Facing up (-Y) |
+| `left` | Facing left (-X) |
+| `down` | Facing down (+Y) |
+
+### Usage
+
+```dart
+world.spawn()
+  ..insert(Transform2D.from(100, 200))
+  ..insert(Orientation(Direction.down));
+
+// Update from velocity (returns true if direction changed)
+final orientation = entity.get<Orientation>()!;
+if (orientation.updateFromVelocity(velocity.x, velocity.y)) {
+  // Direction changed — switch animation clip
+  final dir = orientation.direction;
+  player.play('walk${dir.suffix}');  // e.g., 'walk_right'
+}
+
+// Static helpers
+final dir = Direction.fromVelocity(vx, vy);  // returns null if stationary
+final opposite = Direction.right.opposite;     // Direction.left
+```
+
+## Materials
+
+Materials control how sprites are rendered — blend modes, tinting, and shader effects.
+
+### Blend Modes
+
+| Mode | Description |
+|------|-------------|
+| `normal` | Standard alpha blending (default) |
+| `additive` | Additive blending (glow effects) |
+| `multiply` | Multiply blending (shadows) |
+| `screen` | Screen blending (lightening) |
+| `none` | No blending (opaque) |
+
+### SpriteMaterial
+
+```dart
+SpriteMaterial(
+  texture: myTexture,
+  tint: Color(0xFFFF0000),        // Red tint
+  blendMode: BlendMode.additive,  // Glow effect
+  alphaThreshold: 0.1,            // Discard nearly-transparent pixels
+)
+```
+
+### ColorMaterial
+
+For solid-color shapes without a texture:
+
+```dart
+ColorMaterial(
+  color: Color(0xFF00FF00),
+  blendMode: BlendMode.normal,
+)
+```
+
+### ShaderMaterial
+
+Apply custom shader programs with uniforms:
+
+```dart
+final material = ShaderMaterial(
+  shader: myShader,
+  texture: myTexture,
+  blendMode: BlendMode.normal,
+);
+
+// Set uniforms
+material.setFloat('time', elapsedTime);
+material.setVec2('resolution', screenWidth, screenHeight);
+material.setVec4('tintColor', 1.0, 0.5, 0.0, 1.0);
+```
+
+### ShaderEffects
+
+Pre-built shader material factories for common effects:
+
+```dart
+// Grayscale
+ShaderEffects.grayscale(shader: shader, texture: texture, intensity: 0.8)
+
+// Outline
+ShaderEffects.outline(shader: shader, texture: texture, thickness: 2.0, r: 1, g: 0, b: 0)
+
+// Glow
+ShaderEffects.glow(shader: shader, texture: texture, intensity: 1.5, radius: 3.0)
+
+// Pixelation
+ShaderEffects.pixelate(shader: shader, texture: texture, pixelSize: 4)
+
+// Dissolve
+ShaderEffects.dissolve(shader: shader, texture: texture, threshold: 0.5, edgeWidth: 0.1)
+
+// Wave distortion
+ShaderEffects.waveDistortion(shader: shader, texture: texture, time: t, amplitude: 0.1)
+
+// Color tint
+ShaderEffects.colorTint(shader: shader, texture: texture, r: 1, g: 0.5, b: 0)
+```
 
 ## Scene Transitions
 
@@ -715,20 +894,25 @@ if (transition.phase == TransitionPhase.fadeOut) {
 | `Sprite` | Textured quad rendering |
 | `Camera2D` | 2D orthographic camera |
 | `AnimationPlayer` | Frame-based animation |
+| `AtlasSprite` | Atlas-based sprite with index/name lookup |
+| `Orientation` | Character facing direction |
 | `Visibility` | Show/hide entities |
+| `TransitionState` | Scene transition phase and fade progress |
 
 ## Resources Reference
 
 | Resource | Description |
 |----------|-------------|
-| `TransitionState` | Manages scene transition phases and fade progress |
+| `ViewportSize` | Tracks viewport dimensions |
+| `AnimationTime` | Delta time for animation updates |
 
 ## Systems Reference
 
 | System | Description |
 |--------|-------------|
 | `TransformPropagateSystem` | Computes `GlobalTransform2D` from parent-child hierarchy |
-| `AnimateSystemWithResource` | Updates sprite source rects based on animation clips |
+| `AnimateSystem` | Updates animations (requires manual delta time) |
+| `AnimateSystemWithResource` | Updates animations (uses `AnimationTime` resource) |
 | `TransitionFadeSystem` | Advances fade progress during scene transitions |
 
 ## See Also
