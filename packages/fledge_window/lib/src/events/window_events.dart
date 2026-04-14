@@ -90,6 +90,41 @@ class WindowMoved {
   });
 }
 
+/// Event fired when a window operation fails at the OS level.
+///
+/// The native call threw or the backend rejected the request (e.g. an
+/// invalid display index, an unavailable mode, a rejected resize).
+/// `WindowState` is **not** mutated for a failed operation — the window
+/// stays in whatever state the OS actually applied.
+///
+/// ```dart
+/// for (final failure in world.eventReader<WindowOperationFailed>().read()) {
+///   debugPrint('window ${failure.operation} failed: ${failure.reason}');
+/// }
+/// ```
+class WindowOperationFailed {
+  /// Short identifier of the failed operation (`'setMode'`, `'resize'`,
+  /// `'reposition'`, `'syncDisplays'`, `'init'`, etc.).
+  final String operation;
+
+  /// Human-readable failure message from the underlying exception.
+  final String reason;
+
+  /// The mode that was being switched to, if this failure came from a
+  /// mode change request.
+  final WindowMode? attemptedMode;
+
+  const WindowOperationFailed({
+    required this.operation,
+    required this.reason,
+    this.attemptedMode,
+  });
+
+  @override
+  String toString() =>
+      'WindowOperationFailed($operation: $reason${attemptedMode != null ? ', mode=$attemptedMode' : ''})';
+}
+
 // Request events - sent by game code to request changes
 
 /// Request to change the window mode.

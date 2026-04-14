@@ -115,6 +115,7 @@ class WindowPlugin implements Plugin {
         .addEvent<WindowResized>()
         .addEvent<WindowFocusChanged>()
         .addEvent<WindowMoved>()
+        .addEvent<WindowOperationFailed>()
         .addEvent<SetWindowModeRequest>()
         .addEvent<SetWindowSizeRequest>()
         .addEvent<SetWindowPositionRequest>();

@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:screen_retriever/screen_retriever.dart' hide Display;
 
+import '../events/window_events.dart';
 import '../resources/display_info.dart';
 
 /// System that periodically syncs display information.
@@ -19,6 +20,7 @@ class DisplaySyncSystem implements System {
   SystemMeta get meta => const SystemMeta(
         name: 'DisplaySyncSystem',
         resourceWrites: {DisplayInfo},
+        eventWrites: {WindowOperationFailed},
       );
 
   @override
@@ -36,9 +38,23 @@ class DisplaySyncSystem implements System {
     final displayInfo = world.getResource<DisplayInfo>();
     if (displayInfo == null || !displayInfo.isInitialized) return;
 
-    // Fetch current display info
-    final screenDisplays = await screenRetriever.getAllDisplays();
-    final primaryDisplay = await screenRetriever.getPrimaryDisplay();
+    // Fetch current display info. If the backend throws (disconnected
+    // monitor mid-enumeration, permission revoked, etc.) we leave the
+    // cached DisplayInfo intact and emit a failure event instead.
+    final List<dynamic> screenDisplays;
+    final dynamic primaryDisplay;
+    try {
+      screenDisplays = await screenRetriever.getAllDisplays();
+      primaryDisplay = await screenRetriever.getPrimaryDisplay();
+    } catch (e) {
+      world.eventWriter<WindowOperationFailed>().send(
+            WindowOperationFailed(
+              operation: 'syncDisplays',
+              reason: e.toString(),
+            ),
+          );
+      return;
+    }
 
     // Build updated Display objects
     final displays = <Display>[];

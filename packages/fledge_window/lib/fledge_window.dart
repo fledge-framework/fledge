@@ -55,6 +55,13 @@
 ///     // Pause game
 ///   }
 /// }
+///
+/// // Native calls that fail at the OS level surface here. `WindowState`
+/// // is NOT mutated for a failed op, so the game stays in a consistent
+/// // state.
+/// for (final failure in world.eventReader<WindowOperationFailed>().read()) {
+///   debugPrint('window ${failure.operation} failed: ${failure.reason}');
+/// }
 /// ```
 ///
 /// ## Querying State
