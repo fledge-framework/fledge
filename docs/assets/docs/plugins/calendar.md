@@ -305,7 +305,7 @@ CalendarPlugin(
 
 **Provides:**
 - `Calendar` resource
-- `CalendarSystem` in `CoreStage.update`
+- `CalendarSystem` in `Schedules.update`
 - Time event registration
 
 ## Common Patterns

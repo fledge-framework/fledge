@@ -128,7 +128,7 @@ Future<void> mySystem(World world) async {
 
 **Provides:**
 - `WallTime` resource with `delta`, `elapsed`, and `frameCount`
-- `TimeUpdateSystem` that runs at `CoreStage.first`
+- `WallTimeUpdateSystem` that runs at `Schedules.first`
 
 ### FrameLimiterPlugin
 
@@ -147,7 +147,7 @@ Future<void> debugSystem(World world) async {
 **Provides:**
 - `FrameLimiterConfig` resource with target FPS settings
 - `FrameTime` resource with frame timing metrics
-- `FrameStartSystem` at `CoreStage.first` and `FrameLimiterSystem` at `CoreStage.last`
+- `FrameStartSystem` at `Schedules.first` and `FrameLimiterSystem` at `Schedules.last`
 
 ## Creating Custom Plugins
 
@@ -234,7 +234,7 @@ class RenderPlugin implements Plugin {
       throw StateError('RenderPlugin requires WallTimePlugin');
     }
 
-    app.addSystem(RenderSystemWrapper(), stage: CoreStage.last);
+    app.addSystem(RenderSystemWrapper(), schedule: Schedules.last);
   }
 
   @override

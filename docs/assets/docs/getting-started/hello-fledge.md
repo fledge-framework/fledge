@@ -122,7 +122,7 @@ class ScreenSize {
 }
 ```
 
-We're using `Time` from Fledge's built-in `WallTimePlugin`, and we need `ScreenSize` to know where to bounce.
+We're using `WallTime` from Fledge's built-in `WallTimePlugin`, and we need `ScreenSize` to know where to bounce.
 
 ## Step 4: Create a Plugin
 

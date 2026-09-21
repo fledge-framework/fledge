@@ -106,7 +106,7 @@ Fledge is inspired by [Bevy](https://bevyengine.org/), the popular Rust game eng
 
 - Archetype-based ECS
 - Plugin architecture
-- Schedule stages
+- Named schedule graph
 - Change detection
 - Two-world rendering architecture
 

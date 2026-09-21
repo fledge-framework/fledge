@@ -488,10 +488,10 @@ class SnakePlugin implements Plugin {
     app.world.insertResource(MoveTimer());
 
     // Add systems in order
-    app.addSystem(InputSystem(), stage: CoreStage.preUpdate);
-    app.addSystem(MovementSystem(), stage: CoreStage.update);
-    app.addSystem(FoodCollisionSystem(), stage: CoreStage.postUpdate);
-    app.addSystem(CollisionSystem(), stage: CoreStage.postUpdate);
+    app.addSystem(InputSystem(), schedule: Schedules.preUpdate);
+    app.addSystem(MovementSystem(), schedule: Schedules.update);
+    app.addSystem(FoodCollisionSystem(), schedule: Schedules.postUpdate);
+    app.addSystem(CollisionSystem(), schedule: Schedules.postUpdate);
 
     // Spawn the snake head
     final headPos = GridPosition(config.gridWidth ~/ 2, config.gridHeight ~/ 2);

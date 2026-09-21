@@ -33,7 +33,7 @@ Add resources using the App builder (recommended):
 
 ```dart
 App()
-  .addPlugin(WallTimePlugin())  // Adds Time resource automatically
+  .addPlugin(WallTimePlugin())  // Adds WallTime resource automatically
   .insertResource(GameConfig(difficulty: 'hard'))
   .insertResource(Score())
   .run();

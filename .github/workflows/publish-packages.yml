@@ -57,21 +57,35 @@ jobs:
       - name: Install Melos
         run: dart pub global activate melos
 
-      - name: Bootstrap
-        run: melos bootstrap
-
+      # Normalize versions and cross-package dep constraints BEFORE
+      # bootstrap. Bootstrap uses workspace resolution — if a package's
+      # own version doesn't satisfy another package's ^X.Y.Z constraint
+      # on it (drift between the two at the tagged commit), pub fails
+      # with "version solving failed" before we get a chance to fix it.
       - name: Update package versions
         run: |
           VERSION=${{ steps.version.outputs.VERSION }}
-          echo "Setting all packages to version $VERSION"
+          echo "Setting all packages to version $VERSION and cross-deps to ^$VERSION"
 
           for pubspec in packages/fledge_*/pubspec.yaml; do
-            sed -i "s/^version: .*/version: $VERSION/" "$pubspec"
+            # Package's own version field.
+            sed -i -E "s/^version:.*/version: $VERSION/" "$pubspec"
+            # Cross-package dep constraints (indented `  fledge_foo: ^X.Y.Z`).
+            # Only rewrites caret-versioned lines to avoid touching path/hosted-git deps.
+            # Uses POSIX [[:space:]] instead of \s for BSD/GNU sed portability.
+            sed -i -E "s|^([[:space:]]+fledge_[a-z_0-9]+:[[:space:]]*)\^[0-9]+\.[0-9]+\.[0-9]+.*$|\1^$VERSION|" "$pubspec"
             echo "Updated: $pubspec"
           done
 
-          # Show updated versions
-          grep -r "^version:" packages/fledge_*/pubspec.yaml
+          echo ""
+          echo "=== Resulting versions ==="
+          grep -H "^version:" packages/fledge_*/pubspec.yaml
+          echo ""
+          echo "=== Resulting cross-package deps ==="
+          grep -HE "^\s+fledge_[a-z_0-9]+:\s*\^" packages/fledge_*/pubspec.yaml
+
+      - name: Bootstrap
+        run: melos bootstrap
 
       - name: Install git-cliff
         run: |

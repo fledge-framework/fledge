@@ -162,26 +162,28 @@ final asyncSystem = AsyncFunctionSystem(
 );
 ```
 
-## System Stages
+## Assigning Systems to Schedules
 
-Add systems to specific stages:
+Add systems to specific schedules via `App.addSystem` (or `Scheduler.addSystem` if you have direct access):
 
 ```dart
-final schedule = Schedule();
+final app = App();
 
-schedule.addSystem(inputSystem, stage: CoreStage.preUpdate);
-schedule.addSystem(movementSystem, stage: CoreStage.update);
-schedule.addSystem(collisionSystem, stage: CoreStage.postUpdate);
-schedule.addSystem(renderSystem, stage: CoreStage.last);
+app.addSystem(inputSystem,     schedule: Schedules.preUpdate);
+app.addSystem(movementSystem,  schedule: Schedules.update);
+app.addSystem(collisionSystem, schedule: Schedules.postUpdate);
+app.addSystem(renderSystem,    schedule: Schedules.last);
 ```
 
-### Stage Order
+### Schedule Order
 
-1. `CoreStage.first` - Runs before everything
-2. `CoreStage.preUpdate` - Input, event processing
-3. `CoreStage.update` - Main game logic (default)
-4. `CoreStage.postUpdate` - Physics, collision
-5. `CoreStage.last` - Rendering, cleanup
+1. `Schedules.first` - Runs before everything
+2. `Schedules.preUpdate` - Input, event processing
+3. `Schedules.update` - Main game logic (default)
+4. `Schedules.postUpdate` - Physics, collision
+5. `Schedules.last` - Rendering, cleanup
+
+> The old `stage:` parameter with `CoreStage.foo` is aliased to `schedule: Schedules.foo` for one release. Prefer the new names.
 
 ## Parallel Execution
 

@@ -314,9 +314,9 @@ For more control, add systems manually:
 
 ```dart
 App()
-  .addSystem(CollisionResolutionSystem(), stage: CoreStage.update)
-  .addSystem(CollisionDetectionSystem(), stage: CoreStage.update)
-  .addSystem(CollisionCleanupSystem(), stage: CoreStage.last);
+  .addSystem(CollisionResolutionSystem(), schedule: Schedules.update)
+  .addSystem(CollisionDetectionSystem(), schedule: Schedules.update)
+  .addSystem(CollisionCleanupSystem(), schedule: Schedules.last);
 ```
 
 ## Components Reference
@@ -366,15 +366,15 @@ Registered names are snake_case (not the Dart class names). Refer to these in `b
 
 ## System Ordering
 
-**Put anything that writes `Velocity` — your input system, AI steering, knockback, anything — in `CoreStage.preUpdate` or declare `before: ['collision_resolution']`.**
+**Put anything that writes `Velocity` — your input system, AI steering, knockback, anything — in `Schedules.preUpdate` or declare `before: ['collision_resolution']`.**
 
-The scheduler serialises systems that conflict on the same component and breaks ties by *registration order* within a stage. `PhysicsPlugin` is usually registered early in `App` setup, so `collision_resolution` lands first in `CoreStage.update`. If your movement system shares the `update` stage with physics and doesn't declare explicit ordering, it ends up running *after* resolution — meaning physics clamps **last frame's** velocity, then your movement overwrites it with a wall-ward value, then integration pushes the player through the wall. Everything compiles; tests pass; the player just clips through the level.
+The scheduler serialises systems that conflict on the same component and breaks ties by *registration order* within a schedule. `PhysicsPlugin` is usually registered early in `App` setup, so `collision_resolution` lands first in `Schedules.update`. If your movement system shares the `update` schedule with physics and doesn't declare explicit ordering, it ends up running *after* resolution — meaning physics clamps **last frame's** velocity, then your movement overwrites it with a wall-ward value, then integration pushes the player through the wall. Everything compiles; tests pass; the player just clips through the level.
 
 Two correct shapes:
 
 ```dart
 // Option A — put movement in preUpdate (recommended).
-app.addSystem(MyMovementSystem(), stage: CoreStage.preUpdate);
+app.addSystem(MyMovementSystem(), schedule: Schedules.preUpdate);
 ```
 
 ```dart

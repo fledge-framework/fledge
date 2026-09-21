@@ -855,6 +855,8 @@ final tilemap = await loader.load('maps/level.tmx', myTextureLoader);
 
 The `TextureHandle.id` you assign during loading is how you'll map back to your renderer's internal texture representation.
 
+> **New in v0.2 — `Handle<Texture>` from `fledge_assets`.** The recommended way to manage textures now is the ref-counted `Assets<Texture>` / `Handle<Texture>` API in `fledge_assets`, which supports async loaders and hot reload. `TextureHandle` is still the type carried through `fledge_tiled` and the render extractors; use `TextureHandle.fromAsset(handle, width, height)` to bridge from a `Handle<Texture>` into the tilemap loader when you want a single asset-management pipeline.
+
 ### Accessing Tile Texture Data
 
 After spawning a tilemap, access texture information through the loaded tileset:

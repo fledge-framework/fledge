@@ -1,6 +1,6 @@
 # Schedule API Reference
 
-The `Schedule` organizes systems into stages and manages their execution.
+`Scheduler` is the runtime container that owns per-frame schedules and dispatches them. `Schedule` is the label value type identifying a schedule; `Schedules` is a container of standard labels (`first`, `preUpdate`, `update`, `postUpdate`, `last`, plus reserved fixed-timestep and render pipeline labels).
 
 ## Import
 
@@ -12,28 +12,32 @@ import 'package:fledge_ecs_annotations/fledge_ecs_annotations.dart';
 ## Constructor
 
 ```dart
-Schedule()
+Scheduler()
 ```
 
-Creates a new empty schedule.
+Creates a new empty scheduler. Games rarely construct one directly — `App` owns one and exposes it as `app.scheduler`.
+
+> The runtime container was renamed from `Schedule` to `Scheduler` in v0.2 so the `Schedule` name could be reused for the label value type. The old getter (`app.schedule`) is kept as a deprecated alias for one release.
 
 ## Methods
 
-### addSystem(system, {stage})
+### addSystem(system, {schedule})
 
 ```dart
-void addSystem(System system, {CoreStage stage = CoreStage.update})
+void addSystem(System system, {Schedule schedule = Schedules.update})
 ```
 
-Adds a system to the schedule at the specified stage.
+Adds a system to the given schedule.
 
 ```dart
-final schedule = Schedule();
+final scheduler = app.scheduler;
 
-schedule.addSystem(InputSystemWrapper(), stage: CoreStage.preUpdate);
-schedule.addSystem(MovementSystemWrapper());  // Default: CoreStage.update
-schedule.addSystem(RenderSystemWrapper(), stage: CoreStage.last);
+scheduler.addSystem(InputSystemWrapper(), schedule: Schedules.preUpdate);
+scheduler.addSystem(MovementSystemWrapper());  // Default: Schedules.update
+scheduler.addSystem(RenderSystemWrapper(), schedule: Schedules.last);
 ```
+
+> `stage: CoreStage.foo` is aliased to `schedule: Schedules.foo` for one release. New code should use the `schedule:` parameter.
 
 ### run(world)
 
@@ -41,67 +45,84 @@ schedule.addSystem(RenderSystemWrapper(), stage: CoreStage.last);
 Future<void> run(World world)
 ```
 
-Executes all systems in stage order. Systems within the same stage may run in parallel if they don't conflict.
+Executes all systems in schedule order. Systems within the same schedule may run in parallel if they don't conflict.
 
 ```dart
-await schedule.run(world);
+await scheduler.run(world);
 ```
 
-## Core Stages
+## Standard Schedules
 
-Systems are organized into stages that execute in order:
+Systems are organized into schedules that execute in order. `Schedules` is the container of standard labels:
 
 ```dart
-enum CoreStage {
-  first,      // Run before everything else
-  preUpdate,  // Input handling, event processing
-  update,     // Main game logic (default)
-  postUpdate, // Physics, collision resolution
-  last,       // Rendering, cleanup
+class Schedules {
+  // Runs once, before the frame loop.
+  static const startup       = Schedule('startup');
+
+  // Per-frame, in order:
+  static const first         = Schedule('first');       // Initialization, time
+  static const preUpdate     = Schedule('preUpdate');   // Input, events
+  static const update        = Schedule('update');      // Game logic (default)
+  static const postUpdate    = Schedule('postUpdate');  // Physics, collision
+  static const last          = Schedule('last');        // Rendering, cleanup
+
+  // Reserved fixed-timestep chain (v0.2):
+  static const fixedFirst      = Schedule('fixedFirst');
+  static const fixedPreUpdate  = Schedule('fixedPreUpdate');
+  static const fixedUpdate     = Schedule('fixedUpdate');
+  static const fixedPostUpdate = Schedule('fixedPostUpdate');
+  static const fixedLast       = Schedule('fixedLast');
+
+  // Reserved render pipeline (v0.2):
+  static const extract         = Schedule('extract');
+  static const render          = Schedule('render');
 }
 ```
 
-### Stage Execution Order
+### Per-Frame Execution Order
 
 ```
-┌─────────────────────┐
-│     CoreStage.first │  ← Initialization, time updates
-├─────────────────────┤
-│   CoreStage.preUpdate│  ← Input, events
-├─────────────────────┤
-│    CoreStage.update │  ← Game logic (default)
-├─────────────────────┤
-│  CoreStage.postUpdate│  ← Physics, collision
-├─────────────────────┤
-│     CoreStage.last  │  ← Rendering, cleanup
-└─────────────────────┘
+┌───────────────────────┐
+│  Schedules.first      │  ← Initialization, time updates
+├───────────────────────┤
+│  Schedules.preUpdate  │  ← Input, events
+├───────────────────────┤
+│  Schedules.update     │  ← Game logic (default)
+├───────────────────────┤
+│  Schedules.postUpdate │  ← Physics, collision
+├───────────────────────┤
+│  Schedules.last       │  ← Rendering, cleanup
+└───────────────────────┘
 ```
+
+Fixed-timestep schedules (`Schedules.fixedFirst`…`Schedules.fixedLast`) run 0..N times per frame driven by the `FixedTimestep` resource. Render pipeline schedules (`Schedules.extract` → `Schedules.render`) are for the render-world extract/dispatch phase.
 
 ## Parallel Execution
 
-Within each stage, non-conflicting systems run in parallel:
+Within each schedule, non-conflicting systems run in parallel:
 
 ```dart
 // These can run in parallel (no conflicts)
 @system
-void systemA(World world) {  // Writes Position
-  for (final (_, pos) in world.query1<Position>().iter()) { }
+void systemA(QueryMut1<Position> query) {  // Writes Position
+  for (final (_, pos) in query.iter()) { }
 }
 
 @system
-void systemB(World world) {  // Writes Health
-  for (final (_, health) in world.query1<Health>().iter()) { }
+void systemB(QueryMut1<Health> query) {  // Writes Health
+  for (final (_, health) in query.iter()) { }
 }
 
 // These must run sequentially (both write Position)
 @system
-void systemC(World world) {  // Writes Position
-  for (final (_, pos) in world.query1<Position>().iter()) { }
+void systemC(QueryMut1<Position> query) {  // Writes Position
+  for (final (_, pos) in query.iter()) { }
 }
 
 @system
-void systemD(World world) {  // Writes Position
-  for (final (_, pos, vel) in world.query2<Position, Velocity>().iter()) { }
+void systemD(QueryMut2<Position, Velocity> query) {  // Writes Position
+  for (final (_, pos, vel) in query.iter()) { }
 }
 ```
 
@@ -120,40 +141,36 @@ Systems conflict when they both access the same component type and at least one 
 
 ```dart
 void main() async {
-  final world = World();
-  final schedule = Schedule();
+  final app = App();
+  final scheduler = app.scheduler;
 
-  // Stage: first
-  schedule.addSystem(TimeSystemWrapper(), stage: CoreStage.first);
+  // Schedule: first
+  scheduler.addSystem(WallTimeUpdateSystem(), schedule: Schedules.first);
 
-  // Stage: preUpdate
-  schedule.addSystem(InputSystemWrapper(), stage: CoreStage.preUpdate);
-  schedule.addSystem(EventProcessorWrapper(), stage: CoreStage.preUpdate);
+  // Schedule: preUpdate
+  scheduler.addSystem(InputSystemWrapper(),       schedule: Schedules.preUpdate);
+  scheduler.addSystem(EventProcessorWrapper(),    schedule: Schedules.preUpdate);
 
-  // Stage: update (default)
-  schedule.addSystem(AISystemWrapper());
-  schedule.addSystem(MovementSystemWrapper());
-  schedule.addSystem(ShootingSystemWrapper());
+  // Schedule: update (default)
+  scheduler.addSystem(AISystemWrapper());
+  scheduler.addSystem(MovementSystemWrapper());
+  scheduler.addSystem(ShootingSystemWrapper());
 
-  // Stage: postUpdate
-  schedule.addSystem(PhysicsSystemWrapper(), stage: CoreStage.postUpdate);
-  schedule.addSystem(CollisionSystemWrapper(), stage: CoreStage.postUpdate);
+  // Schedule: postUpdate
+  scheduler.addSystem(PhysicsSystemWrapper(),    schedule: Schedules.postUpdate);
+  scheduler.addSystem(CollisionSystemWrapper(), schedule: Schedules.postUpdate);
 
-  // Stage: last
-  schedule.addSystem(RenderSystemWrapper(), stage: CoreStage.last);
-  schedule.addSystem(CleanupSystemWrapper(), stage: CoreStage.last);
+  // Schedule: last
+  scheduler.addSystem(RenderSystemWrapper(),  schedule: Schedules.last);
+  scheduler.addSystem(CleanupSystemWrapper(), schedule: Schedules.last);
 
-  // Game loop
-  while (gameRunning) {
-    await schedule.run(world);
-    await Future.delayed(Duration(milliseconds: 16)); // ~60 FPS
-  }
+  await app.run();
 }
 ```
 
 ## System Dependencies
 
-The schedule automatically determines dependencies based on `SystemMeta`:
+The scheduler automatically determines dependencies based on `SystemMeta`:
 
 ```dart
 class SystemMeta {
@@ -162,31 +179,33 @@ class SystemMeta {
   final Set<ComponentId> writes;     // Components written
   final Set<Type> resourceReads;     // Resources read
   final Set<Type> resourceWrites;    // Resources written
+  final List<String> before;         // Explicit ordering
+  final List<String> after;          // Explicit ordering
 }
 ```
 
 ## Manual Ordering
 
-For explicit ordering within a stage, add systems in the desired order:
+Within a schedule the scheduler falls back to registration order to break ties on conflicts, but this is fragile — declare explicit ordering via `before:` / `after:` on `SystemMeta`, or split systems into different schedules.
 
 ```dart
-// These run sequentially in the order added
-schedule.addSystem(FirstSystemWrapper());
-schedule.addSystem(SecondSystemWrapper());
-schedule.addSystem(ThirdSystemWrapper());
+// These run sequentially in the order added — but prefer explicit
+// before:/after: on SystemMeta.
+scheduler.addSystem(FirstSystemWrapper());
+scheduler.addSystem(SecondSystemWrapper());
+scheduler.addSystem(ThirdSystemWrapper());
 ```
+
+Use `App.checkScheduleOrdering()` to catch implicit ordering.
 
 ## Game Loop Integration
 
+Most games just call `app.run()`. If you need a bespoke driver, iterate the scheduler yourself:
+
 ```dart
 class Game {
-  final World world = World();
-  final Schedule schedule = Schedule();
+  final App app = App()..addPlugin(WallTimePlugin());
   bool running = true;
-
-  void setup() {
-    // Add systems...
-  }
 
   Future<void> run() async {
     final stopwatch = Stopwatch()..start();
@@ -197,11 +216,11 @@ class Game {
       final deltaTime = currentTime - lastTime;
       lastTime = currentTime;
 
-      // Update time resource
-      world.getResource<WallTime>()?.delta = deltaTime;
+      // WallTimePlugin's WallTimeUpdateSystem in Schedules.first will
+      // pick up the delta from the frame clock — you rarely need to
+      // touch WallTime by hand.
 
-      // Run all systems
-      await schedule.run(world);
+      await app.tick();
 
       // Frame limiting
       final frameTime = stopwatch.elapsedMilliseconds / 1000.0 - currentTime;

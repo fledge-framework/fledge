@@ -107,7 +107,7 @@ class MyPlugin implements Plugin {
     app.addEvent<MyEvent>();
 
     // Add systems
-    app.addSystem(MySystem(), stage: CoreStage.update);
+    app.addSystem(MySystem(), schedule: Schedules.update);
   }
 
   @override

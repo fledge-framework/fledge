@@ -268,21 +268,9 @@ final json = world.entityToJson(entity);
 final restored = world.entityFromJson(json!);
 ```
 
-## @reflectable Annotation
+## Reflection Annotations (reserved)
 
-Mark components for code generation:
-
-```dart
-@component
-@reflectable
-class Position {
-  double x;
-  double y;
-  Position(this.x, this.y);
-}
-
-// Generated code registers automatically
-```
+Full reflection-based codegen — registering `ComponentTypeInfo` from an annotated component so `TypeRegistry` picks it up automatically — is **reserved for a future release**. In v0.2 you can populate a `TypeRegistry` by hand for the components you want to serialize or inspect; the codegen path is not yet available.
 
 ## See Also
 

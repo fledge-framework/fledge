@@ -216,13 +216,13 @@ void spawnerSystem(World world) {
 
 ## System Organization
 
-### By Stage
+### By Schedule
 
 Organize systems by when they should run:
 
 ```dart-tabs
 // @tab Annotations
-// Input stage - CoreStage.preUpdate
+// Runs in Schedules.preUpdate
 @system
 void inputSystem(World world) {
   for (final (_, input) in world.query1<InputReceiver>(filter: const With<Player>()).iter()) {
@@ -230,7 +230,7 @@ void inputSystem(World world) {
   }
 }
 
-// Update stage - CoreStage.update (default)
+// Runs in Schedules.update (default)
 @system
 void movementSystem(World world) {
   for (final (_, pos, vel) in world.query2<Position, Velocity>().iter()) {
@@ -238,7 +238,7 @@ void movementSystem(World world) {
   }
 }
 
-// Physics stage - CoreStage.postUpdate
+// Runs in Schedules.postUpdate
 @system
 void collisionSystem(World world) {
   for (final (_, pos, collider) in world.query2<Position, Collider>().iter()) {
@@ -246,7 +246,7 @@ void collisionSystem(World world) {
   }
 }
 
-// Render stage - CoreStage.last
+// Runs in Schedules.last
 @system
 void renderSystem(World world) {
   for (final (_, pos, sprite) in world.query2<Position, Sprite>().iter()) {
@@ -254,7 +254,7 @@ void renderSystem(World world) {
   }
 }
 // @tab Inheritance
-// Input stage - CoreStage.preUpdate
+// Runs in Schedules.preUpdate
 class InputSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
@@ -270,7 +270,7 @@ class InputSystem implements System {
   }
 }
 
-// Update stage - CoreStage.update (default)
+// Runs in Schedules.update (default)
 class MovementSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
@@ -287,7 +287,7 @@ class MovementSystem implements System {
   }
 }
 
-// Physics stage - CoreStage.postUpdate
+// Runs in Schedules.postUpdate
 class CollisionSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
@@ -303,7 +303,7 @@ class CollisionSystem implements System {
   }
 }
 
-// Render stage - CoreStage.last
+// Runs in Schedules.last
 class RenderSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(

@@ -108,7 +108,7 @@ extractors.register(ParticleExtractor());
 The `RenderPlugin` provides:
 - `Extractors` resource for registering component extractors
 - `RenderWorld` resource for storing extracted render data
-- `RenderExtractionSystem` that runs at `CoreStage.last`
+- `RenderExtractionSystem` that runs in `Schedules.extract` (the extract phase of the render pipeline)
 
 ## RenderWorld
 
@@ -300,7 +300,7 @@ Extracted components are the data classes that live in the render world. Fledge 
 Use the `ExtractedData` mixin for simple extracted data:
 
 ```dart
-import 'package:fledge_render/fledge_render.dart';
+import 'package:fledge_render_2d/fledge_render_2d.dart';
 
 /// Extracted data for a particle effect.
 class ExtractedParticle with ExtractedData {
@@ -328,7 +328,7 @@ class ExtractedParticle with ExtractedData {
 Use `SortableExtractedData` when entities need draw ordering:
 
 ```dart
-import 'package:fledge_render/fledge_render.dart';
+import 'package:fledge_render_2d/fledge_render_2d.dart';
 
 /// Extracted character data with Y-sorting.
 class ExtractedCharacter with ExtractedData, SortableExtractedData {
@@ -363,7 +363,7 @@ sortKey = (position.y * 1000).toInt()
 **Layer-based sorting** (platformers, tilemaps):
 
 ```dart
-import 'package:fledge_render/fledge_render.dart';
+import 'package:fledge_render_2d/fledge_render_2d.dart';
 
 // Using the DrawLayer enum for semantic layer names
 sortKey = DrawLayer.characters.sortKey(subOrder: (position.y * 1000).toInt())

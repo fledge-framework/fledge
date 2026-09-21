@@ -92,32 +92,34 @@ Registers an event type.
 app.addEvent<CollisionEvent>();
 ```
 
-### addSystem(system, {stage})
+### addSystem(system, {schedule})
 
 ```dart
-App addSystem(System system, {CoreStage stage = CoreStage.update})
+App addSystem(System system, {Schedule schedule = Schedules.update})
 ```
 
-Adds a system to the schedule.
+Adds a system to the scheduler in the given schedule.
 
 ```dart
 app.addSystem(MovementSystemWrapper());
-app.addSystem(RenderSystemWrapper(), stage: CoreStage.last);
+app.addSystem(RenderSystemWrapper(), schedule: Schedules.last);
 ```
 
-### addSystems(systems, {stage})
+> `addSystem(..., stage: CoreStage.foo)` is aliased to the old name for one release; new code should use `schedule: Schedules.foo`.
+
+### addSystems(systems, {schedule})
 
 ```dart
-App addSystems(List<System> systems, {CoreStage stage = CoreStage.update})
+App addSystems(List<System> systems, {Schedule schedule = Schedules.update})
 ```
 
-Adds multiple systems to the same stage.
+Adds multiple systems to the same schedule.
 
 ```dart
 app.addSystems([
   AISystemWrapper(),
   MovementSystemWrapper(),
-], stage: CoreStage.update);
+], schedule: Schedules.update);
 ```
 
 ## Lifecycle Methods
@@ -324,8 +326,8 @@ void main() async {
     .insertResource(Score())
     .addEvent<CollisionEvent>()
     .addSystem(MovementSystemWrapper())
-    .addSystem(CollisionSystemWrapper(), stage: CoreStage.postUpdate)
-    .addSystem(RenderSystemWrapper(), stage: CoreStage.last)
+    .addSystem(CollisionSystemWrapper(), schedule: Schedules.postUpdate)
+    .addSystem(RenderSystemWrapper(), schedule: Schedules.last)
     .onStart((app) => print('Starting...'))
     .onTick((app) {
       final score = app.world.getResource<Score>()!;

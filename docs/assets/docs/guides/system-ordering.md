@@ -86,7 +86,7 @@ Explicit ordering constraints combine with automatic conflict detection.
 
 ### Registration order breaks ties — and it's a trap
 
-When two systems in the same stage conflict (shared component write, or one writes what the other reads) and **neither declares `before:` / `after:`**, the scheduler still has to pick an order. It breaks the tie by the order the systems were registered with the `App`.
+When two systems in the same schedule conflict (shared component write, or one writes what the other reads) and **neither declares `before:` / `after:`**, the scheduler still has to pick an order. It breaks the tie by the order the systems were registered with the `App`.
 
 That's fine when the order happens to be what you want. The failure mode is when it's *not* — and the most common case is a new movement/AI/steering system that writes `Velocity` being registered *after* the physics plugin's `collision_resolution` (which also writes `Velocity`):
 
@@ -101,9 +101,9 @@ Everything compiles, every test passes, the player silently clips through walls.
 Two fixes:
 
 ```dart
-// Option A — put the movement system in an earlier stage. Stage
-// boundaries always beat intra-stage ordering.
-app.addSystem(MyMovementSystem(), stage: CoreStage.preUpdate);
+// Option A — put the movement system in an earlier schedule. Schedule
+// boundaries always beat intra-schedule ordering.
+app.addSystem(MyMovementSystem(), schedule: Schedules.preUpdate);
 
 // Option B — stay in update but say so explicitly.
 class MyMovementSystem implements System {

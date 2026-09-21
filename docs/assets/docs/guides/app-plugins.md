@@ -16,7 +16,7 @@ Fledge provides two main classes: `App` and `World`. Understanding when to use e
 `App` is the recommended entry point for all Fledge games. It provides:
 
 - **Plugin system** for modular, reusable game features
-- **System scheduling** with automatic ordering and stages
+- **System scheduling** with automatic ordering and named schedules
 - **Lifecycle management** (start, tick, stop, cleanup)
 - **Core plugins** like `WallTimePlugin` for delta time
 
@@ -87,7 +87,7 @@ void main() async {
     .insertResource(GameConfig())
     .addEvent<CollisionEvent>()
     .addSystem(MovementSystemWrapper())
-    .addSystem(RenderSystemWrapper(), stage: CoreStage.last)
+    .addSystem(RenderSystemWrapper(), schedule: Schedules.last)
     .run();
 }
 ```
@@ -115,8 +115,8 @@ App()
 ```dart
 App()
   .addSystem(MovementSystemWrapper())
-  .addSystem(PhysicsSystemWrapper(), stage: CoreStage.postUpdate)
-  .addSystem(RenderSystemWrapper(), stage: CoreStage.last)
+  .addSystem(PhysicsSystemWrapper(), schedule: Schedules.postUpdate)
+  .addSystem(RenderSystemWrapper(), schedule: Schedules.last)
 ```
 
 Add multiple systems at once:
@@ -127,7 +127,7 @@ App()
     AISystemWrapper(),
     MovementSystemWrapper(),
     ShootingSystemWrapper(),
-  ], stage: CoreStage.update)
+  ], schedule: Schedules.update)
 ```
 
 ### Lifecycle Callbacks
@@ -191,8 +191,8 @@ class PhysicsPlugin implements Plugin {
     app
       .insertResource(PhysicsConfig())
       .addEvent<CollisionEvent>()
-      .addSystem(GravitySystemWrapper(), stage: CoreStage.update)
-      .addSystem(CollisionSystemWrapper(), stage: CoreStage.postUpdate);
+      .addSystem(GravitySystemWrapper(), schedule: Schedules.update)
+      .addSystem(CollisionSystemWrapper(), schedule: Schedules.postUpdate);
   }
 
   @override
@@ -218,7 +218,7 @@ For simple cases, use `FunctionPlugin`:
 ```dart
 final debugPlugin = FunctionPlugin((app) {
   app.insertResource(DebugConfig(showFps: true));
-  app.addSystem(DebugOverlaySystemWrapper(), stage: CoreStage.last);
+  app.addSystem(DebugOverlaySystemWrapper(), schedule: Schedules.last);
 });
 
 App().addPlugin(debugPlugin);
@@ -281,7 +281,7 @@ class MySystem implements System {
 
 **Provides:**
 - `WallTime` resource with `delta`, `elapsed`, and `frameCount`
-- `TimeUpdateSystem` that runs at `CoreStage.first`
+- `WallTimeUpdateSystem` that runs at `Schedules.first`
 
 ### FrameLimiterPlugin
 
@@ -318,11 +318,11 @@ class DebugSystem implements System {
 **Provides:**
 - `FrameLimiterConfig` resource with target FPS settings
 - `FrameTime` resource with frame timing metrics
-- `FrameStartSystem` at `CoreStage.first` and `FrameLimiterSystem` at `CoreStage.last`
+- `FrameStartSystem` at `Schedules.first` and `FrameLimiterSystem` at `Schedules.last`
 
-## Accessing World and Schedule
+## Accessing World and Scheduler
 
-The App exposes its world and schedule:
+The App exposes its world and scheduler:
 
 ```dart
 final app = App();
@@ -331,8 +331,8 @@ final app = App();
 app.world.insertResource(MyResource());
 final entity = app.world.spawn();
 
-// Direct schedule access
-app.schedule.addSystem(MySystem());
+// Direct scheduler access (previously named Schedule)
+app.scheduler.addSystem(MySystem());
 ```
 
 ## Complete Example

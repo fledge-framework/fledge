@@ -139,7 +139,7 @@ The `SystemMeta` declares dependencies:
 Fledge uses this information to:
 1. **Run systems in parallel** when they don't conflict
 2. **Detect data races** at runtime
-3. **Order systems** within stages
+3. **Order systems** within schedules
 
 ### System Guidelines
 
@@ -226,7 +226,7 @@ Fledge provides these via plugins:
 
 | Resource | Plugin | Purpose |
 |----------|--------|---------|
-| `Time` | `WallTimePlugin` | Delta time, elapsed time |
+| `WallTime` | `WallTimePlugin` | Delta time, elapsed time |
 
 ## Archetypes
 
@@ -274,25 +274,27 @@ world.query2<Position, Velocity>();
 
 > In games, don't create World directly. Use `App` and access `app.world`.
 
-## Schedule and Stages
+## Schedules
 
-Systems run in **stages**. Stages run in order; systems within a stage can run in parallel.
+Systems run in **schedules**. Schedules run in order; systems within a schedule can run in parallel.
 
 ```dart
-app.addSystem(inputSystem, stage: CoreStage.preUpdate);
-app.addSystem(movementSystem, stage: CoreStage.update);
-app.addSystem(collisionSystem, stage: CoreStage.postUpdate);
+app.addSystem(inputSystem, schedule: Schedules.preUpdate);
+app.addSystem(movementSystem, schedule: Schedules.update);
+app.addSystem(collisionSystem, schedule: Schedules.postUpdate);
 ```
 
-### Default Stages
+### Standard Schedules
 
-| Stage | Purpose | Examples |
-|-------|---------|----------|
-| `first` | Very first | Debug logging |
-| `preUpdate` | Before main logic | Input handling |
-| `update` | Main game logic | Movement, AI |
-| `postUpdate` | After main logic | Physics, collision |
-| `last` | Very last | Rendering prep |
+| Schedule | Purpose | Examples |
+|----------|---------|----------|
+| `Schedules.first` | Very first | Debug logging |
+| `Schedules.preUpdate` | Before main logic | Input handling |
+| `Schedules.update` | Main game logic | Movement, AI |
+| `Schedules.postUpdate` | After main logic | Physics, collision |
+| `Schedules.last` | Very last | Rendering prep |
+
+> `CoreStage` and the `stage:` parameter are aliased to the schedule constants above for one release. Prefer the new names in new code.
 
 ## Commands
 
