@@ -95,6 +95,33 @@ void main() {
       expect(t.translation.y, 200);
     });
 
+    test(
+      'root camera also writes GlobalTransform2D so same-frame readers '
+      'see the follow-updated position (regression for Batch 4 #19)',
+      () async {
+        world.get<CameraFollow>(cameraEntity)!.smoothing = 1.0;
+        // Give the camera a GlobalTransform2D at the old position so we
+        // can detect it being updated.
+        world.insert(cameraEntity, GlobalTransform2D.identity());
+        await CameraFollowSystem().run(world);
+        final g = world.get<GlobalTransform2D>(cameraEntity)!;
+        // storage[6] = translationX, storage[7] = translationY.
+        expect(g.matrix.storage[6], 100);
+        expect(g.matrix.storage[7], 200);
+      },
+    );
+
+    test('root camera without a prior GlobalTransform2D gets one inserted', () async {
+      world.get<CameraFollow>(cameraEntity)!.smoothing = 1.0;
+      // No GlobalTransform2D on the camera to start with.
+      expect(world.get<GlobalTransform2D>(cameraEntity), isNull);
+      await CameraFollowSystem().run(world);
+      final g = world.get<GlobalTransform2D>(cameraEntity);
+      expect(g, isNotNull);
+      expect(g!.matrix.storage[6], 100);
+      expect(g.matrix.storage[7], 200);
+    });
+
     test('non-pixelPerfect keeps sub-pixel positions', () async {
       world.get<Transform2D>(target)!.translation.setValues(100.6, 200.4);
       world
@@ -110,5 +137,79 @@ void main() {
       expect(t.translation.x, closeTo(100.6, 1e-4));
       expect(t.translation.y, closeTo(200.4, 1e-4));
     });
+  });
+
+  group('CameraFollow marker target', () {
+    test(
+      'CameraFollow.marker() tracks whichever entity carries '
+      'CameraFollowTarget',
+      () async {
+        final world = World();
+        // Spawn a camera that has no explicit target yet.
+        final cameraEntity =
+            (world.spawn()
+                  ..insert(Transform2D.from(0, 0))
+                  ..insert(Camera2D())
+                  ..insert(CameraFollow.marker(smoothing: 1.0)))
+                .entity;
+
+        // First run — no marker anywhere. Camera stays put and the
+        // system logs a "no target" warning (the follow.target is
+        // still Entity.placeholder).
+        await CameraFollowSystem().run(world);
+        expect(world.get<Transform2D>(cameraEntity)!.translation.x, 0);
+        expect(world.get<Transform2D>(cameraEntity)!.translation.y, 0);
+
+        // Spawn a target with the marker.
+        final target = world.spawn()
+          ..insert(Transform2D.from(50, 75))
+          ..insert(
+            GlobalTransform2D()..matrix.setValues(1, 0, 0, 0, 1, 0, 50, 75, 1),
+          )
+          ..insert(const CameraFollowTarget());
+        // Un-latch the warning so the next run picks up the newly
+        // spawned marker cleanly.
+        world.get<CameraFollow>(cameraEntity)!.warnedMissingTarget = false;
+
+        await CameraFollowSystem().run(world);
+        expect(world.get<Transform2D>(cameraEntity)!.translation.x, 50);
+        expect(world.get<Transform2D>(cameraEntity)!.translation.y, 75);
+        // We used the marker entity — return-value is just to keep
+        // the intent visible.
+        expect(target.entity, isNotNull);
+      },
+    );
+
+    test(
+      'explicit CameraFollow.target wins over the CameraFollowTarget marker',
+      () async {
+        final world = World();
+        final explicit = world.spawn()
+          ..insert(Transform2D.from(10, 20))
+          ..insert(
+            GlobalTransform2D()..matrix.setValues(1, 0, 0, 0, 1, 0, 10, 20, 1),
+          );
+        world.spawn()
+          ..insert(Transform2D.from(500, 500))
+          ..insert(
+            GlobalTransform2D()
+              ..matrix.setValues(1, 0, 0, 0, 1, 0, 500, 500, 1),
+          )
+          ..insert(const CameraFollowTarget()); // decoy
+
+        final cameraEntity =
+            (world.spawn()
+                  ..insert(Transform2D.from(0, 0))
+                  ..insert(Camera2D())
+                  ..insert(
+                    CameraFollow(target: explicit.entity, smoothing: 1.0),
+                  ))
+                .entity;
+
+        await CameraFollowSystem().run(world);
+        expect(world.get<Transform2D>(cameraEntity)!.translation.x, 10);
+        expect(world.get<Transform2D>(cameraEntity)!.translation.y, 20);
+      },
+    );
   });
 }
