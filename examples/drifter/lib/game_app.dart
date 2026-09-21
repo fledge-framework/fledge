@@ -19,7 +19,6 @@ import 'systems/hud_update_system.dart';
 import 'systems/input_movement_system.dart';
 import 'systems/pickup_collection_system.dart';
 import 'systems/save_load_system.dart';
-import 'systems/velocity_apply_system.dart';
 
 /// Player collider half-width — used both for spawning and resolution.
 const double kPlayerHalfSize = 10;
@@ -79,7 +78,10 @@ App buildApp({SaveConfig? saveConfig}) {
     ..addSystem(TransformPropagateSystem(), schedule: Schedules.preUpdate)
     ..addSystem(SaveLoadSystem(), schedule: Schedules.preUpdate)
     ..addSystem(InputMovementSystem(), schedule: Schedules.preUpdate)
-    ..addSystem(VelocityApplySystem(), schedule: Schedules.update)
+    // fledge_physics's VelocityIntegrationSystem (added by PhysicsPlugin
+    // above) now integrates Velocity into Transform2D after the
+    // collision-resolution clamp, so this example no longer ships its
+    // own integrator.
     ..addSystem(PickupCollectionSystem(), schedule: Schedules.update)
     // HudUpdateSystem writes UiText.text before LayoutSystem runs in
     // postUpdate, so the extractor sees this frame's text.
