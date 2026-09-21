@@ -5,6 +5,7 @@ import 'package:fledge_render_2d/fledge_render_2d.dart'
     show GlobalTransform2D, PreviousTransform2D, Transform2D;
 
 import 'camera2d.dart';
+import 'pixel_perfect.dart';
 
 /// Component making a [Camera2D] entity smoothly follow another entity.
 ///
@@ -50,10 +51,26 @@ class CameraFollow {
 
 /// System that updates every camera with a [CameraFollow] component.
 ///
-/// Runs in `Schedules.postUpdate` after `TransformPropagateSystem`
-/// (which lives in `Schedules.preUpdate`) so it reads fresh target
-/// positions. Declares `before: ['CameraShakeSystem']` so shake
-/// applies on top of a stable follow-updated camera.
+/// Runs in `Schedules.postUpdate`. Declares `after:
+/// ['transform_propagate']` so it reads a fresh
+/// `GlobalTransform2D` on the follow target — otherwise a target
+/// entity that moved earlier in the same tick would still expose
+/// the previous frame's global position and the camera would lag.
+///
+/// Games that need the camera's new position to feed further
+/// world-space computations in the same frame (a second sprite
+/// pass, a debug overlay drawn in world space, ...) should
+/// re-run `TransformPropagateSystem` after this system so the
+/// camera's own `GlobalTransform2D` is fresh. Otherwise the follow
+/// output is visible next frame, one tick late.
+///
+/// Also declares `before: ['CameraShakeSystem']` so shake applies
+/// on top of a stable follow-updated camera.
+///
+/// When `Camera2D.pixelPerfect` is set on the followed camera, the
+/// system snaps the resulting `Transform2D.translation` to whole
+/// pixels so pixel-art tiles don't develop seams from sub-pixel
+/// camera positions.
 class CameraFollowSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
@@ -64,6 +81,7 @@ class CameraFollowSystem implements System {
       ComponentId.of<Camera2D>(),
       ComponentId.of<GlobalTransform2D>(),
     },
+    after: const ['transform_propagate'],
     before: const [
       'CameraShakeSystem',
       'ParallaxSystem',
@@ -82,7 +100,7 @@ class CameraFollowSystem implements System {
     final ft = world.getResource<FixedTimestep>();
     final alpha = ft?.alpha ?? 1.0;
 
-    for (final (_, follow, _, transform)
+    for (final (_, follow, camera, transform)
         in world.query3<CameraFollow, Camera2D, Transform2D>().iter()) {
       final targetTransform = world.get<GlobalTransform2D>(follow.target);
       if (targetTransform == null) {
@@ -121,6 +139,15 @@ class CameraFollowSystem implements System {
       final smoothing = follow.smoothing.clamp(0.0, 1.0);
       transform.translation.x += (tx - transform.translation.x) * smoothing;
       transform.translation.y += (ty - transform.translation.y) * smoothing;
+
+      // Pixel-perfect camera: snap the follow output to whole pixels
+      // so pixel-art tiles don't develop seams from sub-pixel camera
+      // positions. Only applies when the camera opted in; games that
+      // want a smooth non-integer camera keep pixelPerfect=false.
+      if (camera.pixelPerfect) {
+        transform.translation.x = snapToPixel(transform.translation.x);
+        transform.translation.y = snapToPixel(transform.translation.y);
+      }
     }
     return Future.value();
   }

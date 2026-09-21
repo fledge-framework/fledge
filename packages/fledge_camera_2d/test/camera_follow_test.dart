@@ -76,5 +76,40 @@ void main() {
       // Second run — should be a no-op (already warned).
       await CameraFollowSystem().run(world);
     });
+
+    test(
+      'pixelPerfect: camera position is snapped to whole pixels',
+      () async {
+        // Target at (100.6, 200.4) — the smoothed camera position lands
+        // at non-integer coordinates, which pixelPerfect must round.
+        world.get<Transform2D>(target)!.translation.setValues(100.6, 200.4);
+        world.get<GlobalTransform2D>(target)!.matrix.setValues(
+              1, 0, 0, 0, 1, 0, 100.6, 200.4, 1,
+            );
+        world.get<CameraFollow>(cameraEntity)!.smoothing = 1.0;
+        world.get<Camera2D>(cameraEntity)!.pixelPerfect = true;
+
+        await CameraFollowSystem().run(world);
+
+        final t = world.get<Transform2D>(cameraEntity)!;
+        expect(t.translation.x, 101);
+        expect(t.translation.y, 200);
+      },
+    );
+
+    test('non-pixelPerfect keeps sub-pixel positions', () async {
+      world.get<Transform2D>(target)!.translation.setValues(100.6, 200.4);
+      world.get<GlobalTransform2D>(target)!.matrix.setValues(
+            1, 0, 0, 0, 1, 0, 100.6, 200.4, 1,
+          );
+      world.get<CameraFollow>(cameraEntity)!.smoothing = 1.0;
+      world.get<Camera2D>(cameraEntity)!.pixelPerfect = false;
+
+      await CameraFollowSystem().run(world);
+
+      final t = world.get<Transform2D>(cameraEntity)!;
+      expect(t.translation.x, closeTo(100.6, 1e-4));
+      expect(t.translation.y, closeTo(200.4, 1e-4));
+    });
   });
 }
