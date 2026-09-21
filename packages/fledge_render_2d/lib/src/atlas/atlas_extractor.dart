@@ -60,14 +60,12 @@ class AtlasSpriteExtractor extends Extractor {
             atlasSprite.flipX,
             atlasSprite.flipY,
           ),
-          anchor: _centerAnchor.clone(),
+          anchor: atlasSprite.anchor.clone(),
           size: _sizeFromRect(sourceRect),
         ),
       );
     }
   }
-
-  static final _centerAnchor = Vector2(0.5, 0.5);
 
   static Vector2 _sizeFromRect(Rect rect) {
     return Vector2(rect.width, rect.height);

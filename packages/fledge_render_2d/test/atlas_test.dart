@@ -1,7 +1,9 @@
 import 'dart:ui' show Color, Rect;
 
+import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vector_math/vector_math.dart' show Vector2;
 
 void main() {
   group('GridAtlasLayout', () {
@@ -308,5 +310,45 @@ void main() {
 
       expect(atlasSprite.index, 10);
     });
+
+    test('anchor defaults to (0.5, 0.5) and can be overridden', () {
+      const texture = TextureHandle(id: 1, width: 128, height: 128);
+      final atlas = TextureAtlas.grid(texture: texture, columns: 4, rows: 4);
+
+      final defaultAnchor = AtlasSprite(atlas: atlas);
+      expect(defaultAnchor.anchor.x, 0.5);
+      expect(defaultAnchor.anchor.y, 0.5);
+
+      final feetAnchor = AtlasSprite(atlas: atlas, anchor: Vector2(0.5, 1.0));
+      expect(feetAnchor.anchor.x, 0.5);
+      expect(feetAnchor.anchor.y, 1.0);
+    });
+
+    test(
+      'AtlasSpriteExtractor forwards the anchor onto ExtractedSprite '
+      '(regression for Batch 4 #21)',
+      () {
+        const texture = TextureHandle(id: 1, width: 64, height: 64);
+        final atlas = TextureAtlas.grid(texture: texture, columns: 2, rows: 2);
+
+        final world = World();
+        final renderWorld = RenderWorld();
+        final gt = GlobalTransform2D()
+          ..matrix.setValues(1, 0, 0, 0, 1, 0, 0, 0, 1);
+        world.spawn()
+          ..insert(AtlasSprite(atlas: atlas, anchor: Vector2(0.5, 1.0)))
+          ..insert(gt);
+
+        AtlasSpriteExtractor().extract(world, renderWorld);
+
+        var seen = 0;
+        for (final (_, s) in renderWorld.query1<ExtractedSprite>().iter()) {
+          expect(s.anchor.x, 0.5);
+          expect(s.anchor.y, 1.0);
+          seen++;
+        }
+        expect(seen, 1);
+      },
+    );
   });
 }

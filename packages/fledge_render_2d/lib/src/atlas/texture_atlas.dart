@@ -1,5 +1,7 @@
 import 'dart:ui' show Color, Rect;
 
+import 'package:vector_math/vector_math.dart' show Vector2;
+
 import '../render/extract/draw_layer.dart' show DrawLayer;
 import '../sprite/sprite.dart';
 import 'atlas_layout.dart';
@@ -150,6 +152,14 @@ class AtlasSprite {
   /// derives the sub-order from y-position; when non-zero this wins.
   int layerSubOrder;
 
+  /// Anchor point inside the sprite quad in `[0..1]` on each axis.
+  ///
+  /// `(0.5, 0.5)` — the default — centres the sprite on the entity's
+  /// transform. `(0.5, 1.0)` places the sprite's bottom edge at the
+  /// transform, so top-down games can pin an atlas frame's "feet"
+  /// to the entity position.
+  Vector2 anchor;
+
   /// Creates an atlas sprite.
   AtlasSprite({
     required this.atlas,
@@ -159,7 +169,8 @@ class AtlasSprite {
     this.flipY = false,
     this.layer = DrawLayer.characters,
     this.layerSubOrder = 0,
-  });
+    Vector2? anchor,
+  }) : anchor = anchor ?? Vector2(0.5, 0.5);
 
   /// Get the current source rectangle.
   Rect get sourceRect => atlas.getSpriteRect(index);
