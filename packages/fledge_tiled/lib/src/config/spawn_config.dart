@@ -1,6 +1,6 @@
 import 'package:fledge_ecs/fledge_ecs.dart';
+import 'package:fledge_physics/fledge_physics.dart';
 
-import '../collision/collision_shapes.dart';
 import '../components/object_layer.dart';
 
 /// Configuration for tile layer spawning.

@@ -1,15 +1,13 @@
 # Changelog
 
+## [0.2.0] - 2026-09-20
+
+### Changed
+
+- Consumer migration to the new `schedule:` API (previously `stage:`).
+
+
 ## [0.1.14] - 2026-04-14
-
-## [Unreleased]
-
-### Features
-
-- **fledge_net:** Add network packet encryption
-- **examples:** Add new drifter game demo
-
-
 
 ## [0.1.13] - 2026-04-14
 
@@ -17,32 +15,11 @@
 
 ## [0.1.12] - 2026-04-14
 
-## [Unreleased]
-
-### Features
-
-- **fledge_net:** Create net package
-
-### Miscellaneous
-
-- Resolve analysis issues
-
-
-
 ## [0.1.11] - 2026-01-21
 
 
 
 ## [0.1.10] - 2026-01-06
-
-## [Unreleased]
-
-### Miscellaneous
-
-- Bump versions
-- Bump versions
-
-
 
 ## [0.1.9] - 2026-01-06
 
@@ -76,36 +53,7 @@
 
 ## [0.1.3] - 2026-01-04
 
-## [Unreleased]
-
-### Bug Fixes
-
-- **fledge_render_2d:** Fix null safety error on private field
-
-
-
 ## [0.1.2] - 2026-01-03
-
-## [Unreleased]
-
-### Bug Fixes
-
-- **fledge_input:** Persist input transition flags through the entire frame
-- Update dependencies to latest stable versions
-- **fledge:** Update dependencies, upgrade melos to v7
-
-### Miscellaneous
-
-- **license:** Remove whitespace from license files
-- Update license text
-- Bump versions
-
-
-
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.1.1] - 2025-01-03
 

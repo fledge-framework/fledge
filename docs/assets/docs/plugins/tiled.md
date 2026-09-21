@@ -20,7 +20,7 @@ import 'package:flutter/services.dart';
 
 void main() async {
   final app = App()
-    .addPlugin(TimePlugin())
+    .addPlugin(WallTimePlugin())
     .addPlugin(TiledPlugin());
 
   // Load the tilemap

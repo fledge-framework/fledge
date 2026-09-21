@@ -7,17 +7,17 @@
 ///
 /// ```dart
 /// // Define a resource
-/// class Time {
+/// class WallTime {
 ///   double delta = 0.0;
 ///   double elapsed = 0.0;
 /// }
 ///
 /// // Insert into world
-/// world.insertResource(Time());
+/// world.insertResource(WallTime());
 ///
 /// // Access in a system
 /// @system
-/// void updateSystem(Query1<Position> query, Res<Time> time) {
+/// void updateSystem(Query1<Position> query, Res<WallTime> time) {
 ///   for (final (entity, pos) in query.iter()) {
 ///     pos.x += time.value.delta;
 ///   }
@@ -94,7 +94,7 @@ class Resources {
 ///
 /// ```dart
 /// @system
-/// void mySystem(Res<Time> time) {
+/// void mySystem(Res<WallTime> time) {
 ///   print('Delta: ${time.value.delta}');
 /// }
 /// ```
@@ -120,7 +120,7 @@ class Res<T> {
 ///
 /// ```dart
 /// @system
-/// void timeSystem(ResMut<Time> time) {
+/// void timeSystem(ResMut<WallTime> time) {
 ///   time.value.elapsed += time.value.delta;
 /// }
 /// ```

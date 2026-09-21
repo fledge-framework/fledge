@@ -1,11 +1,14 @@
 import 'package:fledge_ecs_annotations/fledge_ecs_annotations.dart';
 
 import 'entity.dart';
+import 'fixed_timestep.dart';
 import 'plugin.dart';
+import 'plugins/time_plugin.dart';
 import 'state/state_conditions.dart';
 import 'state/state_machine.dart';
 import 'system/run_condition.dart';
 import 'system/schedule.dart';
+import 'system/schedule_label.dart';
 import 'system/system.dart';
 import 'system/system_set.dart';
 import 'world.dart';
@@ -20,11 +23,11 @@ import 'world.dart';
 /// ```dart
 /// void main() async {
 ///   await App()
-///     .addPlugin(TimePlugin())
+///     .addPlugin(WallTimePlugin())
 ///     .insertResource(GameConfig())
 ///     .addEvent<CollisionEvent>()
 ///     .addSystem(MovementSystemWrapper())
-///     .addSystem(RenderSystemWrapper(), stage: CoreStage.last)
+///     .addSystem(RenderSystemWrapper(), schedule: Schedules.last)
 ///     .run();
 /// }
 /// ```
@@ -32,8 +35,17 @@ class App {
   /// The ECS world containing all entities, components, resources, and events.
   final World world = World();
 
-  /// The schedule managing system execution.
-  final Schedule schedule = Schedule();
+  /// The scheduler managing system execution.
+  final Scheduler scheduler = Scheduler();
+
+  /// Deprecated alias for [scheduler].
+  ///
+  /// The runtime container was renamed from `Schedule` to `Scheduler` in
+  /// v0.2 to free up the name for the [Schedule] label value type. This
+  /// getter keeps existing call sites (e.g. `app.schedule.systemCount`)
+  /// working for one release.
+  @Deprecated('Renamed to scheduler in v0.2. Use App.scheduler instead.')
+  Scheduler get schedule => scheduler;
 
   /// Installed plugins.
   final List<Plugin> _plugins = [];
@@ -46,6 +58,17 @@ class App {
 
   /// Whether the app is currently running.
   bool _running = false;
+
+  /// True once [Schedules.startup] has been dispatched. Startup runs
+  /// exactly once, on the first call to [tick] or [runStartup] —
+  /// whichever comes first.
+  bool _startupHasRun = false;
+
+  /// Fallback stopwatch used to compute frame delta when no [WallTime]
+  /// resource is available (i.e. the user did not add [WallTimePlugin]).
+  /// Lazily started on the first tick.
+  final Stopwatch _fallbackClock = Stopwatch();
+  double _fallbackLastSeconds = 0.0;
 
   /// The number of plugins that are considered session-level.
   /// Set by [markSessionCheckpoint].
@@ -63,6 +86,14 @@ class App {
 
   /// Callback when the app stops.
   void Function(App app)? _onStop;
+
+  /// Creates an [App] with a default [FixedTimestep] resource (60Hz,
+  /// 5-step catchup cap). Games that need a different cadence can
+  /// override the resource with `insertResource(FixedTimestep(...))`
+  /// before calling [run] / [tick].
+  App() {
+    world.insertResource(FixedTimestep());
+  }
 
   /// Adds a plugin to the app.
   ///
@@ -130,49 +161,119 @@ class App {
   /// This is a convenience method that wraps the system with an
   /// [InState] run condition.
   ///
+  /// The system's target schedule can be specified either with the
+  /// legacy [stage] parameter or the new [schedule] parameter. Passing
+  /// both throws an [ArgumentError]; passing neither defaults to
+  /// [Schedules.update].
+  ///
   /// ```dart
   /// app.addSystemInState(movementSystem, GameState.playing);
+  /// app.addSystemInState(
+  ///   movementSystem,
+  ///   GameState.playing,
+  ///   schedule: Schedules.update,
+  /// );
   /// ```
   App addSystemInState<S extends Enum>(
     System system,
     S state, {
-    CoreStage stage = CoreStage.update,
+    @Deprecated('Use schedule: Schedules.foo instead of stage: CoreStage.foo.')
+    CoreStage? stage,
+    Schedule? schedule,
   }) {
     // Wrap the system with a state condition
     final wrappedSystem = _StateConditionSystem(
       system,
       InState<S>(state).condition,
     );
-    schedule.addSystem(wrappedSystem, stage: stage);
+    _addSystemToTarget(wrappedSystem, stage: stage, schedule: schedule);
     return this;
   }
 
-  /// Adds a system to the schedule.
+  /// Adds a system to the scheduler.
+  ///
+  /// The system's target schedule can be specified either with the
+  /// legacy [stage] parameter or the new [schedule] parameter. Passing
+  /// both throws an [ArgumentError]; passing neither defaults to
+  /// [Schedules.update].
   ///
   /// ```dart
   /// app.addSystem(MovementSystemWrapper());
-  /// app.addSystem(RenderSystemWrapper(), stage: CoreStage.last);
+  /// app.addSystem(RenderSystemWrapper(), schedule: Schedules.last);
   /// ```
-  App addSystem(System system, {CoreStage stage = CoreStage.update}) {
-    schedule.addSystem(system, stage: stage);
+  App addSystem(
+    System system, {
+    @Deprecated('Use schedule: Schedules.foo instead of stage: CoreStage.foo.')
+    CoreStage? stage,
+    Schedule? schedule,
+  }) {
+    _addSystemToTarget(system, stage: stage, schedule: schedule);
     return this;
   }
 
-  /// Adds multiple systems to the schedule.
+  /// Adds multiple systems to the scheduler.
   ///
-  /// All systems are added to the same stage.
+  /// All systems are added to the same target schedule. Passing both
+  /// [stage] and [schedule] throws an [ArgumentError]; passing neither
+  /// defaults to [Schedules.update].
   ///
   /// ```dart
   /// app.addSystems([
   ///   MovementSystemWrapper(),
   ///   PhysicsSystemWrapper(),
-  /// ], stage: CoreStage.update);
+  /// ], schedule: Schedules.update);
   /// ```
-  App addSystems(List<System> systems, {CoreStage stage = CoreStage.update}) {
+  App addSystems(
+    List<System> systems, {
+    @Deprecated('Use schedule: Schedules.foo instead of stage: CoreStage.foo.')
+    CoreStage? stage,
+    Schedule? schedule,
+  }) {
     for (final system in systems) {
-      schedule.addSystem(system, stage: stage);
+      _addSystemToTarget(system, stage: stage, schedule: schedule);
     }
     return this;
+  }
+
+  /// Resolves the target [Schedule] for a system given the legacy [stage]
+  /// parameter and the new [schedule] parameter, then adds it to the
+  /// [scheduler].
+  ///
+  /// - Passing both is a caller error and throws [ArgumentError].
+  /// - Passing only [stage] maps the [CoreStage] to a [Schedule] via
+  ///   [_stageToSchedule].
+  /// - Passing only [schedule] uses it directly.
+  /// - Passing neither defaults to [Schedules.update].
+  void _addSystemToTarget(
+    System system, {
+    CoreStage? stage,
+    Schedule? schedule,
+  }) {
+    if (stage != null && schedule != null) {
+      throw ArgumentError(
+        'Pass either `stage:` or `schedule:` to addSystem — not both. '
+        '`stage:` is deprecated; prefer `schedule: Schedules.foo`.',
+      );
+    }
+    final target = schedule ??
+        (stage != null ? _stageToSchedule(stage) : Schedules.update);
+    scheduler.addSystemToSchedule(system, target);
+  }
+
+  /// Maps a legacy [CoreStage] to the equivalent [Schedule] label.
+  Schedule _stageToSchedule(CoreStage stage) {
+    switch (stage) {
+      case CoreStage.first:
+        return Schedules.first;
+      case CoreStage.preUpdate:
+        return Schedules.preUpdate;
+      case CoreStage.update:
+        return Schedules.update;
+      case CoreStage.postUpdate:
+        return Schedules.postUpdate;
+      case CoreStage.last:
+        return Schedules.last;
+    }
   }
 
   /// Configures a system set with ordering constraints and run conditions.
@@ -197,6 +298,11 @@ class App {
   /// The system will inherit the set's ordering constraints and
   /// run conditions.
   ///
+  /// The system's target schedule can be specified either with the
+  /// legacy [stage] parameter or the new [schedule] parameter. Passing
+  /// both throws an [ArgumentError]; passing neither defaults to
+  /// [Schedules.update].
+  ///
   /// ```dart
   /// app
   ///   .configureSet('physics', (s) => s.after('input'))
@@ -206,11 +312,13 @@ class App {
   App addSystemToSet(
     System system,
     String setName, {
-    CoreStage stage = CoreStage.update,
+    @Deprecated('Use schedule: Schedules.foo instead of stage: CoreStage.foo.')
+    CoreStage? stage,
+    Schedule? schedule,
   }) {
     final set = _systemSets.getOrCreate(setName);
     final wrappedSystem = SetConfiguredSystem(system, set);
-    schedule.addSystem(wrappedSystem, stage: stage);
+    _addSystemToTarget(wrappedSystem, stage: stage, schedule: schedule);
     return this;
   }
 
@@ -266,6 +374,18 @@ class App {
 
   /// Executes a single frame/tick.
   ///
+  /// Runs, in order (Phase 1c):
+  ///
+  /// 1. Event queue update.
+  /// 2. [Schedules.startup] — only on the first call, exactly once.
+  /// 3. [Schedules.first], [Schedules.preUpdate].
+  /// 4. Fixed-timestep chain via [Scheduler.runFixedIfDue] (0..
+  ///    [FixedTimestep.maxCatchupSteps] iterations).
+  /// 5. [Schedules.update], [Schedules.postUpdate], [Schedules.last].
+  /// 6. [Schedules.extract], [Schedules.render].
+  /// 7. `onTick` callback, per-frame change-detection tick, pending
+  ///    state transitions.
+  ///
   /// Useful for testing or manual control of the game loop.
   ///
   /// ```dart
@@ -275,8 +395,26 @@ class App {
     // Update event queues (swap buffers)
     world.updateEvents();
 
-    // Run all systems
-    await schedule.run(world);
+    // Startup runs once, before the first real frame.
+    if (!_startupHasRun) {
+      _startupHasRun = true;
+      await scheduler.runSchedule(Schedules.startup, world);
+    }
+
+    // Frame delta comes from WallTime if available, else the fallback
+    // stopwatch. This is consumed by the fixed-timestep accumulator.
+    final delta = _frameDeltaSeconds();
+
+    final timestep = world.getResource<FixedTimestep>()!;
+
+    await scheduler.runSchedule(Schedules.first, world);
+    await scheduler.runSchedule(Schedules.preUpdate, world);
+    await scheduler.runFixedIfDue(timestep, delta, world);
+    await scheduler.runSchedule(Schedules.update, world);
+    await scheduler.runSchedule(Schedules.postUpdate, world);
+    await scheduler.runSchedule(Schedules.last, world);
+    await scheduler.runSchedule(Schedules.extract, world);
+    await scheduler.runSchedule(Schedules.render, world);
 
     // Call tick callback
     _onTick?.call(this);
@@ -288,9 +426,47 @@ class App {
     _applyStateTransitions();
   }
 
+  /// Frame delta in seconds for the current tick.
+  ///
+  /// Prefers the [WallTime] resource (populated by `WallTimePlugin`).
+  /// If no [WallTime] resource is present, falls back to an internal
+  /// stopwatch so fixed-timestep dispatch still works without the
+  /// plugin.
+  double _frameDeltaSeconds() {
+    final time = world.getResource<WallTime>();
+    if (time != null) return time.delta;
+
+    if (!_fallbackClock.isRunning) {
+      _fallbackClock.start();
+      _fallbackLastSeconds = 0.0;
+      return 0.0;
+    }
+    final now = _fallbackClock.elapsedMicroseconds / 1e6;
+    final delta = now - _fallbackLastSeconds;
+    _fallbackLastSeconds = now;
+    return delta;
+  }
+
   /// Applies all pending state transitions.
   void _applyStateTransitions() {
     _states.applyTransitions();
+  }
+
+  /// Runs the [Schedules.startup] schedule.
+  ///
+  /// Startup auto-runs on the first call to [tick]; calling this
+  /// method explicitly beforehand is optional and idempotent — the
+  /// first invocation dispatches [Schedules.startup] and marks it done,
+  /// subsequent calls (including the implicit one inside [tick]) are
+  /// no-ops.
+  ///
+  /// Users don't need to call this in normal setup; it exists for
+  /// tests and games that want startup to complete before the first
+  /// frame's `first`/`preUpdate` schedules run in a separate step.
+  Future<void> runStartup() async {
+    if (_startupHasRun) return;
+    _startupHasRun = true;
+    await scheduler.runSchedule(Schedules.startup, world);
   }
 
   /// Walk the schedule for pairs of systems whose relative order is
@@ -320,7 +496,7 @@ class App {
   /// Returns an empty list when every same-stage conflict has an
   /// explicit ordering.
   List<OrderingAmbiguity> checkScheduleOrdering() =>
-      schedule.checkOrderingAmbiguities();
+      scheduler.checkOrderingAmbiguities();
 
   /// Stops the running game loop.
   ///
@@ -344,7 +520,7 @@ class App {
   /// ```dart
   /// final app = App()
   ///   ..addPlugin(WindowPlugin())
-  ///   ..addPlugin(TimePlugin())
+  ///   ..addPlugin(WallTimePlugin())
   ///   ..addPlugin(AudioPlugin());
   ///
   /// app.markSessionCheckpoint(); // These plugins will persist
@@ -379,8 +555,8 @@ class App {
       plugin.cleanup();
     }
 
-    // 2. Clear all systems from the schedule
-    schedule.clear();
+    // 2. Clear all systems from the scheduler
+    scheduler.clear();
 
     // 3. Rebuild systems from session plugins
     // Copy the list to avoid concurrent modification if build() adds plugins

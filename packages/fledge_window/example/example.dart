@@ -5,7 +5,7 @@ import 'package:fledge_window/fledge_window.dart';
 void main() async {
   // Start in borderless fullscreen
   final app = App()
-    ..addPlugin(TimePlugin())
+    ..addPlugin(WallTimePlugin())
     ..addPlugin(WindowPlugin.borderless(title: 'My Game'));
 
   // Or other modes:

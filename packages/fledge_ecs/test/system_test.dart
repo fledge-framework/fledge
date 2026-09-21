@@ -121,7 +121,7 @@ void main() {
       final world = World();
       final order = <String>[];
 
-      final schedule = Schedule()
+      final schedule = Scheduler()
         ..addSystem(
           FunctionSystem('first', run: (_) => order.add('first')),
           stage: CoreStage.first,
@@ -155,7 +155,7 @@ void main() {
       final endTimes = <String, DateTime>{};
 
       // Two systems that read different components
-      final schedule = Schedule()
+      final schedule = Scheduler()
         ..addSystem(AsyncFunctionSystem(
           'system1',
           reads: {ComponentId.of<Position>()},
@@ -188,7 +188,7 @@ void main() {
 
       final posId = ComponentId.of<Position>();
 
-      final schedule = Schedule()
+      final schedule = Scheduler()
         ..addSystem(FunctionSystem(
           'writer1',
           writes: {posId},
@@ -207,7 +207,7 @@ void main() {
     });
 
     test('systemCount returns total systems', () {
-      final schedule = Schedule()
+      final schedule = Scheduler()
         ..addSystem(FunctionSystem('s1', run: (_) {}))
         ..addSystem(FunctionSystem('s2', run: (_) {}))
         ..addSystem(FunctionSystem('s3', run: (_) {}), stage: CoreStage.first);

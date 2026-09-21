@@ -2,32 +2,28 @@
 
 Annotations for the [Fledge](https://fledge-framework.dev) ECS framework. Used with `fledge_ecs_generator` for code generation.
 
+[![pub package](https://img.shields.io/pub/v/fledge_ecs_annotations.svg)](https://pub.dev/packages/fledge_ecs_annotations)
+
 ## Installation
 
 ```yaml
 dependencies:
-  fledge_ecs_annotations: ^0.1.0
+  fledge_ecs_annotations: ^0.2.0
 ```
 
-## Usage
-
-This package provides annotations used by the Fledge code generator to create boilerplate code for your ECS components and systems.
-
-### Available Annotations
+## Quick Start
 
 ```dart
 import 'package:fledge_ecs_annotations/fledge_ecs_annotations.dart';
 
-// Mark a class as a component
 @component
 class Position {
   double x;
   double y;
 }
 
-// Mark a function as a system
 @system
-void moveEntities(Query<(Position, Velocity)> query, Res<Time> time) {
+void moveEntities(Query<(Position, Velocity)> query, Res<WallTime> time) {
   for (final (pos, vel) in query.iter()) {
     pos.x += vel.x * time.value.delta;
     pos.y += vel.y * time.value.delta;
@@ -35,10 +31,9 @@ void moveEntities(Query<(Position, Velocity)> query, Res<Time> time) {
 }
 ```
 
-## Related Packages
+## Documentation
 
-- [fledge_ecs](https://pub.dev/packages/fledge_ecs) - Core ECS framework
-- [fledge_ecs_generator](https://pub.dev/packages/fledge_ecs_generator) - Code generator
+See the [Fledge documentation site](https://fledge-framework.dev/docs) for guides, API reference, and advanced usage.
 
 ## License
 

@@ -58,7 +58,7 @@ class ComponentId implements Comparable<ComponentId> {
 
   /// The user-facing name of the component type this id was registered
   /// for — e.g. `Velocity` instead of `ComponentId(3)`. Used in
-  /// diagnostics like `Schedule.checkOrderingAmbiguities`.
+  /// diagnostics like `Scheduler.checkOrderingAmbiguities`.
   String get debugName =>
       id < _idToType.length ? '${_idToType[id]}' : 'ComponentId($id)';
 

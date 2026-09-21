@@ -72,7 +72,7 @@ abstract class PluginGroup implements Plugin {
 class DefaultPlugins extends PluginGroup {
   @override
   List<Plugin> get plugins => [
-    TimePlugin(),
+    WallTimePlugin(),
     FrameLimiterPlugin(targetFps: 60),
     InputPlugin(),
     RenderPlugin(),
@@ -110,16 +110,16 @@ final debugPlugin = FunctionPlugin(
 
 Core plugins are bundled with `fledge_ecs` and provide foundational functionality.
 
-### TimePlugin
+### WallTimePlugin
 
-Provides `Time` resource with delta and elapsed time.
+Provides `WallTime` resource with delta and elapsed time.
 
 ```dart
-App().addPlugin(TimePlugin());
+App().addPlugin(WallTimePlugin());
 
 @system
 Future<void> mySystem(World world) async {
-  final time = world.getResource<Time>()!;
+  final time = world.getResource<WallTime>()!;
   print('Delta: ${time.delta}');
   print('Elapsed: ${time.elapsed}');
   print('Frame: ${time.frameCount}');
@@ -127,7 +127,7 @@ Future<void> mySystem(World world) async {
 ```
 
 **Provides:**
-- `Time` resource with `delta`, `elapsed`, and `frameCount`
+- `WallTime` resource with `delta`, `elapsed`, and `frameCount`
 - `TimeUpdateSystem` that runs at `CoreStage.first`
 
 ### FrameLimiterPlugin
@@ -229,9 +229,9 @@ Handle dependencies between plugins:
 class RenderPlugin implements Plugin {
   @override
   void build(App app) {
-    // Ensure TimePlugin is added first
-    if (!app.world.hasResource<Time>()) {
-      throw StateError('RenderPlugin requires TimePlugin');
+    // Ensure WallTimePlugin is added first
+    if (!app.world.hasResource<WallTime>()) {
+      throw StateError('RenderPlugin requires WallTimePlugin');
     }
 
     app.addSystem(RenderSystemWrapper(), stage: CoreStage.last);

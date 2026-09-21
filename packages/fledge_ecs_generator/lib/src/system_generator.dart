@@ -14,7 +14,7 @@ import 'package:source_gen/source_gen.dart';
 /// Example input:
 /// ```dart
 /// @system
-/// void movementSystem(Query2<Position, Velocity> query, Res<Time> time) {
+/// void movementSystem(Query2<Position, Velocity> query, Res<WallTime> time) {
 ///   for (final (_, pos, vel) in query.iter()) {
 ///     pos.x += vel.dx * time.value.delta;
 ///   }
@@ -29,13 +29,13 @@ import 'package:source_gen/source_gen.dart';
 ///     name: 'movementSystem',
 ///     writes: {ComponentId.of<Position>()},
 ///     reads: {ComponentId.of<Velocity>()},
-///     resourceReads: {Time},
+///     resourceReads: {WallTime},
 ///   );
 ///
 ///   @override
 ///   Future<void> run(World world) {
 ///     final query = world.query2<Position, Velocity>();
-///     final time = Res<Time>(world.resource<Time>());
+///     final time = Res<WallTime>(world.resource<WallTime>());
 ///     movementSystem(query, time);
 ///     return Future.value();
 ///   }
@@ -145,7 +145,12 @@ class SystemGenerator extends GeneratorForAnnotation<SystemAnnotation> {
       if (type is InterfaceType) {
         final typeName = type.element.name ?? '';
 
-        // Check for Query types
+        // Check for Query / QueryMut types.
+        //
+        // We match both `QueryN<...>` (read-only intent marker) and
+        // `QueryMutN<...>` (write intent marker). The distinction is decoded
+        // inside [_analyzeQueryParameter] which routes the component types
+        // into the reads or writes bucket accordingly.
         if (typeName.startsWith('Query')) {
           _analyzeQueryParameter(type, analysis, paramName);
         }
@@ -292,28 +297,34 @@ class SystemGenerator extends GeneratorForAnnotation<SystemAnnotation> {
     _ParameterAnalysis analysis,
     String paramName,
   ) {
+    // Distinguish read vs write intent by the parameter's declared type name.
+    //
+    // `QueryN<...>`    -> every T is a read.
+    // `QueryMutN<...>` -> every T is a write.
+    //
+    // We deliberately do NOT try to infer access patterns from the function
+    // body: mixed reads/writes on the same query are out of scope. Users
+    // needing mixed access should split the query into two parameters (one
+    // Query, one QueryMut) or hand-write SystemMeta on a class-based
+    // `System` subclass.
+    final typeName = type.element.name ?? '';
+    final isMut = typeName.startsWith('QueryMut');
     final typeArgs = type.typeArguments;
 
-    // Extract component types from Query type arguments
-    // Query1<T1>, Query2<T1, T2>, etc.
     final componentTypes = <String>[];
-
     for (final arg in typeArgs) {
       if (arg is InterfaceType) {
         componentTypes.add(arg.element.name!);
       }
     }
 
-    // For now, assume first component is written, rest are read
-    // This is a simplification - real analysis would check actual usage
-    if (componentTypes.isNotEmpty) {
-      // All query components are considered writes (mutable access)
-      for (final componentType in componentTypes) {
-        analysis.writes.add('ComponentId.of<$componentType>()');
-      }
+    final bucket = isMut ? analysis.writes : analysis.reads;
+    for (final t in componentTypes) {
+      bucket.add('ComponentId.of<$t>()');
     }
 
-    // Generate query setup
+    // Generate query setup: pick the queryN or queryMutN factory based on
+    // the parameter's declared type.
     if (typeArgs.isNotEmpty) {
       final typeArgsStr = typeArgs.map((t) {
         if (t is InterfaceType) {
@@ -322,10 +333,10 @@ class SystemGenerator extends GeneratorForAnnotation<SystemAnnotation> {
         return t.toString();
       }).join(', ');
 
-      // Determine query method based on number of type args
-      final queryMethod = 'query${typeArgs.length}';
+      final method =
+          isMut ? 'queryMut${typeArgs.length}' : 'query${typeArgs.length}';
       analysis.parameterSetup
-          .add('final $paramName = world.$queryMethod<$typeArgsStr>();');
+          .add('final $paramName = world.$method<$typeArgsStr>();');
     }
   }
 }

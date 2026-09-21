@@ -2,27 +2,21 @@
 
 Code generator for the [Fledge](https://fledge-framework.dev) ECS framework. Generates component registration and system wrappers from annotations.
 
-## Installation
+[![pub package](https://img.shields.io/pub/v/fledge_ecs_generator.svg)](https://pub.dev/packages/fledge_ecs_generator)
 
-Add to your `dev_dependencies`:
+## Installation
 
 ```yaml
 dev_dependencies:
-  fledge_ecs_generator: ^0.1.0
+  fledge_ecs_generator: ^0.2.0
   build_runner: ^2.4.0
-```
 
-And add `fledge_ecs_annotations` to your regular dependencies:
-
-```yaml
 dependencies:
-  fledge_ecs: ^0.1.0
-  fledge_ecs_annotations: ^0.1.0
+  fledge_ecs: ^0.2.0
+  fledge_ecs_annotations: ^0.2.0
 ```
 
-## Usage
-
-### 1. Annotate Your Code
+## Quick Start
 
 ```dart
 import 'package:fledge_ecs_annotations/fledge_ecs_annotations.dart';
@@ -35,7 +29,7 @@ class Position {
 }
 
 @system
-void moveEntities(Query<(Position, Velocity)> query, Res<Time> time) {
+void moveEntities(Query<(Position, Velocity)> query, Res<WallTime> time) {
   for (final (pos, vel) in query.iter()) {
     pos.x += vel.x * time.value.delta;
     pos.y += vel.y * time.value.delta;
@@ -43,29 +37,25 @@ void moveEntities(Query<(Position, Velocity)> query, Res<Time> time) {
 }
 ```
 
-### 2. Run the Generator
+Run the generator:
 
 ```bash
 dart run build_runner build
 ```
 
-### 3. Use Generated Code
-
-The generator creates registration code that you can use to set up your app:
+Then import the generated code:
 
 ```dart
 import 'my_game.g.dart';
 
 void main() {
-  final app = App()
-    ..addPlugin(GeneratedPlugin());
+  final app = App()..addPlugin(GeneratedPlugin());
 }
 ```
 
-## Related Packages
+## Documentation
 
-- [fledge_ecs](https://pub.dev/packages/fledge_ecs) - Core ECS framework
-- [fledge_ecs_annotations](https://pub.dev/packages/fledge_ecs_annotations) - Annotation definitions
+See the [Fledge documentation site](https://fledge-framework.dev/docs) for guides, API reference, and advanced usage.
 
 ## License
 

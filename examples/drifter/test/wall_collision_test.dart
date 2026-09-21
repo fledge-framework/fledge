@@ -4,7 +4,6 @@ import 'package:fledge_ecs/fledge_ecs.dart' hide State;
 import 'package:fledge_input/fledge_input.dart';
 import 'package:fledge_physics/fledge_physics.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart';
-import 'package:fledge_tiled/fledge_tiled.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 

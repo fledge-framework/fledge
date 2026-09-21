@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0] - 2026-09-20
+
+### Changed
+
+- Consumer migration to `WallTime` and `Schedules.*` labels where applicable.
+
+
 ## [0.1.14] - 2026-04-14
 
 ## [0.1.14] - 2026-04-14

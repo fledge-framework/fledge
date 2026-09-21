@@ -14,7 +14,7 @@ class TransitionFadeSystem implements System {
   @override
   SystemMeta get meta => const SystemMeta(
         name: 'TransitionFadeSystem',
-        resourceReads: {Time},
+        resourceReads: {WallTime},
         resourceWrites: {TransitionState},
       );
 
@@ -31,7 +31,7 @@ class TransitionFadeSystem implements System {
   }
 
   void _runSync(World world) {
-    final time = world.getResource<Time>();
+    final time = world.getResource<WallTime>();
     final transitionState = world.getResource<TransitionState>();
 
     if (time == null || transitionState == null) return;

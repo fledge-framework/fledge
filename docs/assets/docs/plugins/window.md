@@ -21,7 +21,7 @@ void main() async {
   // Start in fullscreen mode
   await App()
     .addPlugin(WindowPlugin.fullscreen(title: 'My Game'))
-    .addPlugin(TimePlugin())
+    .addPlugin(WallTimePlugin())
     .run();
 }
 ```
@@ -209,7 +209,7 @@ void main() async {
     .build();
 
   await App()
-    .addPlugin(TimePlugin())
+    .addPlugin(WallTimePlugin())
     .addPlugin(WindowPlugin.borderless(title: 'My Game'))
     .addPlugin(InputPlugin.simple(
       context: InputContext(name: 'default', map: inputMap),

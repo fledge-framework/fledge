@@ -1,7 +1,13 @@
-import 'package:fledge_render/fledge_render.dart';
+import 'dart:ui' show Canvas, Color, Rect;
+
+import 'package:vector_math/vector_math.dart';
 
 import '../batch/sprite_batch.dart';
-import '../camera/camera2d.dart';
+import '../render/extract/camera_view.dart';
+import '../render/graph/render_node.dart';
+import '../render/graph/slot.dart';
+import '../render/world/render_world.dart';
+import 'sprite.dart';
 
 /// Render node that draws sprite batches.
 ///
@@ -31,10 +37,6 @@ class SpriteRenderNode implements RenderNode {
 
     if (batches == null) return;
 
-    // Get the frame context for drawing
-    final frame = context.frameContext;
-    if (frame == null) return;
-
     // Draw each batch
     for (final batch in batches.all) {
       if (batch.isEmpty) continue;
@@ -57,53 +59,79 @@ class SpriteRenderNode implements RenderNode {
   }
 }
 
+/// Executes an atlas-batched sprite draw. Backend-owned.
+///
+/// Concrete implementations live in `lib/src/backend/`:
+/// [CanvasSpriteDrawer] (default) and [GpuSpriteDrawer] (stub). A
+/// drawer is installed as a resource by [RenderPlugin] based on the
+/// [RenderBackend] selected on plugin construction.
+abstract class SpriteDrawer {
+  /// Draw a batch of sprites sharing [texture].
+  ///
+  /// Called once per batch per frame from [SpriteRenderNode]. Empty
+  /// batches must be safe (implementations should no-op on empty
+  /// input and MUST NOT issue a backend draw call for zero sprites).
+  void drawSpriteBatch(TextureHandle texture, List<BackendSpriteData> batch);
+}
+
 /// Context for sprite rendering.
 class SpriteRenderContext {
   /// The render world with extracted sprites.
   final RenderWorld renderWorld;
 
-  /// The frame context for issuing draw calls (may be null in tests).
-  final dynamic frameContext;
+  /// Backend drawer that executes the atlas draw.
+  final SpriteDrawer drawer;
 
-  /// Callback to draw a sprite batch.
-  final void Function(dynamic texture, List<BackendSpriteData> sprites)?
-      _drawCallback;
+  /// Live canvas for the current frame. Only populated when the
+  /// backend is [RenderBackend.canvas] and the outer widget passes
+  /// its `Canvas` down per `paint()` call.
+  ///
+  /// Nothing in [SpriteRenderNode] reads this — the drawer holds its
+  /// own canvas reference. It is exposed here so a future node
+  /// (e.g. a custom UI overlay) can share the same canvas without
+  /// re-plumbing.
+  final Canvas? canvas;
 
   /// Creates a sprite render context.
-  SpriteRenderContext({
+  const SpriteRenderContext({
     required this.renderWorld,
-    this.frameContext,
-    void Function(dynamic texture, List<BackendSpriteData> sprites)?
-        drawCallback,
-  }) : _drawCallback = drawCallback;
+    required this.drawer,
+    this.canvas,
+  });
 
-  /// Draw a sprite batch.
-  void drawSpriteBatch(dynamic texture, List<BackendSpriteData> sprites) {
-    _drawCallback?.call(texture, sprites);
+  /// Draw a sprite batch through the installed [drawer].
+  void drawSpriteBatch(TextureHandle texture, List<BackendSpriteData> batch) {
+    drawer.drawSpriteBatch(texture, batch);
   }
 }
 
-/// Sprite data for backend rendering.
+/// Sprite data for backend rendering. Immutable.
 ///
-/// Contains all the information needed by the backend to draw a sprite.
+/// The 2D sprite pipeline produces one instance of this per rendered
+/// sprite and hands a `List<BackendSpriteData>` to the current
+/// [SpriteDrawer]. Fields were previously typed `dynamic`; Phase 3a
+/// tightens them so the backend contract is checked at compile time.
 class BackendSpriteData {
-  /// Source rectangle in the texture.
-  final dynamic sourceRect;
+  /// Source rectangle in the texture (pixel-space).
+  final Rect sourceRect;
 
-  /// Destination rectangle on screen.
-  final dynamic destRect;
+  /// Destination rectangle in local space, before [transform] is
+  /// applied. Centred on the sprite's anchor offset.
+  final Rect destRect;
 
-  /// Transformation matrix.
-  final dynamic transform;
+  /// Local-to-world transform for this sprite.
+  final Matrix3 transform;
 
-  /// Tint color.
-  final dynamic color;
+  /// Tint colour applied by the backend.
+  final Color color;
 
-  /// View-projection matrix from camera.
-  final dynamic viewProjection;
+  /// Optional view-projection matrix from the active camera. `null`
+  /// means "no camera — draw in raw world space." Canvas backends
+  /// apply this either as a pre-multiply or via `canvas.transform`.
+  final Matrix4? viewProjection;
 
   /// Creates backend sprite data.
-  BackendSpriteData({
+  const BackendSpriteData({
     required this.sourceRect,
     required this.destRect,
     required this.transform,

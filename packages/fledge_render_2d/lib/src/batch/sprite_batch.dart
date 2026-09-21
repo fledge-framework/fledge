@@ -1,9 +1,10 @@
 import 'dart:ui' show Color, Offset, Rect;
 
 import 'package:fledge_ecs/fledge_ecs.dart';
-import 'package:fledge_render/fledge_render.dart';
 import 'package:vector_math/vector_math.dart';
 
+import '../render/stages/render_schedule.dart';
+import '../render/world/render_world.dart';
 import '../sprite/extracted_sprite.dart';
 import '../sprite/sprite.dart';
 

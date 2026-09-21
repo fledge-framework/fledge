@@ -4,14 +4,15 @@ import 'package:fledge_physics/fledge_physics.dart';
 import '../components.dart';
 import '../resources.dart';
 
-/// Drains this frame's `CollisionEvent`s on the player, despawns any
-/// collided pickups, and bumps the run score + high score.
+/// Drains this frame's `CollisionEvent`s that involve the player,
+/// despawns any collided pickups, and bumps the run score + high score.
 ///
-/// Must run after `CollisionDetectionSystem` (so this frame's events
-/// exist) and before `CollisionCleanupSystem` (which is at
-/// `CoreStage.last`). Since detection is `CoreStage.update`, registering
-/// this system in `CoreStage.update` after the physics plugin keeps it
-/// ordered correctly.
+/// Reads from the ECS event queue (`world.eventReader<CollisionEvent>()`)
+/// rather than a per-entity component, so archetype churn on collisions
+/// is zero and multiple collisions per frame all survive.
+///
+/// Ordering: must run after `collision_detection` so we see the events
+/// it produced this frame — `SystemMeta.after` pins that explicitly.
 class PickupCollectionSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
@@ -19,12 +20,14 @@ class PickupCollectionSystem implements System {
         reads: {
           ComponentId.of<Player>(),
           ComponentId.of<Pickup>(),
-          ComponentId.of<CollisionEvent>(),
         },
+        eventReads: {CollisionEvent},
         resourceWrites: {RunScore, HighScore},
         // The events we consume are produced by `collision_detection`
-        // this frame. Note: the registered system name is the
-        // snake_case one, not the class name.
+        // (last frame; the queue is double-buffered). Even though the
+        // read/write cross frames semantically, we still declare
+        // `after: ['collision_detection']` so the ordering intent is
+        // explicit and `checkScheduleOrdering()` sees no ambiguity.
         after: const ['collision_detection'],
       );
 
@@ -42,12 +45,19 @@ class PickupCollectionSystem implements System {
 
     final toDespawn = <Entity>{};
 
-    // Each collision fires bidirectionally, so querying on the player
-    // side gives us every (player, pickup) pair in one pass.
-    for (final (_, event, _) in world.query2<CollisionEvent, Player>().iter()) {
-      final other = event.other;
-      if (!world.has<Pickup>(other)) continue;
-      toDespawn.add(other);
+    // Each collision produces exactly one event (unordered pair). Look
+    // for a (player, pickup) pair on either side.
+    for (final evt in world.eventReader<CollisionEvent>().read()) {
+      final Entity? pickup;
+      if (world.has<Player>(evt.entityA) && world.has<Pickup>(evt.entityB)) {
+        pickup = evt.entityB;
+      } else if (world.has<Player>(evt.entityB) &&
+          world.has<Pickup>(evt.entityA)) {
+        pickup = evt.entityA;
+      } else {
+        pickup = null;
+      }
+      if (pickup != null) toDespawn.add(pickup);
     }
 
     for (final pickup in toDespawn) {

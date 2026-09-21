@@ -95,6 +95,18 @@ class NetworkTick {
 ///   .addPlugin(NetworkPlugin())
 ///   .run();
 /// ```
+///
+/// ## Scheduling netcode systems
+///
+/// Prediction / reconciliation / state-apply systems must run on
+/// `Schedules.fixedUpdate` (driven by the `FixedTimestep` resource, 60Hz
+/// by default). Only the fixed-timestep schedule guarantees the client
+/// and server tick at the same rate — the variable-rate `Schedules.update`
+/// runs at the render frame rate and would cause prediction to desync.
+///
+/// Best-effort transport bookkeeping (packet pumping, ping/pong,
+/// congestion) can run on `Schedules.first` / `Schedules.last`, which
+/// are frame-rate driven and don't require lockstep with the server.
 class NetworkPlugin implements Plugin {
   /// Initial network configuration.
   final NetworkConfig config;

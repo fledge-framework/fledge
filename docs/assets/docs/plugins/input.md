@@ -36,7 +36,7 @@ void main() async {
 
   // Build the app
   final app = App()
-    .addPlugin(TimePlugin())
+    .addPlugin(WallTimePlugin())
     .addPlugin(inputPlugin)
     .addSystem(playerSystem);
 

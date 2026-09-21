@@ -156,14 +156,16 @@ abstract class NetworkState {
 }
 ```
 
-The built-in `TransformNetworkState` syncs position and rotation (7 floats, 28 bytes):
+Fledge is a 2D engine, so the built-in `Transform2DNetworkState` syncs position and rotation as three float32s (12 bytes, plus a 1-byte delta mask):
 
 ```dart
-final state = TransformNetworkState()
-  ..x = position.x
-  ..y = position.y
-  ..z = position.z;
+final state = Transform2DNetworkState()
+  ..x = transform.translation.x
+  ..y = transform.translation.y
+  ..rotation = transform.rotation; // radians
 ```
+
+Delta encoding uses a 3-bit mask (X, Y, rotation) with a 0.001 epsilon threshold — fields whose difference falls below epsilon are not transmitted, and `createDelta` returns `null` when nothing changed.
 
 ### Client-Side Interpolation
 
@@ -184,33 +186,42 @@ final smoothed = interpolation.currentState;
 
 ## Input Prediction
 
-Clients predict locally and reconcile when the server confirms:
+Clients predict locally and reconcile when the server confirms. Prediction, reconciliation, and state-apply logic **must** run on `Schedules.fixedUpdate` (driven by the `FixedTimestep` resource — 60Hz by default). Only the fixed-timestep schedule guarantees the client and server advance the sim at the same rate; running prediction on the variable-rate `Schedules.update` desyncs from the host.
+
+Best-effort transport work (packet pumping, ping/pong, `host.update()` / `client.update()`) can stay on `Schedules.first` or `Schedules.last`, which are frame-rate driven.
 
 ```dart
 final prediction = ClientPrediction();
 
-// Each frame — record input and predicted state
-final input = InputFrame(tick: prediction.nextTick())
-  ..moveX = controller.moveX
-  ..moveY = controller.moveY
-  ..setButton(InputButton.primaryAction, firing);
+// Register the prediction system on the fixed-timestep schedule.
+app.addSystem(
+  FunctionSystem('predictInput', run: (world) {
+    final input = InputFrame(tick: prediction.nextTick())
+      ..moveX = controller.moveX
+      ..moveY = controller.moveY
+      ..setButton(InputButton.primaryAction, firing);
 
-prediction.recordInput(input, predictedState);
+    prediction.recordInput(input, predictedState);
 
-// Send unacknowledged inputs to host
-final unacked = prediction.getUnackedInputs();
-client.send(PacketType.input, serializeInputs(unacked));
+    // Send unacknowledged inputs to host.
+    final unacked = prediction.getUnackedInputs();
+    client.send(PacketType.input, serializeInputs(unacked));
+  }),
+  schedule: Schedules.fixedUpdate,
+);
 
-// When server state arrives — reconcile
+// When server state arrives — reconcile.
 final inputsToReplay = prediction.reconcile(serverTick, serverState);
-// Re-simulate from server state using replayed inputs
+// Re-simulate from server state using replayed inputs.
 ```
+
+> Determinism is scoped to the fixed-timestep loop. `fledge_net` relies on both peers running the same `FixedTimestep.stepDuration` for prediction to converge; it is *not* a rollback / GGPO-style netcode.
 
 ### InputFrame
 
 Each input frame captures a tick's worth of player input:
 
-- Movement: `moveX`, `moveY`, `moveZ` (normalized -1..1)
+- Movement: `moveX`, `moveY` (normalized -1..1). `moveZ` is available for games that use a third axis (e.g. jump strength) but is not used by the built-in 2D state sync.
 - Look: `lookX`, `lookY`
 - Buttons: 32-bit bitfield via `setButton()` / `isButtonPressed()`
 - Custom data: optional `Uint8List` for game-specific input
@@ -239,13 +250,19 @@ Packets use a 20-byte header with a "FLEG" magic number:
 | Field | Size | Description |
 |-------|------|-------------|
 | Magic | 4 bytes | `0x464C4547` ("FLEG") |
-| Version | 1 byte | Protocol version (currently 1) |
+| Version | 1 byte | Protocol version (currently `2`) |
 | Type | 1 byte | PacketType enum |
 | Sequence | 2 bytes | Packet sequence number |
 | Ack | 2 bytes | Last received sequence from remote |
 | AckBits | 4 bytes | Bitmap of last 32 received sequences |
 | Timestamp | 4 bytes | Milliseconds for RTT calculation |
 | Reserved | 2 bytes | Reserved for future use |
+
+### Protocol version mismatch
+
+The protocol version was bumped to `2` when `Transform2DNetworkState` replaced the older 3D transform format. `PacketHeader.deserialize` returns `null` for any packet whose version doesn't match `PacketHeader.version`, so peers running incompatible versions cannot exchange traffic.
+
+Clients surface the mismatch through `NetworkClient.onStateChange` — when the client receives bytes carrying the protocol magic but a different version byte, it transitions to `ClientState.failed` with a reason of the form `"Protocol version mismatch: local v2, server v1"`.
 
 ### PacketType
 
@@ -294,7 +311,7 @@ Resources inserted:
 - `NetworkTick` — current server and local tick counters
 - `NetworkEntityRegistry` — entity ↔ netId mapping
 
-You create your own systems to drive the host/client, poll for data, and sync state.
+You create your own systems to drive the host/client, poll for data, and sync state. Place prediction / reconciliation / state-apply systems on `Schedules.fixedUpdate` so they tick at the same rate as the server sim (see [Input Prediction](#input-prediction)). Transport bookkeeping (`host.update()`, `client.update()`) can run on `Schedules.first` or `Schedules.last`.
 
 ## Reliable Delivery
 

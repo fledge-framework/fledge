@@ -11,7 +11,7 @@ class ChannelFadeSystem implements System {
   @override
   SystemMeta get meta => const SystemMeta(
         name: 'ChannelFadeSystem',
-        resourceReads: {Time},
+        resourceReads: {WallTime},
         resourceWrites: {VolumeChannels},
       );
 
@@ -23,7 +23,7 @@ class ChannelFadeSystem implements System {
 
   @override
   Future<void> run(World world) async {
-    final time = world.getResource<Time>();
+    final time = world.getResource<WallTime>();
     final channels = world.getResource<VolumeChannels>();
     if (time == null || channels == null) return;
     channels.advanceFades(time.delta);

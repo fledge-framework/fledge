@@ -1,7 +1,9 @@
+import 'package:fledge_assets/fledge_assets.dart';
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_render/fledge_render.dart' show Extractors;
 
 import 'extraction/tilemap_extractor.dart';
+import 'resources/tiled_assets.dart' show TilemapAsset, TilesetAsset;
 import 'resources/tilemap_assets.dart';
 import 'resources/tileset_registry.dart';
 import 'systems/tile_animation_system.dart';
@@ -16,7 +18,7 @@ import 'systems/tilemap_spawn_system.dart';
 ///
 /// ```dart
 /// final app = App()
-///   .addPlugin(TimePlugin())      // Required for animations
+///   .addPlugin(WallTimePlugin())  // Required for animations
 ///   .addPlugin(RenderPlugin())    // For render extraction
 ///   .addPlugin(TiledPlugin());
 ///
@@ -56,16 +58,27 @@ class TiledPlugin implements Plugin {
 
   @override
   void build(App app) {
-    // Insert resources
-    app.insertResource(TilemapAssets()).insertResource(TilesetRegistry());
+    // Insert resources — post-Phase-5 `Assets<TilemapAsset>` /
+    // `Assets<TilesetAsset>` alongside the deprecated key-based
+    // facades. The `Asset` suffix in the type parameters distinguishes
+    // the loaded value from the per-entity `Tilemap` component in
+    // `src/components/tilemap.dart` (which points at a
+    // `LoadedTilemap`).
+    app
+        .insertResource<Assets<TilemapAsset>>(Assets<TilemapAsset>())
+        .insertResource<Assets<TilesetAsset>>(Assets<TilesetAsset>())
+        // ignore: deprecated_member_use_from_same_package
+        .insertResource(TilemapAssets())
+        // ignore: deprecated_member_use_from_same_package
+        .insertResource(TilesetRegistry());
 
     // Register events
     app.addEvent<SpawnTilemapEvent>().addEvent<TilemapSpawnedEvent>();
 
     // Add systems
     app
-        .addSystem(TilemapSpawnSystem(), stage: CoreStage.first)
-        .addSystem(TileAnimationSystem(), stage: CoreStage.update);
+        .addSystem(TilemapSpawnSystem(), schedule: Schedules.first)
+        .addSystem(TileAnimationSystem(), schedule: Schedules.update);
 
     // Register extractor with render system (if present)
     final extractors = app.world.getResource<Extractors>();

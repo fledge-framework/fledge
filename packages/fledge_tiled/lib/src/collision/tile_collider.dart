@@ -1,6 +1,7 @@
+import 'package:fledge_physics/fledge_physics.dart';
+
 import '../components/object_layer.dart';
 import '../resources/tileset_registry.dart';
-import 'collision_shapes.dart';
 
 /// Utility for generating collision shapes from Tiled data.
 class TileCollider {

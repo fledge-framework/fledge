@@ -1,11 +1,11 @@
 import 'dart:ui';
 
 import 'package:fledge_ecs/fledge_ecs.dart';
+import 'package:fledge_physics/fledge_physics.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart'
     show Transform2D, GlobalTransform2D;
 import 'package:tiled/tiled.dart' as tiled;
 
-import '../collision/collision_shapes.dart';
 import '../collision/tile_collider.dart';
 import '../components/object_layer.dart';
 import '../components/tile_layer.dart';

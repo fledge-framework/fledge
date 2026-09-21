@@ -11,8 +11,7 @@ This is the "does everything wire up cleanly?" example. In ~500 LOC across the `
 | Package | Integration point |
 |---|---|
 | `fledge_ecs` | App + World, resources, marker components, systems, stage ordering (`preUpdate` → `update` → `last`) |
-| `fledge_render_2d` | `Transform2D` positions, `TransformPropagateSystem` wired manually (there's no plugin) |
-| `fledge_render` | `RenderPlugin` + `Extractors` + a custom `Extractor` to build a `RenderWorld` snapshot each frame |
+| `fledge_render_2d` | `Transform2D` positions, `TransformPropagateSystem` wired manually (there's no plugin), `Sprite` + `SpriteExtractor` + `FledgeRenderView` for canvas-backed sprite rendering |
 | `fledge_input` | `InputWidget` with a caller-owned `FocusNode`, arrow/WASD + action keys via `bindArrows`/`bindWasd`/`bindKey`, pause-on-blur |
 | `fledge_physics` | `Velocity` + `Collider` + `CollisionConfig` with game-defined layer bits; sensor pickups vs solid walls; `CollisionEvent` consumption |
 | `fledge_tiled` | Source of `Collider` / `RectangleShape` (yes — the shapes live here, not in `fledge_physics`) |
@@ -53,8 +52,6 @@ lib/
 ├── components.dart                    Player / Wall / Pickup marker components
 ├── resources.dart                     GameBounds, RunScore, HighScore (Saveable), Load/ResetRequested
 ├── actions.dart                       DrifterAction enum + InputMap builder
-├── extraction.dart                    Main-world → render-world snapshot extractors
-├── render/game_painter.dart           Reads ONLY the render world; draws via Canvas primitives
 └── systems/
     ├── input_movement_system.dart     ActionState → player Velocity
     ├── velocity_apply_system.dart     Integrates Velocity into Transform2D (post collision resolution)

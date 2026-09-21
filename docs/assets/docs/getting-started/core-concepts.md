@@ -217,7 +217,7 @@ world.spawn()
   ..insert(Position(0, 0));    // This entity's position
 
 // Resources are global
-world.insertResource(Time());  // One Time for everyone
+world.insertResource(WallTime());  // One Time for everyone
 ```
 
 ### Built-in Resources
@@ -226,7 +226,7 @@ Fledge provides these via plugins:
 
 | Resource | Plugin | Purpose |
 |----------|--------|---------|
-| `Time` | `TimePlugin` | Delta time, elapsed time |
+| `Time` | `WallTimePlugin` | Delta time, elapsed time |
 
 ## Archetypes
 
@@ -344,7 +344,7 @@ class CombatPlugin implements Plugin {
 
 // Use plugins
 final app = App()
-  ..addPlugin(TimePlugin())
+  ..addPlugin(WallTimePlugin())
   ..addPlugin(CombatPlugin());
 ```
 

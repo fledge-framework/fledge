@@ -74,12 +74,12 @@ class MovementSystem implements System {
   SystemMeta get meta => SystemMeta(
     name: 'movement',
     writes: {ComponentId.of<Position>(), ComponentId.of<Velocity>()},
-    resourceReads: {ScreenSize, Time},
+    {ScreenSize, WallTime},
   );
 
   @override
   Future<void> run(World world) async {
-    final dt = world.getResource<Time>()?.delta ?? 0.016;
+    final dt = world.getResource<WallTime>()?.delta ?? 0.016;
     final screen = world.getResource<ScreenSize>()!;
 
     for (final (_, pos, vel, square) in
@@ -122,7 +122,7 @@ class ScreenSize {
 }
 ```
 
-We're using `Time` from Fledge's built-in `TimePlugin`, and we need `ScreenSize` to know where to bounce.
+We're using `Time` from Fledge's built-in `WallTimePlugin`, and we need `ScreenSize` to know where to bounce.
 
 ## Step 4: Create a Plugin
 
@@ -197,7 +197,7 @@ class _BouncingSquareWidgetState extends State<BouncingSquareWidget>
 
     // Create the Fledge app
     _app = App()
-      ..addPlugin(TimePlugin())
+      ..addPlugin(WallTimePlugin())
       ..addPlugin(BouncingSquarePlugin(
         screenWidth: 400,
         screenHeight: 300,
@@ -307,7 +307,7 @@ Let's trace through a single frame:
 
 1. **AnimationController** triggers `_gameLoop()`
 2. **`app.tick()`** runs all systems in order
-3. **TimePlugin's system** updates the `Time` resource with delta time
+3. **WallTimePlugin's system** updates the `WallTime` resource with delta time
 4. **MovementSystem** queries for entities with `Position`, `Velocity`, and `Square`
 5. **MovementSystem** updates positions and handles bouncing
 6. **`setState()`** triggers Flutter to repaint

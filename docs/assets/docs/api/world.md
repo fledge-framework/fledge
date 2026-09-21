@@ -178,7 +178,7 @@ void insertResource<T>(T resource)
 Inserts a global resource. Replaces if already exists.
 
 ```dart
-world.insertResource(Time());
+world.insertResource(WallTime());
 world.insertResource(GameConfig(difficulty: 'hard'));
 ```
 
@@ -191,7 +191,7 @@ T? getResource<T>()
 Gets a resource by type, or `null` if not found.
 
 ```dart
-final time = world.getResource<Time>();
+final time = world.getResource<WallTime>();
 if (time != null) {
   print('Delta: ${time.delta}');
 }

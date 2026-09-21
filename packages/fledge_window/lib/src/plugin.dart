@@ -127,13 +127,13 @@ class WindowPlugin implements Plugin {
 
     // Add systems
     // Init runs first and only once
-    app.addSystem(WindowInitSystem(config), stage: CoreStage.first);
+    app.addSystem(WindowInitSystem(config), schedule: Schedules.first);
 
     // Display sync runs periodically
-    app.addSystem(DisplaySyncSystem(), stage: CoreStage.first);
+    app.addSystem(DisplaySyncSystem(), schedule: Schedules.first);
 
     // Event handler processes mode/size change requests
-    app.addSystem(WindowEventSystem(), stage: CoreStage.first);
+    app.addSystem(WindowEventSystem(), schedule: Schedules.first);
   }
 
   @override

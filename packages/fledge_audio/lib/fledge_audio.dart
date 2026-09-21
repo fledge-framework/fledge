@@ -14,7 +14,7 @@
 ///
 /// // Setup
 /// await App()
-///   .addPlugin(TimePlugin())
+///   .addPlugin(WallTimePlugin())
 ///   .addPlugin(AudioPlugin())
 ///   .run();
 ///

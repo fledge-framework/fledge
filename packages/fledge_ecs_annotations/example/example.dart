@@ -18,7 +18,7 @@ class Velocity {
 // Mark a function as a system for code generation
 // The generator will create a System class wrapper
 @system
-void moveEntities(Query<(Position, Velocity)> query, Res<Time> time) {
+void moveEntities(Query<(Position, Velocity)> query, Res<WallTime> time) {
   for (final (pos, vel) in query.iter()) {
     pos.x += vel.x * time.value.delta;
     pos.y += vel.y * time.value.delta;
@@ -36,7 +36,7 @@ class Res<T> {
   T get value => throw UnimplementedError();
 }
 
-class Time {
+class WallTime {
   double get delta => 0.016;
 }
 

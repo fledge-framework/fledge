@@ -1,5 +1,6 @@
 import 'dart:ui' show Color, Rect;
 
+import '../render/extract/draw_layer.dart' show DrawLayer;
 import '../sprite/sprite.dart';
 import 'atlas_layout.dart';
 
@@ -123,6 +124,9 @@ class TextureAtlas {
 ///
 /// Use this when you need to dynamically change which sprite
 /// from an atlas is displayed (e.g., for animations).
+///
+/// See [Sprite] for the semantics of [layer] and [layerSubOrder];
+/// they behave identically here.
 class AtlasSprite {
   /// The texture atlas.
   final TextureAtlas atlas;
@@ -139,6 +143,13 @@ class AtlasSprite {
   /// Flip vertically.
   bool flipY;
 
+  /// Draw-order layer this sprite belongs to.
+  DrawLayer layer;
+
+  /// Explicit sub-order within [layer]. When 0 (the default), the extractor
+  /// derives the sub-order from y-position; when non-zero this wins.
+  int layerSubOrder;
+
   /// Creates an atlas sprite.
   AtlasSprite({
     required this.atlas,
@@ -146,6 +157,8 @@ class AtlasSprite {
     this.color = const Color(0xFFFFFFFF),
     this.flipX = false,
     this.flipY = false,
+    this.layer = DrawLayer.characters,
+    this.layerSubOrder = 0,
   });
 
   /// Get the current source rectangle.

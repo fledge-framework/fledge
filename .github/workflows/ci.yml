@@ -11,8 +11,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  analyze:
-    name: Analyze
+  # Formatting is OS-independent; run once on Linux to save CI minutes.
+  format:
+    name: Format
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,15 +32,13 @@ jobs:
       - name: Check formatting
         run: melos exec -- dart format --set-exit-if-changed .
 
-      - name: Generate code
-        run: melos run build_runner
-
-      - name: Analyze
-        run: melos run analyze
-
-  test:
-    name: Test
-    runs-on: ubuntu-latest
+  analyze:
+    name: Analyze (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
@@ -54,9 +53,44 @@ jobs:
         with:
           melos-version: '7.3.0'
 
+      - name: Generate code
+        run: melos run build_runner
+
+      - name: Analyze
+        run: melos run analyze
+
+  test:
+    name: Test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Setup Melos
+        uses: bluefireteam/melos-action@v3
+        with:
+          melos-version: '7.3.0'
+
+      # Flutter desktop tests on Linux require GTK + build tooling.
+      - name: Install Linux desktop dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libgtk-3-dev clang cmake pkg-config libblkid-dev liblzma-dev
+
       - name: Run tests
         run: melos run test
 
+  # Pana measures pub scores; the analysis itself is platform-agnostic.
   pana:
     name: Pana Analysis
     runs-on: ubuntu-latest
@@ -64,17 +98,23 @@ jobs:
       fail-fast: false
       matrix:
         package:
+          - fledge_assets
           - fledge_audio
           - fledge_ecs
           - fledge_ecs_annotations
           - fledge_ecs_generator
           - fledge_input
           - fledge_physics
-          - fledge_render
           - fledge_render_2d
+          - fledge_camera_2d
+          - fledge_lighting_2d
+          - fledge_ui
+          - fledge_debug
           - fledge_save
           - fledge_tiled
-          - fledge_time
+          - fledge_calendar
+          - fledge_tween
+          - fledge_particles
           - fledge_window
           - fledge_yarn
     steps:
@@ -100,8 +140,18 @@ jobs:
           pana --no-warning --exit-code-threshold 0
 
   build-examples:
-    name: Build Examples
-    runs-on: ubuntu-latest
+    name: Build Examples (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            drifter-target: linux
+          - os: windows-latest
+            drifter-target: windows
+          - os: macos-latest
+            drifter-target: macos
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
@@ -116,6 +166,13 @@ jobs:
         with:
           melos-version: '7.3.0'
 
+      # Flutter Linux desktop target needs GTK + build tooling.
+      - name: Install Linux desktop dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libgtk-3-dev clang cmake pkg-config libblkid-dev liblzma-dev
+
       - name: Generate code for basic_ecs example
         working-directory: examples/basic_ecs
         run: dart run build_runner build --delete-conflicting-outputs
@@ -128,12 +185,14 @@ jobs:
         working-directory: examples/advanced_ecs
         run: dart compile exe bin/main.dart -o advanced_ecs
 
-      # Drifter is a Flutter app, not a pure-Dart CLI. Build it for web
-      # so we catch standalone-entrypoint regressions that `build-docs`
-      # (which imports drifter as a library) wouldn't see.
-      - name: Build drifter example (web)
+      # Drifter builds against the desktop target for this runner.
+      # Web builds are covered by build-docs (which imports drifter as a lib).
+      - name: Enable Flutter ${{ matrix.drifter-target }} desktop
+        run: flutter config --enable-${{ matrix.drifter-target }}-desktop
+
+      - name: Build drifter example (${{ matrix.drifter-target }})
         working-directory: examples/drifter
-        run: flutter build web --release
+        run: flutter build ${{ matrix.drifter-target }} --release
 
   build-docs:
     name: Build Docs

@@ -1,4 +1,37 @@
+import 'package:fledge_assets/fledge_assets.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
+
+/// A loaded audio clip, ready to play through SoLoud.
+///
+/// This is the value stored in `Assets<AudioClip>` (see
+/// [AudioClipLoader]). It wraps SoLoud's `AudioSource` with the
+/// originating asset path so hot-reload can rebuild the source.
+class AudioClip {
+  /// The SoLoud audio source ready to play.
+  final AudioSource source;
+
+  /// Original asset path. Kept for diagnostics + reloading.
+  final String assetPath;
+
+  const AudioClip({required this.source, required this.assetPath});
+}
+
+/// A [Loader] that reads an audio file via SoLoud.
+///
+/// SoLoud handles decoding of WAV/MP3/OGG/FLAC on its side; this
+/// loader is a thin adapter that turns "path + SoLoud instance" into
+/// an [AudioClip].
+class AudioClipLoader implements Loader<AudioClip> {
+  final SoLoud soloud;
+
+  const AudioClipLoader(this.soloud);
+
+  @override
+  Future<AudioClip> load(String path) async {
+    final source = await soloud.loadAsset(path);
+    return AudioClip(source: source, assetPath: path);
+  }
+}
 
 /// Resource managing loaded audio assets.
 ///
@@ -13,6 +46,10 @@ import 'package:flutter_soloud/flutter_soloud.dart';
 /// world.playSfx('explosion');
 /// world.playMusic('theme');
 /// ```
+@Deprecated(
+  'Prefer `Assets<AudioClip>` from fledge_assets. AudioAssets stays as a '
+  'thin key-based proxy over the same SoLoud sources for one release.',
+)
 class AudioAssets {
   /// The underlying SoLoud instance.
   final SoLoud _soloud;

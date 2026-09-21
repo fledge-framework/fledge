@@ -1,8 +1,8 @@
 import 'dart:ui' show Rect;
 
+import 'package:fledge_physics/fledge_physics.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart' show TextureAtlas;
 
-import '../collision/collision_shapes.dart';
 import '../components/tilemap_animator.dart';
 import '../properties/tiled_properties.dart';
 
@@ -23,6 +23,10 @@ import '../properties/tiled_properties.dart';
 ///
 /// final tileset = registry.get('tilesets/terrain.tsx')!;
 /// ```
+@Deprecated(
+  'Prefer `Assets<Tileset>` from fledge_assets. TilesetRegistry stays as a '
+  'path-keyed facade for one release.',
+)
 class TilesetRegistry {
   /// Loaded tilesets by source path.
   final Map<String, LoadedTileset> _tilesets = {};

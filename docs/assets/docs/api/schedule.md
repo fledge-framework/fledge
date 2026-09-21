@@ -198,7 +198,7 @@ class Game {
       lastTime = currentTime;
 
       // Update time resource
-      world.getResource<Time>()?.delta = deltaTime;
+      world.getResource<WallTime>()?.delta = deltaTime;
 
       // Run all systems
       await schedule.run(world);

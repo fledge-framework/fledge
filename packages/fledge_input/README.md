@@ -4,19 +4,11 @@ Action-based input system for [Fledge](https://fledge-framework.dev) games. Maps
 
 [![pub package](https://img.shields.io/pub/v/fledge_input.svg)](https://pub.dev/packages/fledge_input)
 
-## Features
-
-- **Named Actions**: Define semantic actions like "jump" or "move" instead of raw keys
-- **Multiple Bindings**: Map multiple physical inputs to a single action
-- **Context Switching**: Switch input mappings based on game state (menu vs gameplay)
-- **Input Types**: Keyboard, mouse, and gamepad support
-- **WASD/Arrows**: Built-in helpers for common movement patterns
-
 ## Installation
 
 ```yaml
 dependencies:
-  fledge_input: ^0.1.0
+  fledge_input: ^0.2.0
 ```
 
 ## Quick Start
@@ -26,10 +18,8 @@ import 'package:flutter/services.dart';
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_input/fledge_input.dart';
 
-// Define your actions
 enum Actions { jump, move, attack }
 
-// Create an input map
 final inputMap = InputMap.builder()
   .bindKey(LogicalKeyboardKey.space, ActionId.fromEnum(Actions.jump))
   .bindWasd(ActionId.fromEnum(Actions.move))
@@ -37,116 +27,21 @@ final inputMap = InputMap.builder()
   .bindLeftStick(ActionId.fromEnum(Actions.move))
   .build();
 
-// Configure the plugin
-final inputPlugin = InputPlugin.simple(
-  context: InputContext(name: 'default', map: inputMap),
-);
-
-// Use in your app
 final app = App()
-  ..addPlugin(inputPlugin);
+  ..addPlugin(InputPlugin.simple(
+    context: InputContext(name: 'default', map: inputMap),
+  ));
 
-// Wrap your game widget with InputWidget
+// Wrap your Flutter game widget with InputWidget.
 InputWidget(
   world: app.world,
   child: GameWidget(app: app),
-)
-```
-
-`InputWidget` returns `KeyEventResult.ignored` for key events that aren't bound in the active `InputMap`, so ancestor `Focus` widgets (e.g. page-level shortcut handlers like `Ctrl+K`) still receive them. Bound keys return `KeyEventResult.handled` and don't bubble.
-
-## System ordering
-
-If your movement/steering system writes a component that `fledge_physics`'s `CollisionResolutionSystem` also writes (e.g. `Velocity`), register it in `CoreStage.preUpdate` or declare `before: ['collision_resolution']`. Putting it in `CoreStage.update` next to physics silently makes the player clip through walls — the scheduler orders same-stage conflicts by registration order, and the physics plugin is usually added first. See the [physics plugin docs](https://fledge-framework.dev/docs/plugins/physics) for the full story. `App.checkScheduleOrdering()` surfaces this automatically.
-
-## Controlling Focus (pause-on-blur)
-
-Pass a `FocusNode` in if you want to observe focus state — useful for pausing when the player clicks away:
-
-```dart
-class _GameState extends State<Game> {
-  late final FocusNode _focus = FocusNode()..addListener(_onFocusChanged);
-  bool _paused = true;
-
-  void _onFocusChanged() => setState(() => _paused = !_focus.hasFocus);
-
-  @override
-  Widget build(BuildContext context) {
-    return InputWidget(
-      world: app.world,
-      focusNode: _focus,
-      autofocus: true,
-      child: Stack(children: [
-        GameCanvas(),
-        if (_paused)
-          GestureDetector(
-            onTap: _focus.requestFocus,
-            child: const _ClickToPlayOverlay(),
-          ),
-      ]),
-    );
-  }
-}
-```
-
-`InputWidget` disposes its internal `FocusNode` only when it created one itself — nodes you pass in you own and must dispose.
-
-## Reading Input in Systems
-
-```dart
-class PlayerSystem extends System {
-  @override
-  Future<void> run(World world) async {
-    final actions = world.getResource<ActionState>()!;
-
-    if (actions.justPressed(ActionId.fromEnum(Actions.jump))) {
-      // Jump!
-    }
-
-    final move = actions.vector2Value(ActionId.fromEnum(Actions.move));
-    // Move player by (move.$1, move.$2)
-  }
-}
-```
-
-## Context Switching
-
-Switch input mappings based on game state:
-
-```dart
-enum GameState { menu, playing }
-
-final menuMap = InputMap.builder()
-  .bindArrows(ActionId('navigate'))
-  .bindKey(LogicalKeyboardKey.enter, ActionId('select'))
-  .build();
-
-final gameplayMap = InputMap.builder()
-  .bindWasd(ActionId('move'))
-  .bindKey(LogicalKeyboardKey.space, ActionId('jump'))
-  .build();
-
-final inputPlugin = InputPlugin<GameState>(
-  contexts: [
-    InputContext(name: 'menu', map: menuMap),
-    InputContext(name: 'gameplay', map: gameplayMap),
-  ],
-  stateBindings: {
-    GameState.menu: 'menu',
-    GameState.playing: 'gameplay',
-  },
-  defaultContext: 'menu',
 );
 ```
 
 ## Documentation
 
-See the [Input System Guide](https://fledge-framework.dev/docs/guides/input) for detailed documentation.
-
-## Related Packages
-
-- [fledge_ecs](https://pub.dev/packages/fledge_ecs) - Core ECS framework
-- [fledge_window](https://pub.dev/packages/fledge_window) - Window management
+See the [Fledge documentation site](https://fledge-framework.dev/docs/plugins/input) for guides, API reference, and advanced usage.
 
 ## License
 

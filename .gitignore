@@ -106,3 +106,6 @@ local.properties
 # Test artifacts
 .test_coverage/
 test_results/
+
+# Projects
+projects/

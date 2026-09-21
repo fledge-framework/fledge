@@ -1,11 +1,11 @@
 import 'dart:ui' show Offset;
 
+import 'package:fledge_physics/fledge_physics.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart'
     show TextureHandle, TextureAtlas, GridAtlasLayout;
 import 'package:tiled/tiled.dart';
 import 'package:xml/xml.dart';
 
-import '../collision/collision_shapes.dart';
 import '../components/tilemap_animator.dart';
 import '../properties/tiled_properties.dart';
 import '../resources/tilemap_assets.dart';

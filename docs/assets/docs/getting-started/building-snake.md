@@ -240,13 +240,13 @@ class MovementSystem implements System {
       ComponentId.of<SnakeHead>(),
       ComponentId.of<SnakeSegment>(),
     },
-    resourceReads: {Time, GameConfig, MoveTimer, GameState},
+    resourceReads: {WallTime, GameConfig, MoveTimer, GameState},
     resourceWrites: {MoveTimer},
   );
 
   @override
   Future<void> run(World world) async {
-    final time = world.getResource<Time>()!;
+    final time = world.getResource<WallTime>()!;
     final config = world.getResource<GameConfig>()!;
     final timer = world.getResource<MoveTimer>()!;
     final gameState = world.getResource<GameState>()!;
@@ -555,7 +555,7 @@ class _SnakeGameWidgetState extends State<SnakeGameWidget>
 
   void _initGame() {
     _app = App()
-      ..addPlugin(TimePlugin())
+      ..addPlugin(WallTimePlugin())
       ..addPlugin(SnakePlugin());
   }
 

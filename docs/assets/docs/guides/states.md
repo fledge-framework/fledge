@@ -82,7 +82,7 @@ app.addSystem(FunctionSystem(
   run: (world) {
     // Initialize gameplay
     world.spawn()..insert(Player());
-    world.insertResource(GameTime(0));
+    world.insertResource(SessionTimer(0));
   },
 ));
 ```
@@ -97,7 +97,7 @@ app.addSystem(FunctionSystem(
   runIf: OnExitState<GameState>(GameState.playing).condition,
   run: (world) {
     // Cleanup
-    world.removeResource<GameTime>();
+    world.removeResource<SessionTimer>();
   },
 ));
 ```

@@ -19,7 +19,7 @@ import 'package:fledge_audio/fledge_audio.dart';
 
 void main() async {
   final app = App()
-    .addPlugin(TimePlugin())  // Required for crossfading
+    .addPlugin(WallTimePlugin())  // Required for crossfading
     .addPlugin(AudioPlugin());
 
   // Initialize systems
@@ -53,7 +53,7 @@ Audio commands like `playSfx()`, `playMusic()`, and `stopMusic()` use Fledge's *
 ```dart
 void main() async {
   final app = App()
-    .addPlugin(TimePlugin())
+    .addPlugin(WallTimePlugin())
     .addPlugin(AudioPlugin());
 
   // First tick initializes the audio system
@@ -434,7 +434,7 @@ void main() async {
     .build();
 
   final app = App()
-    .addPlugin(TimePlugin())
+    .addPlugin(WallTimePlugin())
     .addPlugin(AudioPlugin())
     .addPlugin(InputPlugin.simple(
       context: InputContext(name: 'default', map: inputMap),

@@ -21,6 +21,10 @@ import 'tileset_registry.dart';
 /// final assets = world.getResource<TilemapAssets>()!;
 /// final loaded = assets.get('level1')!;
 /// ```
+@Deprecated(
+  'Prefer `Assets<Tilemap>` from fledge_assets. TilemapAssets stays as a '
+  'thin key-based facade for one release.',
+)
 class TilemapAssets {
   /// Loaded maps by key.
   final Map<String, LoadedTilemap> _maps = {};

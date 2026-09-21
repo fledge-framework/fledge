@@ -276,8 +276,10 @@ class _DrifterPageState extends State<DrifterPage> {
         'fledge_ecs',
         'App + World, resources, stage ordering, marker components'
       ),
-      ('fledge_render_2d', 'Transform2D, TransformPropagateSystem'),
-      ('fledge_render', 'RenderPlugin + extractors to a render world'),
+      (
+        'fledge_render_2d',
+        'Transform2D, TransformPropagateSystem, RenderPlugin + extractors to a render world'
+      ),
       (
         'fledge_input',
         'InputWidget with caller-owned FocusNode, pause-on-blur, arrow/WASD actions'

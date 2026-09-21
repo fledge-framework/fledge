@@ -53,7 +53,7 @@ import 'systems/input_frame_end_system.dart';
 ///
 /// // Add to app
 /// await App()
-///   .addPlugin(TimePlugin())
+///   .addPlugin(WallTimePlugin())
 ///   .addState<GameState>(GameState.menu)
 ///   .addPlugin(inputPlugin)
 ///   .run();
@@ -131,17 +131,17 @@ class InputPlugin<S extends Enum> implements Plugin {
     app.insertResource(registry);
 
     // Add systems
-    app.addSystem(InputPollingSystem(), stage: CoreStage.first);
+    app.addSystem(InputPollingSystem(), schedule: Schedules.first);
 
     // Add state-aware context update if state bindings are configured
     if (stateBindings != null && stateBindings!.isNotEmpty) {
-      app.addSystem(ContextUpdateSystem<S>(), stage: CoreStage.first);
+      app.addSystem(ContextUpdateSystem<S>(), schedule: Schedules.first);
     }
 
-    app.addSystem(ActionResolutionSystem(), stage: CoreStage.first);
+    app.addSystem(ActionResolutionSystem(), schedule: Schedules.first);
 
     // Clear transition flags at end of frame, after all systems have read input
-    app.addSystem(InputFrameEndSystem(), stage: CoreStage.last);
+    app.addSystem(InputFrameEndSystem(), schedule: Schedules.last);
   }
 
   @override

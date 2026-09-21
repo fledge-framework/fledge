@@ -77,7 +77,14 @@ class PacketHeader {
   static const int magic = 0x464C4547; // "FLEG"
 
   /// Protocol version.
-  static const int version = 1;
+  ///
+  /// Bumped to 2 in Phase 8 for the 2D transform state wire-format change
+  /// (see `Transform2DNetworkState`). Peers running an older version can no
+  /// longer parse each other's packets; [deserialize] returns `null` on a
+  /// version mismatch. [peekVersion] lets the receiver still recognise a
+  /// protocol-shaped packet (magic match, version mismatch) so it can
+  /// surface a clear "protocol version mismatch" error to the caller.
+  static const int version = 2;
 
   /// Packet type.
   final PacketType type;
@@ -117,6 +124,20 @@ class PacketHeader {
     buffer.setInt32(14, timestamp, Endian.little);
     // 2 bytes reserved at offset 18
     return buffer.buffer.asUint8List();
+  }
+
+  /// Returns the protocol version byte in [data] if it starts with the
+  /// protocol [magic] number, or `null` otherwise.
+  ///
+  /// Callers use this after [deserialize] returns `null` to distinguish
+  /// "not our protocol at all" from "our protocol, wrong version" so the
+  /// latter can be surfaced as a clean version-mismatch error rather than
+  /// a silent drop-and-timeout.
+  static int? peekVersion(Uint8List data) {
+    if (data.length < 5) return null;
+    final buffer = ByteData.sublistView(data);
+    if (buffer.getUint32(0, Endian.little) != magic) return null;
+    return buffer.getUint8(4);
   }
 
   /// Deserialize header from bytes.

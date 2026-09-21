@@ -383,7 +383,7 @@ class World {
   /// If a resource of this type already exists, it is replaced.
   ///
   /// ```dart
-  /// world.insertResource(Time());
+  /// world.insertResource(WallTime());
   /// world.insertResource(GameConfig(difficulty: 'hard'));
   /// ```
   void insertResource<T>(T resource) {
@@ -395,7 +395,7 @@ class World {
   /// Returns null if no resource of this type exists.
   ///
   /// ```dart
-  /// final time = world.getResource<Time>();
+  /// final time = world.getResource<WallTime>();
   /// if (time != null) {
   ///   print('Delta: ${time.delta}');
   /// }
@@ -484,7 +484,7 @@ class World {
   /// }
   /// ```
   Query1<T1> query1<T1>({QueryFilter? filter}) {
-    return Query1<T1>(archetypes, filter: filter);
+    return Query1<T1>(archetypes, entities, filter: filter);
   }
 
   /// Creates a query for entities with components [T1] and [T2].
@@ -496,17 +496,47 @@ class World {
   /// }
   /// ```
   Query2<T1, T2> query2<T1, T2>({QueryFilter? filter}) {
-    return Query2<T1, T2>(archetypes, filter: filter);
+    return Query2<T1, T2>(archetypes, entities, filter: filter);
   }
 
   /// Creates a query for entities with components [T1], [T2], and [T3].
   Query3<T1, T2, T3> query3<T1, T2, T3>({QueryFilter? filter}) {
-    return Query3<T1, T2, T3>(archetypes, filter: filter);
+    return Query3<T1, T2, T3>(archetypes, entities, filter: filter);
   }
 
   /// Creates a query for entities with components [T1], [T2], [T3], and [T4].
   Query4<T1, T2, T3, T4> query4<T1, T2, T3, T4>({QueryFilter? filter}) {
-    return Query4<T1, T2, T3, T4>(archetypes, filter: filter);
+    return Query4<T1, T2, T3, T4>(archetypes, entities, filter: filter);
+  }
+
+  // ===== Mutable Query Factories =====
+  //
+  // Runtime behavior is identical to the read-only [queryN] factories.
+  // These exist so the code generator can distinguish a @system parameter's
+  // intent (read vs write) at the type level. See [QueryMut1] for details.
+
+  /// Creates a mutable query for entities with component [T1].
+  ///
+  /// Runtime behavior is identical to [query1]; the [QueryMut1] type signals
+  /// to the scheduler that this call site writes to [T1].
+  QueryMut1<T1> queryMut1<T1>({QueryFilter? filter}) {
+    return QueryMut1<T1>(archetypes, entities, filter: filter);
+  }
+
+  /// Creates a mutable query for entities with components [T1] and [T2].
+  QueryMut2<T1, T2> queryMut2<T1, T2>({QueryFilter? filter}) {
+    return QueryMut2<T1, T2>(archetypes, entities, filter: filter);
+  }
+
+  /// Creates a mutable query for entities with components [T1], [T2], and [T3].
+  QueryMut3<T1, T2, T3> queryMut3<T1, T2, T3>({QueryFilter? filter}) {
+    return QueryMut3<T1, T2, T3>(archetypes, entities, filter: filter);
+  }
+
+  /// Creates a mutable query for entities with components
+  /// [T1], [T2], [T3], and [T4].
+  QueryMut4<T1, T2, T3, T4> queryMut4<T1, T2, T3, T4>({QueryFilter? filter}) {
+    return QueryMut4<T1, T2, T3, T4>(archetypes, entities, filter: filter);
   }
 }
 

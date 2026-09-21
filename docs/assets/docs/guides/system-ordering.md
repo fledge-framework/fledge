@@ -136,7 +136,7 @@ void main() {
 }
 ```
 
-Each returned `OrderingAmbiguity` names both systems, the stage they're in, what they conflict on (e.g. `both write component Velocity`, `resource Time: A writes, B reads`), and the explicit constraint you'd add to fix it. A clean run returns an empty list.
+Each returned `OrderingAmbiguity` names both systems, the stage they're in, what they conflict on (e.g. `both write component Velocity`, `resource WallTime: A writes, B reads`), and the explicit constraint you'd add to fix it. A clean run returns an empty list.
 
 ## System Sets
 

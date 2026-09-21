@@ -1,14 +1,19 @@
 # Changelog
 
+## [0.2.0] - 2026-09-20
+
+### Changed
+
+- **BREAKING**: `Transform2DNetworkState` (12-byte wire) replaces `TransformNetworkState` (3D quaternion form).
+- Protocol version bumped from 1 to 2; clients with mismatched protocol are cleanly rejected.
+- Prediction guide now points at `Schedules.fixedUpdate`.
+
+### Preserved
+
+- Crypto, congestion control, and interest management are unchanged.
+
+
 ## [0.1.14] - 2026-04-14
-
-## [Unreleased]
-
-### Features
-
-- **fledge_net:** Add network packet encryption
-
-
 
 ## [0.1.13] - 2026-04-14
 
@@ -25,16 +30,4 @@
 
 
 ## [0.1.12] - 2026-04-14
-
-## [Unreleased]
-
-### Features
-
-- **fledge_net:** Create net package
-
-### Miscellaneous
-
-- Resolve analysis issues
-
-
 

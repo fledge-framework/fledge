@@ -182,13 +182,17 @@ Closes #123
 | `fledge_ecs` | Core ECS implementation |
 | `fledge_ecs_annotations` | Annotations for code generation |
 | `fledge_ecs_generator` | Code generator for components/systems |
+| `fledge_assets` | Ref-counted asset store (`Handle<T>` + `Assets<T>`) shared by render/audio/tiled |
 
 ### Render Packages
 
 | Package | Description |
 |---------|-------------|
-| `fledge_render` | Core render infrastructure |
-| `fledge_render_2d` | 2D rendering components |
+| `fledge_render_2d` | 2D rendering components **and** core render infrastructure (RenderPlugin, Extractors, RenderWorld, RenderLayer). `fledge_render` is a deprecated re-export shim that re-exports this package for one release. |
+| `fledge_camera_2d` | 2D cameras, follow, shake, letterbox, parallax, projections, transitions |
+| `fledge_lighting_2d` | 2D dynamic lighting — point/directional/spot lights, ambient, additive Canvas pass |
+| `fledge_ui` | Retained-mode HUD/UI — anchor-based layout, containers, text, images, panels |
+| `fledge_debug` | Runtime observability — FPS/entity/ordering overlay + AABB/collider/frustum gizmos |
 
 ### Plugin Packages
 
@@ -201,7 +205,9 @@ Closes #123
 | `fledge_yarn` | Yarn Spinner dialogue |
 | `fledge_physics` | Physics and collision |
 | `fledge_save` | Save/load system |
-| `fledge_time` | Game calendar and time |
+| `fledge_calendar` | In-game calendar and day/night cycle (`fledge_time` is a deprecated re-export shim) |
+| `fledge_tween` | Easing curves and value tweens |
+| `fledge_particles` | CPU-driven particle system (emitters, pooling, presets) |
 | `fledge_net` | Multiplayer networking |
 
 ### Dependency Order
@@ -209,11 +215,15 @@ Closes #123
 When making changes that affect multiple packages, be aware of the dependency order:
 1. `fledge_ecs_annotations`
 2. `fledge_ecs`
-3. `fledge_render`
-4. `fledge_render_2d`
-5. `fledge_input`, `fledge_audio`, `fledge_window` (parallel)
-6. `fledge_tiled`, `fledge_physics`, `fledge_yarn`, `fledge_save`, `fledge_time`, `fledge_net` (parallel)
-7. `fledge_ecs_generator`
+3. `fledge_assets` (pure-Dart; depends only on `fledge_ecs`)
+4. `fledge_render_2d` (2D rendering + render infrastructure; depends on `fledge_assets` for the `Assets<Texture>` store). `fledge_render` is a deprecated shim that re-exports this package.
+5. `fledge_camera_2d` (depends on `fledge_render_2d` for `CameraView` / `Viewport`)
+6. `fledge_lighting_2d` (depends on `fledge_render_2d` for `Extractors` / `RenderWorld` / `renderSpritesToDrawer` and on `fledge_assets` for `Handle<Texture>`)
+7. `fledge_ui` (depends on `fledge_render_2d` for `Extractors` / `RenderWorld` / `TextureHandle` / `DrawLayer` and on `fledge_camera_2d` for `ViewportSize`)
+8. `fledge_input`, `fledge_audio`, `fledge_window` (parallel; `fledge_audio` depends on `fledge_assets` for `Assets<AudioClip>`)
+9. `fledge_tiled`, `fledge_physics`, `fledge_yarn`, `fledge_save`, `fledge_calendar`, `fledge_tween`, `fledge_particles`, `fledge_net` (parallel; `fledge_tiled` depends on `fledge_assets` for `Assets<TilemapAsset>` / `Assets<TilesetAsset>` **and** `fledge_camera_2d` for `Camera2D` / `ViewportSize`; `fledge_particles` depends on `fledge_render_2d` for `ExtractedSprite` / `DrawLayer`; `fledge_time` is a deprecated shim that re-exports `fledge_calendar`)
+10. `fledge_debug` (depends on `fledge_ui` for `UiText` / `UiAnchor`, `fledge_camera_2d` for `Camera2D`, and `fledge_physics` for `Collider` / `CollisionShape`)
+11. `fledge_ecs_generator`
 
 ## Adding New Features
 

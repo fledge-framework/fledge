@@ -37,7 +37,7 @@ void main() async {
   print('Total entities: ${world.entityCount}\n');
 
   // Create a schedule
-  final schedule = Schedule()
+  final scheduler = Scheduler()
     ..addSystem(
       FunctionSystem(
         'movement',
@@ -76,14 +76,14 @@ void main() async {
           }
         },
       ),
-      stage: CoreStage.postUpdate,
+      schedule: Schedules.postUpdate,
     );
 
   // Run a few simulation steps
   print('Running 3 simulation steps...\n');
   for (int step = 1; step <= 3; step++) {
     print('Step $step:');
-    await schedule.run(world);
+    await scheduler.run(world);
     print('');
   }
 

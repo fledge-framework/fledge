@@ -14,8 +14,8 @@ import 'app.dart';
 ///     app
 ///       .insertResource(PhysicsConfig())
 ///       .addEvent<CollisionEvent>()
-///       .addSystem(gravitySystem, stage: CoreStage.update)
-///       .addSystem(collisionSystem, stage: CoreStage.postUpdate);
+///       .addSystem(gravitySystem, schedule: Schedules.update)
+///       .addSystem(collisionSystem, schedule: Schedules.postUpdate);
 ///   }
 /// }
 ///
@@ -42,7 +42,7 @@ abstract class Plugin {
 /// class DefaultPlugins extends PluginGroup {
 ///   @override
 ///   List<Plugin> get plugins => [
-///     TimePlugin(),
+///     WallTimePlugin(),
 ///     InputPlugin(),
 ///     RenderPlugin(),
 ///   ];

@@ -1,10 +1,12 @@
 import 'dart:ui' show Offset, Rect;
 
+import 'package:fledge_camera_2d/fledge_camera_2d.dart'
+    show Camera2D, ViewportSize;
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_render/fledge_render.dart'
     show DrawLayer, DrawLayerExtension, Extractor, RenderWorld;
 import 'package:fledge_render_2d/fledge_render_2d.dart'
-    show Camera2D, GlobalTransform2D, Transform2D, ViewportSize;
+    show GlobalTransform2D, Transform2D;
 import 'package:vector_math/vector_math.dart' show Vector2;
 
 import '../components/tile_layer.dart';

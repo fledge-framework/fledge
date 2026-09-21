@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:fledge_ecs_annotations/fledge_ecs_annotations.dart';
 
+import '../fixed_timestep.dart';
 import '../world.dart';
+import 'schedule_label.dart';
 import 'system.dart';
 
 /// A node in the system dependency graph.
@@ -168,7 +170,7 @@ class SystemStage {
   }
 
   /// Scan pairs in this stage for ordering determined only by registration
-  /// order. Called by [Schedule.checkOrderingAmbiguities].
+  /// order. Called by [Scheduler.checkOrderingAmbiguities].
   List<OrderingAmbiguity> _findOrderingAmbiguities() {
     final out = <OrderingAmbiguity>[];
     for (var i = 0; i < _systems.length; i++) {
@@ -245,50 +247,81 @@ List<String> _describeMetaConflict(SystemMeta a, SystemMeta b) {
   return reasons;
 }
 
-/// The schedule containing all systems organized by stage.
+/// The scheduler containing all systems organized by [Schedule].
 ///
-/// Systems are grouped into stages that run in a defined order.
-/// Within each stage, systems may run in parallel if they don't conflict.
+/// The [Scheduler] owns one [SystemStage] per registered [Schedule] label.
+/// Within each schedule, systems may run in parallel when they don't
+/// conflict; between schedules the scheduler runs them serially in the
+/// order they were registered.
 ///
-/// ## Default Stages
+/// ## Default Schedules
 ///
-/// - **first**: Runs before all other stages
-/// - **preUpdate**: Input processing, preparation
-/// - **update**: Main game logic
-/// - **postUpdate**: Reactions to update changes
-/// - **last**: Cleanup, finalization
+/// The scheduler registers every constant on [Schedules] by default,
+/// but per-frame orchestration (including startup + fixed-timestep +
+/// extract/render dispatch) is owned by [App]. Callers that hold a bare
+/// [Scheduler] can still drive a single per-frame pass through the
+/// non-startup schedules via [run] — see that method for exact order.
 ///
 /// ## Example
 ///
 /// ```dart
-/// final schedule = Schedule()
-///   ..addSystem(inputSystem, stage: CoreStage.preUpdate)
-///   ..addSystem(movementSystem)  // defaults to update
-///   ..addSystem(renderSystem, stage: CoreStage.postUpdate);
+/// final scheduler = Scheduler()
+///   ..addSystemToSchedule(inputSystem, Schedules.preUpdate)
+///   ..addSystemToSchedule(movementSystem, Schedules.update)
+///   ..addSystemToSchedule(renderSystem, Schedules.postUpdate);
 ///
-/// // Run all stages
-/// await schedule.run(world);
+/// // Run all per-frame schedules (equivalent to one App.tick minus
+/// // startup + tick-counter bookkeeping).
+/// await scheduler.run(world);
 /// ```
-class Schedule {
+class Scheduler {
   /// The stages in execution order.
   final List<SystemStage> _stages = [];
 
   /// Maps stage labels to their index.
   final Map<String, int> _stageIndex = {};
 
-  /// Creates a schedule with the default core stages.
-  Schedule() {
-    for (final stage in CoreStage.values) {
-      addStage(stage.name);
+  /// Non-fixed per-frame schedules in the order [run] iterates them.
+  ///
+  /// The full per-frame sequence [App.tick] uses interleaves
+  /// [runFixedIfDue] between [Schedules.preUpdate] and [Schedules.update],
+  /// but that path is App-owned; [run] itself is now a compatibility
+  /// shim that walks the non-fixed schedules in order and does not
+  /// drive the fixed chain.
+  static const List<Schedule> _perFrameSchedules = <Schedule>[
+    Schedules.first,
+    Schedules.preUpdate,
+    Schedules.update,
+    Schedules.postUpdate,
+    Schedules.last,
+    Schedules.extract,
+    Schedules.render,
+  ];
+
+  /// The fixed-timestep chain, in the order each fixed iteration runs.
+  static const List<Schedule> _fixedSchedules = <Schedule>[
+    Schedules.fixedFirst,
+    Schedules.fixedPreUpdate,
+    Schedules.fixedUpdate,
+    Schedules.fixedPostUpdate,
+    Schedules.fixedLast,
+  ];
+
+  /// Creates a scheduler with every schedule in [Schedules.all] registered.
+  Scheduler() {
+    for (final schedule in Schedules.all) {
+      addStage(schedule.name);
     }
   }
 
-  /// Creates an empty schedule with no stages.
-  Schedule.empty();
+  /// Creates an empty scheduler with no schedules registered.
+  Scheduler.empty();
 
-  /// Adds a new stage to the schedule.
+  /// Adds a new stage to the scheduler.
   ///
-  /// Stages are run in the order they are added.
+  /// Stages are run in the order they are added. Prefer
+  /// [addSchedule] for user-defined [Schedule] labels; this is the
+  /// low-level primitive both the schedule and legacy stage APIs use.
   void addStage(String name) {
     if (_stageIndex.containsKey(name)) {
       throw ArgumentError('Stage $name already exists');
@@ -297,11 +330,39 @@ class Schedule {
     _stages.add(SystemStage(name));
   }
 
-  /// Adds a system to a stage.
+  /// Registers a user-defined [Schedule] with this scheduler.
   ///
-  /// If no stage is specified, the system is added to the 'update' stage.
-  void addSystem(System system, {CoreStage stage = CoreStage.update}) {
-    addSystemToStage(system, stage.name);
+  /// No-op if a schedule with the same [Schedule.name] is already
+  /// registered.
+  void addSchedule(Schedule schedule) {
+    if (_stageIndex.containsKey(schedule.name)) return;
+    addStage(schedule.name);
+  }
+
+  /// Adds a system to a schedule (or, via the deprecated [stage] parameter,
+  /// to the corresponding legacy `CoreStage` bucket).
+  ///
+  /// If neither [stage] nor [schedule] is specified, the system is added
+  /// to [Schedules.update]. Passing both throws [ArgumentError].
+  void addSystem(
+    System system, {
+    @Deprecated(
+      'Use schedule: Schedules.foo instead of stage: CoreStage.foo.',
+    )
+    CoreStage? stage,
+    Schedule? schedule,
+  }) {
+    if (stage != null && schedule != null) {
+      throw ArgumentError(
+        'Pass either stage: or schedule: to Scheduler.addSystem, not both.',
+      );
+    }
+    if (schedule != null) {
+      addSystemToSchedule(system, schedule);
+      return;
+    }
+    // stage may be null (default) — treat as CoreStage.update.
+    addSystemToStage(system, (stage ?? CoreStage.update).name);
   }
 
   /// Adds a system to a named stage.
@@ -313,11 +374,92 @@ class Schedule {
     _stages[index].addSystem(system);
   }
 
-  /// Runs all stages in order.
-  Future<void> run(World world) async {
-    for (final stage in _stages) {
-      await stage.run(world);
+  /// Adds a system to the given [Schedule].
+  ///
+  /// Throws a [StateError] if [schedule] hasn't been registered — call
+  /// [addSchedule] first for custom schedules.
+  void addSystemToSchedule(System system, Schedule schedule) {
+    if (!_stageIndex.containsKey(schedule.name)) {
+      throw StateError(
+        "Schedule ${schedule.name} isn't registered — "
+        'call scheduler.addSchedule(schedule) first.',
+      );
     }
+    addSystemToStage(system, schedule.name);
+  }
+
+  /// Runs one per-frame pass through the non-fixed schedules in order:
+  /// `first → preUpdate → update → postUpdate → last → extract → render`.
+  ///
+  /// Kept for callers that hold a bare [Scheduler] (tests, adapters).
+  ///
+  /// **Note:** per-frame orchestration is now [App]-owned. [App.tick]
+  /// drives startup, fixed-timestep dispatch, and change-detection tick
+  /// bookkeeping around this method. When holding an [App], prefer
+  /// [App.tick].
+  ///
+  /// Fixed-timestep schedules are **not** dispatched here — see
+  /// [runFixedIfDue]. Startup is also not dispatched here — call
+  /// [runSchedule] with [Schedules.startup] or use [App.runStartup].
+  Future<void> run(World world) async {
+    for (final schedule in _perFrameSchedules) {
+      final index = _stageIndex[schedule.name];
+      if (index == null) continue;
+      await _stages[index].run(world);
+    }
+  }
+
+  /// Runs a single named schedule.
+  ///
+  /// No-op if the schedule isn't registered. Used by
+  /// [runSchedule] callers such as `App.runStartup`, [runFixedIfDue],
+  /// and the per-frame render/extract dispatch in [App.tick].
+  Future<void> runSchedule(Schedule schedule, World world) async {
+    final index = _stageIndex[schedule.name];
+    if (index == null) return;
+    await _stages[index].run(world);
+  }
+
+  /// Advances the fixed-timestep accumulator by [frameDeltaSeconds] and
+  /// runs the fixed schedule chain (`fixedFirst` → `fixedPreUpdate` →
+  /// `fixedUpdate` → `fixedPostUpdate` → `fixedLast`) 0..
+  /// [FixedTimestep.maxCatchupSteps] times.
+  ///
+  /// Each iteration counts as its own tick for change detection —
+  /// [World.advanceTick] is called at the end of every fixed step.
+  ///
+  /// Returns the number of fixed steps that actually ran. Also
+  /// mirrored into [FixedTimestep.stepsThisFrame] as a diagnostic.
+  Future<int> runFixedIfDue(
+    FixedTimestep timestep,
+    double frameDeltaSeconds,
+    World world,
+  ) async {
+    timestep.addAccumulated(frameDeltaSeconds);
+
+    var steps = 0;
+    while (timestep.accumulatorSeconds >= timestep.stepSeconds &&
+        steps < timestep.maxCatchupSteps) {
+      for (final schedule in _fixedSchedules) {
+        final index = _stageIndex[schedule.name];
+        if (index == null) continue;
+        await _stages[index].run(world);
+      }
+      timestep.consumeStep();
+      world.advanceTick();
+      steps++;
+    }
+
+    // If we hit the cap while still owing more steps, drop the residual
+    // so we don't spiral. If we simply ran out of accumulated time (the
+    // normal exit), the leftover fractional step stays for next frame.
+    if (steps == timestep.maxCatchupSteps &&
+        timestep.accumulatorSeconds >= timestep.stepSeconds) {
+      timestep.dropRemainder();
+    }
+
+    timestep.stepsThisFrame = steps;
+    return steps;
   }
 
   /// Returns the stage with the given name.
@@ -348,7 +490,7 @@ class Schedule {
   ///
   /// A pair is flagged when:
   ///
-  /// 1. They live in the same stage.
+  /// 1. They live in the same schedule.
   /// 2. Their metas [SystemMeta.conflictsWith] each other (shared
   ///    component write, write-vs-read, shared resource, etc.) — so one
   ///    must run before the other.
@@ -374,10 +516,17 @@ class Schedule {
 }
 
 /// One pair of systems in the same stage whose relative order is only
-/// defined by registration order. See [Schedule.checkOrderingAmbiguities].
+/// defined by registration order. See [Scheduler.checkOrderingAmbiguities].
 class OrderingAmbiguity {
   /// Stage the pair lives in.
+  ///
+  /// This is the [Schedule.name] of the schedule the pair was found in.
+  /// Retained as `stage` for backwards compatibility with pre-Schedule
+  /// diagnostics; prefer [schedule] in new code.
   final String stage;
+
+  /// Alias for [stage] — the schedule name the pair lives in.
+  String get schedule => stage;
 
   /// First system — runs before [systemB] under the current registration.
   final String systemA;
@@ -386,7 +535,7 @@ class OrderingAmbiguity {
   final String systemB;
 
   /// Human-readable reasons the scheduler had to serialise them (e.g.
-  /// "both write Velocity", "conflict on resource Time").
+  /// "both write Velocity", "conflict on resource WallTime").
   final List<String> reasons;
 
   const OrderingAmbiguity({

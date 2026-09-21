@@ -31,14 +31,14 @@ class _NoopSystem implements System {
 void main() {
   group('Schedule.checkOrderingAmbiguities', () {
     test('no conflicts → no ambiguities', () {
-      final schedule = Schedule();
+      final schedule = Scheduler();
       schedule.addSystem(_NoopSystem(const SystemMeta(name: 'a')));
       schedule.addSystem(_NoopSystem(const SystemMeta(name: 'b')));
       expect(schedule.checkOrderingAmbiguities(), isEmpty);
     });
 
     test('two systems in different stages never conflict here', () {
-      final schedule = Schedule();
+      final schedule = Scheduler();
       schedule.addSystem(
         _NoopSystem(SystemMeta(
           name: 'a',
@@ -58,7 +58,7 @@ void main() {
 
     test('same-stage shared component write without explicit order is flagged',
         () {
-      final schedule = Schedule();
+      final schedule = Scheduler();
       schedule.addSystem(_NoopSystem(SystemMeta(
         name: 'resolve',
         writes: {ComponentId.of<_Velocity>()},
@@ -78,7 +78,7 @@ void main() {
     });
 
     test('explicit `before` silences the warning', () {
-      final schedule = Schedule();
+      final schedule = Scheduler();
       schedule.addSystem(_NoopSystem(SystemMeta(
         name: 'resolve',
         writes: {ComponentId.of<_Velocity>()},
@@ -92,7 +92,7 @@ void main() {
     });
 
     test('explicit `after` silences the warning', () {
-      final schedule = Schedule();
+      final schedule = Scheduler();
       schedule.addSystem(_NoopSystem(SystemMeta(
         name: 'resolve',
         writes: {ComponentId.of<_Velocity>()},
@@ -106,7 +106,7 @@ void main() {
     });
 
     test('resource write/read conflict is flagged and described', () {
-      final schedule = Schedule();
+      final schedule = Scheduler();
       schedule.addSystem(_NoopSystem(const SystemMeta(
         name: 'writer',
         resourceWrites: {_Time},
@@ -122,7 +122,7 @@ void main() {
     });
 
     test('component write-read conflict is flagged in the right direction', () {
-      final schedule = Schedule();
+      final schedule = Scheduler();
       schedule.addSystem(_NoopSystem(SystemMeta(
         name: 'writer',
         writes: {ComponentId.of<_Position>()},

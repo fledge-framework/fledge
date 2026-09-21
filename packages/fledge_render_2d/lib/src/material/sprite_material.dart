@@ -1,6 +1,9 @@
 import 'dart:ui' show Color;
 
+import 'package:fledge_assets/fledge_assets.dart' show Handle;
+
 import '../sprite/sprite.dart';
+import '../sprite/texture.dart' show Texture;
 import 'material2d.dart';
 
 /// Standard material for sprite rendering.
@@ -10,6 +13,8 @@ import 'material2d.dart';
 /// - Tint color
 /// - Blend modes
 /// - Alpha testing
+/// - An optional [normalMap] slot for future GPU-side lighting
+///   (see the field docstring for scope in v0.2).
 ///
 /// Example:
 /// ```dart
@@ -34,6 +39,16 @@ class SpriteMaterial extends Material2D {
   /// Set to 0 to disable alpha testing.
   double alphaThreshold;
 
+  /// Normal map for future GPU-side lighting passes.
+  ///
+  /// **Ignored by the Canvas backend in v0.2.** This is a
+  /// data-plumbing slot so that `fledge_lighting_2d` consumers can
+  /// wire normal maps into their `SpriteMaterial` today without a
+  /// breaking API change when a `FragmentProgram`-based lighting
+  /// backend lands. Per-pixel normal-mapped lighting on top of
+  /// `Canvas.drawRawAtlas` is not possible without a shader.
+  final Handle<Texture>? normalMap;
+
   @override
   final BlendMode blendMode;
 
@@ -43,6 +58,7 @@ class SpriteMaterial extends Material2D {
     this.tint = const Color(0xFFFFFFFF),
     this.blendMode = BlendMode.normal,
     this.alphaThreshold = 0,
+    this.normalMap,
   });
 
   @override
@@ -57,17 +73,24 @@ class SpriteMaterial extends Material2D {
   }
 
   /// Create a copy with optional overrides.
+  ///
+  /// The [normalMap] override, when omitted, keeps the current
+  /// handle. Pass an explicit `null` (via [SpriteMaterial] directly if
+  /// you need the "clear" behaviour) to unset it — mirroring the
+  /// canonical `copyWith` shape used elsewhere in the codebase.
   SpriteMaterial copyWith({
     TextureHandle? texture,
     Color? tint,
     BlendMode? blendMode,
     double? alphaThreshold,
+    Handle<Texture>? normalMap,
   }) {
     return SpriteMaterial(
       texture: texture ?? this.texture,
       tint: tint ?? this.tint,
       blendMode: blendMode ?? this.blendMode,
       alphaThreshold: alphaThreshold ?? this.alphaThreshold,
+      normalMap: normalMap ?? this.normalMap,
     );
   }
 

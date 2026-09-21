@@ -226,7 +226,7 @@ import 'game_plugin.dart';
 
 void main() async {
   final app = App()
-    ..addPlugin(TimePlugin())
+    ..addPlugin(WallTimePlugin())
     ..addPlugin(GamePlugin());
 
   // Game loop - run 5 frames
@@ -270,4 +270,4 @@ Entity 1: Position(9.0, 0.0)
 4. **App builder** as the entry point
 5. **Entity spawning** with `app.world.spawn()`
 6. **Query iteration** with destructuring
-7. **TimePlugin** for delta time tracking
+7. **WallTimePlugin** for delta time tracking

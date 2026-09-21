@@ -1,14 +1,22 @@
 # Changelog
 
+## [0.2.0] - 2026-09-20
+
+### Added
+
+- `Collider`, `CollisionShape`, `CollisionGrid`, `Pathfinder` moved in from `fledge_tiled`.
+- Spatial-hash broad-phase.
+
+### Changed
+
+- `CollisionEvent` is now a real event queue (one-frame latency) rather than a marker component.
+
+### Removed
+
+- `CollisionCleanupSystem` — no longer needed with event-queue collisions.
+
+
 ## [0.1.14] - 2026-04-14
-
-## [Unreleased]
-
-### Features
-
-- **examples:** Add new drifter game demo
-
-
 
 ## [0.1.13] - 2026-04-14
 
@@ -23,15 +31,6 @@
 
 
 ## [0.1.10] - 2026-01-06
-
-## [Unreleased]
-
-### Miscellaneous
-
-- Bump versions
-- Bump versions
-
-
 
 ## [0.1.9] - 2026-01-06
 
@@ -52,14 +51,6 @@
 
 
 ## [0.1.6] - 2026-01-05
-
-## [Unreleased]
-
-### Bug Fixes
-
-- **fledge_physics:** Add flutter dependency to package
-
-
 
 ## [0.1.5] - 2026-01-04
 

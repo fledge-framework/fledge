@@ -2,8 +2,8 @@ import 'dart:ui';
 
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart';
-import 'package:fledge_tiled/fledge_tiled.dart';
 
+import '../collision/collision_shapes.dart';
 import '../components/collision_config.dart';
 import '../components/velocity.dart';
 import '../layers/collision_layers.dart';
@@ -42,7 +42,7 @@ class CollisionResolutionSystem implements System {
           ComponentId.of<CollisionConfig>(),
         },
         writes: {ComponentId.of<Velocity>()},
-        resourceReads: {Time},
+        resourceReads: {WallTime},
       );
 
   @override
@@ -53,7 +53,7 @@ class CollisionResolutionSystem implements System {
 
   @override
   Future<void> run(World world) async {
-    final time = world.getResource<Time>();
+    final time = world.getResource<WallTime>();
     if (time == null || time.delta == 0) return;
 
     // Scale factor for velocity (matches VelocityApplySystem)

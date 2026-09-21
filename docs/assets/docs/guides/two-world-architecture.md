@@ -14,7 +14,7 @@ The two-world architecture consists of:
 ```
 Main World (Game Logic)
 ├── Entities with Position, Velocity, Health...
-├── Resources like Time, Input, GameConfig...
+├── Resources like WallTime, Input, GameConfig...
 └── Systems that update game state
          │
          │ Each frame: Extract
@@ -41,13 +41,13 @@ Render World (GPU Data)
 
 ## The Extraction Process
 
-Each frame, **Extractors** copy relevant data from the main world to the render world. The extraction infrastructure is provided by `fledge_render`:
+Each frame, **Extractors** copy relevant data from the main world to the render world. The extraction infrastructure is provided by `fledge_render_2d`:
 
 ```dart
-import 'package:fledge_render/fledge_render.dart';
+import 'package:fledge_render_2d/fledge_render_2d.dart';
 
 // Extractor, Extractors, RenderWorld, and ExtractSystem
-// are all provided by fledge_render
+// are all provided by fledge_render_2d
 ```
 
 The base `Extractor` class defines the extraction interface:
@@ -288,7 +288,7 @@ class CameraExtractor extends Extractor {
 
 ## Defining Extracted Components
 
-Extracted components are the data classes that live in the render world. Fledge provides two mixins in `fledge_render` to help define them:
+Extracted components are the data classes that live in the render world. Fledge provides two mixins in `fledge_render_2d` to help define them:
 
 | Mixin | Purpose |
 |-------|---------|

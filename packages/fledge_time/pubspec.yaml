@@ -1,6 +1,6 @@
 name: fledge_time
-description: Calendar and time system for Fledge games with configurable day/night cycles, seasons, and time scaling.
-version: 0.1.14
+description: Deprecated - merged into fledge_calendar. Re-export shim; import package:fledge_calendar/fledge_calendar.dart directly.
+version: 0.2.0
 resolution: workspace
 
 repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_time
@@ -19,6 +19,4 @@ environment:
   flutter: ">=1.17.0"
 
 dependencies:
-  fledge_ecs: ^0.1.9
-  meta: ^1.17.0
-
+  fledge_calendar: ^0.2.0

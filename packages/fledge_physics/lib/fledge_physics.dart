@@ -53,18 +53,14 @@
 ///
 /// ## Handling Collisions
 ///
-/// Query for [CollisionEvent] to respond to collisions:
+/// Read the [CollisionEvent] event queue to respond to collisions:
 ///
 /// ```dart
 /// class MySystem implements System {
 ///   @override
 ///   Future<void> run(World world) async {
-///     for (final (entity, event, player)
-///         in world.query2<CollisionEvent, Player>().iter()) {
-///       // Player collided with event.other
-///       if (world.has<Enemy>(event.other)) {
-///         // Handle player-enemy collision
-///       }
+///     for (final evt in world.eventReader<CollisionEvent>().read()) {
+///       // evt.entityA collided with evt.entityB
 ///     }
 ///   }
 /// }
@@ -82,7 +78,16 @@ export 'src/components/velocity.dart';
 // Layers
 export 'src/layers/collision_layers.dart';
 
+// Collision shape types
+export 'src/collision/collision_shapes.dart';
+
+// Broad phase
+export 'src/broad_phase/spatial_hash.dart';
+
+// Pathfinding
+export 'src/pathfinding/collision_grid.dart';
+export 'src/pathfinding/pathfinder.dart';
+
 // Systems
-export 'src/systems/collision_cleanup.dart';
 export 'src/systems/collision_detection.dart';
 export 'src/systems/collision_resolution.dart';

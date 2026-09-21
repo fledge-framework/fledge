@@ -1,15 +1,13 @@
 # Changelog
 
+## [0.2.0] - 2026-09-20
+
+### Changed
+
+- Consumer migration to the new `schedule:` API.
+
+
 ## [0.1.14] - 2026-04-14
-
-## [Unreleased]
-
-### Features
-
-- **fledge_window:** Add error handling
-- **examples:** Add new drifter game demo
-
-
 
 ## [0.1.13] - 2026-04-14
 
@@ -17,28 +15,11 @@
 
 ## [0.1.12] - 2026-04-14
 
-## [Unreleased]
-
-### Features
-
-- **fledge_net:** Create net package
-
-
-
 ## [0.1.11] - 2026-01-21
 
 
 
 ## [0.1.10] - 2026-01-06
-
-## [Unreleased]
-
-### Miscellaneous
-
-- Bump versions
-- Bump versions
-
-
 
 ## [0.1.9] - 2026-01-06
 
@@ -71,14 +52,6 @@
 
 
 ## [0.1.3] - 2026-01-04
-
-## [Unreleased]
-
-### Bug Fixes
-
-- **fledge_render_2d:** Fix null safety error on private field
-
-
 
 ## [0.1.2] - 2026-01-03
 

@@ -4,7 +4,7 @@ import 'package:fledge_audio/fledge_audio.dart';
 
 void main() async {
   final app = App()
-    ..addPlugin(TimePlugin())
+    ..addPlugin(const WallTimePlugin())
     ..addPlugin(const AudioPlugin());
 
   // Initialize systems

@@ -67,18 +67,26 @@ export 'src/transform/global_transform.dart';
 export 'src/transform/propagate.dart';
 export 'src/transform/transform2d.dart';
 
-// Camera
-export 'src/camera/camera2d.dart';
-export 'src/camera/camera_driver.dart';
-export 'src/camera/pixel_perfect.dart';
-export 'src/camera/projection.dart';
-export 'src/camera/viewport_size.dart';
+// Camera view data (owned by the render pipeline).
+//
+// Camera components (`Camera2D`, `Projection`, `OrthographicProjection`,
+// `CameraDriverNode`, follow/shake/parallax/letterbox/transitions) have
+// moved to the `fledge_camera_2d` package. Add `CameraPlugin` from
+// `package:fledge_camera_2d/fledge_camera_2d.dart` alongside
+// `RenderPlugin` in your app.
+export 'src/render/extract/camera_view.dart';
 
 // Sprite
 export 'src/sprite/extracted_sprite.dart';
 export 'src/sprite/sprite.dart';
 export 'src/sprite/sprite_bundle.dart';
 export 'src/sprite/sprite_render_node.dart';
+export 'src/sprite/texture.dart';
+
+// Backend
+export 'src/backend/canvas_render_context.dart';
+export 'src/backend/gpu_render_context.dart';
+export 'src/backend/image_helpers.dart';
 
 // Batching
 export 'src/batch/sprite_batch.dart';
@@ -104,3 +112,34 @@ export 'src/character/orientation.dart';
 // Transitions
 export 'src/transitions/transition_state.dart';
 export 'src/transitions/transition_systems.dart';
+
+// Render infrastructure (previously in fledge_render).
+// Graph
+export 'src/render/graph/edge.dart';
+export 'src/render/graph/render_graph.dart';
+export 'src/render/graph/render_node.dart';
+export 'src/render/graph/slot.dart';
+
+// Context
+export 'src/render/context/render_context.dart';
+
+// World
+export 'src/render/world/render_world.dart';
+
+// Extraction
+export 'src/render/extract/draw_layer.dart';
+export 'src/render/extract/extract.dart';
+export 'src/render/extract/extracted_data.dart';
+
+// Stages
+export 'src/render/stages/render_schedule.dart';
+export 'src/render/stages/render_stage.dart';
+
+// Layers
+export 'src/render/layer/render_layer.dart';
+
+// Plugin
+export 'src/render/plugin/render_plugin.dart';
+
+// Widget
+export 'src/widget/fledge_render_view.dart';

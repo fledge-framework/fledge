@@ -4,17 +4,14 @@ import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart';
 import 'package:vector_math/vector_math.dart';
 
+/// Minimal fledge_render_2d example.
+///
+/// The camera-related APIs (`Camera2D`, `OrthographicProjection`, etc.)
+/// have moved to `package:fledge_camera_2d/fledge_camera_2d.dart`.
+/// See `packages/fledge_camera_2d/example/example.dart` for a full
+/// setup.
 void main() async {
   final world = World();
-
-  // Spawn a camera
-  world.spawn()
-    ..insert(Transform2D.from(0, 0))
-    ..insert(GlobalTransform2D())
-    ..insert(Camera2D(
-      projection: OrthographicProjection(viewportHeight: 600),
-      pixelPerfect: true,
-    ));
 
   // Spawn a sprite with transform
   world.spawn()
@@ -47,12 +44,12 @@ void main() async {
     ));
 
   // Add transform propagation system
-  final schedule = Schedule()..addSystem(TransformPropagateSystem());
+  final scheduler = Scheduler()..addSystem(TransformPropagateSystem());
 
-  await schedule.run(world);
+  await scheduler.run(world);
 
   // ignore: avoid_print
-  print('Spawned camera, sprite, and animated sprite');
+  print('Spawned sprite and animated sprite');
 }
 
 // Placeholder for texture - in real code, load from assets

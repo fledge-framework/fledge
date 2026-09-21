@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0] - 2026-09-20
+
+### Deprecated
+
+- Package deprecated — merged into `fledge_render_2d`. This release is a re-export shim; migrate to `package:fledge_render_2d/fledge_render_2d.dart`.
+
+
 ## [0.1.14] - 2026-04-14
 
 
@@ -17,15 +24,6 @@
 
 
 ## [0.1.10] - 2026-01-06
-
-## [Unreleased]
-
-### Miscellaneous
-
-- Bump versions
-- Bump versions
-
-
 
 ## [0.1.9] - 2026-01-06
 

@@ -19,7 +19,7 @@
 ///
 /// void main() async {
 ///   final app = App()
-///     .addPlugin(TimePlugin())
+///     .addPlugin(WallTimePlugin())
 ///     .addPlugin(TiledPlugin());
 ///
 ///   // Load a tilemap
@@ -75,6 +75,14 @@
 /// ```
 library fledge_tiled;
 
+// Re-export the physics package so downstream users can continue to
+// access `Collider`, `CollisionShape`, `CollisionGrid`, `Pathfinder`,
+// etc. from `package:fledge_tiled/fledge_tiled.dart` for one release
+// while migrating imports.
+// TODO(next-major): remove re-export; import from
+// package:fledge_physics/fledge_physics.dart directly.
+export 'package:fledge_physics/fledge_physics.dart';
+
 // Plugin
 export 'src/plugin.dart';
 
@@ -85,14 +93,14 @@ export 'src/components/object_layer.dart';
 export 'src/components/tilemap_animator.dart';
 
 // Resources
+export 'src/resources/tiled_assets.dart';
 export 'src/resources/tilemap_assets.dart';
 export 'src/resources/tileset_registry.dart';
 
 // Properties
 export 'src/properties/tiled_properties.dart';
 
-// Collision
-export 'src/collision/collision_shapes.dart';
+// Collision (tiled-specific adapter; core shapes now live in fledge_physics)
 export 'src/collision/tile_collider.dart';
 
 // Config
@@ -111,7 +119,5 @@ export 'src/extraction/tilemap_extractor.dart';
 export 'src/loader/tilemap_loader.dart';
 export 'src/loader/asset_tilemap_loader.dart';
 
-// Pathfinding
-export 'src/pathfinding/collision_grid.dart';
-export 'src/pathfinding/pathfinder.dart';
+// Pathfinding (tiled adapter; CollisionGrid + Pathfinder now live in fledge_physics)
 export 'src/pathfinding/collision_extractor.dart';

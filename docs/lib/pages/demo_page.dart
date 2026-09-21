@@ -614,7 +614,7 @@ class _DemoPageState extends State<DemoPage> {
               'The GridGamePlugin does several things:\n\n'
               '• Registers game-specific resources (GridConfig, GameScore, timers). These are added '
               'to the App, making them available to all systems.\n\n'
-              '• Adds systems in the correct order. The stage parameter (CoreStage.update) ensures '
+              '• Adds systems in the correct order. The schedule parameter (Schedules.update) ensures '
               'systems run at the right time relative to input processing and rendering. Note the '
               'difference: annotation-based systems are functions (movementSystem), while class-based '
               'systems are instantiated (MovementSystem()).\n\n'
@@ -643,7 +643,7 @@ class _DemoPageState extends State<DemoPage> {
               'The game widget bridges Flutter\'s widget world and Fledge\'s two-world ECS architecture. '
               'With RenderPlugin, the game loop is simpler than ever.\n\n'
               'The game loop phases:\n\n'
-              '1. app.tick() - Runs game logic AND extraction (RenderPlugin runs extraction at CoreStage.last)\n\n'
+              '1. app.tick() - Runs game logic AND extraction (RenderPlugin runs extraction in Schedules.last)\n\n'
               '2. setState() - Triggers Flutter repaint, painter queries Render World\n\n'
               'Key architectural points:\n\n'
               '• RenderPlugin provides RenderWorld and Extractors resources automatically\n\n'
@@ -665,10 +665,10 @@ class _DemoPageState extends State<DemoPage> {
               'The main() function establishes the application\'s foundation. The App is created once '
               'and shared throughout the widget tree—this is crucial for maintaining consistent state.\n\n'
               '• App creation - We create a single App instance and add core plugins that persist for '
-              'the application\'s lifetime: WindowPlugin for window management, TimePlugin for delta time, '
+              'the application\'s lifetime: WindowPlugin for window management, WallTimePlugin for delta time, '
               'RenderPlugin for two-world extraction, and InputPlugin for input handling.\n\n'
               '• RenderPlugin - This must be added before any plugin that registers extractors. It provides '
-              'Extractors, RenderWorld, and runs the extraction system automatically at CoreStage.last.\n\n'
+              'Extractors, RenderWorld, and runs the extraction system automatically in Schedules.last.\n\n'
               '• Initial tick - The first app.tick() initializes all systems. This is necessary before '
               'Flutter starts because some systems (like WindowPlugin) need to run before rendering.\n\n'
               '• Passing the App - The App is passed to the root widget, which passes it through navigation '
@@ -1027,7 +1027,7 @@ class MovementSystem extends System {
         name: 'movement',
         writes: {ComponentId.of<GridPosition>()},
         reads: {ComponentId.of<Player>()},
-        resourceReads: {ActionState, MovementTimer, GridConfig, Time},
+        resourceReads: {ActionState, MovementTimer, GridConfig, WallTime},
       );
 
   @override
@@ -1035,7 +1035,7 @@ class MovementSystem extends System {
     final actions = world.getResource<ActionState>();
     final timer = world.getResource<MovementTimer>();
     final config = world.getResource<GridConfig>();
-    final time = world.getResource<Time>();
+    final time = world.getResource<WallTime>();
     if (actions == null || timer == null || config == null || time == null) {
       return;
     }
@@ -1076,13 +1076,13 @@ class SpawnSystem extends System {
           ComponentId.of<Player>(),
           ComponentId.of<Collectible>(),
         },
-        resourceReads: {SpawnTimer, Time, GridConfig},
+        resourceReads: {SpawnTimer, WallTime, GridConfig},
       );
 
   @override
   Future<void> run(World world) async {
     final timer = world.getResource<SpawnTimer>();
-    final time = world.getResource<Time>();
+    final time = world.getResource<WallTime>();
     final config = world.getResource<GridConfig>();
     if (timer == null || time == null || config == null) return;
 
@@ -1520,7 +1520,7 @@ import 'package:fledge_input/fledge_input.dart';
 ///
 /// ```dart
 /// final app = App()
-///   ..addPlugin(TimePlugin())
+///   ..addPlugin(WallTimePlugin())
 ///   ..addPlugin(createInputPlugin())  // InputPlugin with bindings
 ///   ..addPlugin(GridGamePlugin());
 ///
@@ -1545,9 +1545,9 @@ class GridGamePlugin implements Plugin {
 
     // Add systems in execution order
     app
-        .addSystem(MovementSystem(), stage: CoreStage.update)
-        .addSystem(SpawnSystem(), stage: CoreStage.update)
-        .addSystem(CollectionSystem(), stage: CoreStage.update);
+        .addSystem(MovementSystem(), schedule: Schedules.update)
+        .addSystem(SpawnSystem(), schedule: Schedules.update)
+        .addSystem(CollectionSystem(), schedule: Schedules.update);
 
     // Spawn player at center
     app.world.spawn()
@@ -1585,7 +1585,7 @@ import 'package:fledge_render/fledge_render.dart';
 ///
 /// Key insight: RenderPlugin handles extraction automatically!
 /// The game loop is now just TWO phases:
-/// 1. app.tick() - Run game logic AND extraction (at CoreStage.last)
+/// 1. app.tick() - Run game logic AND extraction (in Schedules.last)
 /// 2. setState() - Trigger repaint (queries Render World)
 class GridGameWidget extends StatefulWidget {
   /// The shared App instance created in main().
@@ -1625,7 +1625,7 @@ class _GridGameWidgetState extends State<GridGameWidget>
   }
 
   void _gameLoop() {
-    // Run game logic AND extraction (RenderPlugin runs extraction at CoreStage.last)
+    // Run game logic AND extraction (RenderPlugin runs extraction in Schedules.last)
     _app.tick();
 
     // Trigger repaint (painter will query render world)
@@ -1673,7 +1673,7 @@ void main() async {
   // Create the App ONCE at startup with ALL plugins
   final app = App()
     ..addPlugin(WindowPlugin.borderless(title: 'Grid Collector'))
-    ..addPlugin(TimePlugin())
+    ..addPlugin(WallTimePlugin())
     ..addPlugin(RenderPlugin())         // Sets up RenderWorld, Extractors, extraction system
     ..addPlugin(createInputPlugin())    // Input handling with bindings
     ..addPlugin(GridGamePlugin());      // Game-specific components and systems
@@ -1884,7 +1884,7 @@ Future<void> movementSystem(World world) async {
   final actions = world.getResource<ActionState>();
   final timer = world.getResource<MovementTimer>();
   final config = world.getResource<GridConfig>();
-  final time = world.getResource<Time>();
+  final time = world.getResource<WallTime>();
   if (actions == null || timer == null || config == null || time == null) {
     return;
   }
@@ -1917,7 +1917,7 @@ Future<void> movementSystem(World world) async {
 Future<void> spawnSystem(World world) async {
   final random = Random();
   final timer = world.getResource<SpawnTimer>();
-  final time = world.getResource<Time>();
+  final time = world.getResource<WallTime>();
   final config = world.getResource<GridConfig>();
   if (timer == null || time == null || config == null) return;
 
@@ -2020,9 +2020,9 @@ class GridGamePlugin implements Plugin {
     // Add annotation-generated systems (functions, not class instances)
     // These are generated from @system annotated functions in systems.dart
     app
-        .addSystem(movementSystem, stage: CoreStage.update)
-        .addSystem(spawnSystem, stage: CoreStage.update)
-        .addSystem(collectionSystem, stage: CoreStage.update);
+        .addSystem(movementSystem, schedule: Schedules.update)
+        .addSystem(spawnSystem, schedule: Schedules.update)
+        .addSystem(collectionSystem, schedule: Schedules.update);
 
     // Spawn player at center
     app.world.spawn()

@@ -9,7 +9,7 @@ void main() {
   group('System ordering', () {
     test('after constraint orders systems', () async {
       final order = <String>[];
-      final schedule = Schedule();
+      final schedule = Scheduler();
 
       schedule.addSystem(FunctionSystem(
         'first',
@@ -29,7 +29,7 @@ void main() {
 
     test('before constraint orders systems', () async {
       final order = <String>[];
-      final schedule = Schedule();
+      final schedule = Scheduler();
 
       schedule.addSystem(FunctionSystem(
         'first',
@@ -49,7 +49,7 @@ void main() {
 
     test('before constraint works when added in reverse order', () async {
       final order = <String>[];
-      final schedule = Schedule();
+      final schedule = Scheduler();
 
       // Add second first
       schedule.addSystem(FunctionSystem(
@@ -71,7 +71,7 @@ void main() {
 
     test('after constraint ignores missing systems', () async {
       final order = <String>[];
-      final schedule = Schedule();
+      final schedule = Scheduler();
 
       // System with after constraint for non-existent system
       schedule.addSystem(FunctionSystem(
@@ -87,7 +87,7 @@ void main() {
 
     test('multiple after constraints', () async {
       final order = <String>[];
-      final schedule = Schedule();
+      final schedule = Scheduler();
 
       schedule.addSystem(FunctionSystem(
         'first',
@@ -114,7 +114,7 @@ void main() {
 
     test('multiple before constraints', () async {
       final order = <String>[];
-      final schedule = Schedule();
+      final schedule = Scheduler();
 
       schedule.addSystem(FunctionSystem(
         'first',
@@ -141,7 +141,7 @@ void main() {
 
     test('chained ordering', () async {
       final order = <String>[];
-      final schedule = Schedule();
+      final schedule = Scheduler();
 
       schedule.addSystem(FunctionSystem(
         'first',
@@ -167,7 +167,7 @@ void main() {
 
     test('ordering combined with conflict detection', () async {
       final order = <String>[];
-      final schedule = Schedule();
+      final schedule = Scheduler();
 
       schedule.addSystem(FunctionSystem(
         'reader1',
@@ -198,7 +198,7 @@ void main() {
 
     test('independent systems run in any order', () async {
       final order = <String>[];
-      final schedule = Schedule();
+      final schedule = Scheduler();
 
       schedule.addSystem(FunctionSystem(
         'a',
@@ -224,7 +224,7 @@ void main() {
 
     test('bidirectional constraints', () async {
       final order = <String>[];
-      final schedule = Schedule();
+      final schedule = Scheduler();
 
       schedule.addSystem(FunctionSystem(
         'first',

@@ -7,7 +7,7 @@ Resources are global singleton data accessible by all systems. Unlike components
 Resources are plain Dart classes. No annotation is required:
 
 ```dart
-class Time {
+class WallTime {
   double delta = 0.0;
   double elapsed = 0.0;
 }
@@ -33,7 +33,7 @@ Add resources using the App builder (recommended):
 
 ```dart
 App()
-  .addPlugin(TimePlugin())  // Adds Time resource automatically
+  .addPlugin(WallTimePlugin())  // Adds Time resource automatically
   .insertResource(GameConfig(difficulty: 'hard'))
   .insertResource(Score())
   .run();
@@ -72,7 +72,7 @@ void displayScore(World world) {
 
 @system
 void updateTime(World world) {
-  final time = world.getResource<Time>();
+  final time = world.getResource<WallTime>();
   if (time != null) {
     time.elapsed += time.delta;
   }
@@ -106,12 +106,12 @@ class UpdateTimeSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
         name: 'updateTime',
-        resourceWrites: {Time},
+        resourceWrites: {WallTime},
       );
 
   @override
   Future<void> run(World world) async {
-    final time = world.getResource<Time>();
+    final time = world.getResource<WallTime>();
     if (time != null) {
       time.elapsed += time.delta;
     }
@@ -174,7 +174,7 @@ You can also access resources directly from the World:
 
 ```dart
 // Get a resource
-final time = world.getResource<Time>();
+final time = world.getResource<WallTime>();
 if (time != null) {
   print('Elapsed: ${time.elapsed}');
 }
@@ -210,7 +210,7 @@ void systemB(World world) {
 // These can run in parallel (different resources)
 @system
 void systemC(World world) {
-  final time = world.getResource<Time>()!;
+  final time = world.getResource<WallTime>()!;
   print(time.elapsed);
 }
 
@@ -246,11 +246,11 @@ class SystemB implements System {
 // These can run in parallel (different resources)
 class SystemC implements System {
   @override
-  SystemMeta get meta => SystemMeta(name: 'systemC', resourceReads: {Time});
+  SystemMeta get meta => SystemMeta(name: 'systemC', resourceReads: {WallTime});
 
   @override
   Future<void> run(World world) async {
-    final time = world.getResource<Time>()!;
+    final time = world.getResource<WallTime>()!;
     print(time.elapsed);
   }
 }
@@ -273,7 +273,7 @@ class SystemD implements System {
 
 ```dart-tabs
 // @tab Annotations
-class Time {
+class WallTime {
   double delta = 0.0;      // Seconds since last frame
   double elapsed = 0.0;    // Total seconds since start
   int frameCount = 0;
@@ -287,14 +287,14 @@ class Time {
 
 @system
 void movementSystem(World world) {
-  final dt = world.getResource<Time>()!.delta;
+  final dt = world.getResource<WallTime>()!.delta;
   for (final (_, pos, vel) in world.query2<Position, Velocity>().iter()) {
     pos.x += vel.dx * dt;
     pos.y += vel.dy * dt;
   }
 }
 // @tab Inheritance
-class Time {
+class WallTime {
   double delta = 0.0;      // Seconds since last frame
   double elapsed = 0.0;    // Total seconds since start
   int frameCount = 0;
@@ -312,12 +312,12 @@ class MovementSystem implements System {
         name: 'movement',
         writes: {ComponentId.of<Position>()},
         reads: {ComponentId.of<Velocity>()},
-        resourceReads: {Time},
+        resourceReads: {WallTime},
       );
 
   @override
   Future<void> run(World world) async {
-    final dt = world.getResource<Time>()!.delta;
+    final dt = world.getResource<WallTime>()!.delta;
     for (final (_, pos, vel) in world.query2<Position, Velocity>().iter()) {
       pos.x += vel.dx * dt;
       pos.y += vel.dy * dt;
@@ -547,38 +547,38 @@ class PlayerInventory with ChangeTracking implements FrameAware {
 
 Fledge's [core plugins](/docs/plugins/overview#core-plugins) provide common resources:
 
-### TimePlugin
+### WallTimePlugin
 
 ```dart-tabs
 // @tab Annotations
 App()
-  .addPlugin(TimePlugin())
+  .addPlugin(WallTimePlugin())
   .run();
 
-// Provides Time resource updated each frame
+// Provides WallTime resource updated each frame
 @system
 void mySystem(World world) {
-  final time = world.getResource<Time>()!;
+  final time = world.getResource<WallTime>()!;
   print('Delta: ${time.delta}');
   print('Elapsed: ${time.elapsed}');
   print('Frame: ${time.frameCount}');
 }
 // @tab Inheritance
 App()
-  .addPlugin(TimePlugin())
+  .addPlugin(WallTimePlugin())
   .run();
 
-// Provides Time resource updated each frame
+// Provides WallTime resource updated each frame
 class MySystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
         name: 'mySystem',
-        resourceReads: {Time},
+        resourceReads: {WallTime},
       );
 
   @override
   Future<void> run(World world) async {
-    final time = world.getResource<Time>()!;
+    final time = world.getResource<WallTime>()!;
     print('Delta: ${time.delta}');
     print('Elapsed: ${time.elapsed}');
     print('Frame: ${time.frameCount}');

@@ -182,7 +182,7 @@ void main() {
 
       final executed = <String>[];
 
-      final schedule = Schedule()
+      final schedule = Scheduler()
         ..addSystem(FunctionSystem(
           'unconditional',
           run: (_) => executed.add('unconditional'),
@@ -205,7 +205,7 @@ void main() {
 
       final executed = <String>[];
 
-      final schedule = Schedule()
+      final schedule = Scheduler()
         ..addSystem(FunctionSystem(
           'conditional',
           runIf: RunConditions.resource<GameState>((s) => s.isPlaying),
@@ -231,7 +231,7 @@ void main() {
       final posId = ComponentId.of<Position>();
       final executed = <String>[];
 
-      final schedule = Schedule()
+      final schedule = Scheduler()
         ..addSystem(FunctionSystem(
           'skipped',
           writes: {posId},

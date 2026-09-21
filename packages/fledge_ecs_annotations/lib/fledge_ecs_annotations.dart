@@ -26,18 +26,67 @@ class Component {
 
 /// Marks a function as an ECS system.
 ///
-/// Systems contain the logic that operates on entities with specific components.
-/// The function signature determines which components the system accesses.
+/// Systems contain the logic that operates on entities with specific
+/// components. The function signature determines which components and
+/// resources the system accesses, and the code generator emits a matching
+/// [SystemMeta] so the scheduler can safely parallelise non-conflicting
+/// systems.
+///
+/// ## Query access is inferred by parameter *type*, not by inspection
+///
+/// The generator does **not** analyse the function body to work out which
+/// components you mutate. Instead, intent is declared at the type level:
+///
+/// - `QueryN<...>`    — every type argument is treated as a **read**.
+/// - `QueryMutN<...>` — every type argument is treated as a **write**.
+///
+/// This keeps the generator simple and predictable, and it makes access
+/// intent visible at the call site.
 ///
 /// ```dart
+/// // Reads Position and Velocity — can run in parallel with other reads.
 /// @system
-/// void movementSystem(Query<(Position, Velocity)> query, Res<Time> time) {
-///   for (final (entity, pos, vel) in query.iter()) {
-///     pos.x += vel.dx * time.delta;
-///     pos.y += vel.dy * time.delta;
+/// void logMovementSystem(Query2<Position, Velocity> query) {
+///   for (final (_, pos, vel) in query.iter()) {
+///     print('$pos moving by $vel');
+///   }
+/// }
+///
+/// // Writes Position and Velocity — serialised against any conflicting
+/// // reader/writer of those components.
+/// @system
+/// void movementSystem(QueryMut2<Position, Velocity> query, Res<WallTime> time) {
+///   for (final (_, pos, vel) in query.iter()) {
+///     pos.x += vel.dx * time.value.delta;
+///     pos.y += vel.dy * time.value.delta;
 ///   }
 /// }
 /// ```
+///
+/// ## Mixed reads/writes on the same query
+///
+/// A single query cannot mix read and write intent across its components.
+/// If a system needs to read some components while writing others, split
+/// the access into two parameters — one `Query`, one `QueryMut`:
+///
+/// ```dart
+/// @system
+/// void applyDamageSystem(
+///   Query1<Damage> incoming,           // reads Damage
+///   QueryMut1<Health> targets,         // writes Health
+/// ) { ... }
+/// ```
+///
+/// If the two accesses genuinely overlap on the same entities and cannot
+/// be split, drop the annotation and implement `System` directly, then
+/// declare `reads`/`writes` by hand on the `SystemMeta`.
+///
+/// ## Runtime behavior
+///
+/// `Query` and `QueryMut` are runtime-identical — both wrap the same
+/// storage and return mutable references from `iter()`. The distinction is
+/// a nominal marker consumed by the generator; it is not enforced at
+/// runtime.
 const system = SystemAnnotation();
 
 /// Annotation class for [system].
@@ -57,7 +106,7 @@ class SystemAnnotation {
 ///
 /// ```dart
 /// @resource
-/// class Time {
+/// class WallTime {
 ///   double delta = 0.0;
 ///   double elapsed = 0.0;
 /// }
@@ -87,36 +136,6 @@ const event = Event();
 /// Annotation class for [event].
 class Event {
   const Event();
-}
-
-/// Marks a component as reflectable for serialization and editor tooling.
-///
-/// When a component is marked with `@reflectable`, the code generator
-/// will create runtime type information including:
-///
-/// - Field metadata (names, types, nullability)
-/// - JSON serialization/deserialization functions
-/// - Default value factories
-///
-/// ```dart
-/// @component
-/// @reflectable
-/// class Position {
-///   double x;
-///   double y;
-///   Position(this.x, this.y);
-/// }
-///
-/// // Usage:
-/// final info = TypeRegistry.instance.getByType<Position>()!;
-/// final json = info.toJson(position); // {'x': 10.0, 'y': 20.0}
-/// final restored = info.fromJson(json) as Position;
-/// ```
-const reflectable = Reflectable();
-
-/// Annotation class for [reflectable].
-class Reflectable {
-  const Reflectable();
 }
 
 /// Core schedule stages for system execution ordering.

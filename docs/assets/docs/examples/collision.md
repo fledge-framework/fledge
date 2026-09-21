@@ -197,7 +197,7 @@ class CollisionPlugin implements Plugin {
 
 void main() async {
   final app = App()
-    ..addPlugin(TimePlugin())
+    ..addPlugin(WallTimePlugin())
     ..addPlugin(CollisionPlugin());
 
   await app.tick();
@@ -234,7 +234,7 @@ class CollisionPlugin implements Plugin {
 
 void main() async {
   final app = App()
-    ..addPlugin(TimePlugin())
+    ..addPlugin(WallTimePlugin())
     ..addPlugin(CollisionPlugin());
 
   await app.tick();

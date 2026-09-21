@@ -18,12 +18,12 @@ Fledge provides two main classes: `App` and `World`. Understanding when to use e
 - **Plugin system** for modular, reusable game features
 - **System scheduling** with automatic ordering and stages
 - **Lifecycle management** (start, tick, stop, cleanup)
-- **Core plugins** like `TimePlugin` for delta time
+- **Core plugins** like `WallTimePlugin` for delta time
 
 ```dart
 // Recommended: Use App
 final app = App()
-  ..addPlugin(TimePlugin())
+  ..addPlugin(WallTimePlugin())
   ..addPlugin(MyGamePlugin());
 
 await app.run();
@@ -68,7 +68,7 @@ void main() {
 // DO this instead
 void main() async {
   await App()
-    .addPlugin(TimePlugin())
+    .addPlugin(WallTimePlugin())
     .addPlugin(MyGamePlugin())
     .run();
 }
@@ -83,7 +83,7 @@ import 'package:fledge_ecs/fledge_ecs.dart';
 
 void main() async {
   await App()
-    .addPlugin(TimePlugin())
+    .addPlugin(WallTimePlugin())
     .insertResource(GameConfig())
     .addEvent<CollisionEvent>()
     .addSystem(MovementSystemWrapper())
@@ -232,7 +232,7 @@ Bundle related plugins:
 class DefaultPlugins extends PluginGroup {
   @override
   List<Plugin> get plugins => [
-    TimePlugin(),
+    WallTimePlugin(),
     FrameLimiterPlugin(targetFps: 60),
     InputPlugin(),
   ];
@@ -245,33 +245,33 @@ App().addPlugin(DefaultPlugins());
 
 Core plugins are bundled with `fledge_ecs` and provide foundational functionality that most games need.
 
-### TimePlugin
+### WallTimePlugin
 
 Provides time tracking:
 
 ```dart-tabs
 // @tab Annotations
-App().addPlugin(TimePlugin());
+App().addPlugin(WallTimePlugin());
 
 // Access in systems
 @system
 void mySystem(World world) {
-  final time = world.getResource<Time>()!;
+  final time = world.getResource<WallTime>()!;
   final delta = time.delta;      // Seconds since last frame
   final elapsed = time.elapsed;  // Total seconds
   final frame = time.frameCount; // Frame number
 }
 // @tab Inheritance
-App().addPlugin(TimePlugin());
+App().addPlugin(WallTimePlugin());
 
 // Access in systems
 class MySystem implements System {
   @override
-  SystemMeta get meta => SystemMeta(name: 'mySystem', resourceReads: {Time});
+  SystemMeta get meta => SystemMeta(name: 'mySystem', resourceReads: {WallTime});
 
   @override
   Future<void> run(World world) async {
-    final time = world.getResource<Time>()!;
+    final time = world.getResource<WallTime>()!;
     final delta = time.delta;      // Seconds since last frame
     final elapsed = time.elapsed;  // Total seconds
     final frame = time.frameCount; // Frame number
@@ -280,7 +280,7 @@ class MySystem implements System {
 ```
 
 **Provides:**
-- `Time` resource with `delta`, `elapsed`, and `frameCount`
+- `WallTime` resource with `delta`, `elapsed`, and `frameCount`
 - `TimeUpdateSystem` that runs at `CoreStage.first`
 
 ### FrameLimiterPlugin
@@ -354,7 +354,7 @@ class Velocity { double dx, dy; Velocity(this.dx, this.dy); }
 // Systems
 @system
 void movementSystem(World world) {
-  final dt = world.getResource<Time>()!.delta;
+  final dt = world.getResource<WallTime>()!.delta;
   for (final (_, pos, vel) in world.query2<Position, Velocity>().iter()) {
     pos.x += vel.dx * dt;
     pos.y += vel.dy * dt;
@@ -381,7 +381,7 @@ void main() async {
   var frameCount = 0;
 
   await App()
-    .addPlugin(TimePlugin())
+    .addPlugin(WallTimePlugin())
     .addPlugin(FrameLimiterPlugin(targetFps: 60))
     .addPlugin(GamePlugin())
     .onTick((app) {
@@ -409,12 +409,12 @@ class MovementSystem implements System {
         name: 'movement',
         writes: {ComponentId.of<Position>()},
         reads: {ComponentId.of<Velocity>()},
-        resourceReads: {Time},
+        resourceReads: {WallTime},
       );
 
   @override
   Future<void> run(World world) async {
-    final dt = world.getResource<Time>()!.delta;
+    final dt = world.getResource<WallTime>()!.delta;
     for (final (_, pos, vel) in world.query2<Position, Velocity>().iter()) {
       pos.x += vel.dx * dt;
       pos.y += vel.dy * dt;
@@ -442,7 +442,7 @@ void main() async {
   var frameCount = 0;
 
   await App()
-    .addPlugin(TimePlugin())
+    .addPlugin(WallTimePlugin())
     .addPlugin(FrameLimiterPlugin(targetFps: 60))
     .addPlugin(GamePlugin())
     .onTick((app) {

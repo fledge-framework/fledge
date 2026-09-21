@@ -8,8 +8,8 @@ import 'package:fledge_input/fledge_input.dart';
 import 'components.dart';
 import 'resources.dart';
 
-// Re-export Time from fledge_ecs for convenience
-export 'package:fledge_ecs/fledge_ecs.dart' show Time;
+// Re-export WallTime from fledge_ecs for convenience
+export 'package:fledge_ecs/fledge_ecs.dart' show WallTime;
 
 /// Actions for the grid game.
 enum GridActions { move }
@@ -25,7 +25,7 @@ class MovementSystem extends System {
         name: 'movement',
         writes: {ComponentId.of<GridPosition>()},
         reads: {ComponentId.of<Player>()},
-        resourceReads: {ActionState, MoveTimer, GridConfig, Time},
+        resourceReads: {ActionState, MoveTimer, GridConfig, WallTime},
       );
 
   @override
@@ -33,7 +33,7 @@ class MovementSystem extends System {
     final actions = world.getResource<ActionState>();
     final moveTimer = world.getResource<MoveTimer>();
     final config = world.getResource<GridConfig>();
-    final time = world.getResource<Time>();
+    final time = world.getResource<WallTime>();
     if (actions == null ||
         moveTimer == null ||
         config == null ||
@@ -84,13 +84,13 @@ class SpawnSystem extends System {
           ComponentId.of<Player>(),
           ComponentId.of<Collectible>(),
         },
-        resourceReads: {SpawnTimer, Time, GridConfig},
+        resourceReads: {SpawnTimer, WallTime, GridConfig},
       );
 
   @override
   Future<void> run(World world) async {
     final timer = world.getResource<SpawnTimer>();
-    final time = world.getResource<Time>();
+    final time = world.getResource<WallTime>();
     final config = world.getResource<GridConfig>();
     if (timer == null || time == null || config == null) return;
 
@@ -181,7 +181,7 @@ class CollectionSystem extends System {
 ///
 /// ```dart
 /// final app = App()
-///   ..addPlugin(TimePlugin())
+///   ..addPlugin(WallTimePlugin())
 ///   ..addPlugin(GridGamePlugin());
 ///
 /// // Run game loop
@@ -214,9 +214,9 @@ class GridGamePlugin implements Plugin {
 
     // Add systems in execution order
     app
-        .addSystem(MovementSystem(), stage: CoreStage.update)
-        .addSystem(SpawnSystem(), stage: CoreStage.update)
-        .addSystem(CollectionSystem(), stage: CoreStage.update);
+        .addSystem(MovementSystem(), schedule: Schedules.update)
+        .addSystem(SpawnSystem(), schedule: Schedules.update)
+        .addSystem(CollectionSystem(), schedule: Schedules.update);
 
     // Spawn player at center
     app.world.spawn()

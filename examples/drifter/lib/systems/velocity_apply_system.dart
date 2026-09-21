@@ -17,7 +17,7 @@ class VelocityApplySystem implements System {
         name: 'VelocityApplySystem',
         reads: {ComponentId.of<Velocity>()},
         writes: {ComponentId.of<Transform2D>()},
-        resourceReads: {Time},
+        resourceReads: {WallTime},
         // Explicit ordering: run after both physics systems. Detection
         // reads Transform2D and we write it, so on paper either order
         // works — but detection expects pre-integration positions, so
@@ -36,7 +36,7 @@ class VelocityApplySystem implements System {
 
   @override
   Future<void> run(World world) async {
-    final time = world.getResource<Time>();
+    final time = world.getResource<WallTime>();
     if (time == null) return;
     final dt = time.delta;
     if (dt <= 0) return;

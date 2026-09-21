@@ -12,7 +12,7 @@
 ///   // Fullscreen game
 ///   await App()
 ///     .addPlugin(WindowPlugin.fullscreen(title: 'My Game'))
-///     .addPlugin(TimePlugin())
+///     .addPlugin(WallTimePlugin())
 ///     .run();
 /// }
 /// ```

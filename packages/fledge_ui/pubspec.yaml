@@ -1,0 +1,34 @@
+name: fledge_ui
+description: Retained-mode game HUD/UI for Fledge — anchor-based layout, containers, text, images, and solid panels rendered on top of the sprite pipeline.
+version: 0.2.0
+repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_ui
+homepage: https://fledge-framework.dev
+issue_tracker: https://github.com/fledge-framework/fledge/issues
+
+environment:
+  sdk: ^3.6.0
+  flutter: ">=3.0.0"
+
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+  fledge_ecs: ^0.2.0
+  fledge_render_2d: ^0.2.0
+  fledge_camera_2d: ^0.2.0
+  fledge_assets: ^0.2.0
+  vector_math: ^2.2.0
+  meta: ^1.17.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  lints: ^6.0.0
+
+topics:
+  - ecs
+  - game-engine
+  - ui
+  - hud
+  - flutter-games

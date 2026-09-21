@@ -17,79 +17,70 @@ abstract class NetworkState {
   void applyDelta(Uint8List delta);
 }
 
-/// Simple transform state for position/rotation sync.
-class TransformNetworkState implements NetworkState {
+/// Simple 2D transform state for position + rotation sync.
+///
+/// Fledge is a 2D engine — transforms carry an (x, y) translation plus a
+/// single scalar `rotation` in radians. This wire format uses three
+/// float32s (12 bytes) plus an optional 1-byte delta bitmask.
+///
+/// Wire-format breaking change from the previous 3D `TransformNetworkState`
+/// (7 floats, 28 bytes + 7-bit mask). See `PacketHeader.version`.
+class Transform2DNetworkState implements NetworkState {
+  /// X position, in world units.
   double x = 0;
+
+  /// Y position, in world units.
   double y = 0;
-  double z = 0;
-  double rotX = 0;
-  double rotY = 0;
-  double rotZ = 0;
-  double rotW = 1;
+
+  /// Rotation about the Z-axis, in radians.
+  double rotation = 0;
 
   @override
   void serialize(PacketBuilder builder) {
     builder.writeFloat32(x);
     builder.writeFloat32(y);
-    builder.writeFloat32(z);
-    builder.writeFloat32(rotX);
-    builder.writeFloat32(rotY);
-    builder.writeFloat32(rotZ);
-    builder.writeFloat32(rotW);
+    builder.writeFloat32(rotation);
   }
 
   @override
   void deserialize(PacketReader reader) {
     x = reader.readFloat32();
     y = reader.readFloat32();
-    z = reader.readFloat32();
-    rotX = reader.readFloat32();
-    rotY = reader.readFloat32();
-    rotZ = reader.readFloat32();
-    rotW = reader.readFloat32();
+    rotation = reader.readFloat32();
   }
 
   /// Epsilon threshold for detecting meaningful changes.
   static const double _epsilon = 0.001;
 
-  // Bitmask field indices for delta encoding.
+  // Bitmask field indices for delta encoding. Three bits — one per field.
   static const int _bitX = 1 << 0;
   static const int _bitY = 1 << 1;
-  static const int _bitZ = 1 << 2;
-  static const int _bitRotX = 1 << 3;
-  static const int _bitRotY = 1 << 4;
-  static const int _bitRotZ = 1 << 5;
-  static const int _bitRotW = 1 << 6;
+  static const int _bitRotation = 1 << 2;
+
+  /// All-fields mask used when creating a full-state "delta".
+  static const int _allBits = _bitX | _bitY | _bitRotation;
 
   @override
   Uint8List? createDelta(NetworkState other) {
-    if (other is! TransformNetworkState) {
-      // Can't delta against a different type — send full state
-      final builder = PacketBuilder()..writeByte(0x7F); // all bits set
+    if (other is! Transform2DNetworkState) {
+      // Can't delta against a different type — send full state.
+      final builder = PacketBuilder()..writeByte(_allBits);
       serialize(builder);
       return builder.build();
     }
 
-    // Compare fields and build bitmask
+    // Compare fields and build bitmask.
     int mask = 0;
     if ((x - other.x).abs() > _epsilon) mask |= _bitX;
     if ((y - other.y).abs() > _epsilon) mask |= _bitY;
-    if ((z - other.z).abs() > _epsilon) mask |= _bitZ;
-    if ((rotX - other.rotX).abs() > _epsilon) mask |= _bitRotX;
-    if ((rotY - other.rotY).abs() > _epsilon) mask |= _bitRotY;
-    if ((rotZ - other.rotZ).abs() > _epsilon) mask |= _bitRotZ;
-    if ((rotW - other.rotW).abs() > _epsilon) mask |= _bitRotW;
+    if ((rotation - other.rotation).abs() > _epsilon) mask |= _bitRotation;
 
-    if (mask == 0) return null; // Nothing changed
+    if (mask == 0) return null; // Nothing changed.
 
     final builder = PacketBuilder()..writeByte(mask);
     if (mask & _bitX != 0) builder.writeFloat32(x);
     if (mask & _bitY != 0) builder.writeFloat32(y);
-    if (mask & _bitZ != 0) builder.writeFloat32(z);
-    if (mask & _bitRotX != 0) builder.writeFloat32(rotX);
-    if (mask & _bitRotY != 0) builder.writeFloat32(rotY);
-    if (mask & _bitRotZ != 0) builder.writeFloat32(rotZ);
-    if (mask & _bitRotW != 0) builder.writeFloat32(rotW);
+    if (mask & _bitRotation != 0) builder.writeFloat32(rotation);
     return builder.build();
   }
 
@@ -100,43 +91,25 @@ class TransformNetworkState implements NetworkState {
 
     if (mask & _bitX != 0) x = reader.readFloat32();
     if (mask & _bitY != 0) y = reader.readFloat32();
-    if (mask & _bitZ != 0) z = reader.readFloat32();
-    if (mask & _bitRotX != 0) rotX = reader.readFloat32();
-    if (mask & _bitRotY != 0) rotY = reader.readFloat32();
-    if (mask & _bitRotZ != 0) rotZ = reader.readFloat32();
-    if (mask & _bitRotW != 0) rotW = reader.readFloat32();
+    if (mask & _bitRotation != 0) rotation = reader.readFloat32();
   }
 
   /// Copy values from another state.
-  void copyFrom(TransformNetworkState other) {
+  void copyFrom(Transform2DNetworkState other) {
     x = other.x;
     y = other.y;
-    z = other.z;
-    rotX = other.rotX;
-    rotY = other.rotY;
-    rotZ = other.rotZ;
-    rotW = other.rotW;
+    rotation = other.rotation;
   }
 
   /// Linear interpolate between this and target state.
-  void lerp(TransformNetworkState target, double t) {
+  ///
+  /// Rotation is lerped as a scalar. Games that need shortest-arc angular
+  /// interpolation (e.g. crossing ±π) should apply their own wrapping in
+  /// their sync system before calling [lerp].
+  void lerp(Transform2DNetworkState target, double t) {
     x = x + (target.x - x) * t;
     y = y + (target.y - y) * t;
-    z = z + (target.z - z) * t;
-    // Simple quaternion lerp (not slerp for performance)
-    rotX = rotX + (target.rotX - rotX) * t;
-    rotY = rotY + (target.rotY - rotY) * t;
-    rotZ = rotZ + (target.rotZ - rotZ) * t;
-    rotW = rotW + (target.rotW - rotW) * t;
-    // Normalize quaternion
-    final len = (rotX * rotX + rotY * rotY + rotZ * rotZ + rotW * rotW);
-    if (len > 0) {
-      final invLen = 1.0 / len;
-      rotX *= invLen;
-      rotY *= invLen;
-      rotZ *= invLen;
-      rotW *= invLen;
-    }
+    rotation = rotation + (target.rotation - rotation) * t;
   }
 }
 
@@ -209,13 +182,13 @@ class StateBuffer<T extends NetworkState> {
 /// Component for interpolating remote entity state.
 class NetworkInterpolation {
   /// State buffer for interpolation.
-  final StateBuffer<TransformNetworkState> buffer;
+  final StateBuffer<Transform2DNetworkState> buffer;
 
   /// Interpolation delay in milliseconds.
   final double interpolationDelay;
 
   /// Current interpolated state.
-  final TransformNetworkState currentState = TransformNetworkState();
+  final Transform2DNetworkState currentState = Transform2DNetworkState();
 
   NetworkInterpolation({
     int bufferSize = 30,
@@ -223,7 +196,7 @@ class NetworkInterpolation {
   }) : buffer = StateBuffer(maxSnapshots: bufferSize);
 
   /// Add a new received state.
-  void addState(int tick, TransformNetworkState state) {
+  void addState(int tick, Transform2DNetworkState state) {
     buffer.add(StateSnapshot(tick: tick, state: state));
   }
 

@@ -83,7 +83,7 @@ class _GridGameWidgetState extends State<GridGameWidget>
     // RenderPlugin provides: Extractors, RenderWorld, and RenderExtractionSystem
     // GridGamePlugin configures InputPlugin for arrow key input
     _app = App()
-      ..addPlugin(TimePlugin())
+      ..addPlugin(WallTimePlugin())
       ..addPlugin(RenderPlugin())
       ..addPlugin(GridGamePlugin());
 

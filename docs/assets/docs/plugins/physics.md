@@ -19,7 +19,7 @@ import 'package:fledge_physics/fledge_physics.dart';
 
 void main() async {
   final app = App()
-    ..addPlugin(TimePlugin())
+    ..addPlugin(WallTimePlugin())
     ..addPlugin(PhysicsPlugin());
 
   // Spawn a solid wall (blocks movement)

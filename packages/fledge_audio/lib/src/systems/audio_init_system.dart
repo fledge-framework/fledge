@@ -1,3 +1,4 @@
+import 'package:fledge_assets/fledge_assets.dart';
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 
@@ -54,11 +55,19 @@ class AudioInitSystem implements System {
       print('Failed to configure SoLoud: $e');
     }
 
-    // Create and insert resources that need the initialized engine
+    // Create and insert resources that need the initialized engine.
+    //
+    // - `Assets<AudioClip>` is the new post-Phase-5 store; downstream
+    //   code loads clips as ref-counted handles via `AudioClipLoader`.
+    // - `AudioAssets` stays as a deprecated key-based facade for one
+    //   release (see the class-level `@Deprecated` on it).
+    // ignore: deprecated_member_use_from_same_package
     final audioAssets = AudioAssets(soloud);
     final audioState = AudioState(soloud);
     audioState.isInitialized = true;
 
+    world.insertResource<Assets<AudioClip>>(Assets<AudioClip>());
+    // ignore: deprecated_member_use_from_same_package
     world.insertResource(audioAssets);
     world.insertResource(audioState);
   }

@@ -33,7 +33,7 @@ class MovementSystem extends System {
 void main() async {
   // Create the app
   final app = App()
-    ..addPlugin(TimePlugin())
+    ..addPlugin(const WallTimePlugin())
     ..addSystem(MovementSystem());
 
   // Spawn an entity

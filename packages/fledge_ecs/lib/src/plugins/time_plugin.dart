@@ -1,23 +1,25 @@
-import 'package:fledge_ecs_annotations/fledge_ecs_annotations.dart';
-
 import '../app.dart';
 import '../plugin.dart';
 import '../system/run_condition.dart';
+import '../system/schedule_label.dart';
 import '../system/system.dart';
 import '../world.dart';
 
-/// Time resource providing delta time and elapsed time.
+/// Real-time (wall-clock) resource providing delta and elapsed seconds.
 ///
-/// Updated automatically each frame by [TimePlugin].
+/// Updated automatically each frame by [WallTimePlugin]. Distinct from
+/// in-game calendar time (see `fledge_calendar`'s `Calendar` resource):
+/// [WallTime] tracks the real seconds that pass between frames on the
+/// host device, regardless of pause, time-scale, or game-world clock.
 ///
 /// ```dart
 /// @system
-/// void mySystem(Res<Time> time) {
+/// void mySystem(Res<WallTime> time) {
 ///   final deltaSeconds = time.value.delta;
 ///   final totalSeconds = time.value.elapsed;
 /// }
 /// ```
-class Time {
+class WallTime {
   /// Time since last frame in seconds.
   double delta = 0.0;
 
@@ -59,15 +61,26 @@ class Time {
 
   @override
   String toString() =>
-      'Time(delta: ${delta.toStringAsFixed(4)}s, elapsed: ${elapsed.toStringAsFixed(2)}s, frame: $frameCount)';
+      'WallTime(delta: ${delta.toStringAsFixed(4)}s, elapsed: ${elapsed.toStringAsFixed(2)}s, frame: $frameCount)';
 }
 
-/// System that updates the [Time] resource each frame.
-class TimeUpdateSystem implements System {
+/// Deprecated alias for [WallTime].
+///
+/// Renamed to [WallTime] in v0.2 to clarify the distinction from
+/// `fledge_calendar`'s in-game `Calendar` resource. Update call sites to
+/// [WallTime]; this typedef will be removed in a future release.
+@Deprecated('Renamed to WallTime in v0.2. Use WallTime instead.')
+typedef Time = WallTime;
+
+/// System that updates the [WallTime] resource each frame.
+class WallTimeUpdateSystem implements System {
+  /// Creates a new WallTime update system.
+  const WallTimeUpdateSystem();
+
   @override
   SystemMeta get meta => const SystemMeta(
-        name: 'timeUpdate',
-        resourceWrites: {Time},
+        name: 'wallTimeUpdate',
+        resourceWrites: {WallTime},
       );
 
   @override
@@ -78,29 +91,47 @@ class TimeUpdateSystem implements System {
 
   @override
   Future<void> run(World world) {
-    world.getResource<Time>()?.update();
+    world.getResource<WallTime>()?.update();
     return Future.value();
   }
 }
 
-/// Plugin that provides time tracking functionality.
+/// Deprecated alias for [WallTimeUpdateSystem].
+@Deprecated('Renamed to WallTimeUpdateSystem in v0.2. Use WallTimeUpdateSystem.')
+typedef TimeUpdateSystem = WallTimeUpdateSystem;
+
+/// Plugin that provides wall-clock time tracking.
 ///
-/// Adds a [Time] resource that tracks delta time, elapsed time,
+/// Adds a [WallTime] resource that tracks delta time, elapsed time,
 /// and frame count. The time is updated at the start of each frame.
 ///
 /// ```dart
 /// App()
-///   .addPlugin(TimePlugin())
+///   .addPlugin(WallTimePlugin())
 ///   .run();
 /// ```
-class TimePlugin implements Plugin {
+class WallTimePlugin implements Plugin {
+  /// Creates a new wall-time plugin.
+  const WallTimePlugin();
+
   @override
   void build(App app) {
-    final time = Time()..start();
+    final time = WallTime()..start();
     app.insertResource(time);
-    app.addSystem(TimeUpdateSystem(), stage: CoreStage.first);
+    app.addSystem(const WallTimeUpdateSystem(), schedule: Schedules.first);
   }
 
   @override
   void cleanup() {}
+}
+
+/// Deprecated alias for [WallTimePlugin].
+///
+/// Renamed to [WallTimePlugin] in v0.2 to clarify the distinction from
+/// `fledge_calendar`'s in-game `CalendarPlugin`. Update call sites to
+/// [WallTimePlugin]; this class will be removed in a future release.
+@Deprecated('Renamed to WallTimePlugin in v0.2. Use WallTimePlugin instead.')
+class TimePlugin extends WallTimePlugin {
+  /// Creates a new deprecated time plugin (forwards to [WallTimePlugin]).
+  const TimePlugin();
 }

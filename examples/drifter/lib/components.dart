@@ -15,3 +15,14 @@ class Wall {
 class Pickup {
   const Pickup();
 }
+
+/// Marker for the in-canvas HUD score label. `HudUpdateSystem` finds
+/// this entity each frame and syncs its `UiText.text` from `RunScore`.
+class ScoreLabel {
+  const ScoreLabel();
+}
+
+/// Marker for the in-canvas HUD best-score label. Syncs from `HighScore`.
+class HighScoreLabel {
+  const HighScoreLabel();
+}

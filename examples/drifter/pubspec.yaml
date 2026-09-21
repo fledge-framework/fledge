@@ -14,12 +14,16 @@ resolution: workspace
 dependencies:
   flutter:
     sdk: flutter
+  fledge_assets:
+    path: ../../packages/fledge_assets
   fledge_ecs:
     path: ../../packages/fledge_ecs
   fledge_render:
     path: ../../packages/fledge_render
   fledge_render_2d:
     path: ../../packages/fledge_render_2d
+  fledge_camera_2d:
+    path: ../../packages/fledge_camera_2d
   fledge_input:
     path: ../../packages/fledge_input
   fledge_physics:
@@ -28,6 +32,12 @@ dependencies:
     path: ../../packages/fledge_tiled
   fledge_save:
     path: ../../packages/fledge_save
+  fledge_ui:
+    path: ../../packages/fledge_ui
+  fledge_debug:
+    path: ../../packages/fledge_debug
+  # Used directly by game_app.dart for `Vector2` in sprite `customSize`.
+  vector_math: ^2.2.0
 
 dev_dependencies:
   flutter_test:

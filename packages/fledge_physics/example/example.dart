@@ -2,7 +2,6 @@
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_physics/fledge_physics.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart';
-import 'package:fledge_tiled/fledge_tiled.dart';
 
 // Game-specific collision layers
 abstract class GameLayers {
@@ -24,26 +23,28 @@ class TriggerZone {
   const TriggerZone(this.message);
 }
 
-// System that responds to collision events
+// System that responds to collision events by reading the event queue.
 class CollisionResponseSystem extends System {
   @override
   SystemMeta get meta => SystemMeta(
         name: 'collision_response',
         reads: {
           ComponentId.of<Player>(),
-          ComponentId.of<CollisionEvent>(),
           ComponentId.of<TriggerZone>(),
         },
+        // We consume events produced by `collision_detection` this frame.
+        after: const ['collision_detection'],
       );
 
   @override
   Future<void> run(World world) async {
-    // Check player collision events
-    for (final (_, _, collision)
-        in world.query2<Player, CollisionEvent>().iter()) {
-      final other = collision.other;
-
-      // Check if player entered a trigger zone
+    for (final evt in world.eventReader<CollisionEvent>().read()) {
+      // If one side is the player, look at the other side for a trigger.
+      final playerSide = world.has<Player>(evt.entityA)
+          ? evt.entityA
+          : (world.has<Player>(evt.entityB) ? evt.entityB : null);
+      if (playerSide == null) continue;
+      final other = evt.otherOf(playerSide)!;
       final trigger = world.get<TriggerZone>(other);
       if (trigger != null) {
         print('Player entered trigger zone: ${trigger.message}');
@@ -54,11 +55,11 @@ class CollisionResponseSystem extends System {
 
 void main() async {
   final app = App()
-    ..addPlugin(TimePlugin())
-    ..addPlugin(PhysicsPlugin());
+    ..addPlugin(WallTimePlugin())
+    ..addPlugin(const PhysicsPlugin());
 
   // Add our collision response system
-  app.addSystem(CollisionResponseSystem(), stage: CoreStage.update);
+  app.addSystem(CollisionResponseSystem(), schedule: Schedules.update);
 
   // Spawn a solid wall (blocks movement)
   app.world.spawn()

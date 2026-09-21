@@ -9,8 +9,13 @@ workspace:
   - packages/fledge_ecs
   - packages/fledge_ecs_annotations
   - packages/fledge_ecs_generator
+  - packages/fledge_assets
   - packages/fledge_render
   - packages/fledge_render_2d
+  - packages/fledge_camera_2d
+  - packages/fledge_lighting_2d
+  - packages/fledge_ui
+  - packages/fledge_debug
 
   - packages/fledge_audio
   - packages/fledge_input
@@ -19,7 +24,10 @@ workspace:
   - packages/fledge_physics
   - packages/fledge_yarn
   - packages/fledge_save
+  - packages/fledge_calendar
   - packages/fledge_time
+  - packages/fledge_tween
+  - packages/fledge_particles
   - packages/fledge_net
   - examples/basic_ecs
   - examples/advanced_ecs
@@ -57,16 +65,25 @@ melos:
         # lives under the Flutter SDK). Every package that declares a
         # `flutter: sdk: flutter` dependency belongs here; `test:flutter`
         # picks them up via `dependsOn: flutter` below.
+        # Note: `fledge_assets` is pure Dart (Phase 5) and stays out of
+        # this ignore list — its tests run under `dart test`.
         ignore:
           - fledge_render
           - fledge_render_2d
+          - fledge_camera_2d
+          - fledge_lighting_2d
+          - fledge_ui
+          - fledge_debug
 
           - fledge_audio
           - fledge_input
           - fledge_window
           - fledge_tiled
           - fledge_save
+          - fledge_tween
+          - fledge_particles
           - fledge_yarn
+          - fledge_physics
           - fledge_docs
           - drifter_example
 

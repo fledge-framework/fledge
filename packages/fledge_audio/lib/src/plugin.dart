@@ -19,7 +19,7 @@ import 'systems/audio_focus_system.dart';
 /// ```dart
 /// // Basic setup
 /// await App()
-///   .addPlugin(TimePlugin())      // Required for crossfading
+///   .addPlugin(WallTimePlugin())  // Required for crossfading
 ///   .addPlugin(AudioPlugin())
 ///   .run();
 ///
@@ -103,22 +103,22 @@ class AudioPlugin implements Plugin {
     // Add systems
     // Note: AudioAssets and AudioState are inserted by AudioInitSystem
     // after SoLoud is initialized
-    app.addSystem(AudioInitSystem(config), stage: CoreStage.first);
-    app.addSystem(AudioEventSystem(), stage: CoreStage.first);
+    app.addSystem(AudioInitSystem(config), schedule: Schedules.first);
+    app.addSystem(AudioEventSystem(), schedule: Schedules.first);
 
     // Advance any in-progress channel volume fades before consumers read
     // effective volume.
-    app.addSystem(ChannelFadeSystem(), stage: CoreStage.update);
+    app.addSystem(ChannelFadeSystem(), schedule: Schedules.update);
 
     if (config.spatialConfig.enabled) {
-      app.addSystem(SpatialAudioSystem(), stage: CoreStage.update);
+      app.addSystem(SpatialAudioSystem(), schedule: Schedules.update);
     }
 
-    app.addSystem(MusicCrossfadeSystem(), stage: CoreStage.update);
-    app.addSystem(AudioCleanupSystem(), stage: CoreStage.last);
+    app.addSystem(MusicCrossfadeSystem(), schedule: Schedules.update);
+    app.addSystem(AudioCleanupSystem(), schedule: Schedules.last);
 
     if (config.pauseOnFocusLoss) {
-      app.addSystem(AudioFocusSystem(), stage: CoreStage.first);
+      app.addSystem(AudioFocusSystem(), schedule: Schedules.first);
     }
   }
 

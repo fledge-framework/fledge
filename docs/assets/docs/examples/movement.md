@@ -215,7 +215,7 @@ class PhysicsPlugin implements Plugin {
 
 void main() async {
   await App()
-    .addPlugin(TimePlugin())
+    .addPlugin(WallTimePlugin())
     .addPlugin(PhysicsPlugin())
     .run();
 }
@@ -241,7 +241,7 @@ class PhysicsPlugin implements Plugin {
 
 void main() async {
   await App()
-    .addPlugin(TimePlugin())
+    .addPlugin(WallTimePlugin())
     .addPlugin(PhysicsPlugin())
     .run();
 }

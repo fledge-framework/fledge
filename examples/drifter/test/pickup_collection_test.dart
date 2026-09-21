@@ -3,7 +3,6 @@ import 'package:drifter_example/resources.dart';
 import 'package:drifter_example/components.dart';
 import 'package:fledge_physics/fledge_physics.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart';
-import 'package:fledge_tiled/fledge_tiled.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Unit test for [PickupCollectionSystem] — drives the physics plugin
@@ -47,8 +46,14 @@ void main() {
     expect(world.getResource<RunScore>()!.value, 0);
     expect(world.isAlive(pickupEntity.entity), isTrue);
 
-    // One tick: detection fires a CollisionEvent on the player,
-    // PickupCollectionSystem consumes it and despawns the pickup.
+    // The `CollisionEvent` queue is double-buffered by
+    // `world.updateEvents()` (called at the start of every `App.tick`),
+    // so events produced by `collision_detection` on frame N are
+    // readable by `PickupCollectionSystem` on frame N+1. That's two
+    // ticks after the pickup spawns: tick 1 detects the overlap and
+    // fills the write buffer; tick 2 swaps buffers, `pickup_collection`
+    // reads the event, and the pickup is despawned.
+    await app.tick();
     await app.tick();
 
     expect(world.isAlive(pickupEntity.entity), isFalse,

@@ -1,14 +1,13 @@
 # Changelog
 
+## [0.2.0] - 2026-09-20
+
+### Changed
+
+- Consumer migration to `WallTime` and `Schedules.*` labels where applicable.
+
+
 ## [0.1.14] - 2026-04-14
-
-## [Unreleased]
-
-### Features
-
-- **fledge_net:** Add network packet encryption
-
-
 
 ## [0.1.13] - 2026-04-14
 
@@ -23,15 +22,6 @@
 
 
 ## [0.1.10] - 2026-01-06
-
-## [Unreleased]
-
-### Miscellaneous
-
-- Bump versions
-- Bump versions
-
-
 
 ## [0.1.9] - 2026-01-06
 

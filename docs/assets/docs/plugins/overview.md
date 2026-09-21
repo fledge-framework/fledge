@@ -21,7 +21,7 @@ import 'package:fledge_tiled/fledge_tiled.dart';
 
 void main() async {
   await App()
-    .addPlugin(TimePlugin())      // Core plugin for delta time
+    .addPlugin(WallTimePlugin())      // Core plugin for delta time
     .addPlugin(TiledPlugin())     // Tiled tilemap support
     .run();
 }
@@ -35,21 +35,21 @@ Plugins are initialized in the order they are added, so dependencies should be a
 
 Core plugins are bundled with `fledge_ecs` and provide foundational functionality that most games need.
 
-#### TimePlugin
+#### WallTimePlugin
 
-Provides time tracking with delta time, elapsed time, and frame count.
+Provides real-time delta tracking with delta time, elapsed time, and frame count.
 
 ```dart
-App().addPlugin(TimePlugin());
+App().addPlugin(WallTimePlugin());
 
 // Access in systems
-final time = world.getResource<Time>()!;
+final time = world.getResource<WallTime>()!;
 print('Delta: ${time.delta}s, Elapsed: ${time.elapsed}s, Frame: ${time.frameCount}');
 ```
 
 **Provides:**
-- `Time` resource with `delta`, `elapsed`, and `frameCount`
-- `TimeUpdateSystem` that runs at `CoreStage.first`
+- `WallTime` resource with `delta`, `elapsed`, and `frameCount`
+- `WallTimeSystem` that runs at `Schedules.first`
 
 #### FrameLimiterPlugin
 
@@ -66,30 +66,7 @@ print('FPS: ${frameTime.fps}, Frame time: ${frameTime.frameTime}s');
 **Provides:**
 - `FrameLimiterConfig` resource with target FPS settings
 - `FrameTime` resource with frame timing metrics
-- `FrameStartSystem` at `CoreStage.first` and `FrameLimiterSystem` at `CoreStage.last`
-
-#### RenderPlugin
-
-Sets up the render extraction system for the two-world architecture. This plugin is provided by `fledge_render`.
-
-```dart
-import 'package:fledge_render/fledge_render.dart';
-
-App()
-  .addPlugin(TimePlugin())
-  .addPlugin(RenderPlugin());  // Must come before plugins that register extractors
-
-// Register extractors in your game plugin
-final extractors = world.getResource<Extractors>()!;
-extractors.register(SpriteExtractor());
-```
-
-**Provides:**
-- `Extractors` resource for registering component extractors
-- `RenderWorld` resource for storing extracted render data
-- `RenderExtractionSystem` that runs at `CoreStage.last`
-
-See [Two-World Architecture](/docs/guides/two-world-architecture) for details on the extraction pattern.
+- `FrameStartSystem` at `Schedules.first` and `FrameLimiterSystem` at `Schedules.last`
 
 ### First-Party Plugins
 
@@ -97,8 +74,14 @@ First-party plugins are distributed as separate packages and extend Fledge with 
 
 | Plugin | Package | Description |
 |--------|---------|-------------|
-| [Render Infrastructure](/docs/plugins/render_plugin) | `fledge_render` | RenderPlugin, Extractors, RenderWorld, and RenderLayer |
-| [2D Rendering](/docs/plugins/render) | `fledge_render_2d` | Sprites, cameras, transforms, animation, and scene transitions |
+| [Assets](/docs/plugins/assets) | `fledge_assets` | Ref-counted asset store (`Handle<T>` + `Assets<T>`) shared by render, audio, tiled |
+| [Render (2D)](/docs/plugins/render) | `fledge_render_2d` | Sprites, cameras, transforms, animation, materials — plus the RenderPlugin / Extractors / RenderWorld infrastructure |
+| [Camera (2D)](/docs/plugins/camera_2d) | `fledge_camera_2d` | 2D cameras, follow, shake, letterbox, parallax, projections, transitions |
+| [Particles](/docs/plugins/particles) | `fledge_particles` | CPU-driven particle system with emitters, pooling, and presets |
+| [Lighting (2D)](/docs/plugins/lighting_2d) | `fledge_lighting_2d` | Point / directional / spot lights, ambient, additive Canvas pass |
+| [Tween](/docs/plugins/tween) | `fledge_tween` | Easing curves and value tweens for any interpolatable type |
+| [UI](/docs/plugins/ui) | `fledge_ui` | Retained-mode HUD/UI — anchor layout, containers, text, images, panels |
+| [Debug](/docs/plugins/debug) | `fledge_debug` | FPS / entity / ordering overlay plus AABB / collider / frustum gizmos |
 | [Audio](/docs/plugins/audio) | `fledge_audio` | Music, sound effects, and 2D spatial audio |
 | [Input Handling](/docs/plugins/input) | `fledge_input` | Action-based input with keyboard, mouse, and gamepad |
 | [Physics & Collision](/docs/plugins/physics) | `fledge_physics` | Collision detection, resolution, and layer filtering |
@@ -106,7 +89,7 @@ First-party plugins are distributed as separate packages and extend Fledge with 
 | [Tiled Tilemaps](/docs/plugins/tiled) | `fledge_tiled` | Load and render Tiled TMX/TSX tilemaps |
 | [Yarn Dialogue](/docs/plugins/yarn) | `fledge_yarn` | Yarn Spinner dialogue system for branching narratives |
 | [Save System](/docs/plugins/save) | `fledge_save` | Save/load with resource serialization via Saveable mixin |
-| [Game Time](/docs/plugins/time) | `fledge_time` | In-game calendar, day/night, seasons, and time events |
+| [Calendar](/docs/plugins/calendar) | `fledge_calendar` | In-game calendar, day/night, seasons, and time events |
 | [Networking](/docs/plugins/net) | `fledge_net` | Multiplayer networking with host/client, state sync, and input prediction |
 
 ## Creating Custom Plugins

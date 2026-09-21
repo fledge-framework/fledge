@@ -1,9 +1,11 @@
 import 'dart:ui' show Rect;
 
 import 'package:fledge_ecs/fledge_ecs.dart';
-import 'package:fledge_render/fledge_render.dart';
 import 'package:vector_math/vector_math.dart';
 
+import '../render/extract/draw_layer.dart';
+import '../render/extract/extract.dart';
+import '../render/world/render_world.dart';
 import '../sprite/extracted_sprite.dart';
 import '../sprite/sprite.dart';
 import '../transform/global_transform.dart';
@@ -25,8 +27,14 @@ class AtlasSpriteExtractor extends Extractor {
       // Get the source rect for current sprite index
       final sourceRect = atlasSprite.sourceRect;
 
-      // Compute sort key (Y position for typical 2D sorting)
-      final sortKey = (globalTransform.y * 1000).toInt();
+      // Compute sort key: explicit layerSubOrder wins; otherwise derive
+      // from y-position, clamped inside the layer's range.
+      final sub = atlasSprite.layerSubOrder != 0
+          ? atlasSprite.layerSubOrder
+          : (globalTransform.y * 1000)
+              .toInt()
+              .clamp(0, DrawLayerExtension.layerMultiplier - 1);
+      final sortKey = atlasSprite.layer.sortKey(subOrder: sub);
 
       renderWorld.spawn().insert(ExtractedSprite(
             entity: entity,
@@ -35,6 +43,8 @@ class AtlasSpriteExtractor extends Extractor {
             transform: globalTransform.matrix,
             color: atlasSprite.color,
             sortKey: sortKey,
+            layer: atlasSprite.layer,
+            layerSubOrder: atlasSprite.layerSubOrder,
             flipFlags: ExtractedSprite.computeFlipFlags(
               atlasSprite.flipX,
               atlasSprite.flipY,

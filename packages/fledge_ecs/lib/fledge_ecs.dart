@@ -63,6 +63,7 @@ export 'src/change_detection/change_detection.dart';
 // Systems
 export 'src/system/system.dart';
 export 'src/system/schedule.dart';
+export 'src/system/schedule_label.dart';
 export 'src/system/commands.dart';
 export 'src/system/run_condition.dart';
 export 'src/system/system_set.dart';
@@ -81,6 +82,9 @@ export 'src/reflection/reflection.dart';
 
 // Resources
 export 'src/resource.dart';
+
+// Fixed-timestep config + accumulator resource.
+export 'src/fixed_timestep.dart';
 
 // Events
 export 'src/event.dart';

@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.0] - 2026-09-20
+
+### Changed
+
+- `Collider`, `CollisionShape`, `CollisionGrid`, `Pathfinder` moved to `fledge_physics`; deprecated re-exports retained for one release.
+- Now depends on `fledge_physics`.
+
+### Added
+
+- `Assets<TilemapAsset>` / `Assets<TilesetAsset>` integration.
+
+
 ## [0.1.14] - 2026-04-14
 
 
@@ -18,15 +30,6 @@
 
 ## [0.1.10] - 2026-01-06
 
-## [Unreleased]
-
-### Miscellaneous
-
-- Bump versions
-- Bump versions
-
-
-
 ## [0.1.9] - 2026-01-06
 
 ## [0.1.9] - 2026-01-06
@@ -38,14 +41,6 @@
 
 
 ## [0.1.8] - 2026-01-06
-
-## [Unreleased]
-
-### Features
-
-- **fledge_tiled:** Add support for pathfinding
-
-
 
 ## [0.1.7] - 2026-01-05
 
@@ -63,14 +58,6 @@
 
 ## [0.1.6] - 2026-01-05
 
-## [Unreleased]
-
-### Refactoring
-
-- **fledge_render:** Combine core systems from fledge_render_flutter
-
-
-
 ## [0.1.5] - 2026-01-04
 
 
@@ -81,42 +68,7 @@
 
 ## [0.1.3] - 2026-01-04
 
-## [Unreleased]
-
-### Bug Fixes
-
-- **fledge_render_2d:** Fix null safety error on private field
-
-### Features
-
-- **fledge_tiled:** Refactor TilemapSpawnConfig API
-
-
-
 ## [0.1.2] - 2026-01-03
-
-## [Unreleased]
-
-### Bug Fixes
-
-- Update dependencies to latest stable versions
-- **fledge:** Update dependencies, upgrade melos to v7
-
-### Features
-
-- **fledge_render:** Use layer enums rather than magic numbers
-
-### Miscellaneous
-
-- **license:** Remove whitespace from license files
-- Update license text
-
-
-
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.1.0] - 2025-01-02
 

@@ -82,7 +82,7 @@ void main() {
       final system = CounterSystem();
       final app = App()..addSystem(system);
 
-      expect(app.schedule.systemCount, equals(1));
+      expect(app.scheduler.systemCount, equals(1));
     });
 
     test('addSystems adds multiple systems', () {
@@ -92,7 +92,7 @@ void main() {
           CounterSystem(),
         ]);
 
-      expect(app.schedule.systemCount, equals(2));
+      expect(app.scheduler.systemCount, equals(2));
     });
 
     test('tick runs systems', () async {

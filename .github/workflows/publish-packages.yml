@@ -97,19 +97,28 @@ jobs:
           VERSION=${{ steps.version.outputs.VERSION }}
           DATE=$(date +%Y-%m-%d)
 
+          # Alphabetical — order doesn't matter for changelog generation.
           PACKAGES=(
+            "fledge_assets"
             "fledge_audio"
+            "fledge_calendar"
+            "fledge_camera_2d"
+            "fledge_debug"
             "fledge_ecs"
             "fledge_ecs_annotations"
             "fledge_ecs_generator"
             "fledge_input"
+            "fledge_lighting_2d"
             "fledge_net"
+            "fledge_particles"
             "fledge_physics"
             "fledge_render"
             "fledge_render_2d"
             "fledge_save"
             "fledge_tiled"
             "fledge_time"
+            "fledge_tween"
+            "fledge_ui"
             "fledge_window"
             "fledge_yarn"
           )
@@ -187,22 +196,47 @@ jobs:
 
       - name: Publish packages
         run: |
-          # Publish in dependency order
+          # Publish in dependency order. Each package must be already on
+          # pub.dev before any package that depends on it publishes,
+          # because pub validates hosted deps resolve at their declared
+          # constraint.
+          #
+          # Shims (fledge_render, fledge_time) publish last because they
+          # depend on the merged/renamed packages.
           PACKAGES=(
-            "fledge_audio"
-            "fledge_ecs"
+            # Foundation: no in-tree deps.
             "fledge_ecs_annotations"
+            # Core: depends on annotations.
+            "fledge_ecs"
             "fledge_ecs_generator"
-            "fledge_input"
-            "fledge_net"
-            "fledge_physics"
-            "fledge_render"
+            # Assets: depends on ecs.
+            "fledge_assets"
+            # Render (2D infra + components merged in v0.2).
             "fledge_render_2d"
-            "fledge_save"
-            "fledge_tiled"
-            "fledge_time"
+            # Render extensions: depend on ecs + render_2d (+ assets).
+            "fledge_camera_2d"
+            "fledge_tween"
+            "fledge_particles"
+            "fledge_lighting_2d"
+            # Platform / peripherals.
+            "fledge_input"
+            "fledge_audio"
             "fledge_window"
+            # Physics (no longer depends on tiled after v0.2).
+            "fledge_physics"
+            # UI + calendar + yarn + save + net.
+            "fledge_ui"
+            "fledge_calendar"
             "fledge_yarn"
+            "fledge_save"
+            "fledge_net"
+            # Tiled depends on physics + assets + camera_2d.
+            "fledge_tiled"
+            # Debug depends on ui + physics + camera_2d + render_2d.
+            "fledge_debug"
+            # Shims publish last — they depend on the new packages above.
+            "fledge_render"
+            "fledge_time"
           )
 
           for pkg in "${PACKAGES[@]}"; do

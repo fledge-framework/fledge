@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart' hide Color;
 import 'dart:ui';
 
+import 'package:fledge_camera_2d/fledge_camera_2d.dart';
+import 'package:fledge_debug/fledge_debug.dart';
 import 'package:fledge_ecs/fledge_ecs.dart' hide State;
 import 'package:fledge_input/fledge_input.dart';
-import 'package:fledge_render/fledge_render.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart';
 import 'package:fledge_save/fledge_save.dart';
+import 'package:fledge_ui/fledge_ui.dart';
 
 import 'components.dart';
 import 'game_app.dart';
-import 'render/game_painter.dart';
 import 'resources.dart';
 
 /// The Drifter game widget.
@@ -41,6 +42,13 @@ class _DrifterWidgetState extends State<DrifterWidget>
   void initState() {
     super.initState();
     _app = buildApp(saveConfig: widget.saveConfig);
+    // Match the ViewportSize resource to the play-field so the UI
+    // layout system anchors HUD elements against the actual canvas
+    // rect, not the CameraPlugin's default 1280×720.
+    final bounds = _app.world.getResource<GameBounds>()!;
+    _app.world
+        .getResource<ViewportSize>()
+        ?.update(bounds.width, bounds.height);
     spawnScene(_app);
 
     _ticker = AnimationController(
@@ -98,7 +106,6 @@ class _DrifterWidgetState extends State<DrifterWidget>
   @override
   Widget build(BuildContext context) {
     final bounds = _world.getResource<GameBounds>()!;
-    final renderWorld = _world.getResource<RenderWorld>();
     final runScore = _world.getResource<RunScore>()?.value ?? 0;
     final highScore = _world.getResource<HighScore>()?.value ?? 0;
     final isPaused = !_focusNode.hasFocus;
@@ -111,7 +118,10 @@ class _DrifterWidgetState extends State<DrifterWidget>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Canvas
+          // Canvas — painted by `FledgeRenderView`, which reads the
+          // app's RenderWorld each frame and submits sprite batches
+          // through `CanvasSpriteDrawer.drawRawAtlas`. No more
+          // hand-drawn shapes.
           Container(
             decoration: BoxDecoration(
               border: Border.all(color: const Color(0xFF4CAF50), width: 2),
@@ -119,33 +129,41 @@ class _DrifterWidgetState extends State<DrifterWidget>
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(6),
-              child: Stack(
-                children: [
-                  CustomPaint(
-                    size: Size(bounds.width, bounds.height),
-                    painter: renderWorld != null
-                        ? DrifterPainter(renderWorld)
-                        : null,
-                  ),
-                  if (isPaused)
-                    Positioned.fill(
-                      child: GestureDetector(
-                        onTap: _focusNode.requestFocus,
-                        child: Container(
-                          color: const Color(0xCC000000),
-                          alignment: Alignment.center,
-                          child: const Text(
-                            'Click to play',
-                            style: TextStyle(
-                              color: Color(0xFFFFFFFF),
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+              child: SizedBox(
+                width: bounds.width,
+                height: bounds.height,
+                child: Stack(
+                  children: [
+                    DebugGizmosLayer(
+                      app: _app,
+                      child: FledgeUiOverlay(
+                        app: _app,
+                        child: FledgeRenderView(
+                          app: _app,
+                          backgroundColor: const Color(0xFF1A1A2E),
+                        ),
+                      ),
+                    ),
+                    if (isPaused)
+                      Positioned.fill(
+                        child: GestureDetector(
+                          onTap: _focusNode.requestFocus,
+                          child: Container(
+                            color: const Color(0xCC000000),
+                            alignment: Alignment.center,
+                            child: const Text(
+                              'Click to play',
+                              style: TextStyle(
+                                color: Color(0xFFFFFFFF),
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

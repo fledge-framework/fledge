@@ -8,7 +8,7 @@ class MusicCrossfadeSystem implements System {
   @override
   SystemMeta get meta => const SystemMeta(
         name: 'MusicCrossfadeSystem',
-        resourceReads: {Time},
+        resourceReads: {WallTime},
         resourceWrites: {AudioState},
         eventWrites: {MusicChanged},
       );
@@ -22,7 +22,7 @@ class MusicCrossfadeSystem implements System {
   @override
   Future<void> run(World world) async {
     final state = world.getResource<AudioState>();
-    final time = world.getResource<Time>();
+    final time = world.getResource<WallTime>();
     if (state == null || time == null || !state.isInitialized) return;
 
     if (!state.isCrossfading) return;

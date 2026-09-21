@@ -1,7 +1,6 @@
 import 'dart:ui' show Color, Offset, Rect;
 
 import 'package:fledge_ecs/fledge_ecs.dart';
-import 'package:fledge_render/fledge_render.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vector_math/vector_math.dart';
@@ -568,14 +567,15 @@ void main() {
       expect(count, 1); // Only visible sprite was extracted
     });
 
-    test('computes sort key from Y position', () {
+    test('computes sort key from Y position within default layer', () {
       final world = World();
       final renderWorld = RenderWorld();
 
       const texture = TextureHandle(id: 1, width: 64, height: 64);
 
       final globalTransform = GlobalTransform2D();
-      globalTransform.translation = Vector2(100, 250);
+      // y=50 -> sub = 50000 (well inside 0..99999 range)
+      globalTransform.translation = Vector2(100, 50);
 
       world.spawn()
         ..insert(Sprite(texture: texture))
@@ -584,11 +584,16 @@ void main() {
       final extractor = SpriteExtractor();
       extractor.extract(world, renderWorld);
 
+      var seen = 0;
       for (final (_, extracted)
           in renderWorld.query1<ExtractedSprite>().iter()) {
-        // Sort key should be Y * 1000
-        expect(extracted.sortKey, 250000);
+        // Default layer is characters (index 2); sub = (50 * 1000) = 50000.
+        expect(
+            extracted.sortKey, DrawLayer.characters.sortKey(subOrder: 50000));
+        expect(extracted.layer, DrawLayer.characters);
+        seen++;
       }
+      expect(seen, 1);
     });
   });
 }

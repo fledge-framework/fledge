@@ -1,7 +1,7 @@
+import 'package:fledge_physics/fledge_physics.dart';
 import 'package:tiled/tiled.dart' show TileLayer, TileMapParser;
 
 import '../resources/tilemap_assets.dart';
-import 'collision_grid.dart';
 
 /// Extracts a [CollisionGrid] from a [LoadedTilemap].
 ///

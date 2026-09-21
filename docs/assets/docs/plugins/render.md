@@ -1,51 +1,156 @@
-# 2D Rendering
+# Render (2D)
 
-The `fledge_render_2d` package provides 2D game components for Fledge: transforms, sprites, cameras, texture atlases, and animation.
+The `fledge_render_2d` package is Fledge's rendering package. It ships two things:
 
-> For core render infrastructure (RenderPlugin, Extractors, RenderWorld, RenderLayer), see [Render Infrastructure](/docs/plugins/render_plugin).
+1. **Core render infrastructure** — `RenderPlugin`, `Extractors`, `RenderWorld`, `RenderLayer`, and the render graph. Previously lived in a separate `fledge_render` package; Phase 3 merged the two.
+2. **2D component set** — `Transform2D` / `GlobalTransform2D`, `Sprite`, `AtlasSprite`, `AnimationPlayer`, materials, `Orientation`, `Visibility`, and scene transitions.
+
+`fledge_render` remains as a deprecated re-export shim for one release. New code should depend on `fledge_render_2d` directly.
 
 ## Installation
 
 ```yaml
 dependencies:
-  fledge_render: ^0.1.0     # Core infrastructure
-  fledge_render_2d: ^0.1.0  # 2D components
+  fledge_render_2d: ^0.1.0
 ```
 
 ## Quick Start
 
 ```dart
 import 'package:fledge_ecs/fledge_ecs.dart';
-import 'package:fledge_render/fledge_render.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart';
 
 void main() async {
   final app = App()
-    .addPlugin(TimePlugin())
-    .addPlugin(RenderPlugin())  // Sets up extraction automatically
-    // Add 2D render systems
-    .addSystem(TransformPropagateSystem())
-    .addSystem(AnimateSystemWithResource());
+    ..addPlugin(WallTimePlugin())
+    ..addPlugin(RenderPlugin())         // core infrastructure + sprite backend
+    ..addSystem(TransformPropagateSystem())
+    ..addSystem(AnimateSystemWithResource());
 
-  // Register extractors
-  final extractors = app.world.getResource<Extractors>()!;
-  extractors.register(SpriteExtractor());
-
-  // Spawn a camera
+  // Spawn a camera.
   app.world.spawn()
     ..insert(Transform2D.from(0, 0))
-    ..insert(GlobalTransform2D())
+    ..insert(GlobalTransform2D.identity())
     ..insert(Camera2D());
 
-  // Spawn a sprite
+  // Spawn a sprite.
   app.world.spawn()
     ..insert(Transform2D.from(100, 200))
-    ..insert(GlobalTransform2D())
+    ..insert(GlobalTransform2D.identity())
     ..insert(Sprite(texture: playerTexture));
 
   await app.run();
 }
 ```
+
+Paint the scene from a Flutter widget:
+
+```dart
+runApp(MaterialApp(home: FledgeRenderView(app: app)));
+```
+
+## RenderPlugin
+
+`RenderPlugin` sets up the extraction infrastructure. Add it before any plugin that registers an extractor (`ParticlePlugin`, `LightingPlugin`, `UiPlugin`, `TiledPlugin`, ...).
+
+**Provides:**
+- `Extractors` resource — registry for component extractors.
+- `RenderWorld` resource — separate world for extracted render data.
+- `RenderExtractionSystem` — runs at `Schedules.last`, clears the render world, and executes every registered extractor.
+- The default sprite drawer (choose `RenderBackend.canvas`, the default, or plug in your own).
+
+`SpriteBackendPlugin` was collapsed back into `RenderPlugin` in Phase 3d — pass `RenderPlugin(backend: RenderBackend.canvas)` on its own; the matching sprite drawer is installed automatically.
+
+## Two-World Architecture
+
+Fledge separates game logic from rendering using two distinct worlds:
+
+| World | Purpose | Contents |
+|-------|---------|----------|
+| **Main World** | Game logic | Entities with game components (Position, Velocity, Player, ...) |
+| **Render World** | GPU-ready data | Extracted data optimized for rendering, rebuilt every frame |
+
+Each frame:
+1. Main-world systems run (game logic).
+2. `RenderExtractionSystem` clears the render world and runs every extractor.
+3. Painters query only the render world.
+
+See [Two-World Architecture Guide](/docs/guides/two-world-architecture) for details on writing extractors.
+
+## Extractors
+
+Extractors copy and transform data from the main world into the render world.
+
+```dart
+final extractors = app.world.getResource<Extractors>()!;
+extractors.register(SpriteExtractor());
+extractors.register(TilemapExtractor());
+```
+
+Custom extractors:
+
+```dart
+class ParticleExtractor extends Extractor {
+  @override
+  void extract(World mainWorld, RenderWorld renderWorld) {
+    for (final (_, pos, particle) in
+        mainWorld.query2<Position, Particle>().iter()) {
+      renderWorld.spawn().insert(ExtractedParticle(
+        x: pos.x,
+        y: pos.y,
+        radius: particle.radius,
+        color: particle.color,
+      ));
+    }
+  }
+}
+```
+
+For simple one-component extractions, `ComponentExtractor` is more concise:
+
+```dart
+extractors.register(ComponentExtractor<Sprite, ExtractedSprite>(
+  (world, entity, sprite) => ExtractedSprite(
+    x: world.get<Position>(entity)!.x,
+    y: world.get<Position>(entity)!.y,
+    textureKey: sprite.textureKey,
+  ),
+));
+```
+
+### Extracted data types
+
+Mix in `ExtractedData` for render-world components; add `SortableExtractedData` for layer-ordered entities:
+
+```dart
+class ExtractedCharacter with ExtractedData, SortableExtractedData {
+  final double x, y;
+  final int spriteIndex;
+  @override
+  final int sortKey;
+
+  ExtractedCharacter({
+    required this.x,
+    required this.y,
+    required this.spriteIndex,
+  }) : sortKey = (y * 1000).toInt();
+}
+```
+
+## DrawLayer sort keys
+
+Fledge uses `DrawLayer` to give layer-based sorting a shared vocabulary across sprites, particles, tilemaps, and UI:
+
+| Layer | Sort-key range |
+|-------|----------------|
+| `background` | 0 – 99,999 |
+| `ground` | 100,000 – 199,999 |
+| `characters` | 200,000 – 299,999 |
+| `foreground` | 300,000 – 399,999 |
+| `particles` | 400,000 – 499,999 |
+| `ui` | 500,000+ |
+
+Within each layer, entries are sub-sorted by an inner key (usually derived from Y position). This is what makes top-down painter's-algorithm rendering "just work" — characters between roof and floor tiles, sparks above characters, HUD above everything.
 
 ## Transform2D
 
@@ -648,7 +753,7 @@ print(player.isPlaying);         // true/false
 print(player.progress);          // 0.0 to 1.0
 ```
 
-Add `AnimateSystemWithResource` to your app to update sprite source rects each frame (uses `Time` resource for delta time).
+Add `AnimateSystemWithResource` to your app to update sprite source rects each frame (uses `WallTime` resource for delta time).
 
 ## Character Orientation
 
@@ -917,7 +1022,8 @@ if (transition.phase == TransitionPhase.fadeOut) {
 
 ## See Also
 
-- [Render Infrastructure](/docs/plugins/render_plugin) - RenderPlugin, Extractors, RenderWorld, RenderLayer
+- [Assets](/docs/plugins/assets) - Ref-counted texture / atlas / clip management
+- [Camera (2D)](/docs/plugins/camera_2d) - Follow, shake, letterbox, parallax, transitions
 - [Two-World Architecture](/docs/guides/two-world-architecture) - Extraction system details
 - [Tiled Tilemaps](/docs/plugins/tiled) - Tilemap rendering integration
 - [Plugins Overview](/docs/plugins/overview) - Plugin system introduction

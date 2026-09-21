@@ -1,41 +1,67 @@
 import 'package:fledge_ecs/fledge_ecs.dart';
 
-/// Component inserted when two entities collide.
+/// Event published when two entities collide.
 ///
 /// Collision events are:
-/// - Bidirectional: Both colliding entities receive an event
-/// - Frame-scoped: Removed by [CollisionCleanupSystem] at end of frame
-/// - Filtered by layer: Only generated when layer/mask compatibility passes
+/// - **Bidirectional**: A single event carries both entities. Consumers
+///   should not expect two events for a given pair.
+/// - **Frame-scoped**: The events queue is double-buffered by
+///   `world.updateEvents()` (driven by `App.tick`), so consumers see
+///   only the previous frame's collisions.
+/// - **Filtered by layer**: Only generated when layer/mask compatibility
+///   passes on both sides.
 ///
-/// Systems can query for entities with [CollisionEvent] to respond
-/// to collisions:
+/// Consume events via [World.eventReader]:
 ///
 /// ```dart
-/// for (final (entity, event) in world.query1<CollisionEvent>().iter()) {
-///   // entity collided with event.other
-///   final other = event.other;
-///   // Handle collision...
+/// for (final evt in world.eventReader<CollisionEvent>().read()) {
+///   // evt.entityA collided with evt.entityB this frame.
 /// }
 /// ```
 ///
-/// For more specific collision handling, combine with other components:
+/// To respond to collisions involving a specific component (e.g. Player),
+/// look the component up on either side:
 ///
 /// ```dart
-/// for (final (entity, event, player)
-///     in world.query2<CollisionEvent, Player>().iter()) {
-///   // Player collided with something
-///   if (world.has<Enemy>(event.other)) {
-///     // Player hit an enemy
-///   }
+/// for (final evt in world.eventReader<CollisionEvent>().read()) {
+///   final player = world.get<Player>(evt.entityA) ??
+///       world.get<Player>(evt.entityB);
+///   if (player == null) continue;
+///   // Handle player collision...
 /// }
 /// ```
 class CollisionEvent {
-  /// The entity that this entity collided with.
-  final Entity other;
+  /// The first entity in the collision pair.
+  final Entity entityA;
 
-  /// Creates a collision event referencing the other colliding entity.
-  const CollisionEvent(this.other);
+  /// The second entity in the collision pair.
+  final Entity entityB;
+
+  /// Creates a collision event for the given pair of entities.
+  const CollisionEvent({required this.entityA, required this.entityB});
+
+  /// Returns the "other" entity given one side of the pair, or `null` if
+  /// [entity] isn't part of this collision.
+  ///
+  /// Handy when a system already has one entity in hand and just wants
+  /// the partner:
+  ///
+  /// ```dart
+  /// for (final evt in reader.read()) {
+  ///   final other = evt.otherOf(playerEntity);
+  ///   if (other == null) continue;
+  ///   // ...
+  /// }
+  /// ```
+  Entity? otherOf(Entity entity) {
+    if (entity == entityA) return entityB;
+    if (entity == entityB) return entityA;
+    return null;
+  }
+
+  /// Whether [entity] is either side of this collision.
+  bool involves(Entity entity) => entity == entityA || entity == entityB;
 
   @override
-  String toString() => 'CollisionEvent(other: $other)';
+  String toString() => 'CollisionEvent(entityA: $entityA, entityB: $entityB)';
 }

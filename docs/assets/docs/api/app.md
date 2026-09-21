@@ -53,7 +53,7 @@ App addPlugin(Plugin plugin)
 Adds a plugin to the app. Calls the plugin's `build` method immediately.
 
 ```dart
-app.addPlugin(TimePlugin());
+app.addPlugin(WallTimePlugin());
 ```
 
 ### addPlugins(plugins)
@@ -65,7 +65,7 @@ App addPlugins(List<Plugin> plugins)
 Adds multiple plugins in order.
 
 ```dart
-app.addPlugins([TimePlugin(), RenderPlugin()]);
+app.addPlugins([WallTimePlugin(), RenderPlugin()]);
 ```
 
 ### insertResource<T>(resource)
@@ -184,7 +184,7 @@ Marks the current state as the session checkpoint. All plugins added before this
 // In main.dart - session plugins
 final app = App()
   ..addPlugin(WindowPlugin())
-  ..addPlugin(TimePlugin())
+  ..addPlugin(WallTimePlugin())
   ..addPlugin(AudioPlugin());
 
 app.markSessionCheckpoint(); // These plugins persist
@@ -319,7 +319,7 @@ app.onStop((app) => print('Game stopped!'));
 ```dart
 void main() async {
   await App()
-    .addPlugin(TimePlugin())
+    .addPlugin(WallTimePlugin())
     .addPlugin(FrameLimiterPlugin(targetFps: 60))
     .insertResource(Score())
     .addEvent<CollisionEvent>()

@@ -4,7 +4,7 @@ import 'package:fledge_tiled/fledge_tiled.dart';
 
 void main() async {
   final app = App()
-    ..addPlugin(TimePlugin())
+    ..addPlugin(WallTimePlugin())
     ..addPlugin(TiledPlugin());
 
   await app.tick();

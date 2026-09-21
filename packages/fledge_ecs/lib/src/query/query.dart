@@ -1,4 +1,5 @@
 import '../archetype/archetypes.dart';
+import '../archetype/entities.dart';
 import '../entity.dart';
 import 'filter.dart';
 import 'query_state.dart';
@@ -52,17 +53,19 @@ abstract class Query {
 /// Query for a single component type.
 class Query1<T1> implements Query {
   final Archetypes _archetypes;
+  final Entities _entities;
 
   @override
   final QueryState state;
 
-  Query1(this._archetypes, {QueryFilter? filter})
+  Query1(this._archetypes, this._entities, {QueryFilter? filter})
       : state = QueryState.of1<T1>(filter: filter);
 
-  Query1.withState(this._archetypes, this.state);
+  Query1.withState(this._archetypes, this._entities, this.state);
 
   /// Returns an iterable over all matching entities and their components.
-  Iterable<(Entity, T1)> iter() => QueryIter1<T1>(_archetypes, state);
+  Iterable<(Entity, T1)> iter() =>
+      QueryIter1<T1>(_archetypes, _entities, state);
 
   /// Returns the first matching entity, or null if none match.
   (Entity, T1)? single() {
@@ -101,17 +104,19 @@ class Query1<T1> implements Query {
 /// Query for two component types.
 class Query2<T1, T2> implements Query {
   final Archetypes _archetypes;
+  final Entities _entities;
 
   @override
   final QueryState state;
 
-  Query2(this._archetypes, {QueryFilter? filter})
+  Query2(this._archetypes, this._entities, {QueryFilter? filter})
       : state = QueryState.of2<T1, T2>(filter: filter);
 
-  Query2.withState(this._archetypes, this.state);
+  Query2.withState(this._archetypes, this._entities, this.state);
 
   /// Returns an iterable over all matching entities and their components.
-  Iterable<(Entity, T1, T2)> iter() => QueryIter2<T1, T2>(_archetypes, state);
+  Iterable<(Entity, T1, T2)> iter() =>
+      QueryIter2<T1, T2>(_archetypes, _entities, state);
 
   /// Returns the first matching entity, or null if none match.
   (Entity, T1, T2)? single() {
@@ -146,18 +151,19 @@ class Query2<T1, T2> implements Query {
 /// Query for three component types.
 class Query3<T1, T2, T3> implements Query {
   final Archetypes _archetypes;
+  final Entities _entities;
 
   @override
   final QueryState state;
 
-  Query3(this._archetypes, {QueryFilter? filter})
+  Query3(this._archetypes, this._entities, {QueryFilter? filter})
       : state = QueryState.of3<T1, T2, T3>(filter: filter);
 
-  Query3.withState(this._archetypes, this.state);
+  Query3.withState(this._archetypes, this._entities, this.state);
 
   /// Returns an iterable over all matching entities and their components.
   Iterable<(Entity, T1, T2, T3)> iter() =>
-      QueryIter3<T1, T2, T3>(_archetypes, state);
+      QueryIter3<T1, T2, T3>(_archetypes, _entities, state);
 
   /// Returns the first matching entity, or null if none match.
   (Entity, T1, T2, T3)? single() {
@@ -192,18 +198,227 @@ class Query3<T1, T2, T3> implements Query {
 /// Query for four component types.
 class Query4<T1, T2, T3, T4> implements Query {
   final Archetypes _archetypes;
+  final Entities _entities;
 
   @override
   final QueryState state;
 
-  Query4(this._archetypes, {QueryFilter? filter})
+  Query4(this._archetypes, this._entities, {QueryFilter? filter})
       : state = QueryState.of4<T1, T2, T3, T4>(filter: filter);
 
-  Query4.withState(this._archetypes, this.state);
+  Query4.withState(this._archetypes, this._entities, this.state);
 
   /// Returns an iterable over all matching entities and their components.
   Iterable<(Entity, T1, T2, T3, T4)> iter() =>
-      QueryIter4<T1, T2, T3, T4>(_archetypes, state);
+      QueryIter4<T1, T2, T3, T4>(_archetypes, _entities, state);
+
+  /// Returns the first matching entity, or null if none match.
+  (Entity, T1, T2, T3, T4)? single() {
+    final iterator = iter().iterator;
+    if (iterator.moveNext()) {
+      return iterator.current;
+    }
+    return null;
+  }
+
+  /// Returns the number of matching entities.
+  int count() {
+    if (state.hasChangeFilters) {
+      return iter().length;
+    }
+
+    state.updateCache(_archetypes);
+    int total = 0;
+    for (final archetypeIndex in state.matchingArchetypes) {
+      total += _archetypes.tableAt(archetypeIndex).length;
+    }
+    return total;
+  }
+
+  /// Returns true if any entities match.
+  bool get isNotEmpty => count() > 0;
+
+  /// Returns true if no entities match.
+  bool get isEmpty => count() == 0;
+}
+
+// ============================================================================
+// QueryMut — nominal type-level intent markers for the scheduler.
+//
+// Runtime behavior is identical to Query1..Query4: both wrap the same
+// Archetypes and QueryState, expose iter()/single()/count(), and yield
+// mutable references. The distinction exists purely so the code generator
+// can infer whether a @system parameter is a read or a write over the
+// components in its type arguments.
+//
+// - `QueryN<...>`   ->  generator marks each component as a READ.
+// - `QueryMutN<...>`->  generator marks each component as a WRITE.
+//
+// Mixed reads/writes on the same query are out of scope: split the access
+// into separate parameters (one Query, one QueryMut), or hand-write
+// SystemMeta on a class-based System subclass.
+// ============================================================================
+
+/// Mutable query marker for a single component type.
+///
+/// Runtime behavior is identical to [Query1]; the distinct name signals to
+/// the scheduler that this system writes to `T1`.
+class QueryMut1<T1> implements Query {
+  final Archetypes _archetypes;
+  final Entities _entities;
+
+  @override
+  final QueryState state;
+
+  QueryMut1(this._archetypes, this._entities, {QueryFilter? filter})
+      : state = QueryState.of1<T1>(filter: filter);
+
+  QueryMut1.withState(this._archetypes, this._entities, this.state);
+
+  /// Returns an iterable over all matching entities and their components.
+  Iterable<(Entity, T1)> iter() =>
+      QueryIter1<T1>(_archetypes, _entities, state);
+
+  /// Returns the first matching entity, or null if none match.
+  (Entity, T1)? single() {
+    final iterator = iter().iterator;
+    if (iterator.moveNext()) {
+      return iterator.current;
+    }
+    return null;
+  }
+
+  /// Returns the number of matching entities.
+  int count() {
+    if (state.hasChangeFilters) {
+      return iter().length;
+    }
+
+    state.updateCache(_archetypes);
+    int total = 0;
+    for (final archetypeIndex in state.matchingArchetypes) {
+      total += _archetypes.tableAt(archetypeIndex).length;
+    }
+    return total;
+  }
+
+  /// Returns true if any entities match.
+  bool get isNotEmpty => count() > 0;
+
+  /// Returns true if no entities match.
+  bool get isEmpty => count() == 0;
+}
+
+/// Mutable query marker for two component types.
+class QueryMut2<T1, T2> implements Query {
+  final Archetypes _archetypes;
+  final Entities _entities;
+
+  @override
+  final QueryState state;
+
+  QueryMut2(this._archetypes, this._entities, {QueryFilter? filter})
+      : state = QueryState.of2<T1, T2>(filter: filter);
+
+  QueryMut2.withState(this._archetypes, this._entities, this.state);
+
+  /// Returns an iterable over all matching entities and their components.
+  Iterable<(Entity, T1, T2)> iter() =>
+      QueryIter2<T1, T2>(_archetypes, _entities, state);
+
+  /// Returns the first matching entity, or null if none match.
+  (Entity, T1, T2)? single() {
+    final iterator = iter().iterator;
+    if (iterator.moveNext()) {
+      return iterator.current;
+    }
+    return null;
+  }
+
+  /// Returns the number of matching entities.
+  int count() {
+    if (state.hasChangeFilters) {
+      return iter().length;
+    }
+
+    state.updateCache(_archetypes);
+    int total = 0;
+    for (final archetypeIndex in state.matchingArchetypes) {
+      total += _archetypes.tableAt(archetypeIndex).length;
+    }
+    return total;
+  }
+
+  /// Returns true if any entities match.
+  bool get isNotEmpty => count() > 0;
+
+  /// Returns true if no entities match.
+  bool get isEmpty => count() == 0;
+}
+
+/// Mutable query marker for three component types.
+class QueryMut3<T1, T2, T3> implements Query {
+  final Archetypes _archetypes;
+  final Entities _entities;
+
+  @override
+  final QueryState state;
+
+  QueryMut3(this._archetypes, this._entities, {QueryFilter? filter})
+      : state = QueryState.of3<T1, T2, T3>(filter: filter);
+
+  QueryMut3.withState(this._archetypes, this._entities, this.state);
+
+  /// Returns an iterable over all matching entities and their components.
+  Iterable<(Entity, T1, T2, T3)> iter() =>
+      QueryIter3<T1, T2, T3>(_archetypes, _entities, state);
+
+  /// Returns the first matching entity, or null if none match.
+  (Entity, T1, T2, T3)? single() {
+    final iterator = iter().iterator;
+    if (iterator.moveNext()) {
+      return iterator.current;
+    }
+    return null;
+  }
+
+  /// Returns the number of matching entities.
+  int count() {
+    if (state.hasChangeFilters) {
+      return iter().length;
+    }
+
+    state.updateCache(_archetypes);
+    int total = 0;
+    for (final archetypeIndex in state.matchingArchetypes) {
+      total += _archetypes.tableAt(archetypeIndex).length;
+    }
+    return total;
+  }
+
+  /// Returns true if any entities match.
+  bool get isNotEmpty => count() > 0;
+
+  /// Returns true if no entities match.
+  bool get isEmpty => count() == 0;
+}
+
+/// Mutable query marker for four component types.
+class QueryMut4<T1, T2, T3, T4> implements Query {
+  final Archetypes _archetypes;
+  final Entities _entities;
+
+  @override
+  final QueryState state;
+
+  QueryMut4(this._archetypes, this._entities, {QueryFilter? filter})
+      : state = QueryState.of4<T1, T2, T3, T4>(filter: filter);
+
+  QueryMut4.withState(this._archetypes, this._entities, this.state);
+
+  /// Returns an iterable over all matching entities and their components.
+  Iterable<(Entity, T1, T2, T3, T4)> iter() =>
+      QueryIter4<T1, T2, T3, T4>(_archetypes, _entities, state);
 
   /// Returns the first matching entity, or null if none match.
   (Entity, T1, T2, T3, T4)? single() {

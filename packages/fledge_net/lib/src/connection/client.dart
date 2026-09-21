@@ -213,7 +213,21 @@ class NetworkClient {
     }
 
     final packet = Packet.fromBytes(received.data);
-    if (packet == null) return;
+    if (packet == null) {
+      // If the packet has our magic but a mismatched protocol version, the
+      // peer is speaking an incompatible dialect. Surface a clear error to
+      // the caller instead of silently dropping-and-timing-out.
+      final peerVersion = PacketHeader.peekVersion(received.data);
+      if (peerVersion != null && peerVersion != PacketHeader.version) {
+        _setState(
+          ClientState.failed,
+          'Protocol version mismatch: local v${PacketHeader.version}, '
+          'server v$peerVersion',
+        );
+        _connectCompleter?.complete(false);
+      }
+      return;
+    }
 
     _lastReceiveTime = DateTime.now();
 

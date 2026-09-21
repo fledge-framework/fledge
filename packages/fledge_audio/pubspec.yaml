@@ -1,6 +1,6 @@
 name: fledge_audio
 description: Audio plugin for the Fledge ECS game framework. Provides music, sound effects, and 2D spatial audio using flutter_soloud.
-version: 0.1.14
+version: 0.2.0
 repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_audio
 homepage: https://fledge-framework.dev
 issue_tracker: https://github.com/fledge-framework/fledge/issues
@@ -12,8 +12,9 @@ environment:
 resolution: workspace
 
 dependencies:
-  fledge_ecs: ^0.1.9
-  fledge_render_2d: ^0.1.9
+  fledge_assets: ^0.2.0
+  fledge_ecs: ^0.2.0
+  fledge_render_2d: ^0.2.0
   flutter:
     sdk: flutter
   flutter_soloud: ^3.4.8

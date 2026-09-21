@@ -1,15 +1,25 @@
 # Changelog
 
+## [0.2.0] - 2026-09-20
+
+### Changed
+
+- Scheduler rewritten around named schedule graph (`Schedules` + `Scheduler`); `stage:` argument on `addSystem` renamed to `schedule:`.
+- `App.tick()` restructured to drive extract + render schedules on top of the main schedule.
+- Query iterators snapshot archetype membership at iter start, fixing a silent-drop bug when systems spawned/despawned matching entities mid-iteration.
+
+### Added
+
+- `FixedTimestep` resource and fixed-timestep dispatch chain (`Schedules.fixedUpdate`).
+- `Query1..4<T>` / `QueryMut1..4<T>` marker types; reads/writes are now inferred from the marker in generator output.
+- `WallTime` / `WallTimePlugin` for real-time clocks.
+
+### Deprecated
+
+- `Time` / `TimePlugin` — use `WallTime` / `WallTimePlugin`.
+
+
 ## [0.1.14] - 2026-04-14
-
-## [Unreleased]
-
-### Features
-
-- **fledge_net:** Add network packet encryption
-- **examples:** Add new drifter game demo
-
-
 
 ## [0.1.13] - 2026-04-14
 
@@ -20,14 +30,6 @@
 
 
 ## [0.1.11] - 2026-01-21
-
-## [Unreleased]
-
-### Miscellaneous
-
-- Update docs
-
-
 
 ## [0.1.10] - 2026-01-06
 
@@ -64,14 +66,6 @@
 
 ## [0.1.6] - 2026-01-05
 
-## [Unreleased]
-
-### Features
-
-- **fledge_ecs:** Add game checkpoint api
-
-
-
 ## [0.1.5] - 2026-01-04
 
 
@@ -100,26 +94,6 @@
 
 
 ## [0.1.2] - 2026-01-03
-
-## [Unreleased]
-
-### Bug Fixes
-
-- Update dependencies to latest stable versions
-- **fledge:** Update dependencies, upgrade melos to v7
-
-### Miscellaneous
-
-- **license:** Remove whitespace from license files
-- Update license text
-- Bump versions
-
-
-
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.1.1] - 2025-01-03
 

@@ -44,16 +44,28 @@
 ///
 /// ## State Synchronization
 ///
-/// Mark entities for network sync:
+/// Fledge is 2D, so the built-in transform sync ships (x, y, rotation) —
+/// three float32s per snapshot. Mark entities for network sync:
 ///
 /// ```dart
 /// world.spawn()
 ///   ..insert(NetworkIdentity(netId: registry.generateNetId()))
-///   ..insert(Transform3D())
+///   ..insert(Transform2D()) // from fledge_render_2d
 ///   ..insert(Player());
+///
+/// // Serialize the transform onto the wire.
+/// final state = Transform2DNetworkState()
+///   ..x = transform.translation.x
+///   ..y = transform.translation.y
+///   ..rotation = transform.rotation;
 /// ```
 ///
 /// ## Input Prediction
+///
+/// Prediction and reconciliation are fixed-timestep systems — register
+/// them on [Schedules.fixedUpdate] so client and server tick at the same
+/// rate (via [FixedTimestep]). Running prediction on the variable-rate
+/// [Schedules.update] causes desync.
 ///
 /// ```dart
 /// final prediction = ClientPrediction();
