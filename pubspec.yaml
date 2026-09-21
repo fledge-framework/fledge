@@ -37,10 +37,18 @@ workspace:
 dev_dependencies:
   melos: ^7.3.0
 
-# Override conflicting dependencies to allow workspace resolution
-# flutter_test pins test_api and meta to older versions than analyzer 12.x requires
+# Override conflicting dependencies to allow workspace resolution.
+# analyzer 12.x requires meta ^1.18.0, but flutter_test pins meta to an
+# older version, so we bump it here.
+#
+# Do NOT override test_api. flutter_test pins `test_api: 0.7.11` exactly;
+# forcing a newer test_api (e.g. 0.7.14) causes the resolver to keep the
+# older `test` package (1.31.1), which was built against test_api 0.7.13
+# and won't compile against 0.7.14 because `Compiler.cli` was added in
+# 0.7.14 and test 1.31.1's `precompiled.dart` switch is non-exhaustive.
+# Leaving test_api unpinned lets pub pick a coherent set (test 1.31.0 +
+# test_api 0.7.11, matching flutter_test's pin).
 dependency_overrides:
-  test_api: ^0.7.11
   meta: ^1.18.0
 
 melos:
@@ -107,3 +115,15 @@ melos:
     clean:
       description: Clean all packages
       run: melos exec -- dart pub cache clean
+
+    publish:dry:
+      description: |
+        Preview a release by running `dart pub publish --dry-run` in each
+        publishable package. Fails if any package would be rejected by
+        pub.dev. Does not upload anything.
+      run: melos exec -- dart pub publish --dry-run
+      packageFilters:
+        # Skip the workspace root (has `publish_to: none`) and the docs
+        # / example workspace members that also have `publish_to: none`.
+        # `melos exec` with `noPrivate: true` filters them automatically.
+        noPrivate: true

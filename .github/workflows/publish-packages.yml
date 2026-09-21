@@ -4,6 +4,17 @@ on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
+  # Manual trigger — re-run the publish flow for a specific version
+  # without pushing another tag. Combined with the step-level
+  # idempotency guards (skip-if-already-published, skip-if-CHANGELOG-
+  # entry-already-present), this makes the release process fully
+  # replayable from the Actions UI.
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g. 0.2.0). Without the leading v.'
+        required: true
+        type: string
 
 jobs:
   publish:
@@ -18,9 +29,19 @@ jobs:
           fetch-depth: 0  # Fetch full history for changelog generation
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract version from tag
+      - name: Resolve version
         id: version
-        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+        run: |
+          # On tag push: strip the leading `v` from GITHUB_REF_NAME.
+          # On manual dispatch: use the input verbatim.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            RESOLVED="${{ inputs.version }}"
+            echo "Manual trigger — using input version: $RESOLVED"
+          else
+            RESOLVED="${GITHUB_REF_NAME#v}"
+            echo "Tag trigger — extracted version from tag: $RESOLVED"
+          fi
+          echo "VERSION=$RESOLVED" >> $GITHUB_OUTPUT
 
       - name: Setup Dart
         uses: dart-lang/setup-dart@v1
@@ -209,7 +230,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           body: ${{ steps.changelog.outputs.content }}
-          tag_name: ${{ github.ref_name }}
+          # On tag push, github.ref_name is the tag (`v0.2.0`).
+          # On manual dispatch, it's the branch — synthesize the tag
+          # name from the input version instead.
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', inputs.version) || github.ref_name }}
 
       - name: Publish packages
         run: |
@@ -266,6 +290,29 @@ jobs:
           VERSION=${{ steps.version.outputs.VERSION }}
           FAILED=()
 
+          # Sequential publishes race pub.dev's CDN propagation: a
+          # package can fail to publish because a just-published
+          # dependency isn't visible to the resolver yet. Retry with
+          # backoff to cover that case without blindly sleeping.
+          publish_with_retry() {
+            local pkg="$1"
+            local attempt
+            local delays=(0 20 40)  # attempt 1 immediate; then 20s; then 40s
+            for attempt in 1 2 3; do
+              local delay="${delays[$((attempt - 1))]}"
+              if [ "$delay" -gt 0 ]; then
+                echo "    retry $attempt after ${delay}s (propagation wait)..."
+                sleep "$delay"
+              fi
+              if (cd "packages/$pkg" && dart pub publish --force); then
+                echo "  ✓ Published $pkg $VERSION on attempt $attempt."
+                return 0
+              fi
+            done
+            echo "  ✗ Publish of $pkg failed after 3 attempts."
+            return 1
+          }
+
           for pkg in "${PACKAGES[@]}"; do
             echo ""
             echo "=== $pkg $VERSION ==="
@@ -283,22 +330,12 @@ jobs:
                 ;;
               404)
                 echo "  → $pkg $VERSION not on pub.dev, publishing..."
-                if (cd packages/$pkg && dart pub publish --force); then
-                  echo "  ✓ Published $pkg $VERSION."
-                else
-                  echo "  ✗ Publish of $pkg failed."
-                  FAILED+=("$pkg")
-                fi
+                publish_with_retry "$pkg" || FAILED+=("$pkg")
                 ;;
               *)
                 echo "  ! Unexpected HTTP $HTTP_STATUS from pub.dev for $pkg $VERSION."
                 echo "  ! Attempting publish anyway; if it succeeds, treat as first-time."
-                if (cd packages/$pkg && dart pub publish --force); then
-                  echo "  ✓ Published $pkg $VERSION (after unexpected pre-check)."
-                else
-                  echo "  ✗ Publish of $pkg failed."
-                  FAILED+=("$pkg")
-                fi
+                publish_with_retry "$pkg" || FAILED+=("$pkg")
                 ;;
             esac
           done
