@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.2.0] - 2026-09-21
+
+## [0.2.1] - 2026-09-21
+
+### Bug Fixes
+
+- Bump versions to stable
+- Bump lower bound of fledge_audio
+- Correct CI workflow
+
+### Features
+
+- V0.2 engine restructure — 2D/2.5D desktop game engine
+- Add additional examples
+- Upgrade tiled version
+
+### Miscellaneous
+
+- Update docs
+
+### Ci
+
+- Make workflow idempotent
+- Fix workflow
+- Make pana advisory
+- Add manual publish script
+
+### Lint
+
+- Resolve formatting issues
+
+
+
 ## [0.2.1] - 2026-09-21
 
 ## [0.1.14] - 2026-04-14

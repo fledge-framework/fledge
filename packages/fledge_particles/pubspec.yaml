@@ -1,6 +1,6 @@
 name: fledge_particles
 description: CPU-driven particle system for Fledge — emitters, particle pooling, presets, and DrawLayer.particles integration.
-version: 0.2.1
+version: 0.2.0
 repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_particles
 homepage: https://fledge-framework.dev
 issue_tracker: https://github.com/fledge-framework/fledge/issues
