@@ -25,6 +25,10 @@ class SpriteInstance {
   /// Rotation in radians (additional to transform).
   final double rotation;
 
+  /// Packed flip flags: bit 0 = flipX, bit 1 = flipY. Handed through
+  /// to `BackendSpriteData` on the way to the drawer.
+  final int flipFlags;
+
   /// Creates a sprite instance.
   const SpriteInstance({
     required this.sourceRect,
@@ -32,6 +36,7 @@ class SpriteInstance {
     required this.transform,
     required this.color,
     this.rotation = 0,
+    this.flipFlags = 0,
   });
 }
 
@@ -131,23 +136,17 @@ class SpriteBatchSystem implements RenderSystem {
         height: sprite.size.y,
       );
 
-      // Handle flipping by adjusting source rect
-      var srcRect = sprite.sourceRect;
-      if (sprite.flipX || sprite.flipY) {
-        srcRect = Rect.fromLTRB(
-          sprite.flipX ? srcRect.right : srcRect.left,
-          sprite.flipY ? srcRect.bottom : srcRect.top,
-          sprite.flipX ? srcRect.left : srcRect.right,
-          sprite.flipY ? srcRect.top : srcRect.bottom,
-        );
-      }
-
+      // Flip is expressed via bit flags on the backend data, not by
+      // inverting the source rect — Skia rejects inverted srcRects
+      // and the RSTransform path can't represent a single-axis
+      // mirror. The canvas drawer sub-batches by flip flags.
       batch.add(
         SpriteInstance(
-          sourceRect: srcRect,
+          sourceRect: sprite.sourceRect,
           destRect: destRect,
           transform: sprite.transform,
           color: sprite.color,
+          flipFlags: sprite.flipFlags,
         ),
       );
     }

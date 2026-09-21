@@ -147,21 +147,18 @@ BackendSpriteData _toBackendSprite(ExtractedSprite s) {
     height: s.size.y,
   );
 
-  var srcRect = s.sourceRect;
-  if (s.flipX || s.flipY) {
-    srcRect = Rect.fromLTRB(
-      s.flipX ? srcRect.right : srcRect.left,
-      s.flipY ? srcRect.bottom : srcRect.top,
-      s.flipX ? srcRect.left : srcRect.right,
-      s.flipY ? srcRect.top : srcRect.bottom,
-    );
-  }
-
+  // Skia's `drawRawAtlas` requires canonical source rects (L < R,
+  // T < B), and the RSTransform path can't express a single-axis
+  // mirror — a `-scos` degenerates to a 180° rotation. Instead of
+  // inverting the srcRect, hand the flip flags to the backend; the
+  // canvas drawer sub-batches by flip and applies `canvas.scale`
+  // around each sub-batch.
   return BackendSpriteData(
-    sourceRect: srcRect,
+    sourceRect: s.sourceRect,
     destRect: destRect,
     transform: s.transform,
     color: s.color,
+    flipFlags: s.flipFlags,
   );
 }
 

@@ -154,14 +154,81 @@ class CanvasSpriteDrawer implements SpriteDrawer {
       return;
     }
 
-    final count = batch.length;
+    // Sub-batch by flip flags. Each of the four possible flip states
+    // (none, X, Y, XY) becomes a separate drawRawAtlas call wrapped
+    // in canvas.scale(±1, ±1); Skia can't mirror inside an RSTransform
+    // and refuses inverted source rects, so this is the correct
+    // batching contract for mirror support.
+    final vp = batch.first.viewProjection;
+
+    // Bucket entries by flip flags. For the common non-flipped case
+    // this stays a single bucket and produces exactly one draw call,
+    // identical to the pre-Batch-3-#16 fast path.
+    final buckets = <int, List<BackendSpriteData>>{};
+    for (final s in batch) {
+      buckets.putIfAbsent(s.flipFlags, () => <BackendSpriteData>[]).add(s);
+    }
+
+    if (vp != null) {
+      canvas.save();
+      // `Canvas.transform` needs a Float64List; vector_math's
+      // Matrix4 stores Float32List. One allocation per batch, not
+      // per sprite, so the copy is cheap.
+      canvas.transform(Float64List.fromList(vp.storage));
+    }
+
+    for (final entry in buckets.entries) {
+      final flipFlags = entry.key;
+      final bucket = entry.value;
+      if (flipFlags == 0) {
+        // Fast path — the common non-mirrored case. One drawRawAtlas
+        // for every sprite in the bucket.
+        _drawSubBatch(canvas, image, bucket);
+        continue;
+      }
+      // Mirrored sprites: canvas.scale mirrors around the origin, so
+      // a shared batched draw would swap their positions across the
+      // canvas. Draw each flipped sprite individually with a
+      // save/translate/scale/translate/restore pivoted on its own
+      // world-space centre. Loses the drawRawAtlas fast path but
+      // keeps mirrored draws correct.
+      final flipX = (flipFlags & 1) != 0;
+      final flipY = (flipFlags & 2) != 0;
+      final sx = flipX ? -1.0 : 1.0;
+      final sy = flipY ? -1.0 : 1.0;
+      for (final sprite in bucket) {
+        final s = sprite.transform.storage;
+        final pivotX = s[6];
+        final pivotY = s[7];
+        canvas.save();
+        canvas.translate(pivotX, pivotY);
+        canvas.scale(sx, sy);
+        canvas.translate(-pivotX, -pivotY);
+        _drawSubBatch(canvas, image, [sprite]);
+        canvas.restore();
+      }
+    }
+
+    if (vp != null) {
+      canvas.restore();
+    }
+  }
+
+  /// Issue one drawRawAtlas call for a bucket of same-flip sprites.
+  /// Kept as a helper so both the fast path and the per-sprite
+  /// mirrored path share the transform / srcRect packing.
+  void _drawSubBatch(
+    Canvas canvas,
+    Image image,
+    List<BackendSpriteData> bucket,
+  ) {
+    final count = bucket.length;
     final rstTransforms = Float32List(count * 4);
     final srcRects = Float32List(count * 4);
     final colors = Int32List(count);
 
     for (var i = 0; i < count; i++) {
-      final sprite = batch[i];
-
+      final sprite = bucket[i];
       final rst = composeSpriteRSTransform(
         transform: sprite.transform,
         sourceRect: sprite.sourceRect,
@@ -172,7 +239,6 @@ class CanvasSpriteDrawer implements SpriteDrawer {
       rstTransforms[i * 4 + 2] = rst.tx;
       rstTransforms[i * 4 + 3] = rst.ty;
 
-      // srcRect: L T R B in atlas pixel coordinates.
       final src = sprite.sourceRect;
       srcRects[i * 4 + 0] = src.left;
       srcRects[i * 4 + 1] = src.top;
@@ -182,33 +248,15 @@ class CanvasSpriteDrawer implements SpriteDrawer {
       colors[i] = sprite.color.toARGB32();
     }
 
-    // The camera's view-projection matrix is applied once, framing
-    // the whole atlas draw. Pre-multiplying it into each RSTransform
-    // is possible but loses the perspective-safe fast path — all
-    // sprites in a batch share the same camera, so
-    // save+transform+restore is both simpler and marginally faster.
-    final vp = batch.first.viewProjection;
-    if (vp != null) {
-      canvas.save();
-      // `Canvas.transform` needs a Float64List; vector_math's
-      // Matrix4 stores Float32List. One allocation per batch, not
-      // per sprite, so the copy is cheap.
-      canvas.transform(Float64List.fromList(vp.storage));
-    }
-
     canvas.drawRawAtlas(
       image,
       rstTransforms,
       srcRects,
       colors,
       BlendMode.modulate,
-      null, // cullRect: null lets the backend choose. Cheap.
+      null,
       paint,
     );
-
-    if (vp != null) {
-      canvas.restore();
-    }
   }
 }
 

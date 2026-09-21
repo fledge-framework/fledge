@@ -52,6 +52,7 @@ class SpriteRenderNode implements RenderNode {
             transform: instance.transform,
             color: instance.color,
             viewProjection: cameraView?.viewProjection,
+            flipFlags: instance.flipFlags,
           ),
         );
       }
@@ -116,6 +117,12 @@ class SpriteRenderContext {
 /// tightens them so the backend contract is checked at compile time.
 class BackendSpriteData {
   /// Source rectangle in the texture (pixel-space).
+  ///
+  /// Always canonical: `left < right` and `top < bottom`. Mirror
+  /// requests are expressed by [flipFlags], not by feeding an
+  /// inverted rect into the source. Skia rejects inverted source
+  /// rects for `drawRawAtlas` and the RSTransform path can't
+  /// represent a single-axis mirror.
   final Rect sourceRect;
 
   /// Destination rectangle in local space, before [transform] is
@@ -133,6 +140,11 @@ class BackendSpriteData {
   /// apply this either as a pre-multiply or via `canvas.transform`.
   final Matrix4? viewProjection;
 
+  /// Packed flip flags: bit 0 = flipX, bit 1 = flipY. The drawer
+  /// sub-batches by this value and applies a `canvas.scale(±1, ±1)`
+  /// around each sub-batch's `drawRawAtlas` call.
+  final int flipFlags;
+
   /// Creates backend sprite data.
   const BackendSpriteData({
     required this.sourceRect,
@@ -140,5 +152,12 @@ class BackendSpriteData {
     required this.transform,
     required this.color,
     this.viewProjection,
+    this.flipFlags = 0,
   });
+
+  /// Whether the sprite should be mirrored horizontally.
+  bool get flipX => (flipFlags & 1) != 0;
+
+  /// Whether the sprite should be mirrored vertically.
+  bool get flipY => (flipFlags & 2) != 0;
 }
