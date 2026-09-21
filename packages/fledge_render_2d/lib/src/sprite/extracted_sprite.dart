@@ -8,6 +8,8 @@ import '../render/extract/extract.dart';
 import '../render/extract/extracted_data.dart';
 import '../render/world/render_world.dart';
 import '../transform/global_transform.dart';
+import '../transform/previous_transform.dart';
+import '../transform/transform2d.dart';
 import 'sprite.dart';
 
 /// Extracted sprite data for the render world.
@@ -89,10 +91,16 @@ class ExtractedSprite with ExtractedData, SortableExtractedData {
 /// Extractor for sprite components.
 ///
 /// Copies sprite data from the main world to the render world,
-/// computing final render data.
+/// computing final render data. Entities carrying
+/// [PreviousTransform2D] have their translation lerped between the
+/// snapshot and the current `Transform2D` by
+/// `FixedTimestep.alpha` so 60 Hz simulation stays smooth on higher-
+/// refresh displays.
 class SpriteExtractor extends Extractor {
   @override
   void extract(World mainWorld, RenderWorld renderWorld) {
+    final alpha = _interpolationAlpha(mainWorld);
+
     for (final (entity, sprite, globalTransform)
         in mainWorld.query2<Sprite, GlobalTransform2D>().iter()) {
       // Check visibility
@@ -104,9 +112,15 @@ class SpriteExtractor extends Extractor {
       // and is clamped into the layer's range so it can't bleed into the next
       // layer bucket. An explicit `layerSubOrder` overrides the Y-based value.
       final layer = sprite.layer;
+      final renderMatrix = interpolatedRenderMatrix(
+        mainWorld,
+        entity,
+        globalTransform,
+        alpha,
+      );
       final sub = sprite.layerSubOrder != 0
           ? sprite.layerSubOrder
-          : (globalTransform.y * 1000).toInt().clamp(
+          : (renderMatrix.storage[7] * 1000).toInt().clamp(
               0,
               DrawLayerExtension.layerMultiplier - 1,
             );
@@ -117,7 +131,7 @@ class SpriteExtractor extends Extractor {
           entity: entity,
           texture: sprite.texture,
           sourceRect: sprite.effectiveSourceRect,
-          transform: globalTransform.matrix,
+          transform: renderMatrix,
           color: sprite.color,
           sortKey: sortKey,
           layer: layer,
@@ -132,4 +146,48 @@ class SpriteExtractor extends Extractor {
       );
     }
   }
+}
+
+/// Return `FixedTimestep.alpha` if a `FixedTimestep` resource is
+/// installed, otherwise 1.0 (no interpolation).
+double _interpolationAlpha(World world) {
+  final ft = world.getResource<FixedTimestep>();
+  return ft?.alpha ?? 1.0;
+}
+
+/// Compute the render-time transform matrix for [entity], applying
+/// translation interpolation when the entity carries a
+/// [PreviousTransform2D] snapshot. If the entity has no snapshot, or
+/// [alpha] is at 1.0, [globalTransform.matrix] is returned unchanged.
+///
+/// Only translation is interpolated; rotation/scale stays at the
+/// current step's values. This matches the common use case (moving
+/// player / NPC on a static parent) and avoids the SLERP cost for
+/// rotation. The result is a *new* Matrix3 for the interpolated
+/// case so mutating it does not affect the source `GlobalTransform2D`.
+Matrix3 interpolatedRenderMatrix(
+  World world,
+  Entity entity,
+  GlobalTransform2D globalTransform,
+  double alpha,
+) {
+  if (alpha >= 1.0) return globalTransform.matrix;
+  final prev = world.get<PreviousTransform2D>(entity);
+  if (prev == null) return globalTransform.matrix;
+  final current = world.get<Transform2D>(entity);
+  if (current == null) return globalTransform.matrix;
+
+  // Interpolate LOCAL translation. Only correct for root entities;
+  // see PreviousTransform2D's docstring.
+  final ix = prev.translation.x +
+      (current.translation.x - prev.translation.x) * alpha;
+  final iy = prev.translation.y +
+      (current.translation.y - prev.translation.y) * alpha;
+
+  // Rebuild the matrix from the current rotation/scale + interpolated
+  // translation. Cheaper than cloning and rewriting the storage.
+  final result = globalTransform.matrix.clone();
+  result.storage[6] = ix;
+  result.storage[7] = iy;
+  return result;
 }

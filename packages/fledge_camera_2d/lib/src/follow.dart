@@ -2,7 +2,7 @@ import 'dart:ui' show Offset;
 
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart'
-    show GlobalTransform2D, Transform2D;
+    show GlobalTransform2D, PreviousTransform2D, Transform2D;
 
 import 'camera2d.dart';
 
@@ -79,6 +79,9 @@ class CameraFollowSystem implements System {
 
   @override
   Future<void> run(World world) {
+    final ft = world.getResource<FixedTimestep>();
+    final alpha = ft?.alpha ?? 1.0;
+
     for (final (_, follow, _, transform)
         in world.query3<CameraFollow, Camera2D, Transform2D>().iter()) {
       final targetTransform = world.get<GlobalTransform2D>(follow.target);
@@ -96,9 +99,26 @@ class CameraFollowSystem implements System {
       // Reset the warning if the target reappears.
       follow.warnedMissingTarget = false;
 
+      // If the target opted into render interpolation, follow the
+      // interpolated position instead of the raw current one. Keeps
+      // the camera-follow feel smooth on displays running faster than
+      // the physics fixed step.
+      double tx = targetTransform.x + follow.offset.dx;
+      double ty = targetTransform.y + follow.offset.dy;
+      if (alpha < 1.0) {
+        final prev = world.get<PreviousTransform2D>(follow.target);
+        final cur = world.get<Transform2D>(follow.target);
+        if (prev != null && cur != null) {
+          final ix = prev.translation.x +
+              (cur.translation.x - prev.translation.x) * alpha;
+          final iy = prev.translation.y +
+              (cur.translation.y - prev.translation.y) * alpha;
+          tx = ix + follow.offset.dx;
+          ty = iy + follow.offset.dy;
+        }
+      }
+
       final smoothing = follow.smoothing.clamp(0.0, 1.0);
-      final tx = targetTransform.x + follow.offset.dx;
-      final ty = targetTransform.y + follow.offset.dy;
       transform.translation.x += (tx - transform.translation.x) * smoothing;
       transform.translation.y += (ty - transform.translation.y) * smoothing;
     }

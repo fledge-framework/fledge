@@ -18,6 +18,9 @@ import 'texture_atlas.dart';
 class AtlasSpriteExtractor extends Extractor {
   @override
   void extract(World mainWorld, RenderWorld renderWorld) {
+    final ft = mainWorld.getResource<FixedTimestep>();
+    final alpha = ft?.alpha ?? 1.0;
+
     for (final (entity, atlasSprite, globalTransform)
         in mainWorld.query2<AtlasSprite, GlobalTransform2D>().iter()) {
       // Check visibility
@@ -27,11 +30,18 @@ class AtlasSpriteExtractor extends Extractor {
       // Get the source rect for current sprite index
       final sourceRect = atlasSprite.sourceRect;
 
+      final renderMatrix = interpolatedRenderMatrix(
+        mainWorld,
+        entity,
+        globalTransform,
+        alpha,
+      );
+
       // Compute sort key: explicit layerSubOrder wins; otherwise derive
       // from y-position, clamped inside the layer's range.
       final sub = atlasSprite.layerSubOrder != 0
           ? atlasSprite.layerSubOrder
-          : (globalTransform.y * 1000).toInt().clamp(
+          : (renderMatrix.storage[7] * 1000).toInt().clamp(
               0,
               DrawLayerExtension.layerMultiplier - 1,
             );
@@ -42,7 +52,7 @@ class AtlasSpriteExtractor extends Extractor {
           entity: entity,
           texture: atlasSprite.texture,
           sourceRect: sourceRect,
-          transform: globalTransform.matrix,
+          transform: renderMatrix,
           color: atlasSprite.color,
           sortKey: sortKey,
           layer: atlasSprite.layer,
