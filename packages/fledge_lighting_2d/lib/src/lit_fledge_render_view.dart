@@ -1,4 +1,4 @@
-import 'dart:ui' show Canvas, Paint, Rect;
+import 'dart:ui' show BlendMode, Canvas, Color, Paint, Rect;
 
 import 'package:fledge_ecs/fledge_ecs.dart' show App;
 import 'package:fledge_render_2d/fledge_render_2d.dart'
@@ -18,14 +18,15 @@ import 'lighting_render_node.dart';
 
 /// Lighting-aware drop-in replacement for `FledgeRenderView`.
 ///
-/// Paints, on the same `CustomPaint` canvas, in this order:
+/// Paint order depends on `AmbientLight.blend`:
 ///
-/// 1. Ambient fill — full-screen rect of
-///    `AmbientLight.color × AmbientLight.intensity` at normal blend.
-/// 2. Sprites — delegates to `renderSpritesToDrawer`, identical to
-///    what `FledgeRenderView` does.
-/// 3. Lights — every `ExtractedLight` drawn additively on top through
-///    [renderLightsToCanvas].
+/// - [AmbientBlend.underSprites] (default, backward-compatible):
+///   ambient fill → sprites → additive lights. Sprites always draw at
+///   full brightness.
+/// - [AmbientBlend.overSprites]: sprites → ambient multiply →
+///   additive lights. Ambient darkens the sprite layer too. The
+///   pre-sprite fill is skipped in this mode so empty cells are not
+///   double-darkened.
 ///
 /// Callers still drive the game loop themselves — this widget only
 /// paints. Read [AmbientLight] off the app world; if none is
@@ -58,11 +59,18 @@ class _LitFledgeRenderPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final ambient = app.world.getResource<AmbientLight>();
-    if (ambient != null && ambient.intensity > 0) {
+    final fullRect = Rect.fromLTWH(0, 0, size.width, size.height);
+    final overSprites =
+        ambient != null && ambient.blend == AmbientBlend.overSprites;
+
+    // Pre-sprite fill — only in underSprites mode. In overSprites we
+    // skip this so empty cells aren't double-darkened by both the
+    // fill and the multiply pass (item 18 in the fledge-handoff).
+    if (ambient != null && !overSprites && ambient.intensity > 0) {
       final base = ambient.color;
       final scaledAlpha = (base.a * ambient.intensity).clamp(0.0, 1.0);
       final paint = Paint()..color = base.withValues(alpha: scaledAlpha);
-      canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
+      canvas.drawRect(fullRect, paint);
     }
 
     final drawer = app.world.getResource<SpriteDrawer>();
@@ -75,6 +83,23 @@ class _LitFledgeRenderPainter extends CustomPainter {
       renderSpritesToDrawer(renderWorld, drawer);
     } finally {
       canvasDrawer?.endFrame();
+    }
+
+    // Over-sprite multiply pass — darkens the entire sprite layer
+    // toward ambient.color at strength ambient.intensity. Sprites
+    // whose light source hasn't been drawn yet appear at the ambient
+    // level; the additive light pass immediately below then brightens
+    // them back up wherever a light shines.
+    if (overSprites && ambient.intensity > 0) {
+      final tint = Color.lerp(
+        const Color(0xFFFFFFFF),
+        ambient.color,
+        ambient.intensity.clamp(0.0, 1.0),
+      )!;
+      final paint = Paint()
+        ..color = tint.withValues(alpha: 1.0)
+        ..blendMode = BlendMode.multiply;
+      canvas.drawRect(fullRect, paint);
     }
 
     // Additive light pass. Runs on the same canvas so the underlying
