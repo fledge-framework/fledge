@@ -116,7 +116,7 @@ void main() {
         MaterialApp(
           home: Focus(
             autofocus: true,
-            onKeyEvent: (_, __) => KeyEventResult.ignored,
+            onKeyEvent: (_, _) => KeyEventResult.ignored,
             child: SelectionArea(
               child: Scaffold(body: Center(child: const GridGameWidget())),
             ),

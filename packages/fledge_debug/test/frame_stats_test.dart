@@ -45,7 +45,7 @@ void main() {
       expect(stats.p99FrameSeconds, closeTo(0.100, 1e-9));
       // The average is roughly the 60Hz baseline plus one stutter
       // amortised across the 100-sample window — a hair above 60Hz.
-      final expectedAvg = (99 * (1 / 60) + 0.100) / 100;
+      const expectedAvg = (99 * (1 / 60) + 0.100) / 100;
       expect(stats.avgFrameSeconds, closeTo(expectedAvg, 1e-9));
       // maxFrameSeconds surfaces the single slow frame verbatim.
       expect(stats.maxFrameSeconds, closeTo(0.100, 1e-9));

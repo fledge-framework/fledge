@@ -30,6 +30,11 @@ class ActiveCameraViewSystem implements System {
       'CameraFollowSystem',
       'CameraShakeSystem',
       'CameraTransitionSystem',
+      // ParallaxSystem writes GlobalTransform2D on parallax entities.
+      // Order after it so the ambiguity check stays clean; the pair
+      // doesn't actually race (parallax touches non-camera entities)
+      // but the scheduler can't tell that.
+      'ParallaxSystem',
     ],
   );
 

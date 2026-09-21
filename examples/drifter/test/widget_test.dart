@@ -36,7 +36,7 @@ void main() {
       MaterialApp(
         home: Focus(
           autofocus: true,
-          onKeyEvent: (_, __) => KeyEventResult.ignored,
+          onKeyEvent: (_, _) => KeyEventResult.ignored,
           child: const Scaffold(body: Center(child: DrifterWidget())),
         ),
       ),
