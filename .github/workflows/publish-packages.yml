@@ -1,14 +1,19 @@
 name: Publish Packages
 
 on:
+  # Automatic trigger: a `vX.Y.Z` tag is pushed. pub.dev's OIDC
+  # publisher config only accepts publishes whose OIDC claim carries
+  # `tag` as the ref type (see https://dart.dev/go/publishing-from-github),
+  # so `dart pub publish` in this workflow will only succeed when the
+  # workflow itself is triggered by a tag push. The `tag-release` job
+  # in `ci.yml` pushes this tag after CI succeeds on a release commit.
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
-  # Manual trigger — re-run the publish flow for a specific version
-  # without pushing another tag. Combined with the step-level
-  # idempotency guards (skip-if-already-published, skip-if-CHANGELOG-
-  # entry-already-present), this makes the release process fully
-  # replayable from the Actions UI.
+  # Manual trigger — replayable from the Actions UI against an existing
+  # tag ref (select the tag in the "Use workflow from" dropdown). The
+  # OIDC ref-type constraint still applies, so branch-ref dispatches
+  # will fail at the publish step; select the tag, not `main`.
   workflow_dispatch:
     inputs:
       version:
@@ -236,6 +241,12 @@ jobs:
           git add CHANGELOG.md
 
           VERSION=${{ steps.version.outputs.VERSION }}
+          # The `[skip ci]` marker keeps ci.yml (test/analyze/build) from
+          # re-running on this bot-authored release commit. It does NOT
+          # affect this workflow because this workflow was triggered by
+          # the tag push, not by the commit; and it does NOT affect the
+          # `tag-release` job in ci.yml because that job is what creates
+          # the tag in the first place (before this commit exists).
           git commit -m "chore(release): v$VERSION [skip ci]" || echo "No changes to commit"
 
           git push origin HEAD:main

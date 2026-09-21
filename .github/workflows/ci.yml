@@ -243,3 +243,154 @@ jobs:
       - name: Build docs
         working-directory: docs
         run: flutter build web
+
+  # ----------------------------------------------------------------
+  # Terminal jobs — only run for pushes to main, gated on the full CI
+  # matrix passing. Each is a no-op unless its release / docs
+  # precondition matches the head commit.
+  # ----------------------------------------------------------------
+
+  # Cut the `vX.Y.Z` tag once CI is green on a `chore(release): vX.Y.Z`
+  # commit landing on main. The tag push is what triggers
+  # `publish-packages.yml` — pub.dev's OIDC publisher config only
+  # accepts publishes whose OIDC claim carries `tag` as the ref type,
+  # so no other trigger can drive publishing.
+  #
+  # `dispatch-publish` below is a belt-and-suspenders: pushing a tag
+  # with the workflow's built-in GITHUB_TOKEN does NOT automatically
+  # start a downstream workflow (GitHub Actions blocks that to prevent
+  # recursion). We explicitly dispatch `publish-packages.yml` against
+  # the freshly-created tag ref, which preserves the tag OIDC claim.
+  tag-release:
+    name: Tag Release
+    if: |
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      startsWith(github.event.head_commit.message, 'chore(release): v')
+    needs: [format, analyze, test, build-examples, build-docs]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # push the tag
+      actions: write    # dispatch publish-packages against the tag ref
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Parse version from release commit
+        id: version
+        run: |
+          SUBJECT=$(git log -1 --pretty=%s)
+          RESOLVED=$(printf '%s\n' "$SUBJECT" | sed -nE 's/^chore\(release\): v([0-9]+\.[0-9]+\.[0-9]+)( .*)?$/\1/p')
+          if [ -z "$RESOLVED" ]; then
+            echo "Head commit subject '$SUBJECT' did not match" \
+                 "'chore(release): v<X.Y.Z>'. Refusing to tag."
+            exit 1
+          fi
+          echo "VERSION=$RESOLVED" >> $GITHUB_OUTPUT
+          echo "TAG=v$RESOLVED" >> $GITHUB_OUTPUT
+
+      - name: Refuse to overwrite existing tag
+        run: |
+          TAG=${{ steps.version.outputs.TAG }}
+          if git rev-parse -q --verify "refs/tags/$TAG" > /dev/null; then
+            echo "Tag $TAG already exists locally; refusing to re-tag."
+            exit 1
+          fi
+          if git ls-remote --exit-code --tags origin "$TAG" > /dev/null 2>&1; then
+            echo "Tag $TAG already exists on origin; refusing to re-tag."
+            exit 1
+          fi
+
+      - name: Create and push tag
+        run: |
+          TAG=${{ steps.version.outputs.TAG }}
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "$TAG"
+
+      - name: Dispatch publish-packages against the new tag ref
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG=${{ steps.version.outputs.TAG }}
+          VERSION=${{ steps.version.outputs.VERSION }}
+          gh workflow run publish-packages.yml \
+            --ref "$TAG" \
+            -f "version=$VERSION"
+
+  # Rebuild + redeploy the docs site when the push modifies anything
+  # under `docs/`, but only after the CI matrix has confirmed the tree
+  # is healthy. Release commits usually don't touch docs; the path
+  # check keeps this from firing on every release.
+  deploy-docs:
+    name: Deploy Docs
+    if: |
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+    needs: [format, analyze, test, build-docs]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          # `github.event.before` is the commit main pointed at before
+          # this push. Fetch enough history so `git diff before..after`
+          # resolves for both fast-forward pushes and rare force pushes.
+
+      - name: Check whether docs/ changed
+        id: changes
+        run: |
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.event.after }}"
+          # Force pushes or the very first push to a branch can leave
+          # BEFORE as the all-zero SHA. In that case, treat every path
+          # as changed so we don't miss a legitimate deploy.
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            echo "First push or force-push; treating docs as changed."
+            echo "changed=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          if ! git cat-file -e "$BEFORE" 2>/dev/null; then
+            git fetch --no-tags --depth=50 origin "$BEFORE" || true
+          fi
+          if git diff --quiet "$BEFORE" "$AFTER" -- docs/; then
+            echo "No changes under docs/; skipping deploy."
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Flutter
+        if: steps.changes.outputs.changed == 'true'
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Melos
+        if: steps.changes.outputs.changed == 'true'
+        run: dart pub global activate melos
+
+      - name: Bootstrap dependencies
+        if: steps.changes.outputs.changed == 'true'
+        run: melos bootstrap
+
+      - name: Build web
+        if: steps.changes.outputs.changed == 'true'
+        working-directory: docs
+        run: flutter build web --release
+
+      - name: Deploy to Firebase
+        if: steps.changes.outputs.changed == 'true'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          channelId: live
+          projectId: ${{ secrets.FIREBASE_PROJECT_ID }}
+          entryPoint: docs
+        env:
+          FIREBASE_CLI_EXPERIMENTS: webframeworks
