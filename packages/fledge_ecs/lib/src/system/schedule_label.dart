@@ -5,15 +5,15 @@ import 'package:meta/meta.dart';
 /// Systems are added to a `Schedule` via
 /// `App.addSystem(system, schedule: Schedules.update)`.
 ///
-/// Schedules run in a defined order:
+/// Schedules run in a defined order per `App.tick`:
 ///
-/// - [Schedules.startup] runs once before the frame loop begins.
-/// - Per-frame: [Schedules.first] → [Schedules.preUpdate] →
-///   [Schedules.update] → [Schedules.postUpdate] → [Schedules.last].
-/// - Fixed-timestep and render pipeline schedules
-///   ([Schedules.fixedFirst]…[Schedules.fixedLast], [Schedules.extract],
-///   [Schedules.render]) are reserved for later phases and are registered
-///   but not yet driven by the main loop.
+/// - [Schedules.startup] runs once, on the first tick.
+/// - Per-frame chain: [Schedules.first] → [Schedules.preUpdate] →
+///   fixed-timestep dispatch ([Schedules.fixedFirst] →
+///   [Schedules.fixedPreUpdate] → [Schedules.fixedUpdate] →
+///   [Schedules.fixedPostUpdate] → [Schedules.fixedLast], run 0..N
+///   times per frame) → [Schedules.update] → [Schedules.postUpdate] →
+///   [Schedules.last] → [Schedules.extract] → [Schedules.render].
 ///
 /// Constants for the standard schedules are in [Schedules]. Games can
 /// create custom schedules with `const Schedule('my_schedule')`, but they
@@ -71,41 +71,33 @@ class Schedules {
 
   /// Fixed-timestep: runs before all other fixed schedules.
   ///
-  /// Reserved for Phase 1c wiring — present so plugins can already
-  /// declare fixed-timestep systems, but not yet driven by the
-  /// accumulator.
+  /// The fixed chain is dispatched 0..N times per frame by `App.tick`
+  /// (via the [FixedTimestep] accumulator, default 60 Hz, 5-step
+  /// catchup cap) between [preUpdate] and [update].
   static const fixedFirst = Schedule('fixedFirst');
 
-  /// Fixed-timestep: runs before [fixedUpdate].
-  ///
-  /// Reserved for Phase 1c wiring — see [fixedFirst].
+  /// Fixed-timestep: runs before [fixedUpdate]. See [fixedFirst].
   static const fixedPreUpdate = Schedule('fixedPreUpdate');
 
-  /// Fixed-timestep: main fixed update schedule.
-  ///
-  /// Reserved for Phase 1c wiring — see [fixedFirst].
+  /// Fixed-timestep: main fixed update schedule. See [fixedFirst].
   static const fixedUpdate = Schedule('fixedUpdate');
 
-  /// Fixed-timestep: runs after [fixedUpdate].
-  ///
-  /// Reserved for Phase 1c wiring — see [fixedFirst].
+  /// Fixed-timestep: runs after [fixedUpdate]. See [fixedFirst].
   static const fixedPostUpdate = Schedule('fixedPostUpdate');
 
-  /// Fixed-timestep: runs last in the fixed schedule chain.
-  ///
-  /// Reserved for Phase 1c wiring — see [fixedFirst].
+  /// Fixed-timestep: runs last in the fixed schedule chain. See
+  /// [fixedFirst].
   static const fixedLast = Schedule('fixedLast');
 
   /// Render pipeline: extract state from the main world into the render
   /// world.
   ///
-  /// Reserved for Phase 1c / Phase 3 wiring — present so extractors can
-  /// already declare themselves, but not yet driven by the main loop.
+  /// Dispatched by `App.tick` after [last] and before [render].
   static const extract = Schedule('extract');
 
   /// Render pipeline: run render systems against the render world.
   ///
-  /// Reserved for Phase 1c / Phase 3 wiring — see [extract].
+  /// Dispatched by `App.tick` after [extract].
   static const render = Schedule('render');
 
   /// All standard schedule labels, in the order the [Scheduler]

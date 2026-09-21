@@ -120,9 +120,9 @@ class SystemStage {
   /// Walk the dependency graph looking for a cycle. Throws with a path
   /// that names every system involved.
   void _assertAcyclic() {
-    final unvisited = 0;
-    final onStack = 1;
-    final done = 2;
+    const unvisited = 0;
+    const onStack = 1;
+    const done = 2;
     final state = List<int>.filled(_systems.length, unvisited);
     final path = <int>[];
 
