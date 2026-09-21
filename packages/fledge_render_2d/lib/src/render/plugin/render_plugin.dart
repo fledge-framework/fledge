@@ -5,6 +5,7 @@ import '../../backend/canvas_render_context.dart' show CanvasSpriteDrawer;
 import '../../backend/gpu_render_context.dart' show GpuSpriteDrawer;
 import '../../sprite/sprite_render_node.dart' show SpriteDrawer;
 import '../../sprite/texture.dart' show Texture;
+import '../../transitions/transition_state.dart' show TransitionCompleted;
 import '../context/render_context.dart';
 import '../extract/extract.dart';
 import '../world/render_world.dart';
@@ -119,6 +120,11 @@ class RenderPlugin implements Plugin {
       case RenderBackend.gpu:
         app.insertResource<SpriteDrawer>(GpuSpriteDrawer());
     }
+
+    // Transition-completion signal, emitted by TransitionFadeSystem
+    // when a fade transition finishes. Register it here so apps that
+    // use transitions don't have to remember to addEvent themselves.
+    app.addEvent<TransitionCompleted>();
 
     // Extraction runs in its own schedule so render logic isn't
     // interleaved with per-frame `last` cleanup systems.

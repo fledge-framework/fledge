@@ -1,3 +1,19 @@
+/// Event fired when a fade transition completes.
+///
+/// Emitted by [TransitionFadeSystem] the frame the fade-in reaches
+/// zero. Carries the scene identifier and metadata captured before
+/// [TransitionState.complete] cleared them, so consumers (autosave,
+/// analytics, per-map hooks) can react without polling.
+class TransitionCompleted {
+  /// The scene identifier the transition landed on, if any was set.
+  final Object? scene;
+
+  /// The metadata that was attached to the transition request.
+  final Map<String, dynamic>? metadata;
+
+  const TransitionCompleted({this.scene, this.metadata});
+}
+
 /// Phases of a scene transition.
 enum TransitionPhase {
   /// No transition in progress.

@@ -16,6 +16,7 @@ class TransitionFadeSystem implements System {
     name: 'TransitionFadeSystem',
     resourceReads: {WallTime},
     resourceWrites: {TransitionState},
+    eventWrites: {TransitionCompleted},
   );
 
   @override
@@ -51,7 +52,17 @@ class TransitionFadeSystem implements System {
       case TransitionPhase.fadeIn:
         transitionState.fadeProgress -= progressDelta;
         if (transitionState.fadeProgress <= 0.0) {
+          // Capture scene + metadata before complete() clears them so
+          // the emitted event carries the finished transition's target.
+          final finishedScene = transitionState.targetScene;
+          final finishedMetadata = transitionState.metadata;
           transitionState.complete();
+          world.eventWriter<TransitionCompleted>().send(
+            TransitionCompleted(
+              scene: finishedScene,
+              metadata: finishedMetadata,
+            ),
+          );
         }
 
       case TransitionPhase.loading:
