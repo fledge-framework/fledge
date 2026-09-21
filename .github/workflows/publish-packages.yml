@@ -62,194 +62,49 @@ jobs:
       - name: Install Melos
         run: dart pub global activate melos
 
-      # Normalize versions and cross-package dep constraints BEFORE
-      # bootstrap. Bootstrap uses workspace resolution — if a package's
-      # own version doesn't satisfy another package's ^X.Y.Z constraint
-      # on it (drift between the two at the tagged commit), pub fails
-      # with "version solving failed" before we get a chance to fix it.
-      - name: Update package versions
-        run: |
-          VERSION=${{ steps.version.outputs.VERSION }}
-          echo "Setting all packages to version $VERSION and cross-deps to ^$VERSION"
-
-          for pubspec in packages/fledge_*/pubspec.yaml; do
-            # Package's own version field.
-            sed -i -E "s/^version:.*/version: $VERSION/" "$pubspec"
-            # Cross-package dep constraints (indented `  fledge_foo: ^X.Y.Z`).
-            # Only rewrites caret-versioned lines to avoid touching path/hosted-git deps.
-            # Uses POSIX [[:space:]] instead of \s for BSD/GNU sed portability.
-            sed -i -E "s|^([[:space:]]+fledge_[a-z_0-9]+:[[:space:]]*)\^[0-9]+\.[0-9]+\.[0-9]+.*$|\1^$VERSION|" "$pubspec"
-            echo "Updated: $pubspec"
-          done
-
-          echo ""
-          echo "=== Resulting versions ==="
-          grep -H "^version:" packages/fledge_*/pubspec.yaml
-          echo ""
-          echo "=== Resulting cross-package deps ==="
-          grep -HE "^\s+fledge_[a-z_0-9]+:\s*\^" packages/fledge_*/pubspec.yaml
-
       - name: Bootstrap
         run: melos bootstrap
 
-      - name: Install git-cliff
-        run: |
-          curl -sSfL https://github.com/orhun/git-cliff/releases/download/v2.7.0/git-cliff-2.7.0-x86_64-unknown-linux-gnu.tar.gz | tar xz
-          sudo mv git-cliff-2.7.0/git-cliff /usr/local/bin/
-          git-cliff --version
-
-      - name: Generate root changelog
+      # Version bumps + CHANGELOG.md updates already landed on the
+      # release commit that this tag points at (via `melos run release`
+      # locally). All this step does is extract the top-of-file entry
+      # Melos wrote so `softprops/action-gh-release` has release-body
+      # content.
+      #
+      # Melos writes the workspace CHANGELOG.md with **date-based**
+      # top-level headers (`## 2026-09-21`), not version-based ones —
+      # the version appears in per-package subsections below. So the
+      # extractor just takes the topmost `## …` block (that IS this
+      # release, since we're running against a freshly cut tag) and
+      # sanity-checks it references the target version.
+      - name: Extract release notes from CHANGELOG
         id: changelog
         run: |
           VERSION=${{ steps.version.outputs.VERSION }}
-          DATE=$(date +%Y-%m-%d)
-
-          # Generate the release-body content for this tag.
-          # We always regenerate CHANGES.md because the GitHub Release
-          # step below needs it fresh even on re-runs.
-          git-cliff --config cliff.toml --latest --strip header > CHANGES.md
-
-          # Store for the GitHub release step.
-          {
-            echo 'content<<EOF'
-            cat CHANGES.md
-            echo 'EOF'
-          } >> $GITHUB_OUTPUT
-
-          # Idempotency guard: if CHANGELOG.md already has a [VERSION]
-          # entry (from a previous workflow run for this same tag), do
-          # not prepend a duplicate block. This keeps re-runs of the
-          # release workflow clean.
-          if grep -q "^## \[$VERSION\]" CHANGELOG.md 2>/dev/null; then
-            echo "Root CHANGELOG.md already has [$VERSION]; skipping prepend."
-            rm CHANGES.md
-          else
-            # First run for this version: prepend a fresh entry.
-            echo "## [$VERSION] - $DATE" > CHANGELOG_NEW.md
-            echo "" >> CHANGELOG_NEW.md
-            cat CHANGES.md >> CHANGELOG_NEW.md
-            echo "" >> CHANGELOG_NEW.md
-
-            if [ -f CHANGELOG.md ]; then
-              # Skip the header if it exists
-              tail -n +3 CHANGELOG.md >> CHANGELOG_NEW.md 2>/dev/null || true
-            fi
-
-            echo "# Changelog" > CHANGELOG.md
-            echo "" >> CHANGELOG.md
-            cat CHANGELOG_NEW.md >> CHANGELOG.md
-            rm CHANGELOG_NEW.md CHANGES.md
+          if [ ! -f CHANGELOG.md ]; then
+            echo "CHANGELOG.md missing at tag; using placeholder release body."
+            printf 'content<<EOF\nRelease v%s\nEOF\n' "$VERSION" >> $GITHUB_OUTPUT
+            exit 0
           fi
-
-      - name: Generate per-package changelogs
-        run: |
-          VERSION=${{ steps.version.outputs.VERSION }}
-          DATE=$(date +%Y-%m-%d)
-
-          # Alphabetical — order doesn't matter for changelog generation.
-          PACKAGES=(
-            "fledge_assets"
-            "fledge_audio"
-            "fledge_calendar"
-            "fledge_camera_2d"
-            "fledge_debug"
-            "fledge_ecs"
-            "fledge_ecs_annotations"
-            "fledge_ecs_generator"
-            "fledge_input"
-            "fledge_lighting_2d"
-            "fledge_net"
-            "fledge_particles"
-            "fledge_physics"
-            "fledge_render"
-            "fledge_render_2d"
-            "fledge_save"
-            "fledge_tiled"
-            "fledge_time"
-            "fledge_tween"
-            "fledge_ui"
-            "fledge_window"
-            "fledge_yarn"
-          )
-
-          for pkg in "${PACKAGES[@]}"; do
-            echo "Generating changelog for $pkg..."
-            PKG_DIR="packages/$pkg"
-
-            # Idempotency guard: if this package's CHANGELOG already has
-            # a [$VERSION] entry, skip. Lets the workflow re-run cleanly
-            # against the same tag without producing duplicate blocks.
-            if grep -q "^## \[$VERSION\]" "$PKG_DIR/CHANGELOG.md" 2>/dev/null; then
-              echo "  $pkg CHANGELOG already has [$VERSION]; skipping."
-              continue
-            fi
-
-            # Generate changelog for commits affecting this package
-            # Uses --include-path to filter commits by path
-            git-cliff --config cliff.toml --latest --strip header \
-              --include-path "$PKG_DIR/**" > "$PKG_DIR/CHANGES.md" 2>/dev/null || true
-
-            # Check if there are any changes for this package
-            if [ -s "$PKG_DIR/CHANGES.md" ]; then
-              echo "  Found changes for $pkg"
-
-              # Create new changelog entry
-              echo "## [$VERSION] - $DATE" > "$PKG_DIR/CHANGELOG_NEW.md"
-              echo "" >> "$PKG_DIR/CHANGELOG_NEW.md"
-              cat "$PKG_DIR/CHANGES.md" >> "$PKG_DIR/CHANGELOG_NEW.md"
-              echo "" >> "$PKG_DIR/CHANGELOG_NEW.md"
-
-              # Prepend to existing changelog or create new one
-              if [ -f "$PKG_DIR/CHANGELOG.md" ]; then
-                # Skip the header if it exists
-                tail -n +3 "$PKG_DIR/CHANGELOG.md" >> "$PKG_DIR/CHANGELOG_NEW.md" 2>/dev/null || true
-              fi
-
-              # Add header
-              echo "# Changelog" > "$PKG_DIR/CHANGELOG.md"
-              echo "" >> "$PKG_DIR/CHANGELOG.md"
-              cat "$PKG_DIR/CHANGELOG_NEW.md" >> "$PKG_DIR/CHANGELOG.md"
-              rm "$PKG_DIR/CHANGELOG_NEW.md" "$PKG_DIR/CHANGES.md"
-            else
-              echo "  No specific changes for $pkg, adding version entry"
-              # Create minimal changelog entry for version bump
-              echo "## [$VERSION] - $DATE" > "$PKG_DIR/CHANGELOG_NEW.md"
-              echo "" >> "$PKG_DIR/CHANGELOG_NEW.md"
-              echo "- Version bump for framework release" >> "$PKG_DIR/CHANGELOG_NEW.md"
-              echo "" >> "$PKG_DIR/CHANGELOG_NEW.md"
-
-              # Prepend to existing changelog
-              if [ -f "$PKG_DIR/CHANGELOG.md" ]; then
-                tail -n +3 "$PKG_DIR/CHANGELOG.md" >> "$PKG_DIR/CHANGELOG_NEW.md" 2>/dev/null || true
-              fi
-
-              echo "# Changelog" > "$PKG_DIR/CHANGELOG.md"
-              echo "" >> "$PKG_DIR/CHANGELOG.md"
-              cat "$PKG_DIR/CHANGELOG_NEW.md" >> "$PKG_DIR/CHANGELOG.md"
-              rm "$PKG_DIR/CHANGELOG_NEW.md"
-              rm -f "$PKG_DIR/CHANGES.md"
-            fi
-          done
-
-      - name: Commit version updates
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git add packages/fledge_*/pubspec.yaml
-          git add packages/fledge_*/CHANGELOG.md
-          git add CHANGELOG.md
-
-          VERSION=${{ steps.version.outputs.VERSION }}
-          # The `[skip ci]` marker keeps ci.yml (test/analyze/build) from
-          # re-running on this bot-authored release commit. It does NOT
-          # affect this workflow because this workflow was triggered by
-          # the tag push, not by the commit; and it does NOT affect the
-          # `tag-release` job in ci.yml because that job is what creates
-          # the tag in the first place (before this commit exists).
-          git commit -m "chore(release): v$VERSION [skip ci]" || echo "No changes to commit"
-
-          git push origin HEAD:main
+          awk '
+            /^## / {
+              if (in_block) exit
+              in_block = 1
+              next
+            }
+            in_block { print }
+          ' CHANGELOG.md > CHANGES.md
+          if [ ! -s CHANGES.md ] || ! grep -q "$VERSION" CHANGES.md; then
+            echo "Top CHANGELOG.md block doesn't reference $VERSION; using placeholder."
+            printf 'content<<EOF\nRelease v%s\nEOF\n' "$VERSION" >> $GITHUB_OUTPUT
+          else
+            {
+              echo 'content<<EOF'
+              cat CHANGES.md
+              echo 'EOF'
+            } >> $GITHUB_OUTPUT
+          fi
+          rm -f CHANGES.md
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -274,8 +129,10 @@ jobs:
           # bump — the first run publishes what's new, later runs
           # short-circuit into a green success.
           #
-          # Shims (fledge_render, fledge_time) publish last because they
-          # depend on the merged/renamed packages.
+          # `fledge_render` and `fledge_time` are re-export shims marked
+          # discontinued on pub.dev — they still exist as workspace
+          # members for a deprecation window, but no new versions are
+          # published, so they are absent from this list.
           PACKAGES=(
             # Foundation: no in-tree deps.
             "fledge_ecs_annotations"
@@ -307,9 +164,6 @@ jobs:
             "fledge_tiled"
             # Debug depends on ui + physics + camera_2d + render_2d.
             "fledge_debug"
-            # Shims publish last — they depend on the new packages above.
-            "fledge_render"
-            "fledge_time"
           )
 
           VERSION=${{ steps.version.outputs.VERSION }}

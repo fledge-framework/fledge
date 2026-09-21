@@ -55,6 +55,16 @@ melos:
   name: fledge
   repository: https://github.com/fledge-framework/fledge
 
+  command:
+    version:
+      # Also prepend an entry to the workspace-root CHANGELOG.md so
+      # publish-packages.yml can lift release notes for the GitHub
+      # Release straight out of it.
+      workspaceChangelog: true
+      # Turn commit references in the generated CHANGELOG entries into
+      # links back to GitHub.
+      linkToCommits: true
+
   scripts:
     analyze:
       description: Run dart analyze in all packages
@@ -127,3 +137,41 @@ melos:
         # / example workspace members that also have `publish_to: none`.
         # `melos exec` with `noPrivate: true` filters them automatically.
         noPrivate: true
+
+    release:
+      description: |
+        Cut a coordinated fledge release. Usage:
+          VERSION=0.2.3 melos run release
+        Bumps every publishable package's version + cross-package
+        constraints to VERSION, writes per-package and workspace
+        CHANGELOG entries, and creates the `chore(release): vX.Y.Z`
+        commit that ci.yml's `tag-release` job matches. Does not
+        push — review the diff, then `git push origin main` to hand
+        off to CI.
+
+        Melos has no "set the whole workspace to X.Y.Z" flag, so this
+        builds up one `-V <pkg>:<ver>` per publishable package and
+        invokes `melos version` once with all of them. `--message`
+        interpolates only `{new_package_versions}` (a multi-line list),
+        so we run `melos version` with `--no-git-commit-version` and
+        craft the commit ourselves with the version in the subject.
+      run: |
+        set -eu
+        : "${VERSION:?VERSION must be set, e.g. VERSION=0.2.3 melos run release}"
+        # Publishable packages only. `fledge_render` and `fledge_time`
+        # are re-export shims marked discontinued on pub.dev; they
+        # stay in the workspace as compile-time aliases but never get
+        # a new version cut.
+        args=""
+        for pubspec in packages/fledge_*/pubspec.yaml; do
+          name=$(sed -nE 's/^name:[[:space:]]*(.*)/\1/p' "$pubspec" | head -n1)
+          case "$name" in
+            fledge_render|fledge_time) continue ;;
+          esac
+          args="$args -V $name:$VERSION"
+        done
+        # $args is intentionally unquoted here for word-splitting.
+        # shellcheck disable=SC2086
+        melos version $args --yes --no-git-commit-version
+        git add -A
+        git commit -m "chore(release): v$VERSION"
