@@ -112,19 +112,22 @@ void main() {
       expect(s.sortKey, key);
     });
 
-    test('sortKey is preserved on the ExtractedSprite (for stable draw order)', () {
-      final s = tileToSprite(
-        texture: texture,
-        sourceRect: src,
-        tileTopLeft: Offset.zero,
-        tileWidth: 16,
-        tileHeight: 16,
-        color: const Color(0xFFFFFFFF),
-        sortKey: 12345,
-        flipFlags: 0,
-      );
-      expect(s.sortKey, 12345);
-    });
+    test(
+      'sortKey is preserved on the ExtractedSprite (for stable draw order)',
+      () {
+        final s = tileToSprite(
+          texture: texture,
+          sourceRect: src,
+          tileTopLeft: Offset.zero,
+          tileWidth: 16,
+          tileHeight: 16,
+          color: const Color(0xFFFFFFFF),
+          sortKey: 12345,
+          flipFlags: 0,
+        );
+        expect(s.sortKey, 12345);
+      },
+    );
 
     // Sanity — the rotation matches math.atan2 result.
     test('sanity: rotation of D+H equals π/2', () {
@@ -138,7 +141,10 @@ void main() {
         sortKey: 0,
         flipFlags: TileFlipFlags.diagonal | TileFlipFlags.horizontal,
       );
-      final rotation = math.atan2(s.transform.storage[1], s.transform.storage[0]);
+      final rotation = math.atan2(
+        s.transform.storage[1],
+        s.transform.storage[0],
+      );
       expect(rotation, closeTo(math.pi / 2, 1e-9));
     });
   });

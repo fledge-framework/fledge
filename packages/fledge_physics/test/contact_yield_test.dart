@@ -17,9 +17,7 @@ EntityCommands _dyn(
 }) {
   final e = world.spawn()
     ..insert(Transform2D.from(px, py))
-    ..insert(
-      Collider.single(RectangleShape(x: 0, y: 0, width: w, height: h)),
-    )
+    ..insert(Collider.single(RectangleShape(x: 0, y: 0, width: w, height: h)))
     ..insert(Velocity(vx, vy));
   if (config != null) e.insert(config);
   return e;
@@ -38,51 +36,54 @@ World _yieldWorld() {
 
 void main() {
   group('CollisionConfig.yieldAfter', () {
-    test('pair blocks until yieldAfter has elapsed, then passes through', () async {
-      final world = _yieldWorld();
-      const cfg = CollisionConfig(
-        blocksDynamic: true,
-        yieldAfter: Duration(milliseconds: 100), // 6 fixed steps @ 60 Hz
-      );
-      // A and B overlap by 1 px on x (0..4 and 3..7) — that's a
-      // strict Rect.overlaps overlap, which is what the contact
-      // tracker uses.
-      final a = _dyn(world, 0, 0, vx: 4, config: cfg);
-      final b = _dyn(world, 3, 0, config: cfg);
+    test(
+      'pair blocks until yieldAfter has elapsed, then passes through',
+      () async {
+        final world = _yieldWorld();
+        const cfg = CollisionConfig(
+          blocksDynamic: true,
+          yieldAfter: Duration(milliseconds: 100), // 6 fixed steps @ 60 Hz
+        );
+        // A and B overlap by 1 px on x (0..4 and 3..7) — that's a
+        // strict Rect.overlaps overlap, which is what the contact
+        // tracker uses.
+        final a = _dyn(world, 0, 0, vx: 4, config: cfg);
+        final b = _dyn(world, 3, 0, config: cfg);
 
-      final resolver = const CollisionResolutionSystem.fixed();
-      final tracker = world.getResource<ContactYieldTracker>()!;
+        final resolver = const CollisionResolutionSystem.fixed();
+        final tracker = world.getResource<ContactYieldTracker>()!;
 
-      // Each step A's vx is zeroed by blocking. Sixth step's age (6 ×
-      // 16.667 ms) crosses the 100 ms threshold and the pair yields.
-      var yieldedOnStep = -1;
-      for (var step = 1; step <= 8; step++) {
-        // Re-arm velocity every step (blocking zeroes it).
+        // Each step A's vx is zeroed by blocking. Sixth step's age (6 ×
+        // 16.667 ms) crosses the 100 ms threshold and the pair yields.
+        var yieldedOnStep = -1;
+        for (var step = 1; step <= 8; step++) {
+          // Re-arm velocity every step (blocking zeroes it).
+          world.get<Velocity>(a.entity)!.x = 4;
+          await resolver.run(world);
+          if (tracker.isYielding(a.entity, b.entity)) {
+            yieldedOnStep = step;
+            break;
+          }
+          // Still blocked while age < 100ms.
+          expect(world.get<Velocity>(a.entity)!.x, 0.0);
+        }
+        expect(
+          yieldedOnStep,
+          greaterThanOrEqualTo(6),
+          reason: 'Yield should trigger after 6 fixed steps (100 ms).',
+        );
+        expect(
+          yieldedOnStep,
+          lessThanOrEqualTo(7),
+          reason: 'Yield should not take much longer than the threshold.',
+        );
+
+        // Once yielding, blocking is off — A's velocity is preserved.
         world.get<Velocity>(a.entity)!.x = 4;
         await resolver.run(world);
-        if (tracker.isYielding(a.entity, b.entity)) {
-          yieldedOnStep = step;
-          break;
-        }
-        // Still blocked while age < 100ms.
-        expect(world.get<Velocity>(a.entity)!.x, 0.0);
-      }
-      expect(
-        yieldedOnStep,
-        greaterThanOrEqualTo(6),
-        reason: 'Yield should trigger after 6 fixed steps (100 ms).',
-      );
-      expect(
-        yieldedOnStep,
-        lessThanOrEqualTo(7),
-        reason: 'Yield should not take much longer than the threshold.',
-      );
-
-      // Once yielding, blocking is off — A's velocity is preserved.
-      world.get<Velocity>(a.entity)!.x = 4;
-      await resolver.run(world);
-      expect(world.get<Velocity>(a.entity)!.x, 4.0);
-    });
+        expect(world.get<Velocity>(a.entity)!.x, 4.0);
+      },
+    );
 
     test('separation ends yielding and clears the tracker entry', () async {
       final world = _yieldWorld();
@@ -130,44 +131,43 @@ void main() {
           world.get<Velocity>(a.entity)!.x = 4;
           await resolver.run(world);
           world.updateEvents();
-          startedCount +=
-              world.eventReader<ContactYieldStarted>().read().length;
+          startedCount += world
+              .eventReader<ContactYieldStarted>()
+              .read()
+              .length;
         }
         expect(startedCount, 1);
       },
     );
 
-    test(
-      'ContactYieldEnded fires when a yielding pair separates',
-      () async {
-        final world = _yieldWorld();
-        const cfg = CollisionConfig(
-          blocksDynamic: true,
-          yieldAfter: Duration(milliseconds: 50),
-        );
-        final a = _dyn(world, 0, 0, vx: 4, config: cfg);
-        final b = _dyn(world, 3, 0, config: cfg);
-        final resolver = const CollisionResolutionSystem.fixed();
-        final tracker = world.getResource<ContactYieldTracker>()!;
+    test('ContactYieldEnded fires when a yielding pair separates', () async {
+      final world = _yieldWorld();
+      const cfg = CollisionConfig(
+        blocksDynamic: true,
+        yieldAfter: Duration(milliseconds: 50),
+      );
+      final a = _dyn(world, 0, 0, vx: 4, config: cfg);
+      final b = _dyn(world, 3, 0, config: cfg);
+      final resolver = const CollisionResolutionSystem.fixed();
+      final tracker = world.getResource<ContactYieldTracker>()!;
 
-        // Get into yielding.
-        for (var step = 0; step < 12; step++) {
-          world.get<Velocity>(a.entity)!.x = 4;
-          await resolver.run(world);
-          world.updateEvents();
-          if (tracker.isYielding(a.entity, b.entity)) break;
-        }
-
-        // Separate.
-        world.get<Transform2D>(b.entity)!.translation.x = 1000;
-        world.get<Velocity>(a.entity)!.x = 0;
+      // Get into yielding.
+      for (var step = 0; step < 12; step++) {
+        world.get<Velocity>(a.entity)!.x = 4;
         await resolver.run(world);
         world.updateEvents();
+        if (tracker.isYielding(a.entity, b.entity)) break;
+      }
 
-        final ended = world.eventReader<ContactYieldEnded>().read().toList();
-        expect(ended, hasLength(1));
-      },
-    );
+      // Separate.
+      world.get<Transform2D>(b.entity)!.translation.x = 1000;
+      world.get<Velocity>(a.entity)!.x = 0;
+      await resolver.run(world);
+      world.updateEvents();
+
+      final ended = world.eventReader<ContactYieldEnded>().read().toList();
+      expect(ended, hasLength(1));
+    });
 
     test('pair with only one side setting yieldAfter never yields', () async {
       final world = _yieldWorld();

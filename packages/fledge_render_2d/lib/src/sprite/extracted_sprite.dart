@@ -121,8 +121,8 @@ class SpriteExtractor extends Extractor {
       final sub = sprite.layerSubOrder != 0
           ? sprite.layerSubOrder
           : (renderMatrix.storage[7] * DrawLayerExtension.ySortScale)
-              .toInt()
-              .clamp(0, DrawLayerExtension.layerMultiplier - 1);
+                .toInt()
+                .clamp(0, DrawLayerExtension.layerMultiplier - 1);
       final sortKey = layer.sortKey(subOrder: sub);
 
       renderWorld.spawn().insert(
@@ -178,10 +178,10 @@ Matrix3 interpolatedRenderMatrix(
 
   // Interpolate LOCAL translation. Only correct for root entities;
   // see PreviousTransform2D's docstring.
-  final ix = prev.translation.x +
-      (current.translation.x - prev.translation.x) * alpha;
-  final iy = prev.translation.y +
-      (current.translation.y - prev.translation.y) * alpha;
+  final ix =
+      prev.translation.x + (current.translation.x - prev.translation.x) * alpha;
+  final iy =
+      prev.translation.y + (current.translation.y - prev.translation.y) * alpha;
 
   // Rebuild the matrix from the current rotation/scale + interpolated
   // translation. Cheaper than cloning and rewriting the storage.

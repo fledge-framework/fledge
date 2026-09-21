@@ -54,12 +54,9 @@ class PreviousTransform2D {
   /// Creates a snapshot. Fields default to the identity transform;
   /// [SnapshotPreviousTransformSystem] overwrites them on the first
   /// fixed step so the initial values do not need to match anything.
-  PreviousTransform2D({
-    Vector2? translation,
-    this.rotation = 0,
-    Vector2? scale,
-  })  : translation = translation ?? Vector2.zero(),
-        scale = scale ?? Vector2(1, 1);
+  PreviousTransform2D({Vector2? translation, this.rotation = 0, Vector2? scale})
+    : translation = translation ?? Vector2.zero(),
+      scale = scale ?? Vector2(1, 1);
 
   /// Copy [current] into this snapshot. Called from
   /// [SnapshotPreviousTransformSystem] at the top of each fixed step.

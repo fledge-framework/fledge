@@ -110,23 +110,26 @@ void main() {
       expect(rst.ssin, closeTo(1.5 * math.sin(r), 1e-6));
     });
 
-    test('non-zero source origin: source top-left maps to destRect.topLeft', () {
-      // `Canvas.drawRawAtlas` subtracts the source rect's top-left
-      // internally when mapping corners through the RSTransform, so
-      // the atlas position does NOT re-appear in tx/ty. The
-      // RSTransform's job is only to place the dest rect's local
-      // origin (its top-left) inside world space.
-      final rst = composeSpriteRSTransform(
-        transform: Matrix3.identity(),
-        sourceRect: const Rect.fromLTWH(64, 128, 32, 32),
-        destRect: const Rect.fromLTRB(-16, -16, 16, 16),
-      );
-      // Regression for the "atlas / tile frames draw shifted" bug —
-      // Porios's render goldens flagged this. Expected: tx = destL,
-      // ty = destT (source coordinates handled by drawRawAtlas).
-      expect(rst.tx, closeTo(-16, 1e-6));
-      expect(rst.ty, closeTo(-16, 1e-6));
-    });
+    test(
+      'non-zero source origin: source top-left maps to destRect.topLeft',
+      () {
+        // `Canvas.drawRawAtlas` subtracts the source rect's top-left
+        // internally when mapping corners through the RSTransform, so
+        // the atlas position does NOT re-appear in tx/ty. The
+        // RSTransform's job is only to place the dest rect's local
+        // origin (its top-left) inside world space.
+        final rst = composeSpriteRSTransform(
+          transform: Matrix3.identity(),
+          sourceRect: const Rect.fromLTWH(64, 128, 32, 32),
+          destRect: const Rect.fromLTRB(-16, -16, 16, 16),
+        );
+        // Regression for the "atlas / tile frames draw shifted" bug —
+        // Porios's render goldens flagged this. Expected: tx = destL,
+        // ty = destT (source coordinates handled by drawRawAtlas).
+        expect(rst.tx, closeTo(-16, 1e-6));
+        expect(rst.ty, closeTo(-16, 1e-6));
+      },
+    );
 
     test('handles zero-sized source rect without dividing by zero', () {
       final rst = composeSpriteRSTransform(

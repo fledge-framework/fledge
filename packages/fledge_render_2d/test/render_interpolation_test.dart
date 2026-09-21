@@ -19,12 +19,10 @@ void main() {
       world = World()..insertResource(FixedTimestep());
       final commands = world.spawn()
         ..insert(Transform2D.from(10, 20))
-        ..insert(GlobalTransform2D()..matrix.setValues(1, 0, 0, 0, 1, 0, 10, 20, 1))
         ..insert(
-          PreviousTransform2D(
-            translation: Vector2(0, 0),
-          ),
-        );
+          GlobalTransform2D()..matrix.setValues(1, 0, 0, 0, 1, 0, 10, 20, 1),
+        )
+        ..insert(PreviousTransform2D(translation: Vector2(0, 0)));
       entity = commands.entity;
     });
 
@@ -56,24 +54,28 @@ void main() {
       expect(identical(m, source.matrix), isTrue);
     });
 
-    test('no PreviousTransform2D → matrix returned unchanged even at alpha < 1', () {
-      final bare = world.spawn()
-        ..insert(Transform2D.from(3, 4))
-        ..insert(
-          GlobalTransform2D()..matrix.setValues(1, 0, 0, 0, 1, 0, 3, 4, 1),
-        );
-      final source = world.get<GlobalTransform2D>(bare.entity)!;
-      final m = interpolatedRenderMatrix(world, bare.entity, source, 0.5);
-      expect(identical(m, source.matrix), isTrue);
-    });
+    test(
+      'no PreviousTransform2D → matrix returned unchanged even at alpha < 1',
+      () {
+        final bare = world.spawn()
+          ..insert(Transform2D.from(3, 4))
+          ..insert(
+            GlobalTransform2D()..matrix.setValues(1, 0, 0, 0, 1, 0, 3, 4, 1),
+          );
+        final source = world.get<GlobalTransform2D>(bare.entity)!;
+        final m = interpolatedRenderMatrix(world, bare.entity, source, 0.5);
+        expect(identical(m, source.matrix), isTrue);
+      },
+    );
 
     test('teleport: snapTo makes the next extract show no motion', () {
       final prev = world.get<PreviousTransform2D>(entity)!;
       // Player teleports to a new place.
       world.get<Transform2D>(entity)!.translation.setValues(500, 600);
-      world.get<GlobalTransform2D>(entity)!.matrix.setValues(
-            1, 0, 0, 0, 1, 0, 500, 600, 1,
-          );
+      world
+          .get<GlobalTransform2D>(entity)!
+          .matrix
+          .setValues(1, 0, 0, 0, 1, 0, 500, 600, 1);
       prev.snapTo(world.get<Transform2D>(entity)!);
 
       // Even at alpha 0, the extracted position matches the current
@@ -110,11 +112,13 @@ void main() {
   });
 
   group('FixedTimestep.alpha wiring', () {
-    test('sanity: adding stepSeconds*0.5 to the accumulator yields alpha 0.5',
-        () {
-      final ft = FixedTimestep();
-      _setAlpha(ft, 0.5);
-      expect(ft.alpha, closeTo(0.5, 1e-6));
-    });
+    test(
+      'sanity: adding stepSeconds*0.5 to the accumulator yields alpha 0.5',
+      () {
+        final ft = FixedTimestep();
+        _setAlpha(ft, 0.5);
+        expect(ft.alpha, closeTo(0.5, 1e-6));
+      },
+    );
   });
 }

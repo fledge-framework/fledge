@@ -8,8 +8,7 @@ void main() {
     test(
       'fixed-step 60 Hz: Velocity(max 4) moves exactly 4 px per step',
       () async {
-        final world = World()
-          ..insertResource(FixedTimestep()); // default 60 Hz
+        final world = World()..insertResource(FixedTimestep()); // default 60 Hz
         final entity = world.spawn()
           ..insert(Transform2D.from(0, 0))
           ..insert(Velocity(4, 0));
@@ -23,26 +22,23 @@ void main() {
       },
     );
 
-    test(
-      'fixed-step 30 Hz: Velocity(max 4) still produces 240 px/s',
-      () async {
-        // 30 Hz → 8 px/step × 30 steps = 240 px/s.
-        final world = World()
-          ..insertResource(
-            FixedTimestep(stepDuration: const Duration(microseconds: 33333)),
-          );
-        final entity = world.spawn()
-          ..insert(Transform2D.from(0, 0))
-          ..insert(Velocity(4, 0));
-
-        const sys = VelocityIntegrationSystem.fixed();
-        await sys.run(world);
-        expect(
-          world.get<Transform2D>(entity.entity)!.translation.x,
-          closeTo(8.0, 0.01),
+    test('fixed-step 30 Hz: Velocity(max 4) still produces 240 px/s', () async {
+      // 30 Hz → 8 px/step × 30 steps = 240 px/s.
+      final world = World()
+        ..insertResource(
+          FixedTimestep(stepDuration: const Duration(microseconds: 33333)),
         );
-      },
-    );
+      final entity = world.spawn()
+        ..insert(Transform2D.from(0, 0))
+        ..insert(Velocity(4, 0));
+
+      const sys = VelocityIntegrationSystem.fixed();
+      await sys.run(world);
+      expect(
+        world.get<Transform2D>(entity.entity)!.translation.x,
+        closeTo(8.0, 0.01),
+      );
+    });
 
     test('fixed-step 120 Hz: Velocity(max 4) → 2 px/step (240 px/s)', () async {
       final world = World()

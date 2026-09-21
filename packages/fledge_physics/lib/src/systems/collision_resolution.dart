@@ -308,9 +308,9 @@ void _updateYieldTracker(
       for (final key in yieldingSet.toList()) {
         final pair = yieldingEntities[key];
         if (pair != null) {
-          world
-              .eventWriter<ContactYieldEnded>()
-              .send(ContactYieldEnded(pair.$1, pair.$2));
+          world.eventWriter<ContactYieldEnded>().send(
+            ContactYieldEnded(pair.$1, pair.$2),
+          );
         }
       }
       ageMap.clear();
@@ -350,9 +350,9 @@ void _updateYieldTracker(
       if (!yieldingSet.contains(key) && next >= threshold) {
         yieldingSet.add(key);
         yieldingEntities[key] = (a.entity, b.entity);
-        world
-            .eventWriter<ContactYieldStarted>()
-            .send(ContactYieldStarted(a.entity, b.entity));
+        world.eventWriter<ContactYieldStarted>().send(
+          ContactYieldStarted(a.entity, b.entity),
+        );
       }
     }
   }
@@ -368,9 +368,9 @@ void _updateYieldTracker(
     if (yieldingSet.remove(key)) {
       final pair = yieldingEntities.remove(key);
       if (pair != null) {
-        world
-            .eventWriter<ContactYieldEnded>()
-            .send(ContactYieldEnded(pair.$1, pair.$2));
+        world.eventWriter<ContactYieldEnded>().send(
+          ContactYieldEnded(pair.$1, pair.$2),
+        );
       }
     }
   }

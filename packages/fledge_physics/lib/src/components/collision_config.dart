@@ -112,9 +112,9 @@ class CollisionConfig {
   const CollisionConfig.sensor({
     this.layer = CollisionLayers.trigger,
     this.mask = CollisionLayers.all,
-  })  : isSensor = true,
-        blocksDynamic = false,
-        yieldAfter = null;
+  }) : isSensor = true,
+       blocksDynamic = false,
+       yieldAfter = null;
 
   /// Creates a solid configuration (blocks movement).
   ///

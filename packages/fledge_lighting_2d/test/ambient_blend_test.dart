@@ -75,8 +75,11 @@ void main() {
         final r = (argb >> 16) & 0xff;
         final g = (argb >> 8) & 0xff;
         final b = argb & 0xff;
-        expect(r, inInclusiveRange(120, 136),
-            reason: 'Red should be halved by the multiply pass.');
+        expect(
+          r,
+          inInclusiveRange(120, 136),
+          reason: 'Red should be halved by the multiply pass.',
+        );
         expect(g, 0);
         expect(b, 0);
       },

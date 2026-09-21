@@ -47,15 +47,13 @@ ExtractedSprite tileToSprite({
   final cos = math.cos(rotation);
   final sin = math.sin(rotation);
   // Column-major 3x3 affine: [a, b, 0, c, d, 0, tx, ty, 1].
-  final transform = Matrix3(
-    cos, sin, 0,
-    -sin, cos, 0,
-    centerX, centerY, 1,
-  );
+  final transform = Matrix3(cos, sin, 0, -sin, cos, 0, centerX, centerY, 1);
 
-  final layer = DrawLayer.values[
-      (sortKey ~/ DrawLayerExtension.layerMultiplier)
-          .clamp(0, DrawLayer.values.length - 1)];
+  final layer =
+      DrawLayer.values[(sortKey ~/ DrawLayerExtension.layerMultiplier).clamp(
+        0,
+        DrawLayer.values.length - 1,
+      )];
 
   return ExtractedSprite(
     entity: Entity.placeholder,

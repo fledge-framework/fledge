@@ -25,19 +25,22 @@ EntityCommands _spawnDynamic(
 
 void main() {
   group('Dynamic-vs-dynamic blocking (CollisionConfig.blocksDynamic)', () {
-    test('two dynamics without blocksDynamic pass through each other', () async {
-      final world = World()..insertResource(FixedTimestep());
-      // A at x=0 moving right (+x), B at x=6 stationary.
-      final a = _spawnDynamic(world, 0, 0, vx: 4);
-      _spawnDynamic(world, 6, 0);
+    test(
+      'two dynamics without blocksDynamic pass through each other',
+      () async {
+        final world = World()..insertResource(FixedTimestep());
+        // A at x=0 moving right (+x), B at x=6 stationary.
+        final a = _spawnDynamic(world, 0, 0, vx: 4);
+        _spawnDynamic(world, 6, 0);
 
-      await const CollisionResolutionSystem.fixed().run(world);
+        await const CollisionResolutionSystem.fixed().run(world);
 
-      // No blocking → A's velocity untouched.
-      final v = world.get<Velocity>(a.entity)!;
-      expect(v.x, 4.0);
-      expect(v.y, 0.0);
-    });
+        // No blocking → A's velocity untouched.
+        final v = world.get<Velocity>(a.entity)!;
+        expect(v.x, 4.0);
+        expect(v.y, 0.0);
+      },
+    );
 
     test('two dynamics with blocksDynamic block each other', () async {
       final world = World()..insertResource(FixedTimestep());
@@ -139,19 +142,24 @@ void main() {
       },
     );
 
-    test('static blocking still works when dynamic blocking is enabled', () async {
-      final world = World()..insertResource(FixedTimestep());
-      const cfg = CollisionConfig(blocksDynamic: true);
-      // Static wall at x=6.
-      world.spawn()
-        ..insert(Transform2D.from(6, 0))
-        ..insert(
-          Collider.single(const RectangleShape(x: 0, y: 0, width: 4, height: 4)),
-        );
-      final mover = _spawnDynamic(world, 0, 0, vx: 4, config: cfg);
+    test(
+      'static blocking still works when dynamic blocking is enabled',
+      () async {
+        final world = World()..insertResource(FixedTimestep());
+        const cfg = CollisionConfig(blocksDynamic: true);
+        // Static wall at x=6.
+        world.spawn()
+          ..insert(Transform2D.from(6, 0))
+          ..insert(
+            Collider.single(
+              const RectangleShape(x: 0, y: 0, width: 4, height: 4),
+            ),
+          );
+        final mover = _spawnDynamic(world, 0, 0, vx: 4, config: cfg);
 
-      await const CollisionResolutionSystem.fixed().run(world);
-      expect(world.get<Velocity>(mover.entity)!.x, 0.0);
-    });
+        await const CollisionResolutionSystem.fixed().run(world);
+        expect(world.get<Velocity>(mover.entity)!.x, 0.0);
+      },
+    );
   });
 }

@@ -127,9 +127,11 @@ class CameraFollowSystem implements System {
         final prev = world.get<PreviousTransform2D>(follow.target);
         final cur = world.get<Transform2D>(follow.target);
         if (prev != null && cur != null) {
-          final ix = prev.translation.x +
+          final ix =
+              prev.translation.x +
               (cur.translation.x - prev.translation.x) * alpha;
-          final iy = prev.translation.y +
+          final iy =
+              prev.translation.y +
               (cur.translation.y - prev.translation.y) * alpha;
           tx = ix + follow.offset.dx;
           ty = iy + follow.offset.dy;
