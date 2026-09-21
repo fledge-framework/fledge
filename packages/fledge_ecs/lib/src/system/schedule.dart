@@ -28,8 +28,12 @@ class SystemStage {
   final String name;
   final List<SystemNode> _systems = [];
 
-  /// Maps system names to their indices for ordering constraints.
-  final Map<String, int> _nameToIndex = {};
+  /// Maps system names to every registered system's index under that
+  /// name. `before:` / `after:` lookups fan out to every match so a
+  /// schedule can carry two (or more) systems that share a name — for
+  /// example a second `transform_propagate` inserted after a movement
+  /// pass — without any of them dropping their explicit ordering.
+  final Map<String, List<int>> _nameToIndex = {};
 
   /// Maps system names to indices of systems that must run before them.
   /// This handles `before` constraints for systems not yet added.
@@ -67,14 +71,18 @@ class SystemStage {
       node.dependencies.add(i);
     }
 
-    // Handle explicit `after` constraints
+    // Handle explicit `after` constraints. Every already-registered
+    // system with a matching name is added as a dependency so a
+    // schedule holding duplicates keeps all of them upstream.
     for (final afterName in system.meta.after) {
-      final afterIndex = _nameToIndex[afterName];
-      if (afterIndex != null) {
-        // System already exists, add it as a dependency
-        node.dependencies.add(afterIndex);
-      } else {
-        // System doesn't exist yet, record for later
+      final indices = _nameToIndex[afterName];
+      if (indices != null && indices.isNotEmpty) {
+        node.dependencies.addAll(indices);
+      }
+      // Also record the pending edge — a future system registered
+      // under the same name will pick this up (see the pendingAfter
+      // handler below).
+      if (indices == null || indices.isEmpty) {
         _pendingAfter.putIfAbsent(afterName, () => {}).add(newIndex);
       }
     }
@@ -95,20 +103,24 @@ class SystemStage {
       _pendingAfter.remove(systemName);
     }
 
-    // Handle explicit `before` constraints
+    // Handle explicit `before` constraints. Fan out to every already-
+    // registered system sharing the name.
     for (final beforeName in system.meta.before) {
-      final beforeIndex = _nameToIndex[beforeName];
-      if (beforeIndex != null) {
-        // System already exists, update its dependencies
-        _systems[beforeIndex].dependencies.add(newIndex);
-      } else {
+      final indices = _nameToIndex[beforeName];
+      if (indices != null && indices.isNotEmpty) {
+        for (final idx in indices) {
+          _systems[idx].dependencies.add(newIndex);
+        }
+      }
+      if (indices == null || indices.isEmpty) {
         // System doesn't exist yet, record for later
         _pendingBefore.putIfAbsent(beforeName, () => {}).add(newIndex);
       }
     }
 
-    // Register this system's name
-    _nameToIndex[systemName] = newIndex;
+    // Register this system's name — append to the list of indices
+    // under the name so duplicates coexist.
+    _nameToIndex.putIfAbsent(systemName, () => <int>[]).add(newIndex);
 
     _systems.add(node);
 
