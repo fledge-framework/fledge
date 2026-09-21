@@ -87,20 +87,24 @@ class CollisionResolutionSystem implements System {
     // Scale factor for velocity — pixels-per-60Hz-frame → pixels-per-step.
     final timeScale = dt / physicsReferenceFrameSeconds;
 
-    // Build list of static collider shapes with layer info
-    // Static = has Collider, no Velocity, not a sensor
-    final staticColliders = <(Rect bounds, int layer, int mask)>[];
+    // Build the pool of potential blockers. A record per shape carries
+    // its world-space bounds, layer + mask for layer filtering, the
+    // owning entity, and a flag saying whether the blocker is dynamic
+    // (i.e. an eligible participant in dynamic-vs-dynamic blocking).
+    final blockers = <_Blocker>[];
 
     for (final (entity, transform, collider)
         in world.query2<Transform2D, Collider>().iter()) {
-      // Skip entities that have velocity (dynamic, not static)
-      if (world.has<Velocity>(entity)) continue;
-
-      // Get collision config
       final config = world.get<CollisionConfig>(entity);
 
-      // Skip sensors - they don't block movement
+      // Sensors never block movement — they only generate events.
       if (config?.isSensor ?? false) continue;
+
+      final isDynamic = world.has<Velocity>(entity);
+      // Dynamic bodies only enter the blocker pool if they opted in
+      // via `CollisionConfig.blocksDynamic`. Static bodies (no
+      // Velocity) always enter.
+      if (isDynamic && !(config?.blocksDynamic ?? false)) continue;
 
       final layer = config?.layer ?? CollisionLayers.all;
       final mask = config?.mask ?? CollisionLayers.all;
@@ -110,16 +114,20 @@ class CollisionResolutionSystem implements System {
 
       for (final shape in collider.shapes) {
         final bounds = shape.bounds;
-        staticColliders.add((
-          Rect.fromLTWH(
-            bounds.left + tx,
-            bounds.top + ty,
-            bounds.width,
-            bounds.height,
+        blockers.add(
+          _Blocker(
+            bounds: Rect.fromLTWH(
+              bounds.left + tx,
+              bounds.top + ty,
+              bounds.width,
+              bounds.height,
+            ),
+            entity: entity,
+            layer: layer,
+            mask: mask,
+            isDynamic: isDynamic,
           ),
-          layer,
-          mask,
-        ));
+        );
       }
     }
 
@@ -132,14 +140,19 @@ class CollisionResolutionSystem implements System {
       final config = world.get<CollisionConfig>(entity);
       final myLayer = config?.layer ?? CollisionLayers.all;
       final myMask = config?.mask ?? CollisionLayers.all;
+      final myBlocksDynamic = config?.blocksDynamic ?? false;
 
-      // Filter static colliders to only those we can collide with
+      // Filter blockers to only those we can collide with:
+      //  - self is never a blocker;
+      //  - layer/mask must agree in both directions;
+      //  - dynamic blockers only apply when we ALSO opted into
+      //    dynamic-vs-dynamic blocking.
       final relevantColliders = <Rect>[];
-      for (final (bounds, staticLayer, staticMask) in staticColliders) {
-        // Check layer compatibility
-        if ((myLayer & staticMask) != 0 && (staticLayer & myMask) != 0) {
-          relevantColliders.add(bounds);
-        }
+      for (final b in blockers) {
+        if (b.entity == entity) continue;
+        if (b.isDynamic && !myBlocksDynamic) continue;
+        if ((myLayer & b.mask) == 0 || (b.layer & myMask) == 0) continue;
+        relevantColliders.add(b.bounds);
       }
 
       if (relevantColliders.isEmpty) continue;
@@ -224,4 +237,21 @@ class CollisionResolutionSystem implements System {
         a.top < b.bottom &&
         a.bottom > b.top;
   }
+}
+
+/// One entry in the resolution system's per-frame blocker pool.
+class _Blocker {
+  final Rect bounds;
+  final Entity entity;
+  final int layer;
+  final int mask;
+  final bool isDynamic;
+
+  _Blocker({
+    required this.bounds,
+    required this.entity,
+    required this.layer,
+    required this.mask,
+    required this.isDynamic,
+  });
 }

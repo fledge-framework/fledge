@@ -58,14 +58,32 @@ class CollisionConfig {
   /// Useful for triggers, transition zones, and detection areas.
   final bool isSensor;
 
+  /// Opt-in flag for dynamic-vs-dynamic blocking.
+  ///
+  /// Two dynamic bodies (both carrying [Velocity]) block each other
+  /// during collision resolution when **both** have this flag set and
+  /// their layer / mask pair agrees. Neither body is pushed —
+  /// resolution zeros the blocked axis on each side, so if both are
+  /// moving into each other they simply stop.
+  ///
+  /// Static-vs-dynamic blocking is unaffected — a dynamic body is
+  /// always blocked by static colliders it can collide with,
+  /// regardless of this flag.
+  ///
+  /// Default: `false`, so pre-existing dynamic bodies keep passing
+  /// through each other.
+  final bool blocksDynamic;
+
   /// Creates a collision configuration.
   ///
   /// By default, belongs to all layers, collides with all layers,
-  /// and blocks movement (not a sensor).
+  /// blocks movement (not a sensor), and does not participate in
+  /// dynamic-vs-dynamic blocking.
   const CollisionConfig({
     this.layer = CollisionLayers.all,
     this.mask = CollisionLayers.all,
     this.isSensor = false,
+    this.blocksDynamic = false,
   });
 
   /// Creates a sensor configuration (generates events, no blocking).
@@ -75,7 +93,8 @@ class CollisionConfig {
   const CollisionConfig.sensor({
     this.layer = CollisionLayers.trigger,
     this.mask = CollisionLayers.all,
-  }) : isSensor = true;
+  })  : isSensor = true,
+        blocksDynamic = false;
 
   /// Creates a solid configuration (blocks movement).
   ///
@@ -84,6 +103,7 @@ class CollisionConfig {
   const CollisionConfig.solid({
     this.layer = CollisionLayers.solid,
     this.mask = CollisionLayers.all,
+    this.blocksDynamic = false,
   }) : isSensor = false;
 
   /// Returns true if this entity can collide with another.
