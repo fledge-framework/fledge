@@ -250,7 +250,7 @@ class WindowEventSystem implements System {
     try {
       await action();
       return true;
-    } catch (e, _) {
+    } catch (e) {
       world.eventWriter<WindowOperationFailed>().send(
             WindowOperationFailed(
               operation: operation,

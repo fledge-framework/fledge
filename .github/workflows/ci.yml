@@ -91,6 +91,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ninja-build libgtk-3-dev clang cmake pkg-config libblkid-dev liblzma-dev
 
+      # Some tests (e.g. fledge_ecs_generator's golden-fixture tests)
+      # depend on .g.dart files that are not checked in. Generate them
+      # before running tests, matching the analyze job.
+      - name: Generate code
+        run: melos run build_runner
+
       - name: Run tests
         run: melos run test
 
