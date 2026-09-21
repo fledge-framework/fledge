@@ -18,6 +18,7 @@ import '../components/tilemap.dart';
 import '../components/tilemap_animator.dart';
 import '../resources/tilemap_assets.dart';
 import 'extracted_tile.dart';
+import 'tile_sprite_conversion.dart';
 
 /// Camera-aware tilemap extractor that culls tiles at extraction time.
 ///
@@ -270,6 +271,22 @@ class CulledTilemapExtractor extends Extractor {
         subOrder: tile.y * 100 + layer.layerIndex,
       );
 
+      // Emit both ExtractedSprite (widget path) and ExtractedTile
+      // (deprecated but retained for one release for downstream
+      // consumers).
+      renderWorld.spawn().insert(
+        tileToSprite(
+          texture: tileset.atlas.texture,
+          sourceRect: sourceRect,
+          tileTopLeft: Offset(worldX, worldY),
+          tileWidth: tileWidth,
+          tileHeight: tileHeight,
+          color: layerColor,
+          sortKey: sortKey,
+          flipFlags: tile.flipFlags,
+        ),
+      );
+      // ignore: deprecated_member_use_from_same_package
       renderWorld.spawn().insert(
         ExtractedTile(
           texture: tileset.atlas.texture,

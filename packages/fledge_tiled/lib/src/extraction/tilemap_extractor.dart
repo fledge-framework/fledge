@@ -15,6 +15,7 @@ import '../components/tilemap.dart';
 import '../components/tilemap_animator.dart';
 import '../resources/tilemap_assets.dart';
 import 'extracted_tile.dart';
+import 'tile_sprite_conversion.dart';
 
 /// Extractor for tilemap layers.
 ///
@@ -155,6 +156,24 @@ class TilemapExtractor extends Extractor {
         subOrder: tile.y * 100 + layer.layerIndex,
       );
 
+      // Emit both ExtractedSprite (drawn by FledgeRenderView /
+      // LitFledgeRenderView through the shared sprite pipeline) and
+      // ExtractedTile (kept for the deprecation window so downstream
+      // consumers reading ExtractedTile keep working). Both live on
+      // separate render-world entities and share the same sortKey.
+      renderWorld.spawn().insert(
+        tileToSprite(
+          texture: tileset.atlas.texture,
+          sourceRect: sourceRect,
+          tileTopLeft: Offset(worldX, worldY),
+          tileWidth: tileWidth,
+          tileHeight: tileHeight,
+          color: layerColor,
+          sortKey: sortKey,
+          flipFlags: tile.flipFlags,
+        ),
+      );
+      // ignore: deprecated_member_use_from_same_package
       renderWorld.spawn().insert(
         ExtractedTile(
           texture: tileset.atlas.texture,

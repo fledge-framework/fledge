@@ -113,6 +113,7 @@ export 'src/systems/tile_animation_system.dart';
 // Extraction
 export 'src/extraction/culled_tilemap_extractor.dart';
 export 'src/extraction/extracted_tile.dart';
+export 'src/extraction/tile_sprite_conversion.dart';
 export 'src/extraction/tilemap_extractor.dart';
 
 // Loader

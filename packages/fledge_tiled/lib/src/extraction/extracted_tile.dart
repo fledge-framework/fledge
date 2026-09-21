@@ -5,10 +5,19 @@ import 'package:fledge_render_2d/fledge_render_2d.dart'
 
 /// Extracted tile data for the render world.
 ///
-/// Created by [TilemapExtractor] from [TileLayer] components.
-/// Batched by tileset texture for efficient rendering.
+/// **Deprecated as of v0.3**: `TilemapExtractor` and
+/// `CulledTilemapExtractor` now emit `ExtractedSprite` directly (via
+/// `tileToSprite`) so the shared render-widget pipeline
+/// (`FledgeRenderView` / `LitFledgeRenderView`) can draw tiles
+/// without a separate consumer. The class is kept as a public shape
+/// only so downstream code that still references it compiles; new
+/// consumers should read `ExtractedSprite` from the render world.
 ///
 /// Implements [SortableExtractedData] for draw ordering based on [sortKey].
+@Deprecated(
+  'Tiled extractors now emit ExtractedSprite directly. Read '
+  'ExtractedSprite from the render world instead of ExtractedTile.',
+)
 class ExtractedTile with ExtractedData, SortableExtractedData {
   /// The tileset texture.
   final TextureHandle texture;
