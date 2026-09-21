@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:fledge_assets/fledge_assets.dart' show Assets, Handle;
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_physics/fledge_physics.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart'
@@ -13,6 +14,7 @@ import '../components/tilemap.dart';
 import '../components/tilemap_animator.dart';
 import '../config/spawn_config.dart';
 import '../properties/tiled_properties.dart';
+import '../resources/tiled_assets.dart' show TilemapAsset;
 import '../resources/tilemap_assets.dart';
 
 /// Event to spawn a tilemap in the world.
@@ -45,8 +47,14 @@ import '../resources/tilemap_assets.dart';
 /// ));
 /// ```
 class SpawnTilemapEvent {
-  /// Key of the loaded tilemap in TilemapAssets.
-  final String assetKey;
+  /// Key of the loaded tilemap in the deprecated [TilemapAssets] store.
+  ///
+  /// Consulted only when [handle] is null. Prefer [handle].
+  final String? assetKey;
+
+  /// Handle into `Assets<TilemapAsset>` when the tilemap was loaded
+  /// through the modern asset store. Preferred over [assetKey].
+  final Handle<TilemapAsset>? handle;
 
   /// World position to spawn the tilemap.
   final Offset position;
@@ -55,10 +63,17 @@ class SpawnTilemapEvent {
   final TilemapSpawnConfig config;
 
   const SpawnTilemapEvent({
-    required this.assetKey,
+    required String this.assetKey,
     this.position = Offset.zero,
     this.config = const TilemapSpawnConfig(),
-  });
+  }) : handle = null;
+
+  /// Spawn the tilemap referenced by [handle] from `Assets<TilemapAsset>`.
+  const SpawnTilemapEvent.fromHandle(
+    Handle<TilemapAsset> this.handle, {
+    this.position = Offset.zero,
+    this.config = const TilemapSpawnConfig(),
+  }) : assetKey = null;
 }
 
 /// Event fired when a tilemap is spawned.
@@ -68,10 +83,20 @@ class TilemapSpawnedEvent {
   /// The root tilemap entity.
   final Entity entity;
 
-  /// Key of the tilemap in assets.
-  final String assetKey;
+  /// Key of the tilemap in the deprecated [TilemapAssets] store.
+  ///
+  /// Null when the tilemap was spawned via a `Handle<TilemapAsset>`.
+  final String? assetKey;
 
-  const TilemapSpawnedEvent({required this.entity, required this.assetKey});
+  /// Handle into `Assets<TilemapAsset>`, when the tilemap was spawned
+  /// through the modern asset store.
+  final Handle<TilemapAsset>? handle;
+
+  const TilemapSpawnedEvent({
+    required this.entity,
+    this.assetKey,
+    this.handle,
+  });
 }
 
 /// System that spawns entities from loaded tilemaps.
@@ -99,20 +124,46 @@ class TilemapSpawnSystem implements System {
   Future<void> run(World world) async {
     final reader = world.eventReader<SpawnTilemapEvent>();
     final writer = world.eventWriter<TilemapSpawnedEvent>();
-    final assets = world.getResource<TilemapAssets>();
-
-    if (assets == null) return;
+    final modernAssets = world.getResource<Assets<TilemapAsset>>();
+    // ignore: deprecated_member_use_from_same_package
+    final legacyAssets = world.getResource<TilemapAssets>();
 
     for (final event in reader.read()) {
-      final loaded = assets.get(event.assetKey);
+      LoadedTilemap? loaded;
+      Handle<TilemapAsset>? handle = event.handle;
+
+      if (handle != null) {
+        loaded = handle.get();
+      } else if (event.assetKey != null && modernAssets != null) {
+        final id = modernAssets.findByPath(event.assetKey!);
+        if (id != null) {
+          loaded = modernAssets.get(id);
+        }
+      }
+
+      // Fall back to the legacy key-based store.
+      if (loaded == null && event.assetKey != null && legacyAssets != null) {
+        loaded = legacyAssets.get(event.assetKey!);
+      }
+
       if (loaded == null) {
         continue;
       }
 
-      final entity = _spawnTilemap(world, loaded, event.position, event.config);
+      final entity = _spawnTilemap(
+        world,
+        loaded,
+        event.position,
+        event.config,
+        handle,
+      );
 
       writer.send(
-        TilemapSpawnedEvent(entity: entity, assetKey: event.assetKey),
+        TilemapSpawnedEvent(
+          entity: entity,
+          assetKey: event.assetKey,
+          handle: handle,
+        ),
       );
     }
   }
@@ -122,10 +173,11 @@ class TilemapSpawnSystem implements System {
     LoadedTilemap loaded,
     Offset position,
     TilemapSpawnConfig config,
+    Handle<TilemapAsset>? asset,
   ) {
     // Create root tilemap entity
     final mapEntity = world.spawn()
-      ..insert(Tilemap.fromTiledMap(loaded.map))
+      ..insert(Tilemap.fromTiledMap(loaded.map, asset: asset))
       ..insert(Transform2D.from(position.dx, position.dy))
       ..insert(GlobalTransform2D());
 

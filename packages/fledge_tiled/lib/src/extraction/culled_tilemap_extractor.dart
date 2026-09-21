@@ -87,8 +87,8 @@ class CulledTilemapExtractor extends Extractor {
 
   @override
   void extract(World mainWorld, RenderWorld renderWorld) {
-    final assets = mainWorld.getResource<TilemapAssets>();
-    if (assets == null) return;
+    // ignore: deprecated_member_use_from_same_package
+    final legacyAssets = mainWorld.getResource<TilemapAssets>();
 
     // Get camera bounds for culling
     final cullBounds = _getCullBounds(mainWorld);
@@ -98,8 +98,17 @@ class CulledTilemapExtractor extends Extractor {
         in mainWorld.query2<Tilemap, GlobalTransform2D>().iter()) {
       final animator = mainWorld.get<TilemapAnimator>(mapEntity);
 
-      // Find the loaded tilemap data
-      final loaded = _findLoadedTilemap(assets, tilemap);
+      // Find the loaded tilemap data — prefer the handle stored on the
+      // component (set when spawned through Assets<TilemapAsset>), then
+      // fall back to a match-by-dimensions scan of the legacy store.
+      LoadedTilemap? loaded;
+      final handle = tilemap.asset;
+      if (handle != null) {
+        loaded = handle.get();
+      }
+      if (loaded == null && legacyAssets != null) {
+        loaded = _findLoadedTilemap(legacyAssets, tilemap);
+      }
       if (loaded == null) continue;
 
       // Extract each tile layer (child entities)

@@ -1,5 +1,8 @@
 import 'dart:ui' show Rect;
+import 'package:fledge_assets/fledge_assets.dart' show Handle;
 import 'package:tiled/tiled.dart' as tiled show TiledMap, RenderOrder;
+
+import '../resources/tiled_assets.dart' show TilemapAsset;
 
 /// Root component representing a complete Tiled map.
 ///
@@ -44,6 +47,12 @@ class Tilemap {
   /// modifying the layer components directly.
   final Map<String, bool> layerVisibility;
 
+  /// Handle into `Assets<TilemapAsset>` when the entity was spawned
+  /// through the `Handle<TilemapAsset>` path. Extractors that see this
+  /// use it for an O(1) lookup instead of scanning the legacy
+  /// [TilemapAssets] key-based store.
+  final Handle<TilemapAsset>? asset;
+
   Tilemap({
     required this.map,
     required this.bounds,
@@ -54,10 +63,14 @@ class Tilemap {
     this.infinite = false,
     this.renderOrder = RenderOrder.rightDown,
     Map<String, bool>? layerVisibility,
+    this.asset,
   }) : layerVisibility = layerVisibility ?? {};
 
   /// Creates a Tilemap component from a parsed TiledMap.
-  factory Tilemap.fromTiledMap(tiled.TiledMap tiledMap) {
+  factory Tilemap.fromTiledMap(
+    tiled.TiledMap tiledMap, {
+    Handle<TilemapAsset>? asset,
+  }) {
     return Tilemap(
       map: tiledMap,
       bounds: Rect.fromLTWH(
@@ -72,6 +85,7 @@ class Tilemap {
       height: tiledMap.height,
       infinite: tiledMap.infinite,
       renderOrder: RenderOrder.fromTiledEnum(tiledMap.renderOrder),
+      asset: asset,
     );
   }
 
