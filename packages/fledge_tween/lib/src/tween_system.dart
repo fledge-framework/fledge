@@ -161,17 +161,15 @@ class TweenSystem implements System {
           // dispatches on the concrete generic type, avoiding the
           // function-contravariance mismatch you'd hit reconstructing
           // a Tween<dynamic> directly from a Tween<double>.
-          toReplace.add(
-            (
-              entity,
-              Tweener(
-                tween: tweener.tween.reversed(),
-                onSample: tweener.onSample,
-                onComplete: tweener.onComplete,
-                loop: tweener.loop,
-              ),
+          toReplace.add((
+            entity,
+            Tweener(
+              tween: tweener.tween.reversed(),
+              onSample: tweener.onSample,
+              onComplete: tweener.onComplete,
+              loop: tweener.loop,
             ),
-          );
+          ));
       }
     }
 

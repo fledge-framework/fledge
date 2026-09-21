@@ -123,16 +123,19 @@ class RenderGraph {
     }
 
     // Validate slots exist
-    final outputSlot =
-        fromNode.outputs.where((s) => s.name == from.slot).firstOrNull;
+    final outputSlot = fromNode.outputs
+        .where((s) => s.name == from.slot)
+        .firstOrNull;
     if (outputSlot == null) {
       throw ArgumentError(
-          'Output slot "${from.slot}" does not exist on node "${from.node}"');
+        'Output slot "${from.slot}" does not exist on node "${from.node}"',
+      );
     }
     final inputSlot = toNode.inputs.where((s) => s.name == to.slot).firstOrNull;
     if (inputSlot == null) {
       throw ArgumentError(
-          'Input slot "${to.slot}" does not exist on node "${to.node}"');
+        'Input slot "${to.slot}" does not exist on node "${to.node}"',
+      );
     }
 
     // Validate type compatibility
@@ -162,10 +165,12 @@ class RenderGraph {
     for (final input in node.inputs) {
       for (final output in prevNode.outputs) {
         if (input.name == output.name && input.type == output.type) {
-          _edges.add(Edge(
-            from: SlotId(afterNode, output.name),
-            to: SlotId(node.name, input.name),
-          ));
+          _edges.add(
+            Edge(
+              from: SlotId(afterNode, output.name),
+              to: SlotId(node.name, input.name),
+            ),
+          );
         }
       }
     }

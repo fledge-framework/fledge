@@ -31,27 +31,30 @@ class AtlasSpriteExtractor extends Extractor {
       // from y-position, clamped inside the layer's range.
       final sub = atlasSprite.layerSubOrder != 0
           ? atlasSprite.layerSubOrder
-          : (globalTransform.y * 1000)
-              .toInt()
-              .clamp(0, DrawLayerExtension.layerMultiplier - 1);
+          : (globalTransform.y * 1000).toInt().clamp(
+              0,
+              DrawLayerExtension.layerMultiplier - 1,
+            );
       final sortKey = atlasSprite.layer.sortKey(subOrder: sub);
 
-      renderWorld.spawn().insert(ExtractedSprite(
-            entity: entity,
-            texture: atlasSprite.texture,
-            sourceRect: sourceRect,
-            transform: globalTransform.matrix,
-            color: atlasSprite.color,
-            sortKey: sortKey,
-            layer: atlasSprite.layer,
-            layerSubOrder: atlasSprite.layerSubOrder,
-            flipFlags: ExtractedSprite.computeFlipFlags(
-              atlasSprite.flipX,
-              atlasSprite.flipY,
-            ),
-            anchor: _centerAnchor.clone(),
-            size: _sizeFromRect(sourceRect),
-          ));
+      renderWorld.spawn().insert(
+        ExtractedSprite(
+          entity: entity,
+          texture: atlasSprite.texture,
+          sourceRect: sourceRect,
+          transform: globalTransform.matrix,
+          color: atlasSprite.color,
+          sortKey: sortKey,
+          layer: atlasSprite.layer,
+          layerSubOrder: atlasSprite.layerSubOrder,
+          flipFlags: ExtractedSprite.computeFlipFlags(
+            atlasSprite.flipX,
+            atlasSprite.flipY,
+          ),
+          anchor: _centerAnchor.clone(),
+          size: _sizeFromRect(sourceRect),
+        ),
+      );
     }
   }
 

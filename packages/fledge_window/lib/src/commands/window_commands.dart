@@ -41,8 +41,9 @@ extension WindowCommands on World {
   /// world.setWindowMode(WindowMode.borderless, targetDisplay: 1);
   /// ```
   void setWindowMode(WindowMode mode, {int? targetDisplay}) {
-    eventWriter<SetWindowModeRequest>()
-        .send(SetWindowModeRequest(mode, targetDisplay: targetDisplay));
+    eventWriter<SetWindowModeRequest>().send(
+      SetWindowModeRequest(mode, targetDisplay: targetDisplay),
+    );
   }
 
   /// Requests a window size change (windowed mode only).
@@ -64,8 +65,9 @@ extension WindowCommands on World {
   /// world.setWindowPosition(Offset(100, 100));
   /// ```
   void setWindowPosition(Offset position) {
-    eventWriter<SetWindowPositionRequest>()
-        .send(SetWindowPositionRequest(position));
+    eventWriter<SetWindowPositionRequest>().send(
+      SetWindowPositionRequest(position),
+    );
   }
 
   /// Toggles between fullscreen and windowed mode.

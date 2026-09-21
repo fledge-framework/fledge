@@ -78,10 +78,8 @@ class WallTimeUpdateSystem implements System {
   const WallTimeUpdateSystem();
 
   @override
-  SystemMeta get meta => const SystemMeta(
-        name: 'wallTimeUpdate',
-        resourceWrites: {WallTime},
-      );
+  SystemMeta get meta =>
+      const SystemMeta(name: 'wallTimeUpdate', resourceWrites: {WallTime});
 
   @override
   RunCondition? get runCondition => null;
@@ -98,7 +96,8 @@ class WallTimeUpdateSystem implements System {
 
 /// Deprecated alias for [WallTimeUpdateSystem].
 @Deprecated(
-    'Renamed to WallTimeUpdateSystem in v0.2. Use WallTimeUpdateSystem.')
+  'Renamed to WallTimeUpdateSystem in v0.2. Use WallTimeUpdateSystem.',
+)
 typedef TimeUpdateSystem = WallTimeUpdateSystem;
 
 /// Plugin that provides wall-clock time tracking.

@@ -89,16 +89,13 @@ class CameraShakeSystem implements System {
 
   @override
   SystemMeta get meta => SystemMeta(
-        name: 'CameraShakeSystem',
-        writes: {ComponentId.of<Transform2D>()},
-        reads: {
-          ComponentId.of<CameraShake>(),
-          ComponentId.of<Camera2D>(),
-        },
-        resourceReads: {WallTime},
-        after: const ['CameraFollowSystem'],
-        before: const ['ParallaxSystem', 'CameraTransitionSystem'],
-      );
+    name: 'CameraShakeSystem',
+    writes: {ComponentId.of<Transform2D>()},
+    reads: {ComponentId.of<CameraShake>(), ComponentId.of<Camera2D>()},
+    resourceReads: {WallTime},
+    after: const ['CameraFollowSystem'],
+    before: const ['ParallaxSystem', 'CameraTransitionSystem'],
+  );
 
   @override
   RunCondition? get runCondition => null;
@@ -120,8 +117,10 @@ class CameraShakeSystem implements System {
       transform.rotation -= shake._lastRotation;
 
       // Decay trauma. clamp to 0 in case the caller poked a negative.
-      shake.trauma =
-          (shake.trauma - shake.traumaDecayPerSec * delta).clamp(0.0, 1.0);
+      shake.trauma = (shake.trauma - shake.traumaDecayPerSec * delta).clamp(
+        0.0,
+        1.0,
+      );
 
       if (shake.trauma <= 0) {
         shake._lastOffsetX = 0;
@@ -137,7 +136,8 @@ class CameraShakeSystem implements System {
           shake.maxOffsetX * intensity * (shake.rng.nextDouble() * 2 - 1);
       final oy =
           shake.maxOffsetY * intensity * (shake.rng.nextDouble() * 2 - 1);
-      final orot = shake.maxRotationRadians *
+      final orot =
+          shake.maxRotationRadians *
           intensity *
           (shake.rng.nextDouble() * 2 - 1);
 

@@ -25,11 +25,7 @@ import 'light2d.dart';
 /// The Canvas backend does not implement per-pixel normal-map
 /// contributions — that's future GPU work. Every gradient here is a
 /// pure 2D screen-space effect.
-void renderLightsToCanvas(
-  RenderWorld renderWorld,
-  Canvas canvas,
-  Size size,
-) {
+void renderLightsToCanvas(RenderWorld renderWorld, Canvas canvas, Size size) {
   final viewportRect = Offset.zero & size;
   for (final (_, light) in renderWorld.query1<ExtractedLight>().iter()) {
     switch (light.type) {
@@ -115,10 +111,7 @@ Path _spotWedge(ExtractedLight light) {
 
   final path = Path()
     ..moveTo(center.dx, center.dy)
-    ..lineTo(
-      center.dx + math.cos(start) * r,
-      center.dy + math.sin(start) * r,
-    )
+    ..lineTo(center.dx + math.cos(start) * r, center.dy + math.sin(start) * r)
     ..arcTo(
       Rect.fromCircle(center: center, radius: r),
       start,

@@ -20,9 +20,9 @@ class InState<S extends Enum> {
 
   /// The run condition that can be passed to a system.
   RunCondition get condition => (world) {
-        final stateResource = world.getResource<State<S>>();
-        return stateResource?.isIn(state) ?? false;
-      };
+    final stateResource = world.getResource<State<S>>();
+    return stateResource?.isIn(state) ?? false;
+  };
 }
 
 /// Run condition that returns true when just entering the specified state.
@@ -47,9 +47,9 @@ class OnEnterState<S extends Enum> {
 
   /// The run condition that can be passed to a system.
   RunCondition get condition => (world) {
-        final stateResource = world.getResource<State<S>>();
-        return stateResource?.justEnteredState(state) ?? false;
-      };
+    final stateResource = world.getResource<State<S>>();
+    return stateResource?.justEnteredState(state) ?? false;
+  };
 }
 
 /// Run condition that returns true when just exiting the specified state.
@@ -74,9 +74,9 @@ class OnExitState<S extends Enum> {
 
   /// The run condition that can be passed to a system.
   RunCondition get condition => (world) {
-        final stateResource = world.getResource<State<S>>();
-        return stateResource?.justExitedState(state) ?? false;
-      };
+    final stateResource = world.getResource<State<S>>();
+    return stateResource?.justExitedState(state) ?? false;
+  };
 }
 
 /// Helper class for creating state-related run conditions.

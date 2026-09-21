@@ -10,16 +10,16 @@ import 'package:vector_math/vector_math.dart';
 TextureHandle _tex() => const TextureHandle(id: 7, width: 4, height: 4);
 
 ParticleTemplate _shortTemplate() => ParticleTemplate(
-      lifetimeMin: 0.2,
-      lifetimeMax: 0.2,
-      velocityMin: Vector2(0, -10),
-      velocityMax: Vector2(0, -10),
-      acceleration: Vector2.zero(),
-      sizeMin: 4,
-      sizeMax: 4,
-      colorStart: const Color(0xFFFFFFFF),
-      colorEnd: const Color(0x00FFFFFF),
-    );
+  lifetimeMin: 0.2,
+  lifetimeMax: 0.2,
+  velocityMin: Vector2(0, -10),
+  velocityMax: Vector2(0, -10),
+  acceleration: Vector2.zero(),
+  sizeMin: 4,
+  sizeMax: 4,
+  colorStart: const Color(0xFFFFFFFF),
+  colorEnd: const Color(0x00FFFFFF),
+);
 
 void main() {
   test('ParticlePlugin spawns and reaps particles across ticks', () async {
@@ -76,45 +76,52 @@ void main() {
     expect(app.checkScheduleOrdering(), isEmpty);
   });
 
-  test('ParticleExtractor produces ExtractedSprite entries in render world',
-      () async {
-    final app = App()
-      ..insertResource<WallTime>(WallTime())
-      ..addPlugin(RenderPlugin())
-      ..addPlugin(const ParticlePlugin());
+  test(
+    'ParticleExtractor produces ExtractedSprite entries in render world',
+    () async {
+      final app = App()
+        ..insertResource<WallTime>(WallTime())
+        ..addPlugin(RenderPlugin())
+        ..addPlugin(const ParticlePlugin());
 
-    final emitter = ParticleEmitter(
-      template: _shortTemplate(),
-      emitRate: 50.0,
-      texture: _tex(),
-      pool: ParticlePool(16),
-      rng: math.Random(1),
-    );
-    app.world.spawn()
-      ..insert(GlobalTransform2D.identity())
-      ..insert(emitter);
+      final emitter = ParticleEmitter(
+        template: _shortTemplate(),
+        emitRate: 50.0,
+        texture: _tex(),
+        pool: ParticlePool(16),
+        rng: math.Random(1),
+      );
+      app.world.spawn()
+        ..insert(GlobalTransform2D.identity())
+        ..insert(emitter);
 
-    final time = app.world.getResource<WallTime>()!;
-    for (var i = 0; i < 5; i++) {
-      time.delta = 0.05;
-      await app.tick();
-    }
+      final time = app.world.getResource<WallTime>()!;
+      for (var i = 0; i < 5; i++) {
+        time.delta = 0.05;
+        await app.tick();
+      }
 
-    final rw = app.world.getResource<RenderWorld>()!;
-    final count = rw.query1<ExtractedSprite>().iter().length;
-    expect(count, greaterThan(0));
-    // Every extracted particle should sit inside the DrawLayer.particles
-    // sort range.
-    for (final (_, sprite) in rw.query1<ExtractedSprite>().iter()) {
-      expect(sprite.layer, DrawLayer.particles);
-      expect(
+      final rw = app.world.getResource<RenderWorld>()!;
+      final count = rw.query1<ExtractedSprite>().iter().length;
+      expect(count, greaterThan(0));
+      // Every extracted particle should sit inside the DrawLayer.particles
+      // sort range.
+      for (final (_, sprite) in rw.query1<ExtractedSprite>().iter()) {
+        expect(sprite.layer, DrawLayer.particles);
+        expect(
           sprite.sortKey,
           greaterThanOrEqualTo(
-              DrawLayer.particles.index * DrawLayerExtension.layerMultiplier));
-      expect(
+            DrawLayer.particles.index * DrawLayerExtension.layerMultiplier,
+          ),
+        );
+        expect(
           sprite.sortKey,
-          lessThan((DrawLayer.particles.index + 1) *
-              DrawLayerExtension.layerMultiplier));
-    }
-  });
+          lessThan(
+            (DrawLayer.particles.index + 1) *
+                DrawLayerExtension.layerMultiplier,
+          ),
+        );
+      }
+    },
+  );
 }

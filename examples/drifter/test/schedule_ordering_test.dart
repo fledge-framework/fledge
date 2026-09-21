@@ -16,7 +16,8 @@ void main() {
     expect(
       issues,
       isEmpty,
-      reason: 'unexpected schedule ambiguities:\n'
+      reason:
+          'unexpected schedule ambiguities:\n'
           '${issues.map((i) => ' - $i').join('\n')}',
     );
   });

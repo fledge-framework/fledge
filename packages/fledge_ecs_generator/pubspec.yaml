@@ -6,12 +6,15 @@ homepage: https://fledge-framework.dev
 issue_tracker: https://github.com/fledge-framework/fledge/issues
 
 environment:
-  sdk: ^3.6.0
+  sdk: ^3.11.0
 
 resolution: workspace
 
 dependencies:
-  analyzer: ^12.0.0
+  # Bounded range spans analyzer 12/13/14 — 12.x still resolves on Dart
+  # 3.6 (the workspace SDK floor), and 13.x/14.x resolve on newer SDKs so
+  # pana no longer flags the constraint against the latest stable.
+  analyzer: ">=12.0.0 <15.0.0"
   build: ^4.0.3
   source_gen: ^4.1.1
   fledge_ecs_annotations: ^0.2.0

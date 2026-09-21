@@ -15,8 +15,8 @@ enum TriggerKind {
 }
 
 /// A callback type for observer reactions.
-typedef ObserverCallback<T> = void Function(
-    World world, Entity entity, T component);
+typedef ObserverCallback<T> =
+    void Function(World world, Entity entity, T component);
 
 /// An observer that reacts to component lifecycle events.
 ///
@@ -46,21 +46,21 @@ class Observer<T> {
 
   /// Creates an observer triggered when a component is added.
   Observer.onAdd(ObserverCallback<T> callback)
-      : componentType = T,
-        trigger = TriggerKind.onAdd,
-        _callback = callback;
+    : componentType = T,
+      trigger = TriggerKind.onAdd,
+      _callback = callback;
 
   /// Creates an observer triggered when a component is removed.
   Observer.onRemove(ObserverCallback<T> callback)
-      : componentType = T,
-        trigger = TriggerKind.onRemove,
-        _callback = callback;
+    : componentType = T,
+      trigger = TriggerKind.onRemove,
+      _callback = callback;
 
   /// Creates an observer triggered when a component is changed.
   Observer.onChange(ObserverCallback<T> callback)
-      : componentType = T,
-        trigger = TriggerKind.onChange,
-        _callback = callback;
+    : componentType = T,
+      trigger = TriggerKind.onChange,
+      _callback = callback;
 
   /// Invokes the observer callback with the given parameters.
   void invoke(World world, Entity entity, T component) {
@@ -114,9 +114,9 @@ class Observers {
     final componentId = ComponentId.of<T>();
 
     // Add to by-component index
-    _byComponent.putIfAbsent(componentId, () => []).add(
-          _RegisteredObserver(componentId, observer.trigger, observer),
-        );
+    _byComponent
+        .putIfAbsent(componentId, () => [])
+        .add(_RegisteredObserver(componentId, observer.trigger, observer));
 
     // Add to by-trigger index
     _byTrigger[observer.trigger]!
@@ -183,7 +183,11 @@ class Observers {
   ///
   /// This is used internally when the static type is not known.
   void triggerOnAddDynamic(
-      World world, Entity entity, ComponentId componentId, dynamic component) {
+    World world,
+    Entity entity,
+    ComponentId componentId,
+    dynamic component,
+  ) {
     final observers = _byTrigger[TriggerKind.onAdd]![componentId];
     if (observers == null) return;
 
@@ -196,7 +200,11 @@ class Observers {
   ///
   /// This is used internally when the static type is not known.
   void triggerOnRemoveDynamic(
-      World world, Entity entity, ComponentId componentId, dynamic component) {
+    World world,
+    Entity entity,
+    ComponentId componentId,
+    dynamic component,
+  ) {
     final observers = _byTrigger[TriggerKind.onRemove]![componentId];
     if (observers == null) return;
 
@@ -209,7 +217,11 @@ class Observers {
   ///
   /// This is used internally when the static type is not known.
   void triggerOnChangeDynamic(
-      World world, Entity entity, ComponentId componentId, dynamic component) {
+    World world,
+    Entity entity,
+    ComponentId componentId,
+    dynamic component,
+  ) {
     final observers = _byTrigger[TriggerKind.onChange]![componentId];
     if (observers == null) return;
 

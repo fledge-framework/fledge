@@ -16,20 +16,17 @@ import '../resources.dart';
 class PickupCollectionSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
-        name: 'PickupCollectionSystem',
-        reads: {
-          ComponentId.of<Player>(),
-          ComponentId.of<Pickup>(),
-        },
-        eventReads: {CollisionEvent},
-        resourceWrites: {RunScore, HighScore},
-        // The events we consume are produced by `collision_detection`
-        // (last frame; the queue is double-buffered). Even though the
-        // read/write cross frames semantically, we still declare
-        // `after: ['collision_detection']` so the ordering intent is
-        // explicit and `checkScheduleOrdering()` sees no ambiguity.
-        after: const ['collision_detection'],
-      );
+    name: 'PickupCollectionSystem',
+    reads: {ComponentId.of<Player>(), ComponentId.of<Pickup>()},
+    eventReads: {CollisionEvent},
+    resourceWrites: {RunScore, HighScore},
+    // The events we consume are produced by `collision_detection`
+    // (last frame; the queue is double-buffered). Even though the
+    // read/write cross frames semantically, we still declare
+    // `after: ['collision_detection']` so the ordering intent is
+    // explicit and `checkScheduleOrdering()` sees no ambiguity.
+    after: const ['collision_detection'],
+  );
 
   @override
   RunCondition? get runCondition => null;

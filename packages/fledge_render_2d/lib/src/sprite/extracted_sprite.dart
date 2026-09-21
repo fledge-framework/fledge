@@ -106,25 +106,30 @@ class SpriteExtractor extends Extractor {
       final layer = sprite.layer;
       final sub = sprite.layerSubOrder != 0
           ? sprite.layerSubOrder
-          : (globalTransform.y * 1000)
-              .toInt()
-              .clamp(0, DrawLayerExtension.layerMultiplier - 1);
+          : (globalTransform.y * 1000).toInt().clamp(
+              0,
+              DrawLayerExtension.layerMultiplier - 1,
+            );
       final sortKey = layer.sortKey(subOrder: sub);
 
-      renderWorld.spawn().insert(ExtractedSprite(
-            entity: entity,
-            texture: sprite.texture,
-            sourceRect: sprite.effectiveSourceRect,
-            transform: globalTransform.matrix,
-            color: sprite.color,
-            sortKey: sortKey,
-            layer: layer,
-            layerSubOrder: sprite.layerSubOrder,
-            flipFlags:
-                ExtractedSprite.computeFlipFlags(sprite.flipX, sprite.flipY),
-            anchor: sprite.anchor.clone(),
-            size: sprite.size,
-          ));
+      renderWorld.spawn().insert(
+        ExtractedSprite(
+          entity: entity,
+          texture: sprite.texture,
+          sourceRect: sprite.effectiveSourceRect,
+          transform: globalTransform.matrix,
+          color: sprite.color,
+          sortKey: sortKey,
+          layer: layer,
+          layerSubOrder: sprite.layerSubOrder,
+          flipFlags: ExtractedSprite.computeFlipFlags(
+            sprite.flipX,
+            sprite.flipY,
+          ),
+          anchor: sprite.anchor.clone(),
+          size: sprite.size,
+        ),
+      );
     }
   }
 }

@@ -83,7 +83,8 @@ class EncryptedTransport implements Transport {
   set sharedKey(Uint8List? value) {
     if (value != null && value.length != 32) {
       throw ArgumentError(
-          'sharedKey must be exactly 32 bytes (AES-256); got ${value.length}');
+        'sharedKey must be exactly 32 bytes (AES-256); got ${value.length}',
+      );
     }
     _sharedKey = value;
   }
@@ -152,8 +153,9 @@ class EncryptedTransport implements Transport {
       );
     final ciphertextWithTag = cipher.process(plaintext);
 
-    final out =
-        Uint8List(header.length + nonce.length + ciphertextWithTag.length);
+    final out = Uint8List(
+      header.length + nonce.length + ciphertextWithTag.length,
+    );
     out.setRange(0, header.length, header);
     out.setRange(header.length, header.length + nonce.length, nonce);
     out.setRange(header.length + nonce.length, out.length, ciphertextWithTag);
@@ -167,9 +169,14 @@ class EncryptedTransport implements Transport {
 
     final header = Uint8List.sublistView(packet.data, 0, plaintextHeaderBytes);
     final nonce = Uint8List.sublistView(
-        packet.data, plaintextHeaderBytes, plaintextHeaderBytes + nonceBytes);
-    final ciphertextWithTag =
-        Uint8List.sublistView(packet.data, plaintextHeaderBytes + nonceBytes);
+      packet.data,
+      plaintextHeaderBytes,
+      plaintextHeaderBytes + nonceBytes,
+    );
+    final ciphertextWithTag = Uint8List.sublistView(
+      packet.data,
+      plaintextHeaderBytes + nonceBytes,
+    );
 
     final cipher = GCMBlockCipher(AESEngine())
       ..init(

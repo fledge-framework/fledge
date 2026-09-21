@@ -156,10 +156,9 @@ class ClientPrediction {
   /// Record local input and predicted state.
   void recordInput(InputFrame input, Map<String, dynamic> predictedState) {
     inputBuffer.add(input);
-    _stateHistory.addLast(_PredictedState(
-      tick: input.tick,
-      state: Map.from(predictedState),
-    ));
+    _stateHistory.addLast(
+      _PredictedState(tick: input.tick, state: Map.from(predictedState)),
+    );
     while (_stateHistory.length > maxStates) {
       _stateHistory.removeFirst();
     }

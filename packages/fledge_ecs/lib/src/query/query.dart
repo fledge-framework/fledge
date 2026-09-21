@@ -59,7 +59,7 @@ class Query1<T1> implements Query {
   final QueryState state;
 
   Query1(this._archetypes, this._entities, {QueryFilter? filter})
-      : state = QueryState.of1<T1>(filter: filter);
+    : state = QueryState.of1<T1>(filter: filter);
 
   Query1.withState(this._archetypes, this._entities, this.state);
 
@@ -110,7 +110,7 @@ class Query2<T1, T2> implements Query {
   final QueryState state;
 
   Query2(this._archetypes, this._entities, {QueryFilter? filter})
-      : state = QueryState.of2<T1, T2>(filter: filter);
+    : state = QueryState.of2<T1, T2>(filter: filter);
 
   Query2.withState(this._archetypes, this._entities, this.state);
 
@@ -157,7 +157,7 @@ class Query3<T1, T2, T3> implements Query {
   final QueryState state;
 
   Query3(this._archetypes, this._entities, {QueryFilter? filter})
-      : state = QueryState.of3<T1, T2, T3>(filter: filter);
+    : state = QueryState.of3<T1, T2, T3>(filter: filter);
 
   Query3.withState(this._archetypes, this._entities, this.state);
 
@@ -204,7 +204,7 @@ class Query4<T1, T2, T3, T4> implements Query {
   final QueryState state;
 
   Query4(this._archetypes, this._entities, {QueryFilter? filter})
-      : state = QueryState.of4<T1, T2, T3, T4>(filter: filter);
+    : state = QueryState.of4<T1, T2, T3, T4>(filter: filter);
 
   Query4.withState(this._archetypes, this._entities, this.state);
 
@@ -271,7 +271,7 @@ class QueryMut1<T1> implements Query {
   final QueryState state;
 
   QueryMut1(this._archetypes, this._entities, {QueryFilter? filter})
-      : state = QueryState.of1<T1>(filter: filter);
+    : state = QueryState.of1<T1>(filter: filter);
 
   QueryMut1.withState(this._archetypes, this._entities, this.state);
 
@@ -318,7 +318,7 @@ class QueryMut2<T1, T2> implements Query {
   final QueryState state;
 
   QueryMut2(this._archetypes, this._entities, {QueryFilter? filter})
-      : state = QueryState.of2<T1, T2>(filter: filter);
+    : state = QueryState.of2<T1, T2>(filter: filter);
 
   QueryMut2.withState(this._archetypes, this._entities, this.state);
 
@@ -365,7 +365,7 @@ class QueryMut3<T1, T2, T3> implements Query {
   final QueryState state;
 
   QueryMut3(this._archetypes, this._entities, {QueryFilter? filter})
-      : state = QueryState.of3<T1, T2, T3>(filter: filter);
+    : state = QueryState.of3<T1, T2, T3>(filter: filter);
 
   QueryMut3.withState(this._archetypes, this._entities, this.state);
 
@@ -412,7 +412,7 @@ class QueryMut4<T1, T2, T3, T4> implements Query {
   final QueryState state;
 
   QueryMut4(this._archetypes, this._entities, {QueryFilter? filter})
-      : state = QueryState.of4<T1, T2, T3, T4>(filter: filter);
+    : state = QueryState.of4<T1, T2, T3, T4>(filter: filter);
 
   QueryMut4.withState(this._archetypes, this._entities, this.state);
 

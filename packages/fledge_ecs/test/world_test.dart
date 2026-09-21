@@ -65,10 +65,7 @@ void main() {
       test('spawns entity with multiple components', () {
         final world = World();
 
-        final entity = world.spawnWith([
-          Position(1, 2),
-          Velocity(3, 4),
-        ]);
+        final entity = world.spawnWith([Position(1, 2), Velocity(3, 4)]);
 
         expect(world.isAlive(entity), isTrue);
         expect(world.get<Position>(entity)?.x, equals(1));
@@ -208,10 +205,7 @@ void main() {
         final entity = world.spawn().entity;
         world.despawn(entity);
 
-        expect(
-          () => world.insert(entity, Position(0, 0)),
-          throwsStateError,
-        );
+        expect(() => world.insert(entity, Position(0, 0)), throwsStateError);
       });
     });
 

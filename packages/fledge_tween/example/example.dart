@@ -41,17 +41,17 @@ void main() async {
 
   var latest = 0.0;
   app.world.spawn().insert(
-        Tweener(
-          tween: Tween<double>(
-            from: 0,
-            to: 1,
-            duration: const Duration(seconds: 2),
-            lerp: lerpDouble,
-          ),
-          onSample: (value) => latest = value as double,
-          loop: TweenLoopMode.pingPong,
-        ),
-      );
+    Tweener(
+      tween: Tween<double>(
+        from: 0,
+        to: 1,
+        duration: const Duration(seconds: 2),
+        lerp: lerpDouble,
+      ),
+      onSample: (value) => latest = value as double,
+      loop: TweenLoopMode.pingPong,
+    ),
+  );
 
   await app.tick();
   assert(latest >= 0 && latest <= 1);

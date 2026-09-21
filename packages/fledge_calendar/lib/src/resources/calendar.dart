@@ -262,10 +262,9 @@ class Calendar {
   /// Useful for lighting calculations and day/night transitions.
   double get normalizedTimeOfDay {
     final startHour = config.dayStartHour;
-    final hoursSinceStart =
-        (hour >= startHour)
-            ? hour - startHour
-            : hour + config.hoursPerDay - startHour;
+    final hoursSinceStart = (hour >= startHour)
+        ? hour - startHour
+        : hour + config.hoursPerDay - startHour;
     return (hoursSinceStart + minute / 60.0) / config.hoursPerDay;
   }
 
@@ -302,10 +301,9 @@ class Calendar {
   bool get isPastCurfew {
     if (_curfewHour == null) return false;
     final startHour = config.dayStartHour;
-    final hoursSinceStart =
-        (hour >= startHour)
-            ? hour - startHour
-            : hour + config.hoursPerDay - startHour;
+    final hoursSinceStart = (hour >= startHour)
+        ? hour - startHour
+        : hour + config.hoursPerDay - startHour;
     final curfewHoursSinceStart = _curfewHour! - startHour;
     return hoursSinceStart >= curfewHoursSinceStart;
   }
@@ -316,10 +314,9 @@ class Calendar {
   int? get hoursUntilCurfew {
     if (_curfewHour == null) return null;
     final startHour = config.dayStartHour;
-    final hoursSinceStart =
-        (hour >= startHour)
-            ? hour - startHour
-            : hour + config.hoursPerDay - startHour;
+    final hoursSinceStart = (hour >= startHour)
+        ? hour - startHour
+        : hour + config.hoursPerDay - startHour;
     final curfewHoursSinceStart = _curfewHour! - startHour;
     return curfewHoursSinceStart - hoursSinceStart;
   }
@@ -437,10 +434,9 @@ class Calendar {
     if (savedCurfew != null) {
       final minCurfew = config.dayStartHour;
       final maxCurfew = config.dayStartHour + config.hoursPerDay;
-      _curfewHour =
-          (savedCurfew >= minCurfew && savedCurfew <= maxCurfew)
-              ? savedCurfew
-              : config.defaultCurfewHour;
+      _curfewHour = (savedCurfew >= minCurfew && savedCurfew <= maxCurfew)
+          ? savedCurfew
+          : config.defaultCurfewHour;
     } else {
       _curfewHour = config.defaultCurfewHour;
     }

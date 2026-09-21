@@ -99,15 +99,14 @@ class Light2D {
     double intensity = 1.0,
     double radius = 100.0,
     double innerRadius = 0.0,
-  }) =>
-      Light2D(
-        type: LightType.point,
-        color: color,
-        intensity: intensity,
-        radius: radius,
-        innerRadius: innerRadius,
-        direction: Vector2(0, -1),
-      );
+  }) => Light2D(
+    type: LightType.point,
+    color: color,
+    intensity: intensity,
+    radius: radius,
+    innerRadius: innerRadius,
+    direction: Vector2(0, -1),
+  );
 
   /// Convenience for a directional light. [direction] is normalized to
   /// a unit vector.
@@ -115,14 +114,13 @@ class Light2D {
     required Color color,
     required Vector2 direction,
     double intensity = 1.0,
-  }) =>
-      Light2D(
-        type: LightType.directional,
-        color: color,
-        intensity: intensity,
-        radius: double.infinity,
-        direction: direction.normalized(),
-      );
+  }) => Light2D(
+    type: LightType.directional,
+    color: color,
+    intensity: intensity,
+    radius: double.infinity,
+    direction: direction.normalized(),
+  );
 
   /// Convenience for a spot light. [direction] is normalized to a unit
   /// vector; [angle] is the cone half-angle in radians.
@@ -133,14 +131,13 @@ class Light2D {
     double intensity = 1.0,
     double radius = 100.0,
     double innerRadius = 0.0,
-  }) =>
-      Light2D(
-        type: LightType.spot,
-        color: color,
-        intensity: intensity,
-        radius: radius,
-        innerRadius: innerRadius,
-        angle: angle,
-        direction: direction.normalized(),
-      );
+  }) => Light2D(
+    type: LightType.spot,
+    color: color,
+    intensity: intensity,
+    radius: radius,
+    innerRadius: innerRadius,
+    angle: angle,
+    direction: direction.normalized(),
+  );
 }

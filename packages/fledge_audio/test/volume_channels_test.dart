@@ -2,8 +2,8 @@ import 'package:fledge_audio/fledge_audio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 VolumeChannels _channels() => VolumeChannels(
-      const AudioChannelConfig(music: 1, sfx: 1, voice: 1, ambient: 1),
-    );
+  const AudioChannelConfig(music: 1, sfx: 1, voice: 1, ambient: 1),
+);
 
 void main() {
   group('VolumeChannels basic', () {

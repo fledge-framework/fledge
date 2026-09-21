@@ -51,19 +51,17 @@ class OverlayPopulateSystem implements System {
 
   @override
   SystemMeta get meta => SystemMeta(
-        name: 'debug_overlay_populate',
-        reads: {
-          ComponentId.of<DebugOverlayEntity>(),
-        },
-        writes: {
-          ComponentId.of<UiText>(),
-          ComponentId.of<UiNode>(),
-          ComponentId.of<UiAnchorComponent>(),
-          ComponentId.of<UiOffset>(),
-          ComponentId.of<UiSize>(),
-        },
-        resourceReads: {DebugConfig, FrameStats, SystemStats},
-      );
+    name: 'debug_overlay_populate',
+    reads: {ComponentId.of<DebugOverlayEntity>()},
+    writes: {
+      ComponentId.of<UiText>(),
+      ComponentId.of<UiNode>(),
+      ComponentId.of<UiAnchorComponent>(),
+      ComponentId.of<UiOffset>(),
+      ComponentId.of<UiSize>(),
+    },
+    resourceReads: {DebugConfig, FrameStats, SystemStats},
+  );
 
   @override
   RunCondition? get runCondition => null;
@@ -114,7 +112,14 @@ class OverlayPopulateSystem implements System {
         }
       } else {
         _spawnLine(
-            world, config, anchor, line, yOffset, anchorSign, anchorXSign);
+          world,
+          config,
+          anchor,
+          line,
+          yOffset,
+          anchorSign,
+          anchorXSign,
+        );
       }
     }
 
@@ -138,19 +143,19 @@ class OverlayPopulateSystem implements System {
     world.spawn()
       ..insert(const UiNode())
       ..insert(UiAnchorComponent(anchor))
-      ..insert(UiOffset(
-        x: kHorizontalPad * anchorXSign,
-        y: yOffset * anchorSign,
-      ))
-      ..insert(UiSize(
-        width: 260,
-        height: config.overlayFontSize * kRowHeightFactor,
-      ))
-      ..insert(UiText(
-        text: line.text,
-        fontSize: config.overlayFontSize,
-        color: config.overlayTextColor,
-      ))
+      ..insert(
+        UiOffset(x: kHorizontalPad * anchorXSign, y: yOffset * anchorSign),
+      )
+      ..insert(
+        UiSize(width: 260, height: config.overlayFontSize * kRowHeightFactor),
+      )
+      ..insert(
+        UiText(
+          text: line.text,
+          fontSize: config.overlayFontSize,
+          color: config.overlayTextColor,
+        ),
+      )
       ..insert(DebugOverlayEntity(line.key));
   }
 
@@ -164,28 +169,32 @@ class OverlayPopulateSystem implements System {
     if (config.showFps) {
       final stats = world.getResource<FrameStats>();
       final fps = stats?.smoothedFps ?? 0.0;
-      lines.add(_OverlayLine(
-        key: 'fps',
-        text: 'FPS: ${fps.toStringAsFixed(1)}',
-      ));
+      lines.add(
+        _OverlayLine(key: 'fps', text: 'FPS: ${fps.toStringAsFixed(1)}'),
+      );
     }
 
     if (config.showEntityCount) {
-      lines.add(_OverlayLine(
-        key: 'entityCount',
-        text: 'Entities: ${world.entityCount}',
-      ));
+      lines.add(
+        _OverlayLine(
+          key: 'entityCount',
+          text: 'Entities: ${world.entityCount}',
+        ),
+      );
     }
 
     if (config.showSystemTimings) {
       final stats = world.getResource<SystemStats>();
       if (stats != null) {
-        lines.add(_OverlayLine(
-          key: 'frameTime',
-          text: 'Frame: '
-              '${stats.totalFrameMilliseconds.toStringAsFixed(2)}ms '
-              '(first..last)',
-        ));
+        lines.add(
+          _OverlayLine(
+            key: 'frameTime',
+            text:
+                'Frame: '
+                '${stats.totalFrameMilliseconds.toStringAsFixed(2)}ms '
+                '(first..last)',
+          ),
+        );
         // One line per non-empty schedule keeps the readout short in
         // typical apps and never grows unboundedly.
         final counts = stats.scheduleSystemCounts;
@@ -193,10 +202,9 @@ class OverlayPopulateSystem implements System {
         for (final name in orderedNames) {
           final count = counts[name] ?? 0;
           if (count == 0) continue;
-          lines.add(_OverlayLine(
-            key: 'schedule:$name',
-            text: '  $name: $count sys',
-          ));
+          lines.add(
+            _OverlayLine(key: 'schedule:$name', text: '  $name: $count sys'),
+          );
         }
       }
     }
@@ -209,15 +217,14 @@ class OverlayPopulateSystem implements System {
       final report = world.getResource<_AmbiguityReport>();
       final items = report?.items ?? const <String>[];
       if (items.isNotEmpty) {
-        lines.add(_OverlayLine(
-          key: 'ambiguityHeader',
-          text: 'Ambiguities: ${items.length}',
-        ));
+        lines.add(
+          _OverlayLine(
+            key: 'ambiguityHeader',
+            text: 'Ambiguities: ${items.length}',
+          ),
+        );
         for (var i = 0; i < items.length; i++) {
-          lines.add(_OverlayLine(
-            key: 'ambiguity:$i',
-            text: '  ${items[i]}',
-          ));
+          lines.add(_OverlayLine(key: 'ambiguity:$i', text: '  ${items[i]}'));
         }
       }
     }

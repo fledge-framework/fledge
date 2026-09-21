@@ -32,17 +32,11 @@ class ComponentTicks {
   int changedTick;
 
   /// Creates component ticks with the given values.
-  ComponentTicks({
-    required this.addedTick,
-    required this.changedTick,
-  });
+  ComponentTicks({required this.addedTick, required this.changedTick});
 
   /// Creates component ticks for a newly added component.
   factory ComponentTicks.added(int currentTick) {
-    return ComponentTicks(
-      addedTick: currentTick,
-      changedTick: currentTick,
-    );
+    return ComponentTicks(addedTick: currentTick, changedTick: currentTick);
   }
 
   /// Returns true if this component was added after [lastSeenTick].

@@ -42,20 +42,18 @@ class PlayerProgress with Saveable {
 void main() async {
   // Create saveable resources
   final inventory = Inventory()..items.addAll(['sword', 'shield', 'potion']);
-  final progress =
-      PlayerProgress()
-        ..level = 5
-        ..experience = 1250;
+  final progress = PlayerProgress()
+    ..level = 5
+    ..experience = 1250;
 
   // Set up app with save plugin. Any resource that mixes in Saveable is
   // auto-discovered — no manual registerSaveable() needed for world resources.
-  final app =
-      App()
-        ..addPlugin(
-          SavePlugin(config: const SaveConfig(gameDirectory: 'ExampleGame')),
-        )
-        ..insertResource(inventory)
-        ..insertResource(progress);
+  final app = App()
+    ..addPlugin(
+      SavePlugin(config: const SaveConfig(gameDirectory: 'ExampleGame')),
+    )
+    ..insertResource(inventory)
+    ..insertResource(progress);
 
   // Initialize
   await app.tick();

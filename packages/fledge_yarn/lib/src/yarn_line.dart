@@ -90,10 +90,7 @@ class CommandLine extends YarnLine {
   /// Arguments to the command.
   final List<String> arguments;
 
-  const CommandLine({
-    required this.command,
-    this.arguments = const [],
-  });
+  const CommandLine({required this.command, this.arguments = const []});
 
   @override
   String toString() => '<<$command ${arguments.join(' ')}>>';

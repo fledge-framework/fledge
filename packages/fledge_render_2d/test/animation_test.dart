@@ -341,9 +341,17 @@ void main() {
       final initPlayer = AnimationPlayer(
         animations: {
           'a': AnimationClip.fromIndices(
-              name: 'a', startIndex: 0, endIndex: 1, frameDuration: 0.1),
+            name: 'a',
+            startIndex: 0,
+            endIndex: 1,
+            frameDuration: 0.1,
+          ),
           'b': AnimationClip.fromIndices(
-              name: 'b', startIndex: 2, endIndex: 3, frameDuration: 0.1),
+            name: 'b',
+            startIndex: 2,
+            endIndex: 3,
+            frameDuration: 0.1,
+          ),
         },
         initialAnimation: 'b',
       );

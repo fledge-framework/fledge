@@ -79,7 +79,7 @@ class WindowPlugin implements Plugin {
   /// WindowPlugin(config: WindowConfig.fullscreen(title: title))
   /// ```
   WindowPlugin.fullscreen({String title = 'Fledge Game'})
-      : config = WindowConfig.fullscreen(title: title);
+    : config = WindowConfig.fullscreen(title: title);
 
   /// Creates a borderless windowed plugin.
   ///
@@ -88,7 +88,7 @@ class WindowPlugin implements Plugin {
   /// WindowPlugin(config: WindowConfig.borderless(title: title))
   /// ```
   WindowPlugin.borderless({String title = 'Fledge Game'})
-      : config = WindowConfig.borderless(title: title);
+    : config = WindowConfig.borderless(title: title);
 
   /// Creates a windowed plugin with optional size.
   factory WindowPlugin.windowed({

@@ -10,16 +10,16 @@ import 'package:vector_math/vector_math.dart';
 TextureHandle _tex() => const TextureHandle(id: 1, width: 16, height: 16);
 
 ParticleTemplate _template() => ParticleTemplate(
-      lifetimeMin: 1.0,
-      lifetimeMax: 1.0,
-      velocityMin: Vector2.zero(),
-      velocityMax: Vector2.zero(),
-      acceleration: Vector2.zero(),
-      sizeMin: 4,
-      sizeMax: 4,
-      colorStart: const Color(0xFFFFFFFF),
-      colorEnd: const Color(0x00FFFFFF),
-    );
+  lifetimeMin: 1.0,
+  lifetimeMax: 1.0,
+  velocityMin: Vector2.zero(),
+  velocityMax: Vector2.zero(),
+  acceleration: Vector2.zero(),
+  sizeMin: 4,
+  sizeMax: 4,
+  colorStart: const Color(0xFFFFFFFF),
+  colorEnd: const Color(0x00FFFFFF),
+);
 
 /// Build a world with a WallTime resource driving frame delta and a
 /// single emitter entity. Returns the entity and emitter for further
@@ -44,10 +44,11 @@ ParticleTemplate _template() => ParticleTemplate(
     isActive: isActive,
     rng: rng ?? math.Random(1234),
   );
-  final entity = (world.spawn()
-        ..insert(GlobalTransform2D.identity())
-        ..insert(emitter))
-      .entity;
+  final entity =
+      (world.spawn()
+            ..insert(GlobalTransform2D.identity())
+            ..insert(emitter))
+          .entity;
   return (world: world, entity: entity, emitter: emitter);
 }
 
@@ -76,22 +77,24 @@ void main() {
       expect(emitter.pool.liveCount, 10);
     });
 
-    test('isActive=false stops emission but preserves live particles',
-        () async {
-      final (:world, entity: _, :emitter) = buildWorld(emitRate: 20);
-      // Seed a few particles first.
-      await tick(world, 0.1);
-      final beforePause = emitter.pool.liveCount;
-      expect(beforePause, greaterThan(0));
+    test(
+      'isActive=false stops emission but preserves live particles',
+      () async {
+        final (:world, entity: _, :emitter) = buildWorld(emitRate: 20);
+        // Seed a few particles first.
+        await tick(world, 0.1);
+        final beforePause = emitter.pool.liveCount;
+        expect(beforePause, greaterThan(0));
 
-      emitter.isActive = false;
-      // Advance a few frames — no new particles should appear.
-      for (var i = 0; i < 3; i++) {
-        world.getResource<WallTime>()!.delta = 0.1;
-        await ParticleEmitSystem().run(world);
-      }
-      expect(emitter.pool.liveCount, beforePause);
-    });
+        emitter.isActive = false;
+        // Advance a few frames — no new particles should appear.
+        for (var i = 0; i < 3; i++) {
+          world.getResource<WallTime>()!.delta = 0.1;
+          await ParticleEmitSystem().run(world);
+        }
+        expect(emitter.pool.liveCount, beforePause);
+      },
+    );
 
     test('maxDuration stops emission but existing particles live on', () async {
       final (:world, entity: _, :emitter) = buildWorld(

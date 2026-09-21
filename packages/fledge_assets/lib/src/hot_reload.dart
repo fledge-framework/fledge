@@ -94,11 +94,14 @@ class HotReloadWatcher {
 
   /// Test helper: pretend a file changed on disk, so tests don't need
   /// a real filesystem watcher (which is racy on macOS in CI).
-  void debugFireChange(String path) => _onEvent(WatchEvent(
+  void debugFireChange(String path) => _onEvent(
+    WatchEvent(
       ChangeType.MODIFY,
       // Absolute path for realism; the matcher below falls back to
       // basename comparison so relative registrations still work.
-      path));
+      path,
+    ),
+  );
 
   void _onEvent(WatchEvent event) {
     final direct = _pathCallbacks[event.path];
@@ -111,8 +114,9 @@ class HotReloadWatcher {
     // Fallback: basename match, in case the caller registered a
     // relative path and the watcher reports an absolute one.
     final baseIndex = event.path.lastIndexOf(Platform.pathSeparator);
-    final baseName =
-        baseIndex >= 0 ? event.path.substring(baseIndex + 1) : event.path;
+    final baseName = baseIndex >= 0
+        ? event.path.substring(baseIndex + 1)
+        : event.path;
     _pathCallbacks.forEach((registered, callbacks) {
       final regBaseIndex = registered.lastIndexOf(Platform.pathSeparator);
       final regBase = regBaseIndex >= 0

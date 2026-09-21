@@ -41,10 +41,7 @@ class TmxLoader implements Loader<TilemapAsset> {
   /// game-specific (asset bundle vs `dart:io.File`).
   final TextureLoader textureLoader;
 
-  const TmxLoader({
-    required this.tilemapLoader,
-    required this.textureLoader,
-  });
+  const TmxLoader({required this.tilemapLoader, required this.textureLoader});
 
   @override
   Future<TilemapAsset> load(String path) =>

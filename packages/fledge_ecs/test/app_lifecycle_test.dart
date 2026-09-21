@@ -41,11 +41,17 @@ void main() {
       final firstIdx = entries.indexOf('first');
       final lastStartupIdx = entries.lastIndexOf('startup');
 
-      expect(startupCount, equals(1),
-          reason: 'startup should run exactly once');
+      expect(
+        startupCount,
+        equals(1),
+        reason: 'startup should run exactly once',
+      );
       expect(firstIdx, isNonNegative, reason: 'first should have run');
-      expect(lastStartupIdx, lessThan(firstIdx),
-          reason: 'startup entry must precede every first entry');
+      expect(
+        lastStartupIdx,
+        lessThan(firstIdx),
+        reason: 'startup entry must precede every first entry',
+      );
 
       // Verify: entries per tick is 1 startup + 3 first entries.
       expect(entries.where((e) => e == 'first').length, equals(3));
@@ -82,32 +88,34 @@ void main() {
       expect(entries, equals(pattern));
     });
 
-    test('App.runStartup is idempotent — tick 1 does not re-run startup',
-        () async {
-      final app = App()
-        ..insertResource(_Log())
-        ..addSystem(_SpySystem('startup'), schedule: Schedules.startup);
+    test(
+      'App.runStartup is idempotent — tick 1 does not re-run startup',
+      () async {
+        final app = App()
+          ..insertResource(_Log())
+          ..addSystem(_SpySystem('startup'), schedule: Schedules.startup);
 
-      await app.runStartup();
-      expect(
-        app.world.getResource<_Log>()!.entries.where((e) => e == 'startup'),
-        hasLength(1),
-      );
+        await app.runStartup();
+        expect(
+          app.world.getResource<_Log>()!.entries.where((e) => e == 'startup'),
+          hasLength(1),
+        );
 
-      // First tick should not re-run startup.
-      await app.tick();
-      await app.tick();
-      expect(
-        app.world.getResource<_Log>()!.entries.where((e) => e == 'startup'),
-        hasLength(1),
-      );
+        // First tick should not re-run startup.
+        await app.tick();
+        await app.tick();
+        expect(
+          app.world.getResource<_Log>()!.entries.where((e) => e == 'startup'),
+          hasLength(1),
+        );
 
-      // And a second explicit runStartup is also a no-op.
-      await app.runStartup();
-      expect(
-        app.world.getResource<_Log>()!.entries.where((e) => e == 'startup'),
-        hasLength(1),
-      );
-    });
+        // And a second explicit runStartup is also a no-op.
+        await app.runStartup();
+        expect(
+          app.world.getResource<_Log>()!.entries.where((e) => e == 'startup'),
+          hasLength(1),
+        );
+      },
+    );
   });
 }

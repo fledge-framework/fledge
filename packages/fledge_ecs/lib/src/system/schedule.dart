@@ -184,12 +184,14 @@ class SystemStage {
             b.after.contains(a.name)) {
           continue;
         }
-        out.add(OrderingAmbiguity(
-          stage: name,
-          systemA: a.name,
-          systemB: b.name,
-          reasons: _describeMetaConflict(a, b),
-        ));
+        out.add(
+          OrderingAmbiguity(
+            stage: name,
+            systemA: a.name,
+            systemB: b.name,
+            reasons: _describeMetaConflict(a, b),
+          ),
+        );
       }
     }
     return out;
@@ -346,9 +348,7 @@ class Scheduler {
   /// to [Schedules.update]. Passing both throws [ArgumentError].
   void addSystem(
     System system, {
-    @Deprecated(
-      'Use schedule: Schedules.foo instead of stage: CoreStage.foo.',
-    )
+    @Deprecated('Use schedule: Schedules.foo instead of stage: CoreStage.foo.')
     CoreStage? stage,
     Schedule? schedule,
   }) {
@@ -546,7 +546,8 @@ class OrderingAmbiguity {
   });
 
   @override
-  String toString() => 'OrderingAmbiguity(stage=$stage): '
+  String toString() =>
+      'OrderingAmbiguity(stage=$stage): '
       '$systemA runs before $systemB by registration order only. '
       'Reasons: ${reasons.join('; ')}. '
       'Add `before: [\'$systemB\']` to $systemA (or the reverse) to make '

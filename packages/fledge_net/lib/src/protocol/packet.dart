@@ -46,10 +46,10 @@ enum PacketType {
   /// Reliable packets are retransmitted until acknowledged.
   /// State updates and input are unreliable (sent frequently, latest-wins).
   bool get isReliable => switch (this) {
-        connect || connectAccepted || connectRejected || disconnect => true,
-        entitySpawn || entityDespawn || rpc => true,
-        _ => false,
-      };
+    connect || connectAccepted || connectRejected || disconnect => true,
+    entitySpawn || entityDespawn || rpc => true,
+    _ => false,
+  };
 
   static PacketType? fromValue(int value) {
     for (final type in PacketType.values) {
@@ -174,10 +174,7 @@ class Packet {
   /// Packet payload.
   final Uint8List payload;
 
-  Packet({
-    required this.header,
-    required this.payload,
-  });
+  Packet({required this.header, required this.payload});
 
   /// Create a packet from raw bytes.
   static Packet? fromBytes(Uint8List data) {

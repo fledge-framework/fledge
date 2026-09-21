@@ -31,10 +31,7 @@ class YarnPlugin implements Plugin {
   ///
   /// Optionally provide [initialContent] to parse on startup and
   /// [initialVariables] to pre-populate variable storage.
-  YarnPlugin({
-    this.initialContent,
-    this.initialVariables,
-  });
+  YarnPlugin({this.initialContent, this.initialVariables});
 
   @override
   void build(App app) {

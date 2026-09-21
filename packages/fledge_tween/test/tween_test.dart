@@ -5,11 +5,11 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('Tween<double>', () {
     Tween<double> makeLinear() => Tween<double>(
-          from: 0,
-          to: 100,
-          duration: const Duration(seconds: 1),
-          lerp: lerpDouble,
-        );
+      from: 0,
+      to: 100,
+      duration: const Duration(seconds: 1),
+      lerp: lerpDouble,
+    );
 
     test('sample(0) == from', () {
       final t = makeLinear();
@@ -45,10 +45,7 @@ void main() {
         lerp: lerpDouble,
       );
       // Halfway through under easeInQuad should be 0.25.
-      expect(
-        t.sample(const Duration(milliseconds: 500)),
-        closeTo(0.25, 1e-9),
-      );
+      expect(t.sample(const Duration(milliseconds: 500)), closeTo(0.25, 1e-9));
     });
   });
 

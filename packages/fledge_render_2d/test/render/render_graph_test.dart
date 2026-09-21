@@ -36,13 +36,13 @@ class PassThroughNode implements RenderNode {
 
   @override
   List<SlotInfo> get inputs => [
-        SlotInfo(name: inputSlot, type: SlotType.custom),
-      ];
+    SlotInfo(name: inputSlot, type: SlotType.custom),
+  ];
 
   @override
   List<SlotInfo> get outputs => [
-        SlotInfo(name: outputSlot, type: SlotType.custom),
-      ];
+    SlotInfo(name: outputSlot, type: SlotType.custom),
+  ];
 
   PassThroughNode(
     this.name, {
@@ -70,9 +70,7 @@ class ProducerNode implements RenderNode {
   List<SlotInfo> get inputs => const [];
 
   @override
-  List<SlotInfo> get outputs => [
-        SlotInfo(name: slot, type: SlotType.custom),
-      ];
+  List<SlotInfo> get outputs => [SlotInfo(name: slot, type: SlotType.custom)];
 
   ProducerNode(this.name, {required this.slot, required this.value});
 
@@ -92,8 +90,8 @@ class ConsumerNode implements RenderNode {
 
   @override
   List<SlotInfo> get inputs => [
-        SlotInfo(name: slot, type: SlotType.custom, required: required),
-      ];
+    SlotInfo(name: slot, type: SlotType.custom, required: required),
+  ];
 
   @override
   List<SlotInfo> get outputs => const [];
@@ -144,8 +142,11 @@ void main() {
 
     test('optional slot', () {
       const required = SlotInfo(name: 'slot', type: SlotType.texture);
-      const optional =
-          SlotInfo(name: 'slot', type: SlotType.texture, required: false);
+      const optional = SlotInfo(
+        name: 'slot',
+        type: SlotType.texture,
+        required: false,
+      );
 
       expect(required.required, isTrue);
       expect(optional.required, isFalse);
@@ -166,18 +167,9 @@ void main() {
 
   group('Edge', () {
     test('equality', () {
-      const a = Edge(
-        from: SlotId('a', 'out'),
-        to: SlotId('b', 'in'),
-      );
-      const b = Edge(
-        from: SlotId('a', 'out'),
-        to: SlotId('b', 'in'),
-      );
-      const c = Edge(
-        from: SlotId('a', 'out'),
-        to: SlotId('c', 'in'),
-      );
+      const a = Edge(from: SlotId('a', 'out'), to: SlotId('b', 'in'));
+      const b = Edge(from: SlotId('a', 'out'), to: SlotId('b', 'in'));
+      const c = Edge(from: SlotId('a', 'out'), to: SlotId('c', 'in'));
 
       expect(a, equals(b));
       expect(a, isNot(equals(c)));
@@ -218,10 +210,7 @@ void main() {
       final graph = RenderGraph();
       graph.addNode(ProducerNode('a', slot: 'out', value: 1));
       graph.addNode(ConsumerNode('b', slot: 'in', required: false));
-      graph.addEdge(
-        const SlotId('a', 'out'),
-        const SlotId('b', 'in'),
-      );
+      graph.addEdge(const SlotId('a', 'out'), const SlotId('b', 'in'));
 
       graph.removeNode('a');
 
@@ -235,20 +224,24 @@ void main() {
 
       // Add nodes in arbitrary order
       graph.addNode(RecordingNode('c', log));
-      graph.addNode(RecordingNode('a', log, outputs: [
-        const SlotInfo(name: 'out', type: SlotType.custom),
-      ]));
-      graph.addNode(RecordingNode('b', log, inputs: [
-        const SlotInfo(name: 'in', type: SlotType.custom),
-      ], outputs: [
-        const SlotInfo(name: 'out', type: SlotType.custom),
-      ]));
+      graph.addNode(
+        RecordingNode(
+          'a',
+          log,
+          outputs: [const SlotInfo(name: 'out', type: SlotType.custom)],
+        ),
+      );
+      graph.addNode(
+        RecordingNode(
+          'b',
+          log,
+          inputs: [const SlotInfo(name: 'in', type: SlotType.custom)],
+          outputs: [const SlotInfo(name: 'out', type: SlotType.custom)],
+        ),
+      );
 
       // a -> b (c is independent)
-      graph.addEdge(
-        const SlotId('a', 'out'),
-        const SlotId('b', 'in'),
-      );
+      graph.addEdge(const SlotId('a', 'out'), const SlotId('b', 'in'));
 
       graph.execute(Object());
 
@@ -279,23 +272,19 @@ void main() {
       final graph = RenderGraph();
 
       graph.addNode(ProducerNode('start', slot: 'out', value: 10));
-      graph.addNode(PassThroughNode(
-        'double',
-        inputSlot: 'in',
-        outputSlot: 'out',
-        transform: (v) => (v as int) * 2,
-      ));
+      graph.addNode(
+        PassThroughNode(
+          'double',
+          inputSlot: 'in',
+          outputSlot: 'out',
+          transform: (v) => (v as int) * 2,
+        ),
+      );
       final end = ConsumerNode('end', slot: 'in');
       graph.addNode(end);
 
-      graph.addEdge(
-        const SlotId('start', 'out'),
-        const SlotId('double', 'in'),
-      );
-      graph.addEdge(
-        const SlotId('double', 'out'),
-        const SlotId('end', 'in'),
-      );
+      graph.addEdge(const SlotId('start', 'out'), const SlotId('double', 'in'));
+      graph.addEdge(const SlotId('double', 'out'), const SlotId('end', 'in'));
 
       graph.execute(Object());
 
@@ -307,10 +296,7 @@ void main() {
       graph.addNode(ConsumerNode('b', slot: 'in'));
 
       expect(
-        () => graph.addEdge(
-          const SlotId('a', 'out'),
-          const SlotId('b', 'in'),
-        ),
+        () => graph.addEdge(const SlotId('a', 'out'), const SlotId('b', 'in')),
         throwsArgumentError,
       );
     });
@@ -320,10 +306,7 @@ void main() {
       graph.addNode(ProducerNode('a', slot: 'out', value: 1));
 
       expect(
-        () => graph.addEdge(
-          const SlotId('a', 'out'),
-          const SlotId('b', 'in'),
-        ),
+        () => graph.addEdge(const SlotId('a', 'out'), const SlotId('b', 'in')),
         throwsArgumentError,
       );
     });
@@ -334,10 +317,8 @@ void main() {
       graph.addNode(ConsumerNode('b', slot: 'in'));
 
       expect(
-        () => graph.addEdge(
-          const SlotId('a', 'wrong'),
-          const SlotId('b', 'in'),
-        ),
+        () =>
+            graph.addEdge(const SlotId('a', 'wrong'), const SlotId('b', 'in')),
         throwsArgumentError,
       );
     });
@@ -348,10 +329,8 @@ void main() {
       graph.addNode(ConsumerNode('b', slot: 'in'));
 
       expect(
-        () => graph.addEdge(
-          const SlotId('a', 'out'),
-          const SlotId('b', 'wrong'),
-        ),
+        () =>
+            graph.addEdge(const SlotId('a', 'out'), const SlotId('b', 'wrong')),
         throwsArgumentError,
       );
     });
@@ -360,16 +339,16 @@ void main() {
       final graph = RenderGraph();
       graph.addNode(ConsumerNode('consumer', slot: 'required', required: true));
 
-      expect(
-        () => graph.execute(Object()),
-        throwsA(isA<MissingInputError>()),
-      );
+      expect(() => graph.execute(Object()), throwsA(isA<MissingInputError>()));
     });
 
     test('execute allows unconnected optional input', () {
       final graph = RenderGraph();
-      final consumer =
-          ConsumerNode('consumer', slot: 'optional', required: false);
+      final consumer = ConsumerNode(
+        'consumer',
+        slot: 'optional',
+        required: false,
+      );
       graph.addNode(consumer);
 
       graph.execute(Object());
@@ -397,10 +376,7 @@ void main() {
       final graph = RenderGraph();
 
       graph.addNode(ProducerNode('a', slot: 'data', value: 'hello'));
-      graph.addNodeAfter(
-        ConsumerNode('b', slot: 'data'),
-        'a',
-      );
+      graph.addNodeAfter(ConsumerNode('b', slot: 'data'), 'a');
 
       expect(graph.edges, hasLength(1));
       expect(graph.edges.first.from, equals(const SlotId('a', 'data')));
@@ -424,12 +400,20 @@ void main() {
       final graph = RenderGraph();
       final log = <String>[];
 
-      graph.addNode(RecordingNode('a', log, outputs: [
-        const SlotInfo(name: 'out', type: SlotType.custom),
-      ]));
-      graph.addNode(RecordingNode('b', log, inputs: [
-        const SlotInfo(name: 'in', type: SlotType.custom),
-      ]));
+      graph.addNode(
+        RecordingNode(
+          'a',
+          log,
+          outputs: [const SlotInfo(name: 'out', type: SlotType.custom)],
+        ),
+      );
+      graph.addNode(
+        RecordingNode(
+          'b',
+          log,
+          inputs: [const SlotInfo(name: 'in', type: SlotType.custom)],
+        ),
+      );
       graph.addEdge(const SlotId('a', 'out'), const SlotId('b', 'in'));
 
       expect(graph.executionOrder, isNull);
@@ -477,10 +461,7 @@ void main() {
         const SlotValue(SlotType.custom, 'copied'),
       );
 
-      context.copySlot(
-        const SlotId('a', 'out'),
-        const SlotId('b', 'in'),
-      );
+      context.copySlot(const SlotId('a', 'out'), const SlotId('b', 'in'));
 
       final copied = context.getSlotValue(const SlotId('b', 'in'));
       expect(copied?.as<String>(), equals('copied'));

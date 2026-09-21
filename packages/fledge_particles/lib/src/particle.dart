@@ -105,10 +105,10 @@ class ParticlePool {
   /// [Particle] instances are lazily allocated on first [spawn] into
   /// each slot.
   ParticlePool(this.capacity)
-      : assert(capacity > 0, 'ParticlePool.capacity must be positive'),
-        _particles = List<Particle?>.filled(capacity, null),
-        _inUse = List<bool>.filled(capacity, false),
-        _freeIndices = List<int>.generate(capacity, (i) => i);
+    : assert(capacity > 0, 'ParticlePool.capacity must be positive'),
+      _particles = List<Particle?>.filled(capacity, null),
+      _inUse = List<bool>.filled(capacity, false),
+      _freeIndices = List<int>.generate(capacity, (i) => i);
 
   /// The current number of live particles.
   int get liveCount => _liveCount;

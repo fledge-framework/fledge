@@ -18,10 +18,7 @@ class InterestManager {
   /// Users must provide this since fledge_net doesn't depend on Transform2D.
   final (double, double) Function(World world, Entity entity)? positionGetter;
 
-  InterestManager({
-    this.relevanceRadius = 1000,
-    this.positionGetter,
-  });
+  InterestManager({this.relevanceRadius = 1000, this.positionGetter});
 
   /// Get the set of relevant entity network IDs for a specific peer.
   ///

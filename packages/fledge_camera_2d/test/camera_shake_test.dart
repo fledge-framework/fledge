@@ -31,11 +31,9 @@ void main() {
       world.spawn()
         ..insert(Transform2D.from(0, 0))
         ..insert(Camera2D())
-        ..insert(CameraShake(
-          trauma: 1.0,
-          traumaDecayPerSec: 1.0,
-          rng: math.Random(1),
-        ));
+        ..insert(
+          CameraShake(trauma: 1.0, traumaDecayPerSec: 1.0, rng: math.Random(1)),
+        );
       final system = CameraShakeSystem(fixedDelta: 0.1);
       for (var i = 0; i < 5; i++) {
         await system.run(world);
@@ -50,14 +48,16 @@ void main() {
       world.spawn()
         ..insert(Transform2D.from(0, 0))
         ..insert(Camera2D())
-        ..insert(CameraShake(
-          trauma: 1.0,
-          traumaDecayPerSec: 0,
-          maxOffsetX: 10,
-          maxOffsetY: 10,
-          maxRotationRadians: 1.0,
-          rng: math.Random(1),
-        ));
+        ..insert(
+          CameraShake(
+            trauma: 1.0,
+            traumaDecayPerSec: 0,
+            maxOffsetX: 10,
+            maxOffsetY: 10,
+            maxRotationRadians: 1.0,
+            rng: math.Random(1),
+          ),
+        );
       final system = CameraShakeSystem(fixedDelta: 0);
       await system.run(world);
       final t = world.query1<Transform2D>().iter().first.$2;
@@ -72,11 +72,13 @@ void main() {
       world.spawn()
         ..insert(Transform2D.from(0, 0))
         ..insert(Camera2D())
-        ..insert(CameraShake(
-          trauma: 0.5,
-          traumaDecayPerSec: 100, // decay to 0 after one frame
-          rng: math.Random(1),
-        ));
+        ..insert(
+          CameraShake(
+            trauma: 0.5,
+            traumaDecayPerSec: 100, // decay to 0 after one frame
+            rng: math.Random(1),
+          ),
+        );
       final system = CameraShakeSystem(fixedDelta: 0.1);
       await system.run(world);
       // After trauma hits 0, next run should undo any leftover

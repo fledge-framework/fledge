@@ -29,15 +29,9 @@ class DocSidebar extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  Text(
-                    'Documentation',
-                    style: theme.textTheme.headlineSmall,
-                  ),
+                  Text('Documentation', style: theme.textTheme.headlineSmall),
                   const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: onClose,
-                  ),
+                  IconButton(icon: const Icon(Icons.close), onPressed: onClose),
                 ],
               ),
             ),
@@ -128,8 +122,9 @@ class _SectionItemState extends State<_SectionItem> {
                       ? Icons.keyboard_arrow_down_rounded
                       : Icons.keyboard_arrow_right_rounded,
                   size: 20,
-                  color:
-                      theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5),
+                  color: theme.textTheme.bodySmall?.color?.withValues(
+                    alpha: 0.5,
+                  ),
                 ),
               ],
             ),
@@ -196,10 +191,7 @@ class _PageItem extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           border: isActive
               ? Border(
-                  left: BorderSide(
-                    color: FledgeTheme.primaryColor,
-                    width: 2,
-                  ),
+                  left: BorderSide(color: FledgeTheme.primaryColor, width: 2),
                 )
               : null,
         ),

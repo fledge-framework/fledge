@@ -11,6 +11,16 @@
 
 - `Assets<TilemapAsset>` / `Assets<TilesetAsset>` integration.
 
+### Notes
+
+- Continues to pin `xml: ^6.6.1`. `xml 7.0.0` cannot yet be adopted because
+  `tiled 0.11.1` (the newest release compatible with the Fledge Dart 3.6 SDK
+  floor) still constrains `xml: ^6.1.0`. `tiled 0.12.0` supports `xml ^7.0.0`
+  but bumps its own SDK floor to Dart `>=3.11` and reshapes the external
+  tileset API (`TsxProvider` -> `ParserProvider`, `TileMapParser.parseTmx` ->
+  `TiledMap.fromString`), so the upgrade is deferred until Fledge's SDK
+  floor is raised. Tracked as a TODO in `pubspec.yaml`.
+
 
 ## [0.1.14] - 2026-04-14
 

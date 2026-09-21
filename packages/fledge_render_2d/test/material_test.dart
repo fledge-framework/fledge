@@ -222,10 +222,7 @@ void main() {
       const shader = ShaderHandle(id: 1, name: 'custom');
       const texture = TextureHandle(id: 1, width: 64, height: 64);
 
-      final material = ShaderMaterial(
-        shader: shader,
-        texture: texture,
-      );
+      final material = ShaderMaterial(shader: shader, texture: texture);
 
       expect(material.shader, shader);
       expect(material.texture, texture);
@@ -291,10 +288,7 @@ void main() {
       );
 
       expect(material.hasUniform('intensity'), isTrue);
-      expect(
-        (material.getUniform('intensity') as FloatUniform).value,
-        0.8,
-      );
+      expect((material.getUniform('intensity') as FloatUniform).value, 0.8);
     });
 
     test('colorTint', () {

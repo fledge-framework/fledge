@@ -24,22 +24,31 @@ void main() async {
   final world = World();
 
   // Register observers before spawning entities
-  world.observers.register(Observer<Spaceship>.onAdd((w, entity, ship) {
-    print('  [Observer] Spaceship "${ship.name}" spawned!');
-  }));
+  world.observers.register(
+    Observer<Spaceship>.onAdd((w, entity, ship) {
+      print('  [Observer] Spaceship "${ship.name}" spawned!');
+    }),
+  );
 
-  world.observers.register(Observer<Turret>.onAdd((w, entity, turret) {
-    print('  [Observer] Turret "${turret.type}" attached!');
-  }));
+  world.observers.register(
+    Observer<Turret>.onAdd((w, entity, turret) {
+      print('  [Observer] Turret "${turret.type}" attached!');
+    }),
+  );
 
-  world.observers.register(Observer<Health>.onRemove((w, entity, health) {
-    print(
-        '  [Observer] Entity $entity lost Health component (was ${health.current}/${health.max})');
-  }));
+  world.observers.register(
+    Observer<Health>.onRemove((w, entity, health) {
+      print(
+        '  [Observer] Entity $entity lost Health component (was ${health.current}/${health.max})',
+      );
+    }),
+  );
 
-  world.observers.register(Observer<Health>.onChange((w, entity, health) {
-    print('  [Observer] Health changed to ${health.current}/${health.max}');
-  }));
+  world.observers.register(
+    Observer<Health>.onChange((w, entity, health) {
+      print('  [Observer] Health changed to ${health.current}/${health.max}');
+    }),
+  );
 
   // Spawn a spaceship - triggers onAdd observer
   print('Spawning spaceship...');
@@ -121,45 +130,57 @@ void main() async {
       .insertResource(GameTime(0.0));
 
   // Add state transition handlers
-  app.addSystem(FunctionSystem(
-    'onEnterPlaying',
-    runIf: OnEnterState<GameState>(GameState.playing).condition,
-    run: (w) {
-      print('  [State] Entered PLAYING state - game started!');
-      w.insertResource(GameTime(0.0));
-    },
-  ));
+  app.addSystem(
+    FunctionSystem(
+      'onEnterPlaying',
+      runIf: OnEnterState<GameState>(GameState.playing).condition,
+      run: (w) {
+        print('  [State] Entered PLAYING state - game started!');
+        w.insertResource(GameTime(0.0));
+      },
+    ),
+  );
 
-  app.addSystem(FunctionSystem(
-    'onEnterPaused',
-    runIf: OnEnterState<GameState>(GameState.paused).condition,
-    run: (w) {
-      print('  [State] Entered PAUSED state');
-    },
-  ));
+  app.addSystem(
+    FunctionSystem(
+      'onEnterPaused',
+      runIf: OnEnterState<GameState>(GameState.paused).condition,
+      run: (w) {
+        print('  [State] Entered PAUSED state');
+      },
+    ),
+  );
 
-  app.addSystem(FunctionSystem(
-    'onExitPaused',
-    runIf: OnExitState<GameState>(GameState.paused).condition,
-    run: (w) {
-      print('  [State] Exited PAUSED state - resuming!');
-    },
-  ));
+  app.addSystem(
+    FunctionSystem(
+      'onExitPaused',
+      runIf: OnExitState<GameState>(GameState.paused).condition,
+      run: (w) {
+        print('  [State] Exited PAUSED state - resuming!');
+      },
+    ),
+  );
 
   // Systems that only run in playing state
   app.addSystemInState(
-    FunctionSystem('gameTime', run: (w) {
-      final time = w.getResource<GameTime>()!;
-      time.elapsed += 0.016; // ~60 FPS
-    }),
+    FunctionSystem(
+      'gameTime',
+      run: (w) {
+        final time = w.getResource<GameTime>()!;
+        time.elapsed += 0.016; // ~60 FPS
+      },
+    ),
     GameState.playing,
   );
 
   app.addSystemInState(
-    FunctionSystem('scoreSystem', run: (w) {
-      final score = w.getResource<Score>()!;
-      score.value += 10;
-    }),
+    FunctionSystem(
+      'scoreSystem',
+      run: (w) {
+        final score = w.getResource<Score>()!;
+        score.value += 10;
+      },
+    ),
     GameState.playing,
   );
 
@@ -176,7 +197,8 @@ void main() async {
   }
   print('  Score: ${app.world.getResource<Score>()?.value}');
   print(
-      '  Time: ${app.world.getResource<GameTime>()?.elapsed.toStringAsFixed(3)}s');
+    '  Time: ${app.world.getResource<GameTime>()?.elapsed.toStringAsFixed(3)}s',
+  );
 
   // Pause
   print('\nTransitioning to PAUSED...');
@@ -189,7 +211,8 @@ void main() async {
     await app.tick();
   }
   print(
-      '  Score before: $scoreBefore, after: ${app.world.getResource<Score>()?.value}');
+    '  Score before: $scoreBefore, after: ${app.world.getResource<Score>()?.value}',
+  );
 
   // Resume
   print('\nTransitioning back to PLAYING...');
@@ -214,30 +237,42 @@ void main() async {
 
   // Add systems to sets
   app2.addSystemToSet(
-    FunctionSystem('inputHandler', run: (w) {
-      executionOrder.add('input');
-    }),
+    FunctionSystem(
+      'inputHandler',
+      run: (w) {
+        executionOrder.add('input');
+      },
+    ),
     'input',
   );
 
   app2.addSystemToSet(
-    FunctionSystem('movement', run: (w) {
-      executionOrder.add('physics:movement');
-    }),
+    FunctionSystem(
+      'movement',
+      run: (w) {
+        executionOrder.add('physics:movement');
+      },
+    ),
     'physics',
   );
 
   app2.addSystemToSet(
-    FunctionSystem('collision', run: (w) {
-      executionOrder.add('physics:collision');
-    }),
+    FunctionSystem(
+      'collision',
+      run: (w) {
+        executionOrder.add('physics:collision');
+      },
+    ),
     'physics',
   );
 
   app2.addSystemToSet(
-    FunctionSystem('draw', run: (w) {
-      executionOrder.add('render');
-    }),
+    FunctionSystem(
+      'draw',
+      run: (w) {
+        executionOrder.add('render');
+      },
+    ),
     'render',
   );
 
@@ -260,22 +295,26 @@ void main() async {
   var conditionalRuns = 0;
 
   // System that only runs when score > 50
-  app3.addSystem(FunctionSystem(
-    'incrementScore',
-    run: (w) {
-      final score = w.getResource<Score>()!;
-      score.value += 20;
-    },
-  ));
+  app3.addSystem(
+    FunctionSystem(
+      'incrementScore',
+      run: (w) {
+        final score = w.getResource<Score>()!;
+        score.value += 20;
+      },
+    ),
+  );
 
-  app3.addSystem(FunctionSystem(
-    'highScoreBonus',
-    runIf: RunConditions.resource<Score>((s) => s.value > 50),
-    run: (w) {
-      conditionalRuns++;
-      print('  [Condition] High score bonus triggered! (score > 50)');
-    },
-  ));
+  app3.addSystem(
+    FunctionSystem(
+      'highScoreBonus',
+      runIf: RunConditions.resource<Score>((s) => s.value > 50),
+      run: (w) {
+        conditionalRuns++;
+        print('  [Condition] High score bonus triggered! (score > 50)');
+      },
+    ),
+  );
 
   print('Running ticks with conditional system...');
   for (var i = 1; i <= 5; i++) {

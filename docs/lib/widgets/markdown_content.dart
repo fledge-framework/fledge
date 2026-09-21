@@ -27,11 +27,7 @@ class MarkdownContent extends StatelessWidget {
   /// If provided, headings will be wrapped with these keys.
   final Map<String, GlobalKey>? headingKeys;
 
-  const MarkdownContent({
-    super.key,
-    required this.content,
-    this.headingKeys,
-  });
+  const MarkdownContent({super.key, required this.content, this.headingKeys});
 
   @override
   Widget build(BuildContext context) {
@@ -104,9 +100,7 @@ class MarkdownContent extends StatelessWidget {
         height: 1.4,
       ),
       h4Padding: const EdgeInsets.only(top: 20, bottom: 8),
-      p: theme.textTheme.bodyLarge?.copyWith(
-        height: 1.7,
-      ),
+      p: theme.textTheme.bodyLarge?.copyWith(height: 1.7),
       pPadding: const EdgeInsets.only(bottom: 12),
       listBullet: theme.textTheme.bodyLarge,
       a: TextStyle(
@@ -120,10 +114,7 @@ class MarkdownContent extends StatelessWidget {
       ),
       blockquoteDecoration: BoxDecoration(
         border: Border(
-          left: BorderSide(
-            color: FledgeTheme.primaryColor,
-            width: 4,
-          ),
+          left: BorderSide(color: FledgeTheme.primaryColor, width: 4),
         ),
         color: FledgeTheme.primaryColor.withValues(alpha: 0.05),
       ),
@@ -132,28 +123,21 @@ class MarkdownContent extends StatelessWidget {
         vertical: 8,
       ),
       code: FledgeTheme.codeStyle.copyWith(
-        backgroundColor:
-            isDark ? FledgeTheme.surfaceDark2 : Colors.grey.shade100,
+        backgroundColor: isDark
+            ? FledgeTheme.surfaceDark2
+            : Colors.grey.shade100,
         color: FledgeTheme.purpleLight,
       ),
       codeblockDecoration: const BoxDecoration(),
       codeblockPadding: EdgeInsets.zero,
       horizontalRuleDecoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(
-            color: theme.dividerColor,
-            width: 1,
-          ),
-        ),
+        border: Border(top: BorderSide(color: theme.dividerColor, width: 1)),
       ),
       tableHead: theme.textTheme.bodyMedium?.copyWith(
         fontWeight: FontWeight.bold,
       ),
       tableBody: theme.textTheme.bodyMedium,
-      tableBorder: TableBorder.all(
-        color: theme.dividerColor,
-        width: 1,
-      ),
+      tableBorder: TableBorder.all(color: theme.dividerColor, width: 1),
       tableHeadAlign: TextAlign.left,
       tableCellsPadding: const EdgeInsets.all(8),
     );
@@ -205,11 +189,7 @@ class CodeBlockBuilder extends MarkdownElementBuilder {
         }
       }
 
-      return CodeBlock(
-        code: code,
-        language: language,
-        isDark: isDark,
-      );
+      return CodeBlock(code: code, language: language, isDark: isDark);
     }
 
     return null; // Use default styling for inline code
@@ -237,10 +217,12 @@ class CodeBlockBuilder extends MarkdownElementBuilder {
       if (tabMatch != null) {
         // Save previous tab if exists
         if (currentTabLabel != null) {
-          tabs.add(CodeTab(
-            label: currentTabLabel,
-            code: currentTabCode.toString().trim(),
-          ));
+          tabs.add(
+            CodeTab(
+              label: currentTabLabel,
+              code: currentTabCode.toString().trim(),
+            ),
+          );
         }
         // Start new tab
         currentTabLabel = tabMatch.group(1)!.trim();
@@ -256,10 +238,9 @@ class CodeBlockBuilder extends MarkdownElementBuilder {
 
     // Save the last tab
     if (currentTabLabel != null && currentTabCode.isNotEmpty) {
-      tabs.add(CodeTab(
-        label: currentTabLabel,
-        code: currentTabCode.toString().trim(),
-      ));
+      tabs.add(
+        CodeTab(label: currentTabLabel, code: currentTabCode.toString().trim()),
+      );
     }
 
     return tabs;
@@ -274,10 +255,11 @@ class HeadingBuilder extends MarkdownElementBuilder {
   /// Tracks how many times each base anchor ID has been seen.
   final Map<String, int> sharedAnchorCounts;
 
-  HeadingBuilder(
-      {this.headingKeys,
-      required this.level,
-      required this.sharedAnchorCounts});
+  HeadingBuilder({
+    this.headingKeys,
+    required this.level,
+    required this.sharedAnchorCounts,
+  });
 
   @override
   Widget? visitElementAfterWithContext(

@@ -244,8 +244,9 @@ class DialogueRunner {
 
     for (final choice in choiceSet.choices) {
       if (choice.condition != null) {
-        choice.isAvailable =
-            variableStorage.evaluateCondition(choice.condition!);
+        choice.isAvailable = variableStorage.evaluateCondition(
+          choice.condition!,
+        );
       } else {
         choice.isAvailable = true;
       }

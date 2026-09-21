@@ -8,10 +8,7 @@ import '../pages/home_page.dart';
 final router = GoRouter(
   initialLocation: '/',
   routes: [
-    GoRoute(
-      path: '/',
-      builder: (context, state) => const HomePage(),
-    ),
+    GoRoute(path: '/', builder: (context, state) => const HomePage()),
     GoRoute(
       path: '/docs',
       builder: (context, state) =>
@@ -74,9 +71,13 @@ class DocNavigation {
         NavPage(title: 'Observers', path: 'observers'),
         NavPage(title: 'App & Plugins', path: 'app-plugins'),
         NavPage(
-            title: 'Two-World Architecture', path: 'two-world-architecture'),
+          title: 'Two-World Architecture',
+          path: 'two-world-architecture',
+        ),
         NavPage(
-            title: 'Pixel-Perfect Rendering', path: 'pixel-perfect-rendering'),
+          title: 'Pixel-Perfect Rendering',
+          path: 'pixel-perfect-rendering',
+        ),
       ],
     ),
     NavSection(
@@ -162,8 +163,5 @@ class NavPage {
   final String title;
   final String path;
 
-  const NavPage({
-    required this.title,
-    required this.path,
-  });
+  const NavPage({required this.title, required this.path});
 }

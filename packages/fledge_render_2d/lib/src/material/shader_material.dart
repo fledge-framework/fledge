@@ -46,8 +46,8 @@ class ShaderMaterial extends Material2D {
     this.texture,
     Map<String, UniformValue>? uniforms,
     this.blendMode = BlendMode.normal,
-  })  : uniforms = uniforms ?? {},
-        _instanceId = _nextInstanceId++;
+  }) : uniforms = uniforms ?? {},
+       _instanceId = _nextInstanceId++;
 
   @override
   Object get id => (ShaderMaterial, _instanceId);
@@ -112,9 +112,7 @@ class ShaderEffects {
     return ShaderMaterial(
       shader: shader,
       texture: texture,
-      uniforms: {
-        'intensity': FloatUniform(intensity),
-      },
+      uniforms: {'intensity': FloatUniform(intensity)},
     );
   }
 
@@ -207,9 +205,7 @@ class ShaderEffects {
     return ShaderMaterial(
       shader: shader,
       texture: texture,
-      uniforms: {
-        'pixelSize': FloatUniform(pixelSize),
-      },
+      uniforms: {'pixelSize': FloatUniform(pixelSize)},
     );
   }
 

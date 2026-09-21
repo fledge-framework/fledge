@@ -23,10 +23,10 @@ class AnimateSystem implements System {
 
   @override
   SystemMeta get meta => SystemMeta(
-        name: 'animate',
-        writes: {ComponentId.of<AtlasSprite>(), ComponentId.of<Sprite>()},
-        reads: {ComponentId.of<AnimationPlayer>()},
-      );
+    name: 'animate',
+    writes: {ComponentId.of<AtlasSprite>(), ComponentId.of<Sprite>()},
+    reads: {ComponentId.of<AnimationPlayer>()},
+  );
 
   @override
   RunCondition? get runCondition => null;
@@ -75,11 +75,11 @@ class AnimationTime {
 class AnimateSystemWithResource implements System {
   @override
   SystemMeta get meta => SystemMeta(
-        name: 'animate_with_resource',
-        writes: {ComponentId.of<AtlasSprite>(), ComponentId.of<Sprite>()},
-        reads: {ComponentId.of<AnimationPlayer>()},
-        resourceReads: {AnimationTime},
-      );
+    name: 'animate_with_resource',
+    writes: {ComponentId.of<AtlasSprite>(), ComponentId.of<Sprite>()},
+    reads: {ComponentId.of<AnimationPlayer>()},
+    resourceReads: {AnimationTime},
+  );
 
   @override
   RunCondition? get runCondition => null;

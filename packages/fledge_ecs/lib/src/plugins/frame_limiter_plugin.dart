@@ -57,10 +57,8 @@ class FrameTime {
 /// System that records frame start time.
 class FrameStartSystem implements System {
   @override
-  SystemMeta get meta => const SystemMeta(
-        name: 'frameStart',
-        resourceWrites: {FrameTime},
-      );
+  SystemMeta get meta =>
+      const SystemMeta(name: 'frameStart', resourceWrites: {FrameTime});
 
   @override
   RunCondition? get runCondition => null;
@@ -103,10 +101,10 @@ class FrameLimiterSystem implements System {
 
   @override
   SystemMeta get meta => const SystemMeta(
-        name: 'frameLimiter',
-        resourceReads: {FrameLimiterConfig},
-        resourceWrites: {FrameTime},
-      );
+    name: 'frameLimiter',
+    resourceReads: {FrameLimiterConfig},
+    resourceWrites: {FrameTime},
+  );
 
   @override
   RunCondition? get runCondition => null;

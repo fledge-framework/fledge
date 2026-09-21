@@ -80,7 +80,8 @@ class _DemoPageState extends State<DemoPage> {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
 
     // Ctrl+K or Cmd+K to open search
-    final isCtrlOrCmd = HardwareKeyboard.instance.isControlPressed ||
+    final isCtrlOrCmd =
+        HardwareKeyboard.instance.isControlPressed ||
         HardwareKeyboard.instance.isMetaPressed;
 
     if (isCtrlOrCmd && event.logicalKey == LogicalKeyboardKey.keyK) {
@@ -180,8 +181,9 @@ class _DemoPageState extends State<DemoPage> {
                 Text(
                   'Demo',
                   style: theme.textTheme.headlineMedium?.copyWith(
-                    color: theme.textTheme.bodyMedium?.color
-                        ?.withValues(alpha: 0.6),
+                    color: theme.textTheme.bodyMedium?.color?.withValues(
+                      alpha: 0.6,
+                    ),
                   ),
                 ),
               ],
@@ -216,9 +218,7 @@ class _DemoPageState extends State<DemoPage> {
                   child: Container(
                     decoration: BoxDecoration(
                       border: Border(
-                        right: BorderSide(
-                          color: theme.dividerColor,
-                        ),
+                        right: BorderSide(color: theme.dividerColor),
                       ),
                     ),
                     child: const DocSidebar(
@@ -262,9 +262,7 @@ class _DemoPageState extends State<DemoPage> {
                   child: Container(
                     decoration: BoxDecoration(
                       border: Border(
-                        left: BorderSide(
-                          color: theme.dividerColor,
-                        ),
+                        left: BorderSide(color: theme.dividerColor),
                       ),
                     ),
                     padding: const EdgeInsets.all(24),
@@ -327,10 +325,12 @@ class _DemoPageState extends State<DemoPage> {
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: isActive
                             ? FledgeTheme.primaryColor
-                            : theme.textTheme.bodySmall?.color
-                                ?.withValues(alpha: 0.7),
-                        fontWeight:
-                            isActive ? FontWeight.w600 : FontWeight.normal,
+                            : theme.textTheme.bodySmall?.color?.withValues(
+                                alpha: 0.7,
+                              ),
+                        fontWeight: isActive
+                            ? FontWeight.w600
+                            : FontWeight.normal,
                       ),
                     ),
                   ),
@@ -378,19 +378,13 @@ class _DemoPageState extends State<DemoPage> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.amber.withValues(alpha: 0.1),
-        border: Border.all(
-          color: Colors.amber.withValues(alpha: 0.3),
-        ),
+        border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.info_outline,
-            color: Colors.amber[700],
-            size: 20,
-          ),
+          Icon(Icons.info_outline, color: Colors.amber[700], size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -410,8 +404,9 @@ class _DemoPageState extends State<DemoPage> {
                   'where it delivers significantly better performance. '
                   'Use the code examples below to build your own desktop application.',
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.textTheme.bodyMedium?.color
-                        ?.withValues(alpha: 0.8),
+                    color: theme.textTheme.bodyMedium?.color?.withValues(
+                      alpha: 0.8,
+                    ),
                   ),
                 ),
               ],
@@ -434,9 +429,7 @@ class _DemoPageState extends State<DemoPage> {
           ),
         ),
         const SizedBox(height: 16),
-        Center(
-          child: const GridGameWidget(),
-        ),
+        Center(child: const GridGameWidget()),
       ],
     );
   }
@@ -813,9 +806,7 @@ class _SearchButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: theme.dividerColor.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: theme.dividerColor,
-          ),
+          border: Border.all(color: theme.dividerColor),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -829,8 +820,9 @@ class _SearchButton extends StatelessWidget {
             Text(
               'Search docs...',
               style: theme.textTheme.bodyMedium?.copyWith(
-                color:
-                    theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
+                color: theme.textTheme.bodyMedium?.color?.withValues(
+                  alpha: 0.5,
+                ),
               ),
             ),
             const SizedBox(width: 16),
@@ -843,8 +835,9 @@ class _SearchButton extends StatelessWidget {
               child: Text(
                 'Ctrl K',
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color:
-                      theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+                  color: theme.textTheme.bodyMedium?.color?.withValues(
+                    alpha: 0.6,
+                  ),
                   fontWeight: FontWeight.w500,
                   fontSize: 11,
                 ),

@@ -52,10 +52,7 @@ class UdpTransport extends Transport {
 
     try {
       _socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, port);
-      _localAddress = NetAddress(
-        _socket!.address.address,
-        _socket!.port,
-      );
+      _localAddress = NetAddress(_socket!.address.address, _socket!.port);
 
       _socket!.listen(
         _handleSocketEvent,
@@ -75,10 +72,7 @@ class UdpTransport extends Transport {
       final datagram = _socket?.receive();
       if (datagram != null) {
         final packet = ReceivedPacket(
-          source: NetAddress(
-            datagram.address.address,
-            datagram.port,
-          ),
+          source: NetAddress(datagram.address.address, datagram.port),
           data: Uint8List.fromList(datagram.data),
         );
 

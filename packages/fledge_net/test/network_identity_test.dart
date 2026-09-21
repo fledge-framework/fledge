@@ -178,9 +178,11 @@ void main() {
         initialState: {},
       );
       expect(
-          spawn.requestTime
-              .isAfter(before.subtract(const Duration(milliseconds: 1))),
-          true);
+        spawn.requestTime.isAfter(
+          before.subtract(const Duration(milliseconds: 1)),
+        ),
+        true,
+      );
     });
   });
 
@@ -194,9 +196,11 @@ void main() {
       final before = DateTime.now();
       final despawn = PendingDespawn(netId: 1);
       expect(
-          despawn.requestTime
-              .isAfter(before.subtract(const Duration(milliseconds: 1))),
-          true);
+        despawn.requestTime.isAfter(
+          before.subtract(const Duration(milliseconds: 1)),
+        ),
+        true,
+      );
     });
   });
 }

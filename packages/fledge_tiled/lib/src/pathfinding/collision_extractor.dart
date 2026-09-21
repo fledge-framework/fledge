@@ -24,10 +24,7 @@ CollisionGrid extractCollisionGrid(
   LoadedTilemap tilemap, {
   Set<String> collisionLayers = const {'Collision', 'collision'},
 }) {
-  final grid = CollisionGrid(
-    width: tilemap.width,
-    height: tilemap.height,
-  );
+  final grid = CollisionGrid(width: tilemap.width, height: tilemap.height);
 
   // Process each tile layer
   for (final layer in tilemap.map.layers) {

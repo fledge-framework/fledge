@@ -113,19 +113,19 @@ class SetConfiguredSystem implements System {
   final SystemMeta _meta;
 
   SetConfiguredSystem(this._inner, this._set)
-      : _meta = SystemMeta(
-          name: _inner.meta.name,
-          reads: _inner.meta.reads,
-          writes: _inner.meta.writes,
-          resourceReads: _inner.meta.resourceReads,
-          resourceWrites: _inner.meta.resourceWrites,
-          eventReads: _inner.meta.eventReads,
-          eventWrites: _inner.meta.eventWrites,
-          exclusive: _inner.meta.exclusive,
-          // Combine set ordering with system's own ordering
-          before: [..._set.beforeList, ..._inner.meta.before],
-          after: [..._set.afterList, ..._inner.meta.after],
-        );
+    : _meta = SystemMeta(
+        name: _inner.meta.name,
+        reads: _inner.meta.reads,
+        writes: _inner.meta.writes,
+        resourceReads: _inner.meta.resourceReads,
+        resourceWrites: _inner.meta.resourceWrites,
+        eventReads: _inner.meta.eventReads,
+        eventWrites: _inner.meta.eventWrites,
+        exclusive: _inner.meta.exclusive,
+        // Combine set ordering with system's own ordering
+        before: [..._set.beforeList, ..._inner.meta.before],
+        after: [..._set.afterList, ..._inner.meta.after],
+      );
 
   @override
   SystemMeta get meta => _meta;

@@ -30,9 +30,9 @@ class SystemStatsStartSystem implements System {
 
   @override
   SystemMeta get meta => const SystemMeta(
-        name: 'debug_system_stats_start',
-        resourceWrites: {SystemStats},
-      );
+    name: 'debug_system_stats_start',
+    resourceWrites: {SystemStats},
+  );
 
   @override
   RunCondition? get runCondition => null;
@@ -75,9 +75,9 @@ class SystemStatsEndSystem implements System {
 
   @override
   SystemMeta get meta => const SystemMeta(
-        name: 'debug_system_stats_end',
-        resourceWrites: {SystemStats},
-      );
+    name: 'debug_system_stats_end',
+    resourceWrites: {SystemStats},
+  );
 
   @override
   RunCondition? get runCondition => null;

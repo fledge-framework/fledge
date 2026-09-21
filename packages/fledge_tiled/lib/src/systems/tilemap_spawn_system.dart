@@ -71,10 +71,7 @@ class TilemapSpawnedEvent {
   /// Key of the tilemap in assets.
   final String assetKey;
 
-  const TilemapSpawnedEvent({
-    required this.entity,
-    required this.assetKey,
-  });
+  const TilemapSpawnedEvent({required this.entity, required this.assetKey});
 }
 
 /// System that spawns entities from loaded tilemaps.
@@ -86,11 +83,11 @@ class TilemapSpawnedEvent {
 class TilemapSpawnSystem implements System {
   @override
   SystemMeta get meta => const SystemMeta(
-        name: 'tilemap_spawn',
-        eventReads: {SpawnTilemapEvent},
-        eventWrites: {TilemapSpawnedEvent},
-        exclusive: true,
-      );
+    name: 'tilemap_spawn',
+    eventReads: {SpawnTilemapEvent},
+    eventWrites: {TilemapSpawnedEvent},
+    exclusive: true,
+  );
 
   @override
   RunCondition? get runCondition => null;
@@ -114,10 +111,9 @@ class TilemapSpawnSystem implements System {
 
       final entity = _spawnTilemap(world, loaded, event.position, event.config);
 
-      writer.send(TilemapSpawnedEvent(
-        entity: entity,
-        assetKey: event.assetKey,
-      ));
+      writer.send(
+        TilemapSpawnedEvent(entity: entity, assetKey: event.assetKey),
+      );
     }
   }
 
@@ -135,14 +131,21 @@ class TilemapSpawnSystem implements System {
 
     // Add animator if there are animated tiles
     if (loaded.animations.isNotEmpty) {
-      mapEntity
-          .insert(TilemapAnimator(animations: Map.from(loaded.animations)));
+      mapEntity.insert(
+        TilemapAnimator(animations: Map.from(loaded.animations)),
+      );
     }
 
     // Spawn layer entities as children
     int layerIndex = 0;
     _spawnLayers(
-        world, mapEntity.entity, loaded.map.layers, loaded, config, layerIndex);
+      world,
+      mapEntity.entity,
+      loaded.map.layers,
+      loaded,
+      config,
+      layerIndex,
+    );
 
     return mapEntity.entity;
   }
@@ -165,7 +168,13 @@ class TilemapSpawnSystem implements System {
       } else if (layer is tiled.Group) {
         // Recursively handle layer groups
         layerIndex = _spawnLayers(
-            world, parent, layer.layers, loaded, config, layerIndex);
+          world,
+          parent,
+          layer.layers,
+          loaded,
+          config,
+          layerIndex,
+        );
       } else if (layer is tiled.ImageLayer) {
         // Image layers could be handled here
         layerIndex++;
@@ -185,18 +194,20 @@ class TilemapSpawnSystem implements System {
     final tiles = _buildTileData(layer, loaded);
 
     final layerEntity = world.spawnChild(parent)
-      ..insert(TileLayer(
-        name: layer.name,
-        layerIndex: layerIndex,
-        tiledLayer: layer,
-        opacity: layer.opacity,
-        visible: layer.visible,
-        offset: Offset(layer.offsetX, layer.offsetY),
-        parallax: Offset(layer.parallaxX, layer.parallaxY),
-        tintColor: _parseColor(layer.tintColorHex),
-        layerClass: layer.class_,
-        tiles: tiles,
-      ))
+      ..insert(
+        TileLayer(
+          name: layer.name,
+          layerIndex: layerIndex,
+          tiledLayer: layer,
+          opacity: layer.opacity,
+          visible: layer.visible,
+          offset: Offset(layer.offsetX, layer.offsetY),
+          parallax: Offset(layer.parallaxX, layer.parallaxY),
+          tintColor: _parseColor(layer.tintColorHex),
+          layerClass: layer.class_,
+          tiles: tiles,
+        ),
+      )
       ..insert(Transform2D())
       ..insert(GlobalTransform2D());
 
@@ -237,11 +248,9 @@ class TilemapSpawnSystem implements System {
       final shapes = tileset.getCollisionShapes(tile.localId);
       if (shapes.isEmpty) continue;
 
-      collisionData.add(TileCollisionData(
-        gridX: tile.x,
-        gridY: tile.y,
-        shapes: shapes,
-      ));
+      collisionData.add(
+        TileCollisionData(gridX: tile.x, gridY: tile.y, shapes: shapes),
+      );
     }
 
     if (collisionData.isEmpty) return;
@@ -308,14 +317,16 @@ class TilemapSpawnSystem implements System {
 
       final isAnimated = loaded.hasAnimation(gid);
 
-      tiles.add(TileData.fromGid(
-        rawGid,
-        x,
-        y,
-        lookup.tilesetIndex,
-        lookup.tileset.firstGid,
-        animated: isAnimated,
-      ));
+      tiles.add(
+        TileData.fromGid(
+          rawGid,
+          x,
+          y,
+          lookup.tilesetIndex,
+          lookup.tileset.firstGid,
+          animated: isAnimated,
+        ),
+      );
     }
 
     return tiles;
@@ -348,18 +359,20 @@ class TilemapSpawnSystem implements System {
     }).toList();
 
     final layerEntity = world.spawnChild(parent)
-      ..insert(ObjectLayer(
-        name: layer.name,
-        layerIndex: layerIndex,
-        objects: objects,
-        drawOrder: layer.drawOrder == tiled.DrawOrder.indexOrder
-            ? DrawOrder.indexOrder
-            : DrawOrder.topDown,
-        color: _parseColor(layer.tintColorHex),
-        opacity: layer.opacity,
-        visible: layer.visible,
-        offset: Offset(layer.offsetX, layer.offsetY),
-      ))
+      ..insert(
+        ObjectLayer(
+          name: layer.name,
+          layerIndex: layerIndex,
+          objects: objects,
+          drawOrder: layer.drawOrder == tiled.DrawOrder.indexOrder
+              ? DrawOrder.indexOrder
+              : DrawOrder.topDown,
+          color: _parseColor(layer.tintColorHex),
+          opacity: layer.opacity,
+          visible: layer.visible,
+          offset: Offset(layer.offsetX, layer.offsetY),
+        ),
+      )
       ..insert(Transform2D())
       ..insert(GlobalTransform2D());
 

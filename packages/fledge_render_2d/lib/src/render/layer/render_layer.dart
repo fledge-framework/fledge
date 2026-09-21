@@ -151,10 +151,7 @@ class TransformedRenderLayer extends RenderLayer {
   final RenderLayer child;
 
   /// Creates a transformed render layer.
-  TransformedRenderLayer({
-    required this.transform,
-    required this.child,
-  });
+  TransformedRenderLayer({required this.transform, required this.child});
 
   @override
   void paint(Canvas canvas, Size size, RenderWorld renderWorld) {
@@ -183,10 +180,7 @@ class ClippedRenderLayer extends RenderLayer {
   final RenderLayer child;
 
   /// Creates a clipped render layer.
-  ClippedRenderLayer({
-    required this.clipRect,
-    required this.child,
-  });
+  ClippedRenderLayer({required this.clipRect, required this.child});
 
   @override
   void paint(Canvas canvas, Size size, RenderWorld renderWorld) {
@@ -215,10 +209,7 @@ class ConditionalRenderLayer extends RenderLayer {
   final RenderLayer child;
 
   /// Creates a conditional render layer.
-  ConditionalRenderLayer({
-    required this.condition,
-    required this.child,
-  });
+  ConditionalRenderLayer({required this.condition, required this.child});
 
   @override
   void paint(Canvas canvas, Size size, RenderWorld renderWorld) {

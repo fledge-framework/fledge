@@ -31,10 +31,8 @@ class WindowInitSystem implements System {
   WindowInitSystem(this.config);
 
   @override
-  SystemMeta get meta => const SystemMeta(
-        name: 'WindowInitSystem',
-        exclusive: true,
-      );
+  SystemMeta get meta =>
+      const SystemMeta(name: 'WindowInitSystem', exclusive: true);
 
   @override
   RunCondition? get runCondition => null;
@@ -68,11 +66,8 @@ class WindowInitSystem implements System {
       primaryIndex = result.$2;
     } catch (e) {
       world.eventWriter<WindowOperationFailed>().send(
-            WindowOperationFailed(
-              operation: 'syncDisplays',
-              reason: e.toString(),
-            ),
-          );
+        WindowOperationFailed(operation: 'syncDisplays', reason: e.toString()),
+      );
       return;
     }
 
@@ -86,7 +81,10 @@ class WindowInitSystem implements System {
     // Non-critical: title + size constraints. Reported on failure, but we
     // keep going so the window still appears.
     await _tryNative(
-        world, 'setTitle', () => windowManager.setTitle(config.title));
+      world,
+      'setTitle',
+      () => windowManager.setTitle(config.title),
+    );
 
     if (config.minSize != null) {
       await _tryNative(
@@ -119,15 +117,16 @@ class WindowInitSystem implements System {
 
     final windowState = world.getResource<WindowState>()!;
     final modeOk = await _applyMode(
-        world, config.mode, targetDisplay, windowState, config);
+      world,
+      config.mode,
+      targetDisplay,
+      windowState,
+      config,
+    );
 
     // Show + focus. Non-critical in the sense that init doesn't abort, but
     // we do want to reflect actual success in the state.
-    final shown = await _tryNative(
-      world,
-      'show',
-      () => windowManager.show(),
-    );
+    final shown = await _tryNative(world, 'show', () => windowManager.show());
     final focused = await _tryNative(
       world,
       'focus',
@@ -165,25 +164,21 @@ class WindowInitSystem implements System {
         state.position = display.bounds.topLeft;
 
       case WindowMode.borderless:
-        final displayOrigin =
-            display.isPrimary ? Offset.zero : display.bounds.topLeft;
+        final displayOrigin = display.isPrimary
+            ? Offset.zero
+            : display.bounds.topLeft;
         final borderlessBounds = Rect.fromLTWH(
           displayOrigin.dx,
           displayOrigin.dy,
           display.size.width,
           display.size.height,
         );
-        if (!await _tryNative(
-          world,
-          'setMode',
-          () async {
-            await windowManager.setFullScreen(false);
-            await windowManager.setAsFrameless();
-            await windowManager.setHasShadow(false);
-            await windowManager.setBounds(borderlessBounds);
-          },
-          attemptedMode: mode,
-        )) {
+        if (!await _tryNative(world, 'setMode', () async {
+          await windowManager.setFullScreen(false);
+          await windowManager.setAsFrameless();
+          await windowManager.setHasShadow(false);
+          await windowManager.setBounds(borderlessBounds);
+        }, attemptedMode: mode)) {
           return false;
         }
         state.mode = WindowMode.borderless;
@@ -194,21 +189,13 @@ class WindowInitSystem implements System {
         final size = config.windowedSize ?? WindowConfig.defaultWindowedSize;
         final position =
             config.windowedPosition ?? _centerOnDisplay(size, display);
-        if (!await _tryNative(
-          world,
-          'setMode',
-          () async {
-            await windowManager.setFullScreen(false);
-            await windowManager.setTitleBarStyle(TitleBarStyle.normal);
-            await windowManager.setBounds(Rect.fromLTWH(
-              position.dx,
-              position.dy,
-              size.width,
-              size.height,
-            ));
-          },
-          attemptedMode: mode,
-        )) {
+        if (!await _tryNative(world, 'setMode', () async {
+          await windowManager.setFullScreen(false);
+          await windowManager.setTitleBarStyle(TitleBarStyle.normal);
+          await windowManager.setBounds(
+            Rect.fromLTWH(position.dx, position.dy, size.width, size.height),
+          );
+        }, attemptedMode: mode)) {
           return false;
         }
         state.mode = WindowMode.windowed;
@@ -233,12 +220,12 @@ class WindowInitSystem implements System {
       return true;
     } catch (e) {
       world.eventWriter<WindowOperationFailed>().send(
-            WindowOperationFailed(
-              operation: operation,
-              reason: e.toString(),
-              attemptedMode: attemptedMode,
-            ),
-          );
+        WindowOperationFailed(
+          operation: operation,
+          reason: e.toString(),
+          attemptedMode: attemptedMode,
+        ),
+      );
       return false;
     }
   }
@@ -255,26 +242,28 @@ class WindowInitSystem implements System {
       final d = screenDisplays[i];
       final isPrimary = d.id == primaryId;
       if (isPrimary) primaryIndex = i;
-      displays.add(Display(
-        index: i,
-        name: d.name ?? 'Display $i',
-        size: Size(d.size.width, d.size.height),
-        bounds: Rect.fromLTWH(
-          d.visiblePosition?.dx ?? 0,
-          d.visiblePosition?.dy ?? 0,
-          d.visibleSize?.width ?? d.size.width,
-          d.visibleSize?.height ?? d.size.height,
+      displays.add(
+        Display(
+          index: i,
+          name: d.name ?? 'Display $i',
+          size: Size(d.size.width, d.size.height),
+          bounds: Rect.fromLTWH(
+            d.visiblePosition?.dx ?? 0,
+            d.visiblePosition?.dy ?? 0,
+            d.visibleSize?.width ?? d.size.width,
+            d.visibleSize?.height ?? d.size.height,
+          ),
+          scaleFactor: (d.scaleFactor ?? 1.0).toDouble(),
+          refreshRate: 60.0,
+          isPrimary: isPrimary,
         ),
-        scaleFactor: (d.scaleFactor ?? 1.0).toDouble(),
-        refreshRate: 60.0,
-        isPrimary: isPrimary,
-      ));
+      );
     }
     return (displays, primaryIndex);
   }
 
   Offset _centerOnDisplay(Size windowSize, Display display) => Offset(
-        display.bounds.left + (display.bounds.width - windowSize.width) / 2,
-        display.bounds.top + (display.bounds.height - windowSize.height) / 2,
-      );
+    display.bounds.left + (display.bounds.width - windowSize.width) / 2,
+    display.bounds.top + (display.bounds.height - windowSize.height) / 2,
+  );
 }

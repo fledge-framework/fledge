@@ -18,9 +18,7 @@ class DrifterApp extends StatelessWidget {
         brightness: Brightness.dark,
         scaffoldBackgroundColor: const Color(0xFF0F0F18),
       ),
-      home: const Scaffold(
-        body: Center(child: DrifterWidget()),
-      ),
+      home: const Scaffold(body: Center(child: DrifterWidget())),
     );
   }
 }

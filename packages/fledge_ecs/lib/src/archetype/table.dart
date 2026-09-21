@@ -158,8 +158,12 @@ class Table {
   ///
   /// If [currentTick] is provided, the component's change tick is updated
   /// to enable change detection via [Changed<T>] queries.
-  void setComponent<T>(int row, ComponentId componentId, T value,
-      {int? currentTick}) {
+  void setComponent<T>(
+    int row,
+    ComponentId componentId,
+    T value, {
+    int? currentTick,
+  }) {
     final column = _columns[componentId];
     if (column == null) {
       throw ArgumentError('Component $componentId not in archetype');
@@ -190,9 +194,7 @@ class Table {
   ///
   /// This is used when moving an entity between tables.
   Map<ComponentId, dynamic> extractRow(int row) {
-    return {
-      for (final entry in _columns.entries) entry.key: entry.value[row],
-    };
+    return {for (final entry in _columns.entries) entry.key: entry.value[row]};
   }
 
   /// Extracts all component ticks for the entity at [row].
@@ -200,9 +202,7 @@ class Table {
   /// This is used when moving an entity between tables to preserve
   /// change detection state.
   Map<ComponentId, ComponentTicks> extractTicks(int row) {
-    return {
-      for (final entry in _ticks.entries) entry.key: entry.value[row],
-    };
+    return {for (final entry in _ticks.entries) entry.key: entry.value[row]};
   }
 
   /// Clears all entities from this table.

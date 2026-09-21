@@ -13,11 +13,12 @@ void main() {
         ..insert(GlobalTransform2D())
         ..insert(Camera2D());
       // Parallax entity at world (0, 0) with factor 0.5.
-      final e = (world.spawn()
-            ..insert(Transform2D.from(0, 0))
-            ..insert(GlobalTransform2D())
-            ..insert(const Parallax(0.5)))
-          .entity;
+      final e =
+          (world.spawn()
+                ..insert(Transform2D.from(0, 0))
+                ..insert(GlobalTransform2D())
+                ..insert(const Parallax(0.5)))
+              .entity;
       await ParallaxSystem().run(world);
       final g = world.get<GlobalTransform2D>(e)!;
       // effective = transform.pos + (1 - factor) * cameraPos
@@ -32,11 +33,12 @@ void main() {
         ..insert(Transform2D.from(200, 300))
         ..insert(GlobalTransform2D())
         ..insert(Camera2D());
-      final e = (world.spawn()
-            ..insert(Transform2D.from(50, 60))
-            ..insert(GlobalTransform2D())
-            ..insert(const Parallax(1.0)))
-          .entity;
+      final e =
+          (world.spawn()
+                ..insert(Transform2D.from(50, 60))
+                ..insert(GlobalTransform2D())
+                ..insert(const Parallax(1.0)))
+              .entity;
       await ParallaxSystem().run(world);
       final g = world.get<GlobalTransform2D>(e)!;
       expect(g.x, closeTo(50, 1e-9));
@@ -49,11 +51,12 @@ void main() {
         ..insert(Transform2D.from(1000, 500))
         ..insert(GlobalTransform2D())
         ..insert(Camera2D());
-      final e = (world.spawn()
-            ..insert(Transform2D.from(10, 20))
-            ..insert(GlobalTransform2D())
-            ..insert(const Parallax(0.0)))
-          .entity;
+      final e =
+          (world.spawn()
+                ..insert(Transform2D.from(10, 20))
+                ..insert(GlobalTransform2D())
+                ..insert(const Parallax(0.0)))
+              .entity;
       await ParallaxSystem().run(world);
       final g = world.get<GlobalTransform2D>(e)!;
       // effective = transform.pos + camera.pos = (1010, 520).
@@ -63,11 +66,12 @@ void main() {
 
     test('no camera → no-op', () async {
       final world = World();
-      final e = (world.spawn()
-            ..insert(Transform2D.from(5, 6))
-            ..insert(GlobalTransform2D())
-            ..insert(const Parallax(0.5)))
-          .entity;
+      final e =
+          (world.spawn()
+                ..insert(Transform2D.from(5, 6))
+                ..insert(GlobalTransform2D())
+                ..insert(const Parallax(0.5)))
+              .entity;
       // Preload global to non-parallax values.
       final g = world.get<GlobalTransform2D>(e)!;
       g.matrix[6] = 99;

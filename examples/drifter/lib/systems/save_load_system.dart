@@ -19,10 +19,10 @@ import '../resources.dart';
 class SaveLoadSystem implements System {
   @override
   SystemMeta get meta => const SystemMeta(
-        name: 'SaveLoadSystem',
-        resourceReads: {ActionState},
-        resourceWrites: {SaveManager, LoadRequested, ResetRequested},
-      );
+    name: 'SaveLoadSystem',
+    resourceReads: {ActionState},
+    resourceWrites: {SaveManager, LoadRequested, ResetRequested},
+  );
 
   @override
   RunCondition? get runCondition => null;

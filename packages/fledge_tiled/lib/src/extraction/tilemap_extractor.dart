@@ -127,9 +127,7 @@ class TilemapExtractor extends Extractor {
       worldY *= layer.parallax.dy;
 
       // Apply map transform
-      final mapPos = mapTransform.transformPoint(
-        Vector2(worldX, worldY),
-      );
+      final mapPos = mapTransform.transformPoint(Vector2(worldX, worldY));
       worldX = mapPos.x;
       worldY = mapPos.y;
 
@@ -140,19 +138,22 @@ class TilemapExtractor extends Extractor {
       final drawLayer = (layer.layerClass == 'above')
           ? DrawLayer.foreground
           : DrawLayer.ground;
-      final sortKey =
-          drawLayer.sortKey(subOrder: tile.y * 100 + layer.layerIndex);
+      final sortKey = drawLayer.sortKey(
+        subOrder: tile.y * 100 + layer.layerIndex,
+      );
 
-      renderWorld.spawn().insert(ExtractedTile(
-            texture: tileset.atlas.texture,
-            sourceRect: sourceRect,
-            position: Offset(worldX, worldY),
-            tileWidth: tileWidth,
-            tileHeight: tileHeight,
-            color: layerColor,
-            sortKey: sortKey,
-            flipFlags: tile.flipFlags,
-          ));
+      renderWorld.spawn().insert(
+        ExtractedTile(
+          texture: tileset.atlas.texture,
+          sourceRect: sourceRect,
+          position: Offset(worldX, worldY),
+          tileWidth: tileWidth,
+          tileHeight: tileHeight,
+          color: layerColor,
+          sortKey: sortKey,
+          flipFlags: tile.flipFlags,
+        ),
+      );
     }
   }
 }

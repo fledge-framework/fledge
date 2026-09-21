@@ -29,8 +29,7 @@ void main() {
   });
 
   group('archetype mutation during iteration', () {
-    test(
-        'inserting a component during iteration does not drop the entity '
+    test('inserting a component during iteration does not drop the entity '
         'from a later query', () {
       final world = World();
 
@@ -46,9 +45,10 @@ void main() {
       // entities. Under the old iterator, adding B mid-iter migrated entities
       // to a different archetype and left the "current archetype" iterator
       // out of sync — silently skipping half the entities.
-      for (final (e, _) in world
-          .query1<ComponentA>(filter: const Without<ComponentB>())
-          .iter()) {
+      for (final (e, _)
+          in world
+              .query1<ComponentA>(filter: const Without<ComponentB>())
+              .iter()) {
         world.insert(e, ComponentB(0));
       }
 
@@ -79,12 +79,17 @@ void main() {
         world.insert(e, ComponentB(0));
       }
 
-      expect(visitCount.length, equals(20),
-          reason: 'every entity should be visited');
+      expect(
+        visitCount.length,
+        equals(20),
+        reason: 'every entity should be visited',
+      );
       for (final entry in visitCount.entries) {
-        expect(entry.value, equals(1),
-            reason:
-                '${entry.key} was visited ${entry.value} times, expected 1');
+        expect(
+          entry.value,
+          equals(1),
+          reason: '${entry.key} was visited ${entry.value} times, expected 1',
+        );
       }
     });
 
@@ -137,8 +142,7 @@ void main() {
       expect(world.entityCount, equals(0));
     });
 
-    test(
-        'newly spawned entities during iter are NOT observed by the '
+    test('newly spawned entities during iter are NOT observed by the '
         'current iterator (snapshot semantics)', () {
       final world = World();
 
@@ -155,8 +159,11 @@ void main() {
         seenDuringIter++;
       }
 
-      expect(seenDuringIter, equals(5),
-          reason: 'iterator should only yield the pre-iter entities');
+      expect(
+        seenDuringIter,
+        equals(5),
+        reason: 'iterator should only yield the pre-iter entities',
+      );
       // But a subsequent query sees all 10.
       expect(world.query1<ComponentA>().count(), equals(10));
     });

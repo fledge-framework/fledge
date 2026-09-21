@@ -20,13 +20,9 @@ class Edge {
   /// ```dart
   /// Edge.connect('camera_driver', 'view', 'sprite_render', 'view')
   /// ```
-  Edge.connect(
-    String fromNode,
-    String fromSlot,
-    String toNode,
-    String toSlot,
-  )   : from = SlotId(fromNode, fromSlot),
-        to = SlotId(toNode, toSlot);
+  Edge.connect(String fromNode, String fromSlot, String toNode, String toSlot)
+    : from = SlotId(fromNode, fromSlot),
+      to = SlotId(toNode, toSlot);
 
   @override
   bool operator ==(Object other) =>

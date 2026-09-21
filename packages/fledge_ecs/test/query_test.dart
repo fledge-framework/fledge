@@ -113,8 +113,10 @@ void main() {
       world.spawnWith([Position(2, 0), Velocity(2, 0), Sprite('b')]);
       world.spawnWith([Position(3, 0), Velocity(3, 0)]); // No Sprite
 
-      final results =
-          world.query3<Position, Velocity, Sprite>().iter().toList();
+      final results = world
+          .query3<Position, Velocity, Sprite>()
+          .iter()
+          .toList();
 
       expect(results.length, equals(2));
     });
@@ -124,11 +126,16 @@ void main() {
     test('iterates over entities with all four components', () {
       final world = World();
       world.spawnWith([Position(1, 0), Velocity(1, 0), Sprite('a'), Player()]);
-      world.spawnWith(
-          [Position(2, 0), Velocity(2, 0), Sprite('b')]); // No Player
+      world.spawnWith([
+        Position(2, 0),
+        Velocity(2, 0),
+        Sprite('b'),
+      ]); // No Player
 
-      final results =
-          world.query4<Position, Velocity, Sprite, Player>().iter().toList();
+      final results = world
+          .query4<Position, Velocity, Sprite, Player>()
+          .iter()
+          .toList();
 
       expect(results.length, equals(1));
     });
@@ -141,8 +148,10 @@ void main() {
       world.spawnWith([Position(2, 0), Enemy()]);
       world.spawnWith([Position(3, 0)]);
 
-      final results =
-          world.query1<Position>(filter: const With<Player>()).iter().toList();
+      final results = world
+          .query1<Position>(filter: const With<Player>())
+          .iter()
+          .toList();
 
       expect(results.length, equals(1));
       expect(results[0].$2.x, equals(1));

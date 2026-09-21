@@ -46,8 +46,11 @@ void _spawnSprite(
     ..insert(Sprite(texture: texture, color: color, layer: layer));
 }
 
-Future<void> _paintOnce(WidgetTester tester, App app,
-    {Color? background}) async {
+Future<void> _paintOnce(
+  WidgetTester tester,
+  App app, {
+  Color? background,
+}) async {
   await tester.pumpWidget(
     Directionality(
       textDirection: TextDirection.ltr,
@@ -65,8 +68,9 @@ Future<void> _paintOnce(WidgetTester tester, App app,
 
 void main() {
   group('FledgeRenderView', () {
-    testWidgets('paints sprite pipeline into a recorded canvas',
-        (tester) async {
+    testWidgets('paints sprite pipeline into a recorded canvas', (
+      tester,
+    ) async {
       // Swap in a recording drawer so we can prove the widget's
       // paint reached `drawSpriteBatch` (i.e. the sprite pipeline
       // was actually driven end-to-end). The canvas backend's own
@@ -94,47 +98,56 @@ void main() {
           .query1<ExtractedSprite>()
           .iter()
           .length;
-      expect(extractedCount, 1,
-          reason: 'SpriteExtractor should produce one ExtractedSprite');
+      expect(
+        extractedCount,
+        1,
+        reason: 'SpriteExtractor should produce one ExtractedSprite',
+      );
 
       await _paintOnce(tester, app);
       expect(tester.takeException(), isNull);
-      expect(recorder.calls, isNotEmpty,
-          reason: 'FledgeRenderView should have submitted at least one '
-              'sprite batch to the installed drawer');
+      expect(
+        recorder.calls,
+        isNotEmpty,
+        reason:
+            'FledgeRenderView should have submitted at least one '
+            'sprite batch to the installed drawer',
+      );
       expect(recorder.calls.first.texture.id, kSolidColorTexture.id);
       expect(recorder.calls.first.batch.length, 1);
     });
 
-    testWidgets('canvas backend drives drawRawAtlas end-to-end without asserts',
-        (tester) async {
-      // The default drawer installed by `RenderPlugin` is
-      // `CanvasSpriteDrawer`. If it received malformed buffers
-      // (RSTransform / srcRect / colors length parity is checked by
-      // Skia), Flutter would surface an assertion here. A successful
-      // pump proves the whole widget → drawer → drawRawAtlas
-      // pipeline is wired.
-      final app = _buildTestApp();
-      final canvasDrawer =
-          app.world.getResource<SpriteDrawer>()! as CanvasSpriteDrawer;
-      canvasDrawer.registerTexture(
-        kSolidColorTexture,
-        createSolidColorImageSync(const Color(0xFFFFFFFF)),
-      );
+    testWidgets(
+      'canvas backend drives drawRawAtlas end-to-end without asserts',
+      (tester) async {
+        // The default drawer installed by `RenderPlugin` is
+        // `CanvasSpriteDrawer`. If it received malformed buffers
+        // (RSTransform / srcRect / colors length parity is checked by
+        // Skia), Flutter would surface an assertion here. A successful
+        // pump proves the whole widget → drawer → drawRawAtlas
+        // pipeline is wired.
+        final app = _buildTestApp();
+        final canvasDrawer =
+            app.world.getResource<SpriteDrawer>()! as CanvasSpriteDrawer;
+        canvasDrawer.registerTexture(
+          kSolidColorTexture,
+          createSolidColorImageSync(const Color(0xFFFFFFFF)),
+        );
 
-      _spawnSprite(
-        app.world,
-        texture: kSolidColorTexture,
-        color: const Color(0xFF00DD00),
-        layer: DrawLayer.characters,
-        x: 25,
-        y: 40,
-      );
-      await app.tick();
+        _spawnSprite(
+          app.world,
+          texture: kSolidColorTexture,
+          color: const Color(0xFF00DD00),
+          layer: DrawLayer.characters,
+          x: 25,
+          y: 40,
+        );
+        await app.tick();
 
-      await _paintOnce(tester, app, background: const Color(0xFF1A1A2E));
-      expect(tester.takeException(), isNull);
-    });
+        await _paintOnce(tester, app, background: const Color(0xFF1A1A2E));
+        expect(tester.takeException(), isNull);
+      },
+    );
 
     testWidgets('empty render world paints without crashing', (tester) async {
       final app = _buildTestApp();
@@ -147,68 +160,73 @@ void main() {
     });
 
     testWidgets(
-        'preserves layer ordering and groups contiguous same-texture runs',
-        (tester) async {
-      // Replace the auto-installed drawer with a recording one so we
-      // can inspect the batch sequence directly. `insertResource`
-      // overwrites the drawer already registered by `RenderPlugin`.
-      final app = _buildTestApp();
-      final recorder = _RecordingDrawer();
-      app.world.insertResource<SpriteDrawer>(recorder);
+      'preserves layer ordering and groups contiguous same-texture runs',
+      (tester) async {
+        // Replace the auto-installed drawer with a recording one so we
+        // can inspect the batch sequence directly. `insertResource`
+        // overwrites the drawer already registered by `RenderPlugin`.
+        final app = _buildTestApp();
+        final recorder = _RecordingDrawer();
+        app.world.insertResource<SpriteDrawer>(recorder);
 
-      // Two textures. Spawn background-layer + ui-layer entities in
-      // a mixed order; after sorting the expected sequence is:
-      //   background(a) → background(b) → ui(a) → ui(b).
-      // Since both background sprites share texture A and both ui
-      // sprites share texture B, the grouping collapses to two
-      // batches.
-      const textureA = TextureHandle(id: 1, width: 1, height: 1);
-      const textureB = TextureHandle(id: 2, width: 1, height: 1);
+        // Two textures. Spawn background-layer + ui-layer entities in
+        // a mixed order; after sorting the expected sequence is:
+        //   background(a) → background(b) → ui(a) → ui(b).
+        // Since both background sprites share texture A and both ui
+        // sprites share texture B, the grouping collapses to two
+        // batches.
+        const textureA = TextureHandle(id: 1, width: 1, height: 1);
+        const textureB = TextureHandle(id: 2, width: 1, height: 1);
 
-      _spawnSprite(
-        app.world,
-        texture: textureB,
-        color: const Color(0xFFAAAAAA),
-        layer: DrawLayer.ui,
-      );
-      _spawnSprite(
-        app.world,
-        texture: textureA,
-        color: const Color(0xFF111111),
-        layer: DrawLayer.background,
-      );
-      _spawnSprite(
-        app.world,
-        texture: textureB,
-        color: const Color(0xFFBBBBBB),
-        layer: DrawLayer.ui,
-      );
-      _spawnSprite(
-        app.world,
-        texture: textureA,
-        color: const Color(0xFF222222),
-        layer: DrawLayer.background,
-      );
+        _spawnSprite(
+          app.world,
+          texture: textureB,
+          color: const Color(0xFFAAAAAA),
+          layer: DrawLayer.ui,
+        );
+        _spawnSprite(
+          app.world,
+          texture: textureA,
+          color: const Color(0xFF111111),
+          layer: DrawLayer.background,
+        );
+        _spawnSprite(
+          app.world,
+          texture: textureB,
+          color: const Color(0xFFBBBBBB),
+          layer: DrawLayer.ui,
+        );
+        _spawnSprite(
+          app.world,
+          texture: textureA,
+          color: const Color(0xFF222222),
+          layer: DrawLayer.background,
+        );
 
-      await app.tick();
+        await app.tick();
 
-      // Use the shared batching helper directly — avoids relying on
-      // `CustomPaint` sizing quirks in the widget tester and keeps
-      // the ordering contract testable in isolation.
-      renderSpritesToDrawer(
-        app.world.getResource<RenderWorld>()!,
-        recorder,
-      );
+        // Use the shared batching helper directly — avoids relying on
+        // `CustomPaint` sizing quirks in the widget tester and keeps
+        // the ordering contract testable in isolation.
+        renderSpritesToDrawer(app.world.getResource<RenderWorld>()!, recorder);
 
-      expect(recorder.calls.length, 2,
-          reason: 'contiguous same-texture sprites should collapse to a '
-              'single batch, giving 2 batches for 2 texture groups');
-      expect(recorder.calls[0].texture.id, textureA.id,
-          reason: 'background (layer 0) should render before ui (layer 5)');
-      expect(recorder.calls[0].batch.length, 2);
-      expect(recorder.calls[1].texture.id, textureB.id);
-      expect(recorder.calls[1].batch.length, 2);
-    });
+        expect(
+          recorder.calls.length,
+          2,
+          reason:
+              'contiguous same-texture sprites should collapse to a '
+              'single batch, giving 2 batches for 2 texture groups',
+        );
+        expect(
+          recorder.calls[0].texture.id,
+          textureA.id,
+          reason: 'background (layer 0) should render before ui (layer 5)',
+        );
+        expect(recorder.calls[0].batch.length, 2);
+        expect(recorder.calls[1].texture.id, textureB.id);
+        expect(recorder.calls[1].batch.length, 2);
+      },
+    );
 
     testWidgets('endFrame releases canvas after paint', (tester) async {
       // Guard: the widget MUST release the canvas after painting.
@@ -229,8 +247,11 @@ void main() {
 
       final drawer =
           app.world.getResource<SpriteDrawer>()! as CanvasSpriteDrawer;
-      expect(drawer.hasCanvas, isFalse,
-          reason: 'canvas reference must not leak past the frame');
+      expect(
+        drawer.hasCanvas,
+        isFalse,
+        reason: 'canvas reference must not leak past the frame',
+      );
     });
   });
 

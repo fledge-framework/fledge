@@ -13,16 +13,17 @@ void main() {
     expect(
       issues,
       isEmpty,
-      reason: 'PhysicsPlugin should declare explicit ordering between all '
+      reason:
+          'PhysicsPlugin should declare explicit ordering between all '
           'systems it registers. Ambiguities: ${issues.map((i) => i.toString()).join('\n')}',
     );
   });
 
   test('PhysicsPlugin without resolution has no ambiguities either', () {
     final app = App()
-      ..addPlugin(const PhysicsPlugin(
-        config: PhysicsConfig(enableResolution: false),
-      ));
+      ..addPlugin(
+        const PhysicsPlugin(config: PhysicsConfig(enableResolution: false)),
+      );
     final issues = app.checkScheduleOrdering();
     expect(issues, isEmpty);
   });

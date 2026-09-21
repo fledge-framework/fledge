@@ -58,12 +58,12 @@ class PathResult {
   final int nodesExplored;
 
   const PathResult.success(this.path, {this.nodesExplored = 0})
-      : success = true,
-        failureReason = null;
+    : success = true,
+      failureReason = null;
 
   const PathResult.failure(this.failureReason, {this.nodesExplored = 0})
-      : path = null,
-        success = false;
+    : path = null,
+      success = false;
 
   /// The length of the path in tiles, or -1 if no path.
   int get pathLength => path?.length ?? -1;

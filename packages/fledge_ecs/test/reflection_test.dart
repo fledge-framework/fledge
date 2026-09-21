@@ -37,11 +37,7 @@ void main() {
     });
 
     test('default value factory', () {
-      final field = FieldInfo(
-        name: 'value',
-        type: int,
-        defaultValue: () => 42,
-      );
+      final field = FieldInfo(name: 'value', type: int, defaultValue: () => 42);
       expect(field.defaultValue?.call(), equals(42));
     });
 
@@ -184,13 +180,16 @@ void main() {
     });
 
     test('clear removes all types', () {
-      TypeRegistry.instance.registerComponent(ComponentTypeInfo<Position>(
-        type: Position,
-        name: 'Position',
-        fields: [],
-        fromJson: (json) => Position(json['x'] as double, json['y'] as double),
-        toJson: (pos) => {'x': pos.x, 'y': pos.y},
-      ));
+      TypeRegistry.instance.registerComponent(
+        ComponentTypeInfo<Position>(
+          type: Position,
+          name: 'Position',
+          fields: [],
+          fromJson: (json) =>
+              Position(json['x'] as double, json['y'] as double),
+          toJson: (pos) => {'x': pos.x, 'y': pos.y},
+        ),
+      );
 
       TypeRegistry.instance.clear();
 
@@ -199,34 +198,42 @@ void main() {
     });
 
     test('registeredTypes returns all types', () {
-      TypeRegistry.instance.registerComponent(ComponentTypeInfo<Position>(
-        type: Position,
-        name: 'Position',
-        fields: [],
-        fromJson: (json) => Position(json['x'] as double, json['y'] as double),
-        toJson: (pos) => {'x': pos.x, 'y': pos.y},
-      ));
+      TypeRegistry.instance.registerComponent(
+        ComponentTypeInfo<Position>(
+          type: Position,
+          name: 'Position',
+          fields: [],
+          fromJson: (json) =>
+              Position(json['x'] as double, json['y'] as double),
+          toJson: (pos) => {'x': pos.x, 'y': pos.y},
+        ),
+      );
 
-      TypeRegistry.instance.registerComponent(ComponentTypeInfo<Velocity>(
-        type: Velocity,
-        name: 'Velocity',
-        fields: [],
-        fromJson: (json) =>
-            Velocity(json['dx'] as double, json['dy'] as double),
-        toJson: (vel) => {'dx': vel.dx, 'dy': vel.dy},
-      ));
+      TypeRegistry.instance.registerComponent(
+        ComponentTypeInfo<Velocity>(
+          type: Velocity,
+          name: 'Velocity',
+          fields: [],
+          fromJson: (json) =>
+              Velocity(json['dx'] as double, json['dy'] as double),
+          toJson: (vel) => {'dx': vel.dx, 'dy': vel.dy},
+        ),
+      );
 
       expect(TypeRegistry.instance.registeredTypes.length, equals(2));
     });
 
     test('registeredNames returns all names', () {
-      TypeRegistry.instance.registerComponent(ComponentTypeInfo<Position>(
-        type: Position,
-        name: 'Position',
-        fields: [],
-        fromJson: (json) => Position(json['x'] as double, json['y'] as double),
-        toJson: (pos) => {'x': pos.x, 'y': pos.y},
-      ));
+      TypeRegistry.instance.registerComponent(
+        ComponentTypeInfo<Position>(
+          type: Position,
+          name: 'Position',
+          fields: [],
+          fromJson: (json) =>
+              Position(json['x'] as double, json['y'] as double),
+          toJson: (pos) => {'x': pos.x, 'y': pos.y},
+        ),
+      );
 
       expect(TypeRegistry.instance.registeredNames, containsAll(['Position']));
     });
@@ -261,28 +268,33 @@ void main() {
 
     setUp(() {
       world = World();
-      TypeRegistry.instance.registerComponent(ComponentTypeInfo<Position>(
-        type: Position,
-        name: 'Position',
-        fields: [
-          const FieldInfo(name: 'x', type: double),
-          const FieldInfo(name: 'y', type: double),
-        ],
-        fromJson: (json) => Position(json['x'] as double, json['y'] as double),
-        toJson: (pos) => {'x': pos.x, 'y': pos.y},
-      ));
+      TypeRegistry.instance.registerComponent(
+        ComponentTypeInfo<Position>(
+          type: Position,
+          name: 'Position',
+          fields: [
+            const FieldInfo(name: 'x', type: double),
+            const FieldInfo(name: 'y', type: double),
+          ],
+          fromJson: (json) =>
+              Position(json['x'] as double, json['y'] as double),
+          toJson: (pos) => {'x': pos.x, 'y': pos.y},
+        ),
+      );
 
-      TypeRegistry.instance.registerComponent(ComponentTypeInfo<Velocity>(
-        type: Velocity,
-        name: 'Velocity',
-        fields: [
-          const FieldInfo(name: 'dx', type: double),
-          const FieldInfo(name: 'dy', type: double),
-        ],
-        fromJson: (json) =>
-            Velocity(json['dx'] as double, json['dy'] as double),
-        toJson: (vel) => {'dx': vel.dx, 'dy': vel.dy},
-      ));
+      TypeRegistry.instance.registerComponent(
+        ComponentTypeInfo<Velocity>(
+          type: Velocity,
+          name: 'Velocity',
+          fields: [
+            const FieldInfo(name: 'dx', type: double),
+            const FieldInfo(name: 'dy', type: double),
+          ],
+          fromJson: (json) =>
+              Velocity(json['dx'] as double, json['dy'] as double),
+          toJson: (vel) => {'dx': vel.dx, 'dy': vel.dy},
+        ),
+      );
     });
 
     test('toJson serializes entity', () {
@@ -356,21 +368,26 @@ void main() {
 
     setUp(() {
       world = World();
-      TypeRegistry.instance.registerComponent(ComponentTypeInfo<Position>(
-        type: Position,
-        name: 'Position',
-        fields: [],
-        fromJson: (json) => Position(json['x'] as double, json['y'] as double),
-        toJson: (pos) => {'x': pos.x, 'y': pos.y},
-      ));
+      TypeRegistry.instance.registerComponent(
+        ComponentTypeInfo<Position>(
+          type: Position,
+          name: 'Position',
+          fields: [],
+          fromJson: (json) =>
+              Position(json['x'] as double, json['y'] as double),
+          toJson: (pos) => {'x': pos.x, 'y': pos.y},
+        ),
+      );
     });
 
     test('toJsonList serializes multiple entities', () {
       final e1 = world.spawn()..insert(Position(1, 2));
       final e2 = world.spawn()..insert(Position(3, 4));
 
-      final jsonList =
-          BatchEntitySerializer.toJsonList(world, [e1.entity, e2.entity]);
+      final jsonList = BatchEntitySerializer.toJsonList(world, [
+        e1.entity,
+        e2.entity,
+      ]);
 
       expect(jsonList.length, equals(2));
     });
@@ -404,13 +421,16 @@ void main() {
 
     setUp(() {
       world = World();
-      TypeRegistry.instance.registerComponent(ComponentTypeInfo<Position>(
-        type: Position,
-        name: 'Position',
-        fields: [],
-        fromJson: (json) => Position(json['x'] as double, json['y'] as double),
-        toJson: (pos) => {'x': pos.x, 'y': pos.y},
-      ));
+      TypeRegistry.instance.registerComponent(
+        ComponentTypeInfo<Position>(
+          type: Position,
+          name: 'Position',
+          fields: [],
+          fromJson: (json) =>
+              Position(json['x'] as double, json['y'] as double),
+          toJson: (pos) => {'x': pos.x, 'y': pos.y},
+        ),
+      );
     });
 
     test('entityToJson works', () {

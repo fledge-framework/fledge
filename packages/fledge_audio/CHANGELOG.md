@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Widened `flutter_soloud` constraint to `>=3.4.8 <6.0.0` so pub can resolve
+  the current stable 4.x/5.x line. The 4.0.0 release made `SoLoud.play`
+  (and friends) synchronous; the internal call sites no longer `await`
+  the returned `SoundHandle`.
+- Bumped the SDK floor to Dart `>=3.11.0` and Flutter `>=3.41.0`, matching
+  flutter_soloud 4.0's own minimum. This is required for pub to pick a 4.x/5.x
+  version when this package is consumed.
+
 ## [0.2.0] - 2026-09-20
 
 ### Added

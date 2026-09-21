@@ -167,8 +167,9 @@ void main() {
       expect(condition(world), isFalse); // We're no longer in menu
 
       // Check that playing's exit condition would be true if we exit playing
-      final playingExit =
-          const OnExitState<GameState>(GameState.playing).condition;
+      final playingExit = const OnExitState<GameState>(
+        GameState.playing,
+      ).condition;
       state.set(GameState.menu);
       state.applyTransition();
       expect(playingExit(world), isFalse); // We're now in menu, not playing
@@ -179,8 +180,10 @@ void main() {
       final state = State<GameState>(GameState.playing);
       world.insertResource(state);
 
-      final condition = StateConditions.inAny<GameState>(
-          [GameState.playing, GameState.paused]);
+      final condition = StateConditions.inAny<GameState>([
+        GameState.playing,
+        GameState.paused,
+      ]);
       expect(condition(world), isTrue);
 
       state.set(GameState.menu);
@@ -279,12 +282,14 @@ void main() {
       app.addState<GameState>(GameState.menu);
 
       // Request transition during tick
-      app.addSystem(FunctionSystem(
-        'transitioner',
-        run: (world) {
-          world.setState<GameState>(GameState.playing);
-        },
-      ));
+      app.addSystem(
+        FunctionSystem(
+          'transitioner',
+          run: (world) {
+            world.setState<GameState>(GameState.playing);
+          },
+        ),
+      );
 
       expect(app.world.getState<GameState>(), equals(GameState.menu));
 

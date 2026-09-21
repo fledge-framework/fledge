@@ -93,11 +93,7 @@ class SetChannelVolumeRequest {
   /// Fade duration (null = instant change).
   final Duration? fadeDuration;
 
-  const SetChannelVolumeRequest(
-    this.channel,
-    this.volume, {
-    this.fadeDuration,
-  });
+  const SetChannelVolumeRequest(this.channel, this.volume, {this.fadeDuration});
 }
 
 /// Request to preload an audio asset.

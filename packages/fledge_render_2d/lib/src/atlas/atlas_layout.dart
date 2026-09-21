@@ -105,8 +105,8 @@ class GridAtlasLayout implements TextureAtlasLayout {
     this.paddingY = 0,
     this.offsetX = 0,
     this.offsetY = 0,
-  })  : tileWidth = tileWidth ?? ((textureWidth - offsetX) ~/ columns),
-        tileHeight = tileHeight ?? ((textureHeight - offsetY) ~/ rows);
+  }) : tileWidth = tileWidth ?? ((textureWidth - offsetX) ~/ columns),
+       tileHeight = tileHeight ?? ((textureHeight - offsetY) ~/ rows);
 
   @override
   int get length => columns * rows;

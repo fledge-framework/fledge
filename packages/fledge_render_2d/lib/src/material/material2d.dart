@@ -68,10 +68,7 @@ class ShaderHandle {
   final String name;
 
   /// Creates a shader handle.
-  const ShaderHandle({
-    required this.id,
-    required this.name,
-  });
+  const ShaderHandle({required this.id, required this.name});
 
   @override
   bool operator ==(Object other) =>
@@ -120,12 +117,7 @@ class Vec4Uniform extends UniformValue {
 
   /// Create from color.
   factory Vec4Uniform.fromColor(Color color) {
-    return Vec4Uniform(
-      color.r,
-      color.g,
-      color.b,
-      color.a,
-    );
+    return Vec4Uniform(color.r, color.g, color.b, color.a);
   }
 }
 
@@ -138,12 +130,12 @@ class Mat4Uniform extends UniformValue {
 
   /// Creates an identity matrix uniform.
   Mat4Uniform.identity()
-      : values = const [
-          1, 0, 0, 0, //
-          0, 1, 0, 0, //
-          0, 0, 1, 0, //
-          0, 0, 0, 1, //
-        ];
+    : values = const [
+        1, 0, 0, 0, //
+        0, 1, 0, 0, //
+        0, 0, 1, 0, //
+        0, 0, 0, 1, //
+      ];
 }
 
 /// Texture uniform value.

@@ -28,9 +28,9 @@ class Texture {
   /// Build a [Texture] from a decoded [image], reading its dimensions
   /// off the image itself.
   Texture.fromImage(ui.Image image)
-      : image = image,
-        width = image.width,
-        height = image.height;
+    : image = image,
+      width = image.width,
+      height = image.height;
 }
 
 /// A [Loader] that reads a texture from a filesystem path.

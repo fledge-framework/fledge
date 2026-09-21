@@ -76,7 +76,7 @@ User-facing docs live in `docs/assets/docs/{section}/{page}.md` and are wired in
 ## Conventions
 
 - **Commits**: Conventional Commits with the package name as scope, e.g. `feat(fledge_ecs): ...`, `fix(fledge_input): ...`, `chore(*): ...` for multi-package. Breaking changes use `!`, e.g. `feat(fledge_ecs)!: rename Query.iter`. Package changelogs are generated from these — a wrong scope means the change lands in the wrong CHANGELOG.
-- **SDK floor**: Dart 3.6, Flutter 3.38.
+- **SDK floor**: Dart 3.11, Flutter 3.41. Bumped from Dart 3.6 in v0.2 because `flutter_soloud 4.x+` (used by `fledge_audio`) requires it, and the future `tiled 0.12` migration also depends on it. All workspace packages use `sdk: ^3.11.0` uniformly.
 - **Dependency overrides**: The root pubspec overrides only `meta` (`^1.18.0`) — required for `analyzer 12.x` compatibility with `flutter_test`. Do NOT re-add a `test_api` override: the resolver picks a coherent `test` + `test_api` pair automatically once `flutter_test`'s exact pin (`test_api: 0.7.11`) is left alone. See the comment above `dependency_overrides` in `pubspec.yaml`.
 - **Examples that CI builds**: `examples/basic_ecs` (compiled to exe, needs build_runner first), `examples/advanced_ecs` (compiled to exe), `examples/drifter` (native `flutter build linux|macos|windows` per matrix runner). Breaking any of them breaks CI.
 - **CI platform matrix**: `analyze`, `test`, and `build-examples` jobs run on `ubuntu-latest`, `windows-latest`, and `macos-latest`. `pana` and `build-docs` stay Linux-only. When adding a plugin, verify it works on all three desktop OSes — that's the platform stance (desktop-primary, web/mobile best-effort).

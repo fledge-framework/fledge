@@ -9,10 +9,10 @@ import '../context/context_registry.dart';
 class ContextUpdateSystem<S extends Enum> implements System {
   @override
   SystemMeta get meta => SystemMeta(
-        name: 'contextUpdate<$S>',
-        resourceReads: {State<S>},
-        resourceWrites: {InputContextRegistry},
-      );
+    name: 'contextUpdate<$S>',
+    resourceReads: {State<S>},
+    resourceWrites: {InputContextRegistry},
+  );
 
   @override
   RunCondition? get runCondition => null;

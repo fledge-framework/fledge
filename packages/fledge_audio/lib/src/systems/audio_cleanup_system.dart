@@ -7,10 +7,10 @@ import '../resources/audio_state.dart';
 class AudioCleanupSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
-        name: 'AudioCleanupSystem',
-        resourceWrites: {AudioState},
-        writes: {ComponentId.of<AudioSource>()},
-      );
+    name: 'AudioCleanupSystem',
+    resourceWrites: {AudioState},
+    writes: {ComponentId.of<AudioSource>()},
+  );
 
   @override
   RunCondition? get runCondition => null;

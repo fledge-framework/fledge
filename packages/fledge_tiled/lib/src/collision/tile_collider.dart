@@ -22,42 +22,23 @@ class TileCollider {
             width: obj.width,
             height: obj.height,
             rotation: obj.rotation,
-          )
+          ),
         ];
 
       case ObjectShape.ellipse:
         // Local space: ellipse centered within its bounds
         // Tiled positions ellipses from top-left of bounding box
-        return [
-          EllipseShape.fromBounds(
-            0,
-            0,
-            obj.width,
-            obj.height,
-          )
-        ];
+        return [EllipseShape.fromBounds(0, 0, obj.width, obj.height)];
 
       case ObjectShape.polygon:
         if (obj.points == null || obj.points!.isEmpty) return [];
         // Local space: points are already relative, no offset needed
-        return [
-          PolygonShape(
-            points: obj.points!,
-            offsetX: 0,
-            offsetY: 0,
-          )
-        ];
+        return [PolygonShape(points: obj.points!, offsetX: 0, offsetY: 0)];
 
       case ObjectShape.polyline:
         if (obj.points == null || obj.points!.isEmpty) return [];
         // Local space: points are already relative, no offset needed
-        return [
-          PolylineShape(
-            points: obj.points!,
-            offsetX: 0,
-            offsetY: 0,
-          )
-        ];
+        return [PolylineShape(points: obj.points!, offsetX: 0, offsetY: 0)];
 
       case ObjectShape.point:
         // Local space: point at entity origin

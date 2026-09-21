@@ -45,7 +45,8 @@ class ComponentGenerator extends GeneratorForAnnotation<Component> {
     buffer.writeln('extension ${className}ComponentExtension on $className {');
     buffer.writeln('  /// The unique [ComponentId] for this component type.');
     buffer.writeln(
-        '  static ComponentId get componentId => ComponentId.of<$className>();');
+      '  static ComponentId get componentId => ComponentId.of<$className>();',
+    );
     buffer.writeln('}');
 
     return buffer.toString();

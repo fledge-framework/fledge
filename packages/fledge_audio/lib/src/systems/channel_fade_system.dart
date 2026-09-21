@@ -10,10 +10,10 @@ import '../resources/audio_channels.dart';
 class ChannelFadeSystem implements System {
   @override
   SystemMeta get meta => const SystemMeta(
-        name: 'ChannelFadeSystem',
-        resourceReads: {WallTime},
-        resourceWrites: {VolumeChannels},
-      );
+    name: 'ChannelFadeSystem',
+    resourceReads: {WallTime},
+    resourceWrites: {VolumeChannels},
+  );
 
   @override
   RunCondition? get runCondition => null;

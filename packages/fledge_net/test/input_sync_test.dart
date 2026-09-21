@@ -235,10 +235,9 @@ void main() {
 
     test('getUnackedInputs returns inputs after lastAckedTick', () {
       for (var i = 1; i <= 5; i++) {
-        prediction.recordInput(
-          InputFrame(tick: i)..moveX = i.toDouble(),
-          {'x': i * 10.0},
-        );
+        prediction.recordInput(InputFrame(tick: i)..moveX = i.toDouble(), {
+          'x': i * 10.0,
+        });
       }
 
       prediction.lastAckedTick = 3;
@@ -253,10 +252,7 @@ void main() {
 
     test('reconcile updates lastAckedTick and returns replay inputs', () {
       for (var i = 1; i <= 5; i++) {
-        prediction.recordInput(
-          InputFrame(tick: i),
-          {'x': i * 10.0},
-        );
+        prediction.recordInput(InputFrame(tick: i), {'x': i * 10.0});
       }
 
       final replay = prediction.reconcile(3, {'x': 30.0});
@@ -270,10 +266,7 @@ void main() {
 
     test('reconcile removes old inputs and states', () {
       for (var i = 1; i <= 5; i++) {
-        prediction.recordInput(
-          InputFrame(tick: i),
-          {'x': i * 10.0},
-        );
+        prediction.recordInput(InputFrame(tick: i), {'x': i * 10.0});
       }
 
       prediction.reconcile(3, {'x': 30.0});
@@ -325,10 +318,7 @@ void main() {
     });
 
     test('addFrames rejects duplicates', () {
-      queue.addFrames([
-        InputFrame(tick: 1),
-        InputFrame(tick: 2),
-      ]);
+      queue.addFrames([InputFrame(tick: 1), InputFrame(tick: 2)]);
       queue.addFrames([
         InputFrame(tick: 2), // duplicate
         InputFrame(tick: 3),
@@ -363,9 +353,7 @@ void main() {
 
     test('getNextFrame skips already processed ticks', () {
       queue.lastProcessedTick = 2;
-      queue.addFrames([
-        InputFrame(tick: 3)..moveX = 3.0,
-      ]);
+      queue.addFrames([InputFrame(tick: 3)..moveX = 3.0]);
 
       // currentTick=1 won't return tick 3 (3 > 1 so it breaks)
       // Wait, let me re-read the logic...
@@ -377,10 +365,7 @@ void main() {
     });
 
     test('getNextFrame does not return frames beyond currentTick', () {
-      queue.addFrames([
-        InputFrame(tick: 5),
-        InputFrame(tick: 10),
-      ]);
+      queue.addFrames([InputFrame(tick: 5), InputFrame(tick: 10)]);
 
       // currentTick=3 means tick 5 and 10 are in the future
       expect(queue.getNextFrame(3), isNull);

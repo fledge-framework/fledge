@@ -189,7 +189,12 @@ class World {
     // Check if component already exists in this archetype
     if (currentTable.archetypeId.contains(componentId)) {
       _updateExistingComponent<T>(
-          currentTable, location, componentId, entity, component);
+        currentTable,
+        location,
+        componentId,
+        entity,
+        component,
+      );
       return;
     }
 
@@ -210,8 +215,12 @@ class World {
     Entity entity,
     T component,
   ) {
-    currentTable.setComponent(location.row, componentId, component,
-        currentTick: currentTick);
+    currentTable.setComponent(
+      location.row,
+      componentId,
+      component,
+      currentTick: currentTick,
+    );
     observers.triggerOnChange<T>(this, entity, component);
   }
 
@@ -223,8 +232,10 @@ class World {
     ComponentId componentId,
     T component,
   ) {
-    final targetIndex =
-        archetypes.getAddTarget(location.archetypeIndex, componentId);
+    final targetIndex = archetypes.getAddTarget(
+      location.archetypeIndex,
+      componentId,
+    );
     final targetTable = archetypes.tableAt(targetIndex);
 
     // Extract all existing components and their ticks
@@ -271,8 +282,10 @@ class World {
         currentTable.getComponent<T>(location.row, componentId) as T;
 
     // Need to move to a new archetype
-    final targetIndex =
-        archetypes.getRemoveTarget(location.archetypeIndex, componentId);
+    final targetIndex = archetypes.getRemoveTarget(
+      location.archetypeIndex,
+      componentId,
+    );
     final targetTable = archetypes.tableAt(targetIndex);
 
     // Extract all existing components and ticks except the one being removed

@@ -44,10 +44,7 @@ class InputMapBuilder {
 
   /// Bind a keyboard key to a button action.
   InputMapBuilder bindKey(LogicalKeyboardKey key, ActionId action) {
-    _bindings.add(InputBinding(
-      action: action,
-      source: KeyboardBinding(key),
-    ));
+    _bindings.add(InputBinding(action: action, source: KeyboardBinding(key)));
     _actionTypes[action] ??= ActionType.button;
     return this;
   }
@@ -58,118 +55,157 @@ class InputMapBuilder {
     ActionId action, {
     double value = 1.0,
   }) {
-    _bindings.add(InputBinding(
-      action: action,
-      source: KeyboardBinding(key),
-      buttonAxisValue: value,
-    ));
+    _bindings.add(
+      InputBinding(
+        action: action,
+        source: KeyboardBinding(key),
+        buttonAxisValue: value,
+      ),
+    );
     _actionTypes[action] ??= ActionType.axis;
     return this;
   }
 
   /// Bind WASD keys to a Vector2 action.
   InputMapBuilder bindWasd(ActionId action) {
-    _compositeBindings.add(CompositeVector2Binding(
-      action: action,
-      up: KeyboardBinding(LogicalKeyboardKey.keyW),
-      down: KeyboardBinding(LogicalKeyboardKey.keyS),
-      left: KeyboardBinding(LogicalKeyboardKey.keyA),
-      right: KeyboardBinding(LogicalKeyboardKey.keyD),
-    ));
+    _compositeBindings.add(
+      CompositeVector2Binding(
+        action: action,
+        up: KeyboardBinding(LogicalKeyboardKey.keyW),
+        down: KeyboardBinding(LogicalKeyboardKey.keyS),
+        left: KeyboardBinding(LogicalKeyboardKey.keyA),
+        right: KeyboardBinding(LogicalKeyboardKey.keyD),
+      ),
+    );
     _actionTypes[action] = ActionType.vector2;
     return this;
   }
 
   /// Bind arrow keys to a Vector2 action.
   InputMapBuilder bindArrows(ActionId action) {
-    _compositeBindings.add(CompositeVector2Binding(
-      action: action,
-      up: KeyboardBinding(LogicalKeyboardKey.arrowUp),
-      down: KeyboardBinding(LogicalKeyboardKey.arrowDown),
-      left: KeyboardBinding(LogicalKeyboardKey.arrowLeft),
-      right: KeyboardBinding(LogicalKeyboardKey.arrowRight),
-    ));
+    _compositeBindings.add(
+      CompositeVector2Binding(
+        action: action,
+        up: KeyboardBinding(LogicalKeyboardKey.arrowUp),
+        down: KeyboardBinding(LogicalKeyboardKey.arrowDown),
+        left: KeyboardBinding(LogicalKeyboardKey.arrowLeft),
+        right: KeyboardBinding(LogicalKeyboardKey.arrowRight),
+      ),
+    );
     _actionTypes[action] = ActionType.vector2;
     return this;
   }
 
   /// Bind a mouse button to an action.
   InputMapBuilder bindMouseButton(int button, ActionId action) {
-    _bindings.add(InputBinding(
-      action: action,
-      source: MouseButtonBinding(button),
-    ));
+    _bindings.add(
+      InputBinding(action: action, source: MouseButtonBinding(button)),
+    );
     _actionTypes[action] ??= ActionType.button;
     return this;
   }
 
   /// Bind a mouse axis to an action.
-  InputMapBuilder bindMouseAxis(MouseAxis axis, ActionId action,
-      {double scale = 1.0}) {
-    _bindings.add(InputBinding(
-      action: action,
-      source: MouseAxisBinding(axis),
-      scale: scale,
-    ));
+  InputMapBuilder bindMouseAxis(
+    MouseAxis axis,
+    ActionId action, {
+    double scale = 1.0,
+  }) {
+    _bindings.add(
+      InputBinding(
+        action: action,
+        source: MouseAxisBinding(axis),
+        scale: scale,
+      ),
+    );
     _actionTypes[action] ??= ActionType.axis;
     return this;
   }
 
   /// Bind a gamepad button to an action.
-  InputMapBuilder bindGamepadButton(String buttonKey, ActionId action,
-      {String? gamepadId}) {
-    _bindings.add(InputBinding(
-      action: action,
-      source: GamepadButtonBinding(buttonKey, gamepadId: gamepadId),
-    ));
+  InputMapBuilder bindGamepadButton(
+    String buttonKey,
+    ActionId action, {
+    String? gamepadId,
+  }) {
+    _bindings.add(
+      InputBinding(
+        action: action,
+        source: GamepadButtonBinding(buttonKey, gamepadId: gamepadId),
+      ),
+    );
     _actionTypes[action] ??= ActionType.button;
     return this;
   }
 
   /// Bind a gamepad axis to an action.
-  InputMapBuilder bindGamepadAxis(String axisKey, ActionId action,
-      {String? gamepadId, double deadzone = 0.1, bool inverted = false}) {
-    _bindings.add(InputBinding(
-      action: action,
-      source:
-          GamepadAxisBinding(axisKey, gamepadId: gamepadId, inverted: inverted),
-      deadzone: deadzone,
-    ));
+  InputMapBuilder bindGamepadAxis(
+    String axisKey,
+    ActionId action, {
+    String? gamepadId,
+    double deadzone = 0.1,
+    bool inverted = false,
+  }) {
+    _bindings.add(
+      InputBinding(
+        action: action,
+        source: GamepadAxisBinding(
+          axisKey,
+          gamepadId: gamepadId,
+          inverted: inverted,
+        ),
+        deadzone: deadzone,
+      ),
+    );
     _actionTypes[action] ??= ActionType.axis;
     return this;
   }
 
   /// Bind left analog stick to a Vector2 action.
-  InputMapBuilder bindLeftStick(ActionId action,
-      {double deadzone = 0.1, String? gamepadId}) {
-    _bindings.add(InputBinding(
-      action: action,
-      source: GamepadAxisBinding('left_stick_x', gamepadId: gamepadId),
-      deadzone: deadzone,
-    ));
-    _bindings.add(InputBinding(
-      action: action,
-      source: GamepadAxisBinding('left_stick_y', gamepadId: gamepadId),
-      deadzone: deadzone,
-    ));
+  InputMapBuilder bindLeftStick(
+    ActionId action, {
+    double deadzone = 0.1,
+    String? gamepadId,
+  }) {
+    _bindings.add(
+      InputBinding(
+        action: action,
+        source: GamepadAxisBinding('left_stick_x', gamepadId: gamepadId),
+        deadzone: deadzone,
+      ),
+    );
+    _bindings.add(
+      InputBinding(
+        action: action,
+        source: GamepadAxisBinding('left_stick_y', gamepadId: gamepadId),
+        deadzone: deadzone,
+      ),
+    );
     _actionTypes[action] = ActionType.vector2;
     _deadzones[action] = deadzone;
     return this;
   }
 
   /// Bind right analog stick to a Vector2 action.
-  InputMapBuilder bindRightStick(ActionId action,
-      {double deadzone = 0.1, String? gamepadId}) {
-    _bindings.add(InputBinding(
-      action: action,
-      source: GamepadAxisBinding('right_stick_x', gamepadId: gamepadId),
-      deadzone: deadzone,
-    ));
-    _bindings.add(InputBinding(
-      action: action,
-      source: GamepadAxisBinding('right_stick_y', gamepadId: gamepadId),
-      deadzone: deadzone,
-    ));
+  InputMapBuilder bindRightStick(
+    ActionId action, {
+    double deadzone = 0.1,
+    String? gamepadId,
+  }) {
+    _bindings.add(
+      InputBinding(
+        action: action,
+        source: GamepadAxisBinding('right_stick_x', gamepadId: gamepadId),
+        deadzone: deadzone,
+      ),
+    );
+    _bindings.add(
+      InputBinding(
+        action: action,
+        source: GamepadAxisBinding('right_stick_y', gamepadId: gamepadId),
+        deadzone: deadzone,
+      ),
+    );
     _actionTypes[action] = ActionType.vector2;
     _deadzones[action] = deadzone;
     return this;
@@ -177,13 +213,15 @@ class InputMapBuilder {
 
   /// Bind D-pad to a Vector2 action.
   InputMapBuilder bindDpad(ActionId action, {String? gamepadId}) {
-    _compositeBindings.add(CompositeVector2Binding(
-      action: action,
-      up: GamepadButtonBinding('dpad_up', gamepadId: gamepadId),
-      down: GamepadButtonBinding('dpad_down', gamepadId: gamepadId),
-      left: GamepadButtonBinding('dpad_left', gamepadId: gamepadId),
-      right: GamepadButtonBinding('dpad_right', gamepadId: gamepadId),
-    ));
+    _compositeBindings.add(
+      CompositeVector2Binding(
+        action: action,
+        up: GamepadButtonBinding('dpad_up', gamepadId: gamepadId),
+        down: GamepadButtonBinding('dpad_down', gamepadId: gamepadId),
+        left: GamepadButtonBinding('dpad_left', gamepadId: gamepadId),
+        right: GamepadButtonBinding('dpad_right', gamepadId: gamepadId),
+      ),
+    );
     _actionTypes[action] = ActionType.vector2;
     return this;
   }
@@ -202,9 +240,9 @@ class InputMapBuilder {
 
   /// Build the InputMap.
   InputMap build() => InputMap(
-        bindings: List.unmodifiable(_bindings),
-        compositeBindings: List.unmodifiable(_compositeBindings),
-        actionTypes: Map.unmodifiable(_actionTypes),
-        deadzones: Map.unmodifiable(_deadzones),
-      );
+    bindings: List.unmodifiable(_bindings),
+    compositeBindings: List.unmodifiable(_compositeBindings),
+    actionTypes: Map.unmodifiable(_actionTypes),
+    deadzones: Map.unmodifiable(_deadzones),
+  );
 }

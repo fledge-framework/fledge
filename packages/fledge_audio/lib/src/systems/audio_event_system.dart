@@ -11,28 +11,28 @@ import '../resources/audio_state.dart';
 class AudioEventSystem implements System {
   @override
   SystemMeta get meta => const SystemMeta(
-        name: 'AudioEventSystem',
-        eventReads: {
-          PlaySfxRequest,
-          PlayMusicRequest,
-          StopMusicRequest,
-          PauseAudioRequest,
-          ResumeAudioRequest,
-          SetChannelVolumeRequest,
-          PreloadAudioRequest,
-        },
-        eventWrites: {
-          SfxStarted,
-          MusicStarted,
-          MusicChanged,
-          AudioFailed,
-          AudioPaused,
-          AudioResumed,
-          AudioAssetLoaded,
-        },
-        resourceReads: {AudioAssets, SpatialAudioConfig},
-        resourceWrites: {AudioState, VolumeChannels},
-      );
+    name: 'AudioEventSystem',
+    eventReads: {
+      PlaySfxRequest,
+      PlayMusicRequest,
+      StopMusicRequest,
+      PauseAudioRequest,
+      ResumeAudioRequest,
+      SetChannelVolumeRequest,
+      PreloadAudioRequest,
+    },
+    eventWrites: {
+      SfxStarted,
+      MusicStarted,
+      MusicChanged,
+      AudioFailed,
+      AudioPaused,
+      AudioResumed,
+      AudioAssetLoaded,
+    },
+    resourceReads: {AudioAssets, SpatialAudioConfig},
+    resourceWrites: {AudioState, VolumeChannels},
+  );
 
   @override
   RunCondition? get runCondition => null;
@@ -94,18 +94,18 @@ class AudioEventSystem implements System {
     final sound = assets.getSound(request.soundKey);
     if (sound == null) {
       world.eventWriter<AudioFailed>().send(
-            AudioFailed(request.soundKey, 'Sound not loaded'),
-          );
+        AudioFailed(request.soundKey, 'Sound not loaded'),
+      );
       return;
     }
 
     final effectiveVolume =
         channels.getEffectiveVolume(AudioChannel.sfx) * request.volume;
 
-    final handle = await soloud.play(
-      sound.source,
-      volume: effectiveVolume,
-    );
+    // `soloud.play` is synchronous since flutter_soloud 4.0 (it used to
+    // return `Future<SoundHandle>`); the containing method stays async
+    // because we still await asset loads elsewhere.
+    final handle = soloud.play(sound.source, volume: effectiveVolume);
 
     // Apply playback speed
     if (request.playbackSpeed != 1.0) {
@@ -127,8 +127,8 @@ class AudioEventSystem implements System {
     final music = assets.getMusic(request.musicKey);
     if (music == null) {
       world.eventWriter<AudioFailed>().send(
-            AudioFailed(request.musicKey, 'Music not loaded'),
-          );
+        AudioFailed(request.musicKey, 'Music not loaded'),
+      );
       return;
     }
 
@@ -146,7 +146,8 @@ class AudioEventSystem implements System {
       soloud.stop(state.currentMusicHandle!);
     }
 
-    final handle = await soloud.play(
+    // `soloud.play` became synchronous in flutter_soloud 4.0.
+    final handle = soloud.play(
       music.source,
       volume: request.crossfadeDuration != null ? 0.0 : effectiveVolume,
       looping: request.loop,
@@ -166,8 +167,8 @@ class AudioEventSystem implements System {
     world.eventWriter<MusicStarted>().send(MusicStarted(request.musicKey));
     if (previousKey != null && request.crossfadeDuration == null) {
       world.eventWriter<MusicChanged>().send(
-            MusicChanged(previousKey: previousKey, newKey: request.musicKey),
-          );
+        MusicChanged(previousKey: previousKey, newKey: request.musicKey),
+      );
     }
   }
 
@@ -265,12 +266,12 @@ class AudioEventSystem implements System {
         await assets.loadSound(request.key, request.assetPath);
       }
       world.eventWriter<AudioAssetLoaded>().send(
-            AudioAssetLoaded(request.key, isMusic: request.isMusic),
-          );
+        AudioAssetLoaded(request.key, isMusic: request.isMusic),
+      );
     } catch (e) {
       world.eventWriter<AudioFailed>().send(
-            AudioFailed(request.key, e.toString()),
-          );
+        AudioFailed(request.key, e.toString()),
+      );
     }
   }
 }

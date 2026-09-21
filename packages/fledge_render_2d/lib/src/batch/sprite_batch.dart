@@ -137,12 +137,14 @@ class SpriteBatchSystem implements RenderSystem {
         );
       }
 
-      batch.add(SpriteInstance(
-        sourceRect: srcRect,
-        destRect: destRect,
-        transform: sprite.transform,
-        color: sprite.color,
-      ));
+      batch.add(
+        SpriteInstance(
+          sourceRect: srcRect,
+          destRect: destRect,
+          transform: sprite.transform,
+          color: sprite.color,
+        ),
+      );
     }
 
     // Store batches as resource

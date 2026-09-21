@@ -206,11 +206,7 @@ void main() {
 
     test('creates grid atlas with factory', () {
       const texture = TextureHandle(id: 1, width: 256, height: 256);
-      final atlas = TextureAtlas.grid(
-        texture: texture,
-        columns: 4,
-        rows: 4,
-      );
+      final atlas = TextureAtlas.grid(texture: texture, columns: 4, rows: 4);
 
       expect(atlas.length, 16);
       expect(atlas.getSpriteRect(0).width, 64);
@@ -222,12 +218,7 @@ void main() {
         texture: texture,
         columns: 4,
         rows: 4,
-        names: {
-          'idle': 0,
-          'walk1': 1,
-          'walk2': 2,
-          'walk3': 3,
-        },
+        names: {'idle': 0, 'walk1': 1, 'walk2': 2, 'walk3': 3},
       );
 
       expect(atlas.hasNames, isTrue);
@@ -260,19 +251,12 @@ void main() {
         names: {'known': 0},
       );
 
-      expect(
-        () => atlas.getSpriteRectByName('unknown'),
-        throwsArgumentError,
-      );
+      expect(() => atlas.getSpriteRectByName('unknown'), throwsArgumentError);
     });
 
     test('createSprite creates sprite component', () {
       const texture = TextureHandle(id: 1, width: 128, height: 128);
-      final atlas = TextureAtlas.grid(
-        texture: texture,
-        columns: 4,
-        rows: 4,
-      );
+      final atlas = TextureAtlas.grid(texture: texture, columns: 4, rows: 4);
 
       final sprite = atlas.createSprite(5, color: const Color(0xFF0000FF));
 
@@ -286,11 +270,7 @@ void main() {
   group('AtlasSprite', () {
     test('creates with defaults', () {
       const texture = TextureHandle(id: 1, width: 128, height: 128);
-      final atlas = TextureAtlas.grid(
-        texture: texture,
-        columns: 4,
-        rows: 4,
-      );
+      final atlas = TextureAtlas.grid(texture: texture, columns: 4, rows: 4);
 
       final atlasSprite = AtlasSprite(atlas: atlas);
 
@@ -302,11 +282,7 @@ void main() {
 
     test('sourceRect reflects current index', () {
       const texture = TextureHandle(id: 1, width: 128, height: 128);
-      final atlas = TextureAtlas.grid(
-        texture: texture,
-        columns: 4,
-        rows: 4,
-      );
+      final atlas = TextureAtlas.grid(texture: texture, columns: 4, rows: 4);
 
       final atlasSprite = AtlasSprite(atlas: atlas, index: 5);
 

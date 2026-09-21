@@ -19,8 +19,8 @@ class SpriteRenderNode implements RenderNode {
 
   @override
   List<SlotInfo> get inputs => const [
-        SlotInfo(name: 'view', type: SlotType.camera, required: false),
-      ];
+    SlotInfo(name: 'view', type: SlotType.camera, required: false),
+  ];
 
   @override
   List<SlotInfo> get outputs => const [];
@@ -29,7 +29,8 @@ class SpriteRenderNode implements RenderNode {
   void run(RenderGraphContext graph, Object context) {
     if (context is! SpriteRenderContext) {
       throw ArgumentError(
-          'SpriteRenderNode requires SpriteRenderContext, got ${context.runtimeType}');
+        'SpriteRenderNode requires SpriteRenderContext, got ${context.runtimeType}',
+      );
     }
 
     final cameraView = graph.getInput<CameraView>('view');
@@ -44,13 +45,15 @@ class SpriteRenderNode implements RenderNode {
       // Convert to backend format
       final backendSprites = <BackendSpriteData>[];
       for (final instance in batch.instances) {
-        backendSprites.add(BackendSpriteData(
-          sourceRect: instance.sourceRect,
-          destRect: instance.destRect,
-          transform: instance.transform,
-          color: instance.color,
-          viewProjection: cameraView?.viewProjection,
-        ));
+        backendSprites.add(
+          BackendSpriteData(
+            sourceRect: instance.sourceRect,
+            destRect: instance.destRect,
+            transform: instance.transform,
+            color: instance.color,
+            viewProjection: cameraView?.viewProjection,
+          ),
+        );
       }
 
       // Submit to renderer

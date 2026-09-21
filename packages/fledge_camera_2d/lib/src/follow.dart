@@ -57,19 +57,19 @@ class CameraFollow {
 class CameraFollowSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
-        name: 'CameraFollowSystem',
-        writes: {ComponentId.of<Transform2D>()},
-        reads: {
-          ComponentId.of<CameraFollow>(),
-          ComponentId.of<Camera2D>(),
-          ComponentId.of<GlobalTransform2D>(),
-        },
-        before: const [
-          'CameraShakeSystem',
-          'ParallaxSystem',
-          'CameraTransitionSystem',
-        ],
-      );
+    name: 'CameraFollowSystem',
+    writes: {ComponentId.of<Transform2D>()},
+    reads: {
+      ComponentId.of<CameraFollow>(),
+      ComponentId.of<Camera2D>(),
+      ComponentId.of<GlobalTransform2D>(),
+    },
+    before: const [
+      'CameraShakeSystem',
+      'ParallaxSystem',
+      'CameraTransitionSystem',
+    ],
+  );
 
   @override
   RunCondition? get runCondition => null;
@@ -85,8 +85,10 @@ class CameraFollowSystem implements System {
       if (targetTransform == null) {
         if (!follow.warnedMissingTarget) {
           // ignore: avoid_print
-          print('[fledge_camera_2d] CameraFollow.target (${follow.target}) has '
-              'no GlobalTransform2D; skipping this camera.');
+          print(
+            '[fledge_camera_2d] CameraFollow.target (${follow.target}) has '
+            'no GlobalTransform2D; skipping this camera.',
+          );
           follow.warnedMissingTarget = true;
         }
         continue;

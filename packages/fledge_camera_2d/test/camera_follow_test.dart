@@ -11,10 +11,11 @@ void main() {
 
     setUp(() {
       world = World();
-      target = (world.spawn()
-            ..insert(Transform2D.from(100, 200))
-            ..insert(GlobalTransform2D.identity()))
-          .entity;
+      target =
+          (world.spawn()
+                ..insert(Transform2D.from(100, 200))
+                ..insert(GlobalTransform2D.identity()))
+              .entity;
       // Manually set GlobalTransform2D so we don't need to run
       // TransformPropagateSystem in this focused test.
       world
@@ -22,11 +23,12 @@ void main() {
           .matrix
           .setValues(1, 0, 0, 0, 1, 0, 100, 200, 1);
 
-      cameraEntity = (world.spawn()
-            ..insert(Transform2D.from(0, 0))
-            ..insert(Camera2D())
-            ..insert(CameraFollow(target: target, smoothing: 0.5)))
-          .entity;
+      cameraEntity =
+          (world.spawn()
+                ..insert(Transform2D.from(0, 0))
+                ..insert(Camera2D())
+                ..insert(CameraFollow(target: target, smoothing: 0.5)))
+              .entity;
     });
 
     test('lerps toward target with smoothing factor', () async {

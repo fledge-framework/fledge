@@ -34,8 +34,9 @@ class EntitySerializer {
         final component = world.getByComponentId(entity, componentId);
         if (component == null) continue;
 
-        final info =
-            TypeRegistry.instance.getByRuntimeType(component.runtimeType);
+        final info = TypeRegistry.instance.getByRuntimeType(
+          component.runtimeType,
+        );
         if (info != null) {
           components[info.name] = info.toJsonDynamic(component);
         }
@@ -76,7 +77,9 @@ class BatchEntitySerializer {
 
   /// Serializes multiple entities to a JSON list.
   static List<Map<String, dynamic>> toJsonList(
-      World world, Iterable<Entity> entities) {
+    World world,
+    Iterable<Entity> entities,
+  ) {
     return entities
         .map((e) => EntitySerializer.toJson(world, e))
         .whereType<Map<String, dynamic>>()
@@ -85,7 +88,9 @@ class BatchEntitySerializer {
 
   /// Deserializes multiple entities from a JSON list.
   static List<Entity> fromJsonList(
-      World world, List<Map<String, dynamic>> jsonList) {
+    World world,
+    List<Map<String, dynamic>> jsonList,
+  ) {
     return jsonList
         .map((json) => EntitySerializer.fromJson(world, json))
         .toList();
@@ -122,14 +127,20 @@ extension WorldSerializationExtension on World {
     // Check if component already exists in this archetype
     if (currentTable.archetypeId.contains(componentId)) {
       // Just update the existing component
-      currentTable.setComponent(location.row, componentId, component,
-          currentTick: currentTick);
+      currentTable.setComponent(
+        location.row,
+        componentId,
+        component,
+        currentTick: currentTick,
+      );
       return;
     }
 
     // Need to move to a new archetype
-    final targetIndex =
-        archetypes.getAddTarget(location.archetypeIndex, componentId);
+    final targetIndex = archetypes.getAddTarget(
+      location.archetypeIndex,
+      componentId,
+    );
     final targetTable = archetypes.tableAt(targetIndex);
 
     // Extract all existing components and their ticks

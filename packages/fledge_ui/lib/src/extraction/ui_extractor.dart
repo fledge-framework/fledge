@@ -45,39 +45,45 @@ class UiExtractor extends Extractor {
 
       final text = mainWorld.get<UiText>(entity);
       if (text != null) {
-        renderWorld.spawn().insert(ExtractedUiText(
-              rect: computed.rect,
-              sortKey: sortKey,
-              text: text.text,
-              fontSize: text.fontSize,
-              color: text.color,
-              fontFamily: text.fontFamily,
-              fontWeight: text.fontWeight,
-              align: text.align,
-            ));
+        renderWorld.spawn().insert(
+          ExtractedUiText(
+            rect: computed.rect,
+            sortKey: sortKey,
+            text: text.text,
+            fontSize: text.fontSize,
+            color: text.color,
+            fontFamily: text.fontFamily,
+            fontWeight: text.fontWeight,
+            align: text.align,
+          ),
+        );
         continue;
       }
 
       final image = mainWorld.get<UiImage>(entity);
       if (image != null) {
-        renderWorld.spawn().insert(ExtractedUiImage(
-              rect: computed.rect,
-              sortKey: sortKey,
-              texture: image.texture,
-              sourceRect: image.sourceRect,
-              tint: image.tint,
-            ));
+        renderWorld.spawn().insert(
+          ExtractedUiImage(
+            rect: computed.rect,
+            sortKey: sortKey,
+            texture: image.texture,
+            sourceRect: image.sourceRect,
+            tint: image.tint,
+          ),
+        );
         continue;
       }
 
       final rect = mainWorld.get<UiRect>(entity);
       if (rect != null) {
-        renderWorld.spawn().insert(ExtractedUiRect(
-              rect: computed.rect,
-              sortKey: sortKey,
-              color: rect.color,
-              borderRadius: rect.borderRadius,
-            ));
+        renderWorld.spawn().insert(
+          ExtractedUiRect(
+            rect: computed.rect,
+            sortKey: sortKey,
+            color: rect.color,
+            borderRadius: rect.borderRadius,
+          ),
+        );
         continue;
       }
 

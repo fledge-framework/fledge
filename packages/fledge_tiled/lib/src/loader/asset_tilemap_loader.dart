@@ -39,10 +39,7 @@ class AssetTilemapLoader implements TilemapLoader {
   /// Function to load string content from assets.
   final Future<String> Function(String path) loadStringContent;
 
-  AssetTilemapLoader({
-    this.assetPrefix = '',
-    required this.loadStringContent,
-  });
+  AssetTilemapLoader({this.assetPrefix = '', required this.loadStringContent});
 
   @override
   Future<LoadedTilemap> load(String path, TextureLoader textureLoader) async {
@@ -75,8 +72,11 @@ class AssetTilemapLoader implements TilemapLoader {
     String sourcePath = '',
   }) async {
     // Pre-load all TSX files referenced in the TMX
-    final tsxProviders =
-        await _loadTsxProviders(tmxContent, basePath, tsxLoader);
+    final tsxProviders = await _loadTsxProviders(
+      tmxContent,
+      basePath,
+      tsxLoader,
+    );
 
     // Parse the TMX file
     final tiledMap = TileMapParser.parseTmx(tmxContent, tsxList: tsxProviders);
@@ -86,11 +86,7 @@ class AssetTilemapLoader implements TilemapLoader {
     final animations = <int, TileAnimation>{};
 
     for (final tileset in tiledMap.tilesets) {
-      final loaded = await _loadTileset(
-        tileset,
-        basePath,
-        textureLoader,
-      );
+      final loaded = await _loadTileset(tileset, basePath, textureLoader);
       loadedTilesets.add(loaded);
 
       // Extract animations with global IDs
@@ -177,18 +173,21 @@ class AssetTilemapLoader implements TilemapLoader {
 
       // Properties
       if (tile.properties.isNotEmpty) {
-        tileProperties[localId] =
-            TiledProperties.fromCustomProperties(tile.properties);
+        tileProperties[localId] = TiledProperties.fromCustomProperties(
+          tile.properties,
+        );
       }
 
       // Animation
       if (tile.animation.isNotEmpty) {
         tileAnimations[localId] = TileAnimation(
           frames: tile.animation
-              .map((frame) => TileAnimationFrame(
-                    tileId: frame.tileId,
-                    duration: frame.duration / 1000.0,
-                  ))
+              .map(
+                (frame) => TileAnimationFrame(
+                  tileId: frame.tileId,
+                  duration: frame.duration / 1000.0,
+                ),
+              )
               .toList(),
         );
       }
@@ -270,9 +269,7 @@ class AssetTilemapLoader implements TilemapLoader {
         ),
       ];
     } else if (obj.isEllipse) {
-      return [
-        EllipseShape.fromBounds(obj.x, obj.y, obj.width, obj.height),
-      ];
+      return [EllipseShape.fromBounds(obj.x, obj.y, obj.width, obj.height)];
     } else if (obj.isPoint) {
       return [PointShape(x: obj.x, y: obj.y)];
     } else {

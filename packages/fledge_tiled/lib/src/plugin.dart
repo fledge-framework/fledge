@@ -83,9 +83,9 @@ class TiledPlugin implements Plugin {
     // Register extractor with render system (if present)
     final extractors = app.world.getResource<Extractors>();
     if (extractors != null) {
-      extractors.register(TilemapExtractor(
-        respectVisibility: config.respectLayerVisibility,
-      ));
+      extractors.register(
+        TilemapExtractor(respectVisibility: config.respectLayerVisibility),
+      );
     }
   }
 

@@ -130,12 +130,17 @@ void main() {
     test('triggerOnAdd calls onAdd observers', () {
       var called = false;
       final observers = Observers();
-      observers.register(Observer<Position>.onAdd((w, e, p) {
-        called = true;
-      }));
+      observers.register(
+        Observer<Position>.onAdd((w, e, p) {
+          called = true;
+        }),
+      );
 
       observers.triggerOnAdd<Position>(
-          World(), const Entity(1, 0), Position(0, 0));
+        World(),
+        const Entity(1, 0),
+        Position(0, 0),
+      );
 
       expect(called, isTrue);
     });
@@ -143,12 +148,17 @@ void main() {
     test('triggerOnRemove calls onRemove observers', () {
       var called = false;
       final observers = Observers();
-      observers.register(Observer<Position>.onRemove((w, e, p) {
-        called = true;
-      }));
+      observers.register(
+        Observer<Position>.onRemove((w, e, p) {
+          called = true;
+        }),
+      );
 
       observers.triggerOnRemove<Position>(
-          World(), const Entity(1, 0), Position(0, 0));
+        World(),
+        const Entity(1, 0),
+        Position(0, 0),
+      );
 
       expect(called, isTrue);
     });
@@ -156,12 +166,17 @@ void main() {
     test('triggerOnChange calls onChange observers', () {
       var called = false;
       final observers = Observers();
-      observers.register(Observer<Position>.onChange((w, e, p) {
-        called = true;
-      }));
+      observers.register(
+        Observer<Position>.onChange((w, e, p) {
+          called = true;
+        }),
+      );
 
       observers.triggerOnChange<Position>(
-          World(), const Entity(1, 0), Position(0, 0));
+        World(),
+        const Entity(1, 0),
+        Position(0, 0),
+      );
 
       expect(called, isTrue);
     });
@@ -171,15 +186,22 @@ void main() {
       var removeCalled = false;
       final observers = Observers();
 
-      observers.register(Observer<Position>.onAdd((w, e, p) {
-        addCalled = true;
-      }));
-      observers.register(Observer<Position>.onRemove((w, e, p) {
-        removeCalled = true;
-      }));
+      observers.register(
+        Observer<Position>.onAdd((w, e, p) {
+          addCalled = true;
+        }),
+      );
+      observers.register(
+        Observer<Position>.onRemove((w, e, p) {
+          removeCalled = true;
+        }),
+      );
 
       observers.triggerOnAdd<Position>(
-          World(), const Entity(1, 0), Position(0, 0));
+        World(),
+        const Entity(1, 0),
+        Position(0, 0),
+      );
 
       expect(addCalled, isTrue);
       expect(removeCalled, isFalse);
@@ -190,15 +212,22 @@ void main() {
       var velocityCalled = false;
       final observers = Observers();
 
-      observers.register(Observer<Position>.onAdd((w, e, p) {
-        positionCalled = true;
-      }));
-      observers.register(Observer<Velocity>.onAdd((w, e, v) {
-        velocityCalled = true;
-      }));
+      observers.register(
+        Observer<Position>.onAdd((w, e, p) {
+          positionCalled = true;
+        }),
+      );
+      observers.register(
+        Observer<Velocity>.onAdd((w, e, v) {
+          velocityCalled = true;
+        }),
+      );
 
       observers.triggerOnAdd<Position>(
-          World(), const Entity(1, 0), Position(0, 0));
+        World(),
+        const Entity(1, 0),
+        Position(0, 0),
+      );
 
       expect(positionCalled, isTrue);
       expect(velocityCalled, isFalse);
@@ -211,10 +240,12 @@ void main() {
       Position? capturedPosition;
 
       final world = World();
-      world.observers.register(Observer<Position>.onAdd((w, e, p) {
-        capturedEntity = e;
-        capturedPosition = p;
-      }));
+      world.observers.register(
+        Observer<Position>.onAdd((w, e, p) {
+          capturedEntity = e;
+          capturedPosition = p;
+        }),
+      );
 
       final entity = world.spawn().entity;
       world.insert(entity, Position(10, 20));
@@ -229,12 +260,16 @@ void main() {
       var addCalled = false;
 
       final world = World();
-      world.observers.register(Observer<Position>.onAdd((w, e, p) {
-        addCalled = true;
-      }));
-      world.observers.register(Observer<Position>.onChange((w, e, p) {
-        changeCalled = true;
-      }));
+      world.observers.register(
+        Observer<Position>.onAdd((w, e, p) {
+          addCalled = true;
+        }),
+      );
+      world.observers.register(
+        Observer<Position>.onChange((w, e, p) {
+          changeCalled = true;
+        }),
+      );
 
       final entity = world.spawn().entity;
       world.insert(entity, Position(10, 20));
@@ -256,10 +291,12 @@ void main() {
       Position? capturedPosition;
 
       final world = World();
-      world.observers.register(Observer<Position>.onRemove((w, e, p) {
-        capturedEntity = e;
-        capturedPosition = p;
-      }));
+      world.observers.register(
+        Observer<Position>.onRemove((w, e, p) {
+          capturedEntity = e;
+          capturedPosition = p;
+        }),
+      );
 
       final entity = world.spawn().entity;
       world.insert(entity, Position(10, 20));
@@ -274,9 +311,11 @@ void main() {
       World? capturedWorld;
 
       final world = World();
-      world.observers.register(Observer<Position>.onAdd((w, e, p) {
-        capturedWorld = w;
-      }));
+      world.observers.register(
+        Observer<Position>.onAdd((w, e, p) {
+          capturedWorld = w;
+        }),
+      );
 
       final entity = world.spawn().entity;
       world.insert(entity, Position(10, 20));
@@ -288,9 +327,11 @@ void main() {
       Velocity? velocityFromObserver;
 
       final world = World();
-      world.observers.register(Observer<Position>.onAdd((w, e, p) {
-        velocityFromObserver = w.get<Velocity>(e);
-      }));
+      world.observers.register(
+        Observer<Position>.onAdd((w, e, p) {
+          velocityFromObserver = w.get<Velocity>(e);
+        }),
+      );
 
       final entity = world.spawn().entity;
       world.insert(entity, Velocity(1, 2));
@@ -304,10 +345,12 @@ void main() {
       var spawnedCount = 0;
 
       final world = World();
-      world.observers.register(Observer<Position>.onAdd((w, e, p) {
-        w.spawn();
-        spawnedCount++;
-      }));
+      world.observers.register(
+        Observer<Position>.onAdd((w, e, p) {
+          w.spawn();
+          spawnedCount++;
+        }),
+      );
 
       world.spawn().insert(Position(0, 0));
 
@@ -330,10 +373,12 @@ void main() {
       final world = World();
       world.registerEvent<Entity>();
 
-      world.observers.register(Observer<Health>.onRemove((w, e, h) {
-        // Send death event when health is removed
-        w.eventWriter<Entity>().send(e);
-      }));
+      world.observers.register(
+        Observer<Health>.onRemove((w, e, h) {
+          // Send death event when health is removed
+          w.eventWriter<Entity>().send(e);
+        }),
+      );
 
       final entity = world.spawn().entity;
       world.insert(entity, Health(100));
@@ -354,9 +399,11 @@ void main() {
     test('triggerOnAddDynamic works', () {
       var called = false;
       final observers = Observers();
-      observers.register(Observer<Position>.onAdd((w, e, p) {
-        called = true;
-      }));
+      observers.register(
+        Observer<Position>.onAdd((w, e, p) {
+          called = true;
+        }),
+      );
 
       observers.triggerOnAddDynamic(
         World(),
@@ -371,9 +418,11 @@ void main() {
     test('triggerOnRemoveDynamic works', () {
       var called = false;
       final observers = Observers();
-      observers.register(Observer<Position>.onRemove((w, e, p) {
-        called = true;
-      }));
+      observers.register(
+        Observer<Position>.onRemove((w, e, p) {
+          called = true;
+        }),
+      );
 
       observers.triggerOnRemoveDynamic(
         World(),
@@ -388,9 +437,11 @@ void main() {
     test('triggerOnChangeDynamic works', () {
       var called = false;
       final observers = Observers();
-      observers.register(Observer<Position>.onChange((w, e, p) {
-        called = true;
-      }));
+      observers.register(
+        Observer<Position>.onChange((w, e, p) {
+          called = true;
+        }),
+      );
 
       observers.triggerOnChangeDynamic(
         World(),

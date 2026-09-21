@@ -25,7 +25,8 @@ class TiledProperties {
 
   /// Creates from Tiled's CustomProperties.
   factory TiledProperties.fromCustomProperties(
-      tiled.CustomProperties properties) {
+    tiled.CustomProperties properties,
+  ) {
     final map = <String, dynamic>{};
     for (final prop in properties) {
       map[prop.name] = _parsePropertyValue(prop);

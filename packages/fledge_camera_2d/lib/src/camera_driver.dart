@@ -33,14 +33,15 @@ class CameraDriverNode implements RenderNode {
 
   @override
   List<SlotInfo> get outputs => const [
-        SlotInfo(name: 'view', type: SlotType.camera),
-      ];
+    SlotInfo(name: 'view', type: SlotType.camera),
+  ];
 
   @override
   void run(RenderGraphContext graph, Object context) {
     if (context is! CameraDriverContext) {
       throw ArgumentError(
-          'CameraDriverNode requires CameraDriverContext, got ${context.runtimeType}');
+        'CameraDriverNode requires CameraDriverContext, got ${context.runtimeType}',
+      );
     }
 
     final renderWorld = context.renderWorld;
@@ -67,8 +68,10 @@ class CameraDriverNode implements RenderNode {
       return;
     }
 
-    final vpMatrix =
-        bestCamera.viewProjectionMatrix(bestTransform, _screenSize);
+    final vpMatrix = bestCamera.viewProjectionMatrix(
+      bestTransform,
+      _screenSize,
+    );
 
     graph.setOutput(
       'view',

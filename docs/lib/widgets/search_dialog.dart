@@ -106,9 +106,7 @@ class _SearchDialogState extends State<SearchDialog> {
           color: Colors.transparent,
           child: Container(
             width: dialogWidth,
-            constraints: BoxConstraints(
-              maxHeight: screenSize.height * 0.7,
-            ),
+            constraints: BoxConstraints(maxHeight: screenSize.height * 0.7),
             decoration: BoxDecoration(
               color: theme.scaffoldBackgroundColor,
               borderRadius: BorderRadius.circular(12),
@@ -143,9 +141,7 @@ class _SearchDialogState extends State<SearchDialog> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: theme.dividerColor),
-        ),
+        border: Border(bottom: BorderSide(color: theme.dividerColor)),
       ),
       child: Row(
         children: [
@@ -162,8 +158,9 @@ class _SearchDialogState extends State<SearchDialog> {
                 hintText: 'Search documentation...',
                 border: InputBorder.none,
                 hintStyle: theme.textTheme.bodyLarge?.copyWith(
-                  color:
-                      theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.4),
+                  color: theme.textTheme.bodyMedium?.color?.withValues(
+                    alpha: 0.4,
+                  ),
                 ),
               ),
               style: theme.textTheme.bodyLarge,
@@ -180,8 +177,9 @@ class _SearchDialogState extends State<SearchDialog> {
             child: Text(
               'ESC',
               style: theme.textTheme.bodySmall?.copyWith(
-                color:
-                    theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+                color: theme.textTheme.bodyMedium?.color?.withValues(
+                  alpha: 0.6,
+                ),
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -206,16 +204,18 @@ class _SearchDialogState extends State<SearchDialog> {
             Text(
               'No results found',
               style: theme.textTheme.bodyLarge?.copyWith(
-                color:
-                    theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+                color: theme.textTheme.bodyMedium?.color?.withValues(
+                  alpha: 0.6,
+                ),
               ),
             ),
             const SizedBox(height: 4),
             Text(
               'Try different keywords',
               style: theme.textTheme.bodySmall?.copyWith(
-                color:
-                    theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.4),
+                color: theme.textTheme.bodyMedium?.color?.withValues(
+                  alpha: 0.4,
+                ),
               ),
             ),
           ],
@@ -297,8 +297,9 @@ class _SearchResultItem extends StatelessWidget {
                             result.title,
                             style: theme.textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w600,
-                              color:
-                                  isSelected ? FledgeTheme.primaryColor : null,
+                              color: isSelected
+                                  ? FledgeTheme.primaryColor
+                                  : null,
                             ),
                           ),
                         ),
@@ -328,8 +329,9 @@ class _SearchResultItem extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.textTheme.bodySmall?.color
-                            ?.withValues(alpha: 0.7),
+                        color: theme.textTheme.bodySmall?.color?.withValues(
+                          alpha: 0.7,
+                        ),
                       ),
                     ),
                   ],

@@ -169,10 +169,7 @@ class _DrifterWidgetState extends State<DrifterWidget>
           // HUD — Wrap so narrow viewports flow the instructions to a
           // second row instead of overflowing.
           DefaultTextStyle(
-            style: const TextStyle(
-              color: Color(0xFFE0E0E0),
-              fontSize: 14,
-            ),
+            style: const TextStyle(color: Color(0xFFE0E0E0), fontSize: 14),
             child: SizedBox(
               width: bounds.width,
               child: Wrap(
@@ -196,19 +193,19 @@ class _DrifterWidgetState extends State<DrifterWidget>
   }
 
   Widget _hudChip(String label, String value) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1E1E2E),
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Text(
-          '$label: $value',
-          style: const TextStyle(
-            color: Color(0xFFFFD700),
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    decoration: BoxDecoration(
+      color: const Color(0xFF1E1E2E),
+      borderRadius: BorderRadius.circular(4),
+    ),
+    child: Text(
+      '$label: $value',
+      style: const TextStyle(
+        color: Color(0xFFFFD700),
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+  );
 
   int _countPickups() {
     var n = 0;

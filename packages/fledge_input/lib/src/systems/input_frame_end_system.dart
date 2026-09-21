@@ -11,9 +11,9 @@ import '../raw/gamepad_state.dart';
 class InputFrameEndSystem implements System {
   @override
   SystemMeta get meta => const SystemMeta(
-        name: 'inputFrameEnd',
-        resourceWrites: {KeyboardState, MouseState, GamepadState},
-      );
+    name: 'inputFrameEnd',
+    resourceWrites: {KeyboardState, MouseState, GamepadState},
+  );
 
   @override
   RunCondition? get runCondition => null;

@@ -91,13 +91,15 @@ class SearchService {
             final assetPath = 'assets/docs/${section.path}/${page.path}.md';
             final content = await rootBundle.loadString(assetPath);
 
-            _index.add(_IndexedDoc(
-              section: section.path,
-              sectionTitle: section.title,
-              page: page.path,
-              title: page.title,
-              content: _stripMarkdown(content),
-            ));
+            _index.add(
+              _IndexedDoc(
+                section: section.path,
+                sectionTitle: section.title,
+                page: page.path,
+                title: page.title,
+                content: _stripMarkdown(content),
+              ),
+            );
           } catch (e) {
             // Skip missing files
           }
@@ -146,8 +148,11 @@ class SearchService {
 
           // Extract snippet around the match
           if (bestSnippet == null) {
-            bestSnippet =
-                _extractSnippet(doc.content, contentIndex, word.length);
+            bestSnippet = _extractSnippet(
+              doc.content,
+              contentIndex,
+              word.length,
+            );
             matchedText = word;
           }
         }
@@ -157,21 +162,26 @@ class SearchService {
       if (doc.contentLower.contains(queryLower)) {
         score += 30;
         final phraseIndex = doc.contentLower.indexOf(queryLower);
-        bestSnippet =
-            _extractSnippet(doc.content, phraseIndex, queryLower.length);
+        bestSnippet = _extractSnippet(
+          doc.content,
+          phraseIndex,
+          queryLower.length,
+        );
         matchedText = query;
       }
 
       if (score > 0) {
-        results.add(SearchResult(
-          section: doc.section,
-          page: doc.page,
-          title: doc.title,
-          sectionTitle: doc.sectionTitle,
-          snippet: bestSnippet ?? _extractSnippet(doc.content, 0, 0),
-          matchedText: matchedText ?? query,
-          score: score,
-        ));
+        results.add(
+          SearchResult(
+            section: doc.section,
+            page: doc.page,
+            title: doc.title,
+            sectionTitle: doc.sectionTitle,
+            snippet: bestSnippet ?? _extractSnippet(doc.content, 0, 0),
+            matchedText: matchedText ?? query,
+            score: score,
+          ),
+        );
       }
     }
 

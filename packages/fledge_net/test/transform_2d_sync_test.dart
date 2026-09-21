@@ -139,8 +139,10 @@ void main() {
 
       // Craft a "y changed" delta on top of the baseline.
       final withYChange = Transform2DNetworkState()
-        ..x = 10 // unchanged
-        ..y = 25 // changed
+        ..x =
+            10 // unchanged
+        ..y =
+            25 // changed
         ..rotation = 1.5; // unchanged
       final delta = withYChange.createDelta(baseline)!;
 
@@ -158,8 +160,7 @@ void main() {
       expect(restored.y, closeTo(25, 1e-4));
     });
 
-    test(
-        'createDelta against a non-Transform2DNetworkState baseline sends a '
+    test('createDelta against a non-Transform2DNetworkState baseline sends a '
         'full snapshot', () {
       final current = Transform2DNetworkState()
         ..x = 1

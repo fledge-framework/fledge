@@ -36,10 +36,8 @@ class FrameStats {
   /// [avgFrameSeconds], [p99FrameSeconds], and [maxFrameSeconds]. 120
   /// covers roughly two seconds at 60Hz, which is enough context to
   /// notice a stutter without keeping a huge buffer around.
-  FrameStats({
-    int historyCap = 120,
-    this.smoothingFactor = 0.15,
-  }) : _historyCap = historyCap;
+  FrameStats({int historyCap = 120, this.smoothingFactor = 0.15})
+    : _historyCap = historyCap;
 
   /// The size of the rolling history buffer.
   int get historyCapacity => _historyCap;
@@ -92,8 +90,10 @@ class FrameStats {
   double get p99FrameSeconds {
     if (_history.isEmpty) return 0.0;
     final sorted = List<double>.from(_history)..sort();
-    final idx =
-        max(0, (sorted.length * 0.99).floor()).clamp(0, sorted.length - 1);
+    final idx = max(
+      0,
+      (sorted.length * 0.99).floor(),
+    ).clamp(0, sorted.length - 1);
     return sorted[idx];
   }
 

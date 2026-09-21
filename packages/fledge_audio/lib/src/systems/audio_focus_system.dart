@@ -17,11 +17,11 @@ import '../resources/audio_state.dart';
 class AudioFocusSystem implements System {
   @override
   SystemMeta get meta => const SystemMeta(
-        name: 'AudioFocusSystem',
-        eventWrites: {AudioPaused, AudioResumed},
-        resourceReads: {AudioConfig},
-        resourceWrites: {AudioState},
-      );
+    name: 'AudioFocusSystem',
+    eventWrites: {AudioPaused, AudioResumed},
+    resourceReads: {AudioConfig},
+    resourceWrites: {AudioState},
+  );
 
   @override
   RunCondition? get runCondition => null;

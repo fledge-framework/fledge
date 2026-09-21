@@ -129,7 +129,8 @@ class RenderCapabilities {
   );
 
   @override
-  String toString() => 'RenderCapabilities('
+  String toString() =>
+      'RenderCapabilities('
       'shaders: $supportsShaders, '
       'instancing: $supportsInstancing, '
       'compute: $supportsComputeShaders, '

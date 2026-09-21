@@ -43,8 +43,7 @@ void main() {
       expect(rw, equals(ro));
     });
 
-    test(
-        'QueryMut1<A> and Query1<A> return identical (entity, component) '
+    test('QueryMut1<A> and Query1<A> return identical (entity, component) '
         'sequences, and both yield live mutable references', () {
       final world = World();
       world.spawnWith([Position(0, 0)]);
@@ -58,8 +57,11 @@ void main() {
         expect(rw[i].$1, equals(ro[i].$1));
         // Both queries hand out references to the same stored Position, so
         // mutating through either must be visible via a fresh query.
-        expect(identical(rw[i].$2, ro[i].$2), isTrue,
-            reason: 'QueryMut1 must return the same stored instance as Query1');
+        expect(
+          identical(rw[i].$2, ro[i].$2),
+          isTrue,
+          reason: 'QueryMut1 must return the same stored instance as Query1',
+        );
       }
 
       // Mutation via QueryMut1 is visible on a subsequent read via Query1 —

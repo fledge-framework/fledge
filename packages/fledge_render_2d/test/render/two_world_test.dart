@@ -275,8 +275,10 @@ void main() {
         (mainWorld, renderWorld) {},
       );
 
-      final removed =
-          schedule.removeSystemByName(RenderStage.queue, 'my_system');
+      final removed = schedule.removeSystemByName(
+        RenderStage.queue,
+        'my_system',
+      );
 
       expect(removed, isTrue);
       expect(schedule.getSystems(RenderStage.queue), isEmpty);
@@ -332,14 +334,10 @@ void main() {
 
       // Track if render stage sees the data
       var foundEntity = false;
-      schedule.addSyncSystem(
-        RenderStage.render,
-        'check',
-        (m, r) {
-          final extracted = r.query1<ExtractedPosition>().iter().toList();
-          foundEntity = extracted.isNotEmpty && extracted.first.$2.x == 5;
-        },
-      );
+      schedule.addSyncSystem(RenderStage.render, 'check', (m, r) {
+        final extracted = r.query1<ExtractedPosition>().iter().toList();
+        foundEntity = extracted.isNotEmpty && extracted.first.$2.x == 5;
+      });
 
       await schedule.run(mainWorld, renderWorld);
 
@@ -349,16 +347,8 @@ void main() {
     test('clear removes all systems', () {
       final schedule = RenderSchedule();
 
-      schedule.addSyncSystem(
-        RenderStage.extract,
-        's1',
-        (m, r) {},
-      );
-      schedule.addSyncSystem(
-        RenderStage.render,
-        's2',
-        (m, r) {},
-      );
+      schedule.addSyncSystem(RenderStage.extract, 's1', (m, r) {});
+      schedule.addSyncSystem(RenderStage.render, 's2', (m, r) {});
 
       schedule.clear();
 

@@ -17,8 +17,9 @@ import 'expression.dart';
 /// ```
 class VariableStorage {
   final Map<String, dynamic> _variables = {};
-  late final ExpressionEvaluator _evaluator =
-      ExpressionEvaluator((name) => _variables[_normalize(name)]);
+  late final ExpressionEvaluator _evaluator = ExpressionEvaluator(
+    (name) => _variables[_normalize(name)],
+  );
 
   /// All variable names in storage.
   Iterable<String> get variableNames => _variables.keys;

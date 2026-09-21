@@ -23,20 +23,24 @@ void main() async {
   app.world.spawn()
     ..insert(Transform2D.from(200, 200))
     ..insert(GlobalTransform2D.identity())
-    ..insert(Light2D.point(
-      color: const Color(0xFFFFDD88),
-      radius: 180,
-      innerRadius: 40,
-    ));
+    ..insert(
+      Light2D.point(
+        color: const Color(0xFFFFDD88),
+        radius: 180,
+        innerRadius: 40,
+      ),
+    );
 
   // A directional moon tint — parallel rays across the whole viewport.
   app.world.spawn()
     ..insert(Transform2D.identity())
     ..insert(GlobalTransform2D.identity())
-    ..insert(Light2D.directional(
-      color: const Color(0x3040507A),
-      direction: Vector2(1, 1),
-    ));
+    ..insert(
+      Light2D.directional(
+        color: const Color(0x3040507A),
+        direction: Vector2(1, 1),
+      ),
+    );
 
   await app.tick();
 }

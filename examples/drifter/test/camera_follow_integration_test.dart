@@ -17,8 +17,11 @@ void main() {
 
     // A single camera entity should exist.
     final cameras = app.world.query1<Camera2D>().iter().toList();
-    expect(cameras, hasLength(1),
-        reason: 'spawnScene should create exactly one camera');
+    expect(
+      cameras,
+      hasLength(1),
+      reason: 'spawnScene should create exactly one camera',
+    );
 
     final cameraEntity = cameras.first.$1;
     expect(app.world.get<CameraFollow>(cameraEntity), isNotNull);

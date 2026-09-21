@@ -13,11 +13,7 @@ class DocsPage extends StatefulWidget {
   final String section;
   final String page;
 
-  const DocsPage({
-    super.key,
-    required this.section,
-    required this.page,
-  });
+  const DocsPage({super.key, required this.section, required this.page});
 
   @override
   State<DocsPage> createState() => _DocsPageState();
@@ -58,7 +54,8 @@ class _DocsPageState extends State<DocsPage> {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
 
     // Ctrl+K or Cmd+K to open search
-    final isCtrlOrCmd = HardwareKeyboard.instance.isControlPressed ||
+    final isCtrlOrCmd =
+        HardwareKeyboard.instance.isControlPressed ||
         HardwareKeyboard.instance.isMetaPressed;
 
     if (isCtrlOrCmd && event.logicalKey == LogicalKeyboardKey.keyK) {
@@ -203,8 +200,9 @@ class _DocsPageState extends State<DocsPage> {
               Text(
                 'Docs',
                 style: theme.textTheme.headlineMedium?.copyWith(
-                  color:
-                      theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+                  color: theme.textTheme.bodyMedium?.color?.withValues(
+                    alpha: 0.6,
+                  ),
                 ),
               ),
             ],
@@ -240,9 +238,7 @@ class _DocsPageState extends State<DocsPage> {
                 child: Container(
                   decoration: BoxDecoration(
                     border: Border(
-                      right: BorderSide(
-                        color: theme.dividerColor,
-                      ),
+                      right: BorderSide(color: theme.dividerColor),
                     ),
                   ),
                   child: DocSidebar(
@@ -252,20 +248,14 @@ class _DocsPageState extends State<DocsPage> {
                 ),
               ),
             // Main content
-            Expanded(
-              child: _buildContent(theme, isDark, isWideScreen),
-            ),
+            Expanded(child: _buildContent(theme, isDark, isWideScreen)),
             // Table of contents (visible on wide screens)
             if (isWideScreen && _markdownContent != null)
               SizedBox(
                 width: 240,
                 child: Container(
                   decoration: BoxDecoration(
-                    border: Border(
-                      left: BorderSide(
-                        color: theme.dividerColor,
-                      ),
-                    ),
+                    border: Border(left: BorderSide(color: theme.dividerColor)),
                   ),
                   padding: const EdgeInsets.all(24),
                   child: _buildTableOfContents(theme),
@@ -279,9 +269,7 @@ class _DocsPageState extends State<DocsPage> {
 
   Widget _buildContent(ThemeData theme, bool isDark, bool isWideScreen) {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (_error != null) {
@@ -295,10 +283,7 @@ class _DocsPageState extends State<DocsPage> {
               color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.3),
             ),
             const SizedBox(height: 16),
-            Text(
-              _error!,
-              style: theme.textTheme.bodyLarge,
-            ),
+            Text(_error!, style: theme.textTheme.bodyLarge),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () => context.go('/docs/getting-started/introduction'),
@@ -386,10 +371,12 @@ class _DocsPageState extends State<DocsPage> {
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: isActive
                             ? FledgeTheme.primaryColor
-                            : theme.textTheme.bodySmall?.color
-                                ?.withValues(alpha: 0.7),
-                        fontWeight:
-                            isActive ? FontWeight.w600 : FontWeight.normal,
+                            : theme.textTheme.bodySmall?.color?.withValues(
+                                alpha: 0.7,
+                              ),
+                        fontWeight: isActive
+                            ? FontWeight.w600
+                            : FontWeight.normal,
                       ),
                     ),
                   ),
@@ -481,8 +468,9 @@ class _DocsPageState extends State<DocsPage> {
     if (currentIndex == -1) return (null, null);
 
     final prev = currentIndex > 0 ? allPages[currentIndex - 1] : null;
-    final next =
-        currentIndex < allPages.length - 1 ? allPages[currentIndex + 1] : null;
+    final next = currentIndex < allPages.length - 1
+        ? allPages[currentIndex + 1]
+        : null;
 
     return (prev, next);
   }
@@ -526,8 +514,9 @@ class _NavButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
-          mainAxisAlignment:
-              isPrevious ? MainAxisAlignment.start : MainAxisAlignment.end,
+          mainAxisAlignment: isPrevious
+              ? MainAxisAlignment.start
+              : MainAxisAlignment.end,
           children: [
             if (isPrevious) ...[
               Icon(
@@ -546,8 +535,9 @@ class _NavButton extends StatelessWidget {
                   Text(
                     isPrevious ? 'Previous' : 'Next',
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.textTheme.bodySmall?.color
-                          ?.withValues(alpha: 0.6),
+                      color: theme.textTheme.bodySmall?.color?.withValues(
+                        alpha: 0.6,
+                      ),
                     ),
                   ),
                   Text(
@@ -605,9 +595,7 @@ class _SearchButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: theme.dividerColor.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: theme.dividerColor,
-          ),
+          border: Border.all(color: theme.dividerColor),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -621,8 +609,9 @@ class _SearchButton extends StatelessWidget {
             Text(
               'Search docs...',
               style: theme.textTheme.bodyMedium?.copyWith(
-                color:
-                    theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
+                color: theme.textTheme.bodyMedium?.color?.withValues(
+                  alpha: 0.5,
+                ),
               ),
             ),
             const SizedBox(width: 16),
@@ -635,8 +624,9 @@ class _SearchButton extends StatelessWidget {
               child: Text(
                 'Ctrl K',
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color:
-                      theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+                  color: theme.textTheme.bodyMedium?.color?.withValues(
+                    alpha: 0.6,
+                  ),
                   fontWeight: FontWeight.w500,
                   fontSize: 11,
                 ),

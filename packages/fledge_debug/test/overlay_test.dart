@@ -33,14 +33,21 @@ void main() {
     await app.tick();
 
     final lines = overlayTexts(app);
-    expect(lines.any((l) => l.startsWith('FPS: ')), isTrue,
-        reason: 'FPS line missing: $lines');
-    expect(lines.any((l) => l.startsWith('Entities: ')), isTrue,
-        reason: 'Entity-count line missing: $lines');
+    expect(
+      lines.any((l) => l.startsWith('FPS: ')),
+      isTrue,
+      reason: 'FPS line missing: $lines',
+    );
+    expect(
+      lines.any((l) => l.startsWith('Entities: ')),
+      isTrue,
+      reason: 'Entity-count line missing: $lines',
+    );
   });
 
-  testWidgets('overlay reuses UI entities across ticks (retained mode)',
-      (tester) async {
+  testWidgets('overlay reuses UI entities across ticks (retained mode)', (
+    tester,
+  ) async {
     final app = buildApp();
     await app.tick();
     final firstIds = <Entity>{
@@ -53,8 +60,11 @@ void main() {
       for (final (entity, _) in app.world.query1<DebugOverlayEntity>().iter())
         entity,
     };
-    expect(secondIds, equals(firstIds),
-        reason: 'Overlay entities were despawned/respawned between ticks');
+    expect(
+      secondIds,
+      equals(firstIds),
+      reason: 'Overlay entities were despawned/respawned between ticks',
+    );
   });
 
   testWidgets('toggling showFps despawns the FPS line', (tester) async {
@@ -70,13 +80,17 @@ void main() {
     await app.tick();
 
     final texts = overlayTexts(app);
-    expect(texts.any((l) => l.startsWith('FPS: ')), isFalse,
-        reason: 'FPS line lingered after toggle: $texts');
+    expect(
+      texts.any((l) => l.startsWith('FPS: ')),
+      isFalse,
+      reason: 'FPS line lingered after toggle: $texts',
+    );
     expect(texts.any((l) => l.startsWith('Entities: ')), isTrue);
   });
 
-  testWidgets('checkScheduleOrdering ambiguities show on the overlay',
-      (tester) async {
+  testWidgets('checkScheduleOrdering ambiguities show on the overlay', (
+    tester,
+  ) async {
     // Two systems in the same schedule that write the same resource
     // with no ordering declared — the classic ambiguity pattern.
     final app = buildApp();
@@ -86,8 +100,11 @@ void main() {
     await app.tick();
 
     final texts = overlayTexts(app);
-    expect(texts.any((l) => l.startsWith('Ambiguities: ')), isTrue,
-        reason: 'Ambiguity block missing: $texts');
+    expect(
+      texts.any((l) => l.startsWith('Ambiguities: ')),
+      isTrue,
+      reason: 'Ambiguity block missing: $texts',
+    );
   });
 }
 
@@ -97,10 +114,8 @@ class _SharedResource {
 
 class _TouchResourceSystemA implements System {
   @override
-  SystemMeta get meta => const SystemMeta(
-        name: 'touch_a',
-        resourceWrites: {_SharedResource},
-      );
+  SystemMeta get meta =>
+      const SystemMeta(name: 'touch_a', resourceWrites: {_SharedResource});
   @override
   RunCondition? get runCondition => null;
   @override
@@ -111,10 +126,8 @@ class _TouchResourceSystemA implements System {
 
 class _TouchResourceSystemB implements System {
   @override
-  SystemMeta get meta => const SystemMeta(
-        name: 'touch_b',
-        resourceWrites: {_SharedResource},
-      );
+  SystemMeta get meta =>
+      const SystemMeta(name: 'touch_b', resourceWrites: {_SharedResource});
   @override
   RunCondition? get runCondition => null;
   @override

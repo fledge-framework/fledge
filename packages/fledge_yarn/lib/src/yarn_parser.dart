@@ -74,8 +74,10 @@ class YarnParser {
         final value = match.group(2)!;
 
         if (key == 'tags') {
-          tags =
-              value.split(RegExp(r'\s+')).where((t) => t.isNotEmpty).toList();
+          tags = value
+              .split(RegExp(r'\s+'))
+              .where((t) => t.isNotEmpty)
+              .toList();
         } else {
           headers[key] = value;
         }
@@ -169,11 +171,7 @@ class YarnParser {
     }
 
     // No character, just text
-    return DialogueLine(
-      text: line,
-      tags: tags,
-      lineId: lineId,
-    );
+    return DialogueLine(text: line, tags: tags, lineId: lineId);
   }
 
   _LineParseResult _parseChoiceSet(List<String> lines, int startIndex) {
@@ -191,8 +189,8 @@ class YarnParser {
       if (trimmed == '===' || trimmed.isEmpty && i > startIndex) {
         // Check if next non-empty line is still a choice at same level
         var nextNonEmpty = i + 1;
-        while (
-            nextNonEmpty < lines.length && lines[nextNonEmpty].trim().isEmpty) {
+        while (nextNonEmpty < lines.length &&
+            lines[nextNonEmpty].trim().isEmpty) {
           nextNonEmpty++;
         }
         if (nextNonEmpty >= lines.length ||
@@ -250,12 +248,9 @@ class YarnParser {
           i = result.nextIndex;
         }
 
-        choices.add(Choice(
-          text: text,
-          condition: condition,
-          body: body,
-          tags: tags,
-        ));
+        choices.add(
+          Choice(text: text, condition: condition, body: body, tags: tags),
+        );
       } else {
         break;
       }
@@ -353,8 +348,9 @@ class YarnParser {
 
       if (currentLine.startsWith('<<elseif')) {
         // Parse elseif as a nested conditional
-        final elseifMatch =
-            RegExp(r'<<elseif\s+(.+?)>>').firstMatch(currentLine);
+        final elseifMatch = RegExp(
+          r'<<elseif\s+(.+?)>>',
+        ).firstMatch(currentLine);
         if (elseifMatch != null) {
           // Create a synthetic <<if>> line and parse recursively
           final elseifCondition = elseifMatch.group(1)!;

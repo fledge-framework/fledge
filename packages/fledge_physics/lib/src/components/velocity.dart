@@ -27,9 +27,7 @@ class Velocity {
   Velocity(this.x, this.y, [this.max = 4]);
 
   /// Creates a stationary velocity with the given max speed.
-  Velocity.stationary({this.max = 4})
-      : x = 0,
-        y = 0;
+  Velocity.stationary({this.max = 4}) : x = 0, y = 0;
 
   /// Returns true if the entity is moving.
   bool get isMoving => x != 0 || y != 0;

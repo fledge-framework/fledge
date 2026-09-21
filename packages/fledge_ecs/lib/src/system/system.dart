@@ -228,20 +228,20 @@ class FunctionSystem implements System {
     List<String> after = const [],
     RunCondition? runIf,
     required void Function(World world) run,
-  })  : meta = SystemMeta(
-          name: name,
-          reads: reads,
-          writes: writes,
-          resourceReads: resourceReads,
-          resourceWrites: resourceWrites,
-          eventReads: eventReads,
-          eventWrites: eventWrites,
-          exclusive: exclusive,
-          before: before,
-          after: after,
-        ),
-        runCondition = runIf,
-        _run = run;
+  }) : meta = SystemMeta(
+         name: name,
+         reads: reads,
+         writes: writes,
+         resourceReads: resourceReads,
+         resourceWrites: resourceWrites,
+         eventReads: eventReads,
+         eventWrites: eventWrites,
+         exclusive: exclusive,
+         before: before,
+         after: after,
+       ),
+       runCondition = runIf,
+       _run = run;
 
   @override
   Future<void> run(World world) {
@@ -286,20 +286,20 @@ class AsyncFunctionSystem implements System {
     List<String> after = const [],
     RunCondition? runIf,
     required Future<void> Function(World world) run,
-  })  : meta = SystemMeta(
-          name: name,
-          reads: reads,
-          writes: writes,
-          resourceReads: resourceReads,
-          resourceWrites: resourceWrites,
-          eventReads: eventReads,
-          eventWrites: eventWrites,
-          exclusive: exclusive,
-          before: before,
-          after: after,
-        ),
-        runCondition = runIf,
-        _run = run;
+  }) : meta = SystemMeta(
+         name: name,
+         reads: reads,
+         writes: writes,
+         resourceReads: resourceReads,
+         resourceWrites: resourceWrites,
+         eventReads: eventReads,
+         eventWrites: eventWrites,
+         exclusive: exclusive,
+         before: before,
+         after: after,
+       ),
+       runCondition = runIf,
+       _run = run;
 
   @override
   Future<void> run(World world) => _run(world);

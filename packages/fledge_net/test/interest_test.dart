@@ -50,7 +50,9 @@ void main() {
 
       // Mark the peer entity as owned by peer 1.
       world.insert<NetworkIdentity>(
-          peerEntity, NetworkIdentity(netId: 1, ownerId: 1));
+        peerEntity,
+        NetworkIdentity(netId: 1, ownerId: 1),
+      );
 
       registry.register(peerEntity, 1);
       registry.register(nearEntity, 2);
@@ -85,7 +87,9 @@ void main() {
       positions[nearEntity] = _Position(10, 10);
 
       world.insert<NetworkIdentity>(
-          peerEntity, NetworkIdentity(netId: 1, ownerId: 1));
+        peerEntity,
+        NetworkIdentity(netId: 1, ownerId: 1),
+      );
 
       registry.register(peerEntity, 1);
       registry.register(nearEntity, 2);
@@ -113,7 +117,9 @@ void main() {
       positions[farEntity] = _Position(500, 500);
 
       world.insert<NetworkIdentity>(
-          peerEntity, NetworkIdentity(netId: 1, ownerId: 1));
+        peerEntity,
+        NetworkIdentity(netId: 1, ownerId: 1),
+      );
 
       registry.register(peerEntity, 1);
       registry.register(farEntity, 2);

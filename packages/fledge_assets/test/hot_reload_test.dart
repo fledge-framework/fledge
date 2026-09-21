@@ -61,30 +61,35 @@ void main() {
       final poll = HotReloadPollSystem(watcher);
       await poll.run(World());
 
-      expect(handle.get(), 'world',
-          reason: 'reload should have been driven through the poll system');
+      expect(
+        handle.get(),
+        'world',
+        reason: 'reload should have been driven through the poll system',
+      );
     });
   });
 
   group('HotReloadPollSystem', () {
-    test('drains queued callbacks without needing a real watcher event',
-        () async {
-      final watcher = HotReloadWatcher();
-      var callCount = 0;
-      watcher.watchWithCallback('does-not-exist', () async {
-        callCount++;
-      });
-      // Fire a synthetic event; this exercises the enqueue path.
-      watcher.debugFireChange('does-not-exist');
+    test(
+      'drains queued callbacks without needing a real watcher event',
+      () async {
+        final watcher = HotReloadWatcher();
+        var callCount = 0;
+        watcher.watchWithCallback('does-not-exist', () async {
+          callCount++;
+        });
+        // Fire a synthetic event; this exercises the enqueue path.
+        watcher.debugFireChange('does-not-exist');
 
-      final poll = HotReloadPollSystem(watcher);
-      await poll.run(World());
+        final poll = HotReloadPollSystem(watcher);
+        await poll.run(World());
 
-      expect(callCount, 1);
+        expect(callCount, 1);
 
-      // Second poll drains nothing.
-      await poll.run(World());
-      expect(callCount, 1);
-    });
+        // Second poll drains nothing.
+        await poll.run(World());
+        expect(callCount, 1);
+      },
+    );
   });
 }

@@ -40,12 +40,12 @@ class RectangleShape extends CollisionShape {
 
   @override
   RectangleShape translate(double dx, double dy) => RectangleShape(
-        x: x + dx,
-        y: y + dy,
-        width: width,
-        height: height,
-        rotation: rotation,
-      );
+    x: x + dx,
+    y: y + dy,
+    width: width,
+    height: height,
+    rotation: rotation,
+  );
 
   @override
   Rect get bounds {
@@ -97,7 +97,11 @@ class EllipseShape extends CollisionShape {
 
   /// Creates an ellipse from bounding box coordinates.
   factory EllipseShape.fromBounds(
-      double x, double y, double width, double height) {
+    double x,
+    double y,
+    double width,
+    double height,
+  ) {
     return EllipseShape(
       centerX: x + width / 2,
       centerY: y + height / 2,
@@ -108,18 +112,15 @@ class EllipseShape extends CollisionShape {
 
   @override
   EllipseShape translate(double dx, double dy) => EllipseShape(
-        centerX: centerX + dx,
-        centerY: centerY + dy,
-        radiusX: radiusX,
-        radiusY: radiusY,
-      );
+    centerX: centerX + dx,
+    centerY: centerY + dy,
+    radiusX: radiusX,
+    radiusY: radiusY,
+  );
 
   @override
-  Rect get bounds => Rect.fromCenter(
-        center: center,
-        width: radiusX * 2,
-        height: radiusY * 2,
-      );
+  Rect get bounds =>
+      Rect.fromCenter(center: center, width: radiusX * 2, height: radiusY * 2);
 
   /// Center point of the ellipse.
   Offset get center => Offset(centerX, centerY);
@@ -151,10 +152,10 @@ class PolygonShape extends CollisionShape {
 
   @override
   PolygonShape translate(double dx, double dy) => PolygonShape(
-        points: points,
-        offsetX: offsetX + dx,
-        offsetY: offsetY + dy,
-      );
+    points: points,
+    offsetX: offsetX + dx,
+    offsetY: offsetY + dy,
+  );
 
   @override
   Rect get bounds {
@@ -208,10 +209,10 @@ class PolylineShape extends CollisionShape {
 
   @override
   PolylineShape translate(double dx, double dy) => PolylineShape(
-        points: points,
-        offsetX: offsetX + dx,
-        offsetY: offsetY + dy,
-      );
+    points: points,
+    offsetX: offsetX + dx,
+    offsetY: offsetY + dy,
+  );
 
   @override
   Rect get bounds {
@@ -260,10 +261,8 @@ class PointShape extends CollisionShape {
   const PointShape({required this.x, required this.y});
 
   @override
-  PointShape translate(double dx, double dy) => PointShape(
-        x: x + dx,
-        y: y + dy,
-      );
+  PointShape translate(double dx, double dy) =>
+      PointShape(x: x + dx, y: y + dy);
 
   @override
   Rect get bounds => Rect.fromLTWH(x, y, 0, 0);

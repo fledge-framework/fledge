@@ -16,11 +16,7 @@ export 'package:fledge_render/fledge_render.dart'
         SortableExtractedData;
 
 /// Entity type for rendering differentiation.
-enum GridEntityType {
-  player,
-  collectible,
-  tile,
-}
+enum GridEntityType { player, collectible, tile }
 
 /// Extracted render data for a grid entity.
 ///
@@ -87,13 +83,15 @@ class GridEntityExtractor extends Extractor {
       }
 
       // Spawn extracted entity in render world
-      renderWorld.spawn().insert(ExtractedGridEntity(
-            pixelX: pixelX,
-            pixelY: pixelY,
-            size: config.tileSize,
-            color: tileColor.color,
-            entityType: entityType,
-          ));
+      renderWorld.spawn().insert(
+        ExtractedGridEntity(
+          pixelX: pixelX,
+          pixelY: pixelY,
+          size: config.tileSize,
+          color: tileColor.color,
+          entityType: entityType,
+        ),
+      );
     }
   }
 }

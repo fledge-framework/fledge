@@ -27,21 +27,16 @@ class CollisionGrid {
   final List<List<bool>> _grid;
 
   /// Creates a new collision grid with all tiles initially walkable.
-  CollisionGrid({
-    required this.width,
-    required this.height,
-  }) : _grid = List.generate(
-          height,
-          (_) => List.filled(width, true),
-        );
+  CollisionGrid({required this.width, required this.height})
+    : _grid = List.generate(height, (_) => List.filled(width, true));
 
   /// Creates a collision grid from existing data.
   ///
   /// The [data] should be a 2D list where `data[y][x]` is true if walkable.
   CollisionGrid.fromData(List<List<bool>> data)
-      : width = data.isNotEmpty ? data[0].length : 0,
-        height = data.length,
-        _grid = data;
+    : width = data.isNotEmpty ? data[0].length : 0,
+      height = data.length,
+      _grid = data;
 
   /// Check if a tile is walkable.
   ///
@@ -131,10 +126,7 @@ class CollisionGrid {
 
   /// Create a copy of this grid.
   CollisionGrid copy() {
-    final newGrid = List.generate(
-      height,
-      (y) => List<bool>.from(_grid[y]),
-    );
+    final newGrid = List.generate(height, (y) => List<bool>.from(_grid[y]));
     return CollisionGrid.fromData(newGrid);
   }
 }

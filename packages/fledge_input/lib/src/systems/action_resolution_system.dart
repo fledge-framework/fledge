@@ -15,19 +15,19 @@ import '../raw/gamepad_state.dart';
 class ActionResolutionSystem implements System {
   @override
   SystemMeta get meta => const SystemMeta(
-        name: 'actionResolution',
-        resourceReads: {
-          KeyboardState,
-          MouseState,
-          GamepadState,
-          InputContextRegistry
-        },
-        resourceWrites: {ActionState},
-        // Explicit: we need the previous-frame transition flags cleared
-        // and the begin-frame bookkeeping done before we resolve
-        // actions from raw state.
-        after: ['inputPolling'],
-      );
+    name: 'actionResolution',
+    resourceReads: {
+      KeyboardState,
+      MouseState,
+      GamepadState,
+      InputContextRegistry,
+    },
+    resourceWrites: {ActionState},
+    // Explicit: we need the previous-frame transition flags cleared
+    // and the begin-frame bookkeeping done before we resolve
+    // actions from raw state.
+    after: ['inputPolling'],
+  );
 
   @override
   RunCondition? get runCondition => null;
@@ -84,12 +84,7 @@ class ActionResolutionSystem implements System {
           );
 
         case MouseAxisBinding():
-          _processMouseAxisBinding(
-            binding,
-            source,
-            mouse,
-            axisValues,
-          );
+          _processMouseAxisBinding(binding, source, mouse, axisValues);
 
         case GamepadButtonBinding():
           _processGamepadButtonBinding(
@@ -239,8 +234,10 @@ class ActionResolutionSystem implements System {
   ) {
     if (gamepad == null) return;
 
-    final phase =
-        gamepad.getButtonPhase(source.buttonKey, gamepadId: source.gamepadId);
+    final phase = gamepad.getButtonPhase(
+      source.buttonKey,
+      gamepadId: source.gamepadId,
+    );
     final isPressed =
         phase == ButtonPhase.justPressed || phase == ButtonPhase.held;
 
@@ -331,8 +328,10 @@ class ActionResolutionSystem implements System {
       case MouseButtonBinding():
         return mouse?.isButtonPressed(source.button) ?? false;
       case GamepadButtonBinding():
-        return gamepad?.isButtonPressed(source.buttonKey,
-                gamepadId: source.gamepadId) ??
+        return gamepad?.isButtonPressed(
+              source.buttonKey,
+              gamepadId: source.gamepadId,
+            ) ??
             false;
       default:
         return false;

@@ -82,9 +82,7 @@ class PhysicsPlugin implements Plugin {
       );
     }
     app.addSystem(
-      CollisionDetectionSystem(
-        spatialHashCellSize: config.spatialHashCellSize,
-      ),
+      CollisionDetectionSystem(spatialHashCellSize: config.spatialHashCellSize),
       schedule: Schedules.update,
     );
   }

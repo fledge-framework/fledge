@@ -26,11 +26,9 @@ void main() async {
     ..insert(const UiAnchorComponent(UiAnchor.topLeft))
     ..insert(const UiOffset(x: 12, y: 12))
     ..insert(const UiSize(width: 200, height: 20))
-    ..insert(UiText(
-      text: 'Score: 0',
-      fontSize: 14,
-      color: const Color(0xFFFFFFFF),
-    ));
+    ..insert(
+      UiText(text: 'Score: 0', fontSize: 14, color: const Color(0xFFFFFFFF)),
+    );
 
   await app.tick();
 }

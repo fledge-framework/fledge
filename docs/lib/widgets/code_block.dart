@@ -33,10 +33,12 @@ class _CodeBlockState extends State<CodeBlock> {
     final borderColor = widget.isDark
         ? FledgeTheme.secondaryColor.withValues(alpha: 0.3)
         : const Color(0xFFCBD5E1);
-    final headerColor =
-        widget.isDark ? FledgeTheme.phantom : const Color(0xFFE2E8F0);
-    final codeColor =
-        widget.isDark ? FledgeTheme.surfaceDark : const Color(0xFFF8FAFC);
+    final headerColor = widget.isDark
+        ? FledgeTheme.phantom
+        : const Color(0xFFE2E8F0);
+    final codeColor = widget.isDark
+        ? FledgeTheme.surfaceDark
+        : const Color(0xFFF8FAFC);
     final mutedColor = theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6);
     const radius = Radius.circular(8);
 
@@ -53,8 +55,10 @@ class _CodeBlockState extends State<CodeBlock> {
           Container(
             decoration: BoxDecoration(
               color: headerColor,
-              borderRadius:
-                  const BorderRadius.only(topLeft: radius, topRight: radius),
+              borderRadius: const BorderRadius.only(
+                topLeft: radius,
+                topRight: radius,
+              ),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
@@ -71,8 +75,10 @@ class _CodeBlockState extends State<CodeBlock> {
                   onTap: _copyCode,
                   borderRadius: BorderRadius.circular(4),
                   child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -101,7 +107,9 @@ class _CodeBlockState extends State<CodeBlock> {
             decoration: BoxDecoration(
               color: codeColor,
               borderRadius: const BorderRadius.only(
-                  bottomLeft: radius, bottomRight: radius),
+                bottomLeft: radius,
+                bottomRight: radius,
+              ),
             ),
             padding: const EdgeInsets.all(16),
             child: SingleChildScrollView(
@@ -172,15 +180,19 @@ class _CodeBlockState extends State<CodeBlock> {
     final spans = <TextSpan>[];
     for (final node in nodes) {
       if (node.value != null) {
-        spans.add(TextSpan(
-          text: node.value as String,
-          style: theme[node.className],
-        ));
+        spans.add(
+          TextSpan(text: node.value as String, style: theme[node.className]),
+        );
       } else if (node.children != null) {
-        spans.add(TextSpan(
-          style: theme[node.className],
-          children: _convertNodesToSpans(node.children as List<dynamic>, theme),
-        ));
+        spans.add(
+          TextSpan(
+            style: theme[node.className],
+            children: _convertNodesToSpans(
+              node.children as List<dynamic>,
+              theme,
+            ),
+          ),
+        );
       }
     }
     return spans;

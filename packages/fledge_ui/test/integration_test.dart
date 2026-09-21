@@ -6,8 +6,9 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('UiPlugin end-to-end: spawn text, tick, paint FledgeUiOverlay',
-      (tester) async {
+  testWidgets('UiPlugin end-to-end: spawn text, tick, paint FledgeUiOverlay', (
+    tester,
+  ) async {
     final app = App()
       ..addPlugin(RenderPlugin())
       ..addPlugin(const CameraPlugin())
@@ -29,8 +30,11 @@ void main() {
 
     // The extractor should have populated the render world.
     final renderWorld = app.world.getResource<RenderWorld>()!;
-    final extracted =
-        renderWorld.query1<ExtractedUiText>().iter().map((r) => r.$2).toList();
+    final extracted = renderWorld
+        .query1<ExtractedUiText>()
+        .iter()
+        .map((r) => r.$2)
+        .toList();
     expect(extracted, hasLength(1));
     expect(extracted.single.text, 'Score: 0');
 
@@ -42,10 +46,7 @@ void main() {
         child: SizedBox(
           width: 400,
           height: 300,
-          child: FledgeUiOverlay(
-            app: app,
-            child: const SizedBox.expand(),
-          ),
+          child: FledgeUiOverlay(app: app, child: const SizedBox.expand()),
         ),
       ),
     );
@@ -61,12 +62,13 @@ void main() {
       ..addPlugin(const UiPlugin());
     app.world.getResource<ViewportSize>()!.update(200, 200);
 
-    final entity = (app.world.spawn()
-          ..insert(const UiNode())
-          ..insert(const UiAnchorComponent(UiAnchor.topLeft))
-          ..insert(const UiSize(width: 80, height: 20))
-          ..insert(UiText(text: 'Score: 0')))
-        .entity;
+    final entity =
+        (app.world.spawn()
+              ..insert(const UiNode())
+              ..insert(const UiAnchorComponent(UiAnchor.topLeft))
+              ..insert(const UiSize(width: 80, height: 20))
+              ..insert(UiText(text: 'Score: 0')))
+            .entity;
 
     await app.tick();
 

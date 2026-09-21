@@ -41,16 +41,16 @@ class Parallax {
 class ParallaxSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
-        name: 'ParallaxSystem',
-        writes: {ComponentId.of<GlobalTransform2D>()},
-        reads: {
-          ComponentId.of<Parallax>(),
-          ComponentId.of<Transform2D>(),
-          ComponentId.of<Camera2D>(),
-        },
-        after: const ['CameraFollowSystem', 'CameraShakeSystem'],
-        before: const ['CameraTransitionSystem'],
-      );
+    name: 'ParallaxSystem',
+    writes: {ComponentId.of<GlobalTransform2D>()},
+    reads: {
+      ComponentId.of<Parallax>(),
+      ComponentId.of<Transform2D>(),
+      ComponentId.of<Camera2D>(),
+    },
+    after: const ['CameraFollowSystem', 'CameraShakeSystem'],
+    before: const ['CameraTransitionSystem'],
+  );
 
   @override
   RunCondition? get runCondition => null;

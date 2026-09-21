@@ -12,10 +12,10 @@ import '../components/tilemap_animator.dart';
 class TileAnimationSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
-        name: 'tile_animation',
-        writes: {ComponentId.of<TilemapAnimator>()},
-        resourceReads: {WallTime},
-      );
+    name: 'tile_animation',
+    writes: {ComponentId.of<TilemapAnimator>()},
+    resourceReads: {WallTime},
+  );
 
   @override
   RunCondition? get runCondition => null;

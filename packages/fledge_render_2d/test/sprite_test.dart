@@ -107,8 +107,10 @@ void main() {
       const rect = Rect.fromLTRB(0, 0, 100, 100);
       expect(rect.contains(const Offset(50, 50)), isTrue);
       expect(rect.contains(const Offset(0, 0)), isTrue);
-      expect(rect.contains(const Offset(100, 100)),
-          isFalse); // Right edge exclusive
+      expect(
+        rect.contains(const Offset(100, 100)),
+        isFalse,
+      ); // Right edge exclusive
       expect(rect.contains(const Offset(-1, 50)), isFalse);
     });
   });
@@ -218,10 +220,7 @@ void main() {
 
     test('size uses custom size when set', () {
       const texture = TextureHandle(id: 1, width: 64, height: 64);
-      final sprite = Sprite(
-        texture: texture,
-        customSize: Vector2(128, 128),
-      );
+      final sprite = Sprite(texture: texture, customSize: Vector2(128, 128));
 
       expect(sprite.size.x, 128);
       expect(sprite.size.y, 128);
@@ -314,11 +313,7 @@ void main() {
 
     test('creates with position', () {
       const texture = TextureHandle(id: 1, width: 64, height: 64);
-      final bundle = SpriteBundle(
-        texture: texture,
-        x: 100,
-        y: 200,
-      );
+      final bundle = SpriteBundle(texture: texture, x: 100, y: 200);
 
       expect(bundle.transform.translation.x, 100);
       expect(bundle.transform.translation.y, 200);
@@ -326,10 +321,7 @@ void main() {
 
     test('creates with visibility', () {
       const texture = TextureHandle(id: 1, width: 64, height: 64);
-      final bundle = SpriteBundle(
-        texture: texture,
-        visible: false,
-      );
+      final bundle = SpriteBundle(texture: texture, visible: false);
 
       expect(bundle.visibility, isNotNull);
       expect(bundle.visibility!.isVisible, isFalse);
@@ -362,12 +354,14 @@ void main() {
       const texture = TextureHandle(id: 1, width: 64, height: 64);
       final batch = SpriteBatch(texture);
 
-      batch.add(SpriteInstance(
-        sourceRect: const Rect.fromLTWH(0, 0, 64, 64),
-        destRect: const Rect.fromLTWH(0, 0, 64, 64),
-        transform: Matrix3.identity(),
-        color: const Color(0xFFFFFFFF),
-      ));
+      batch.add(
+        SpriteInstance(
+          sourceRect: const Rect.fromLTWH(0, 0, 64, 64),
+          destRect: const Rect.fromLTWH(0, 0, 64, 64),
+          transform: Matrix3.identity(),
+          color: const Color(0xFFFFFFFF),
+        ),
+      );
 
       expect(batch.length, 1);
       expect(batch.isNotEmpty, isTrue);
@@ -377,12 +371,14 @@ void main() {
       const texture = TextureHandle(id: 1, width: 64, height: 64);
       final batch = SpriteBatch(texture);
 
-      batch.add(SpriteInstance(
-        sourceRect: const Rect.fromLTWH(0, 0, 64, 64),
-        destRect: const Rect.fromLTWH(0, 0, 64, 64),
-        transform: Matrix3.identity(),
-        color: const Color(0xFFFFFFFF),
-      ));
+      batch.add(
+        SpriteInstance(
+          sourceRect: const Rect.fromLTWH(0, 0, 64, 64),
+          destRect: const Rect.fromLTWH(0, 0, 64, 64),
+          transform: Matrix3.identity(),
+          color: const Color(0xFFFFFFFF),
+        ),
+      );
 
       batch.clear();
       expect(batch.isEmpty, isTrue);
@@ -395,26 +391,32 @@ void main() {
       const texture2 = TextureHandle(id: 2, width: 64, height: 64);
 
       final batch1 = SpriteBatch(texture1);
-      batch1.add(SpriteInstance(
-        sourceRect: const Rect.fromLTWH(0, 0, 64, 64),
-        destRect: const Rect.fromLTWH(0, 0, 64, 64),
-        transform: Matrix3.identity(),
-        color: const Color(0xFFFFFFFF),
-      ));
-      batch1.add(SpriteInstance(
-        sourceRect: const Rect.fromLTWH(0, 0, 64, 64),
-        destRect: const Rect.fromLTWH(64, 0, 64, 64),
-        transform: Matrix3.identity(),
-        color: const Color(0xFFFFFFFF),
-      ));
+      batch1.add(
+        SpriteInstance(
+          sourceRect: const Rect.fromLTWH(0, 0, 64, 64),
+          destRect: const Rect.fromLTWH(0, 0, 64, 64),
+          transform: Matrix3.identity(),
+          color: const Color(0xFFFFFFFF),
+        ),
+      );
+      batch1.add(
+        SpriteInstance(
+          sourceRect: const Rect.fromLTWH(0, 0, 64, 64),
+          destRect: const Rect.fromLTWH(64, 0, 64, 64),
+          transform: Matrix3.identity(),
+          color: const Color(0xFFFFFFFF),
+        ),
+      );
 
       final batch2 = SpriteBatch(texture2);
-      batch2.add(SpriteInstance(
-        sourceRect: const Rect.fromLTWH(0, 0, 64, 64),
-        destRect: const Rect.fromLTWH(0, 64, 64, 64),
-        transform: Matrix3.identity(),
-        color: const Color(0xFFFFFFFF),
-      ));
+      batch2.add(
+        SpriteInstance(
+          sourceRect: const Rect.fromLTWH(0, 0, 64, 64),
+          destRect: const Rect.fromLTWH(0, 64, 64, 64),
+          transform: Matrix3.identity(),
+          color: const Color(0xFFFFFFFF),
+        ),
+      );
 
       final batches = SpriteBatches([batch1, batch2]);
 
@@ -436,38 +438,44 @@ void main() {
       final entity2 = world.spawn().entity;
       final entity3 = world.spawn().entity;
 
-      renderWorld.spawn().insert(ExtractedSprite(
-            entity: entity1,
-            texture: texture1,
-            sourceRect: const Rect.fromLTWH(0, 0, 64, 64),
-            transform: Matrix3.identity(),
-            color: const Color(0xFFFFFFFF),
-            sortKey: 100,
-            anchor: Vector2(0.5, 0.5),
-            size: Vector2(64, 64),
-          ));
+      renderWorld.spawn().insert(
+        ExtractedSprite(
+          entity: entity1,
+          texture: texture1,
+          sourceRect: const Rect.fromLTWH(0, 0, 64, 64),
+          transform: Matrix3.identity(),
+          color: const Color(0xFFFFFFFF),
+          sortKey: 100,
+          anchor: Vector2(0.5, 0.5),
+          size: Vector2(64, 64),
+        ),
+      );
 
-      renderWorld.spawn().insert(ExtractedSprite(
-            entity: entity2,
-            texture: texture2,
-            sourceRect: const Rect.fromLTWH(0, 0, 64, 64),
-            transform: Matrix3.identity(),
-            color: const Color(0xFFFFFFFF),
-            sortKey: 200,
-            anchor: Vector2(0.5, 0.5),
-            size: Vector2(64, 64),
-          ));
+      renderWorld.spawn().insert(
+        ExtractedSprite(
+          entity: entity2,
+          texture: texture2,
+          sourceRect: const Rect.fromLTWH(0, 0, 64, 64),
+          transform: Matrix3.identity(),
+          color: const Color(0xFFFFFFFF),
+          sortKey: 200,
+          anchor: Vector2(0.5, 0.5),
+          size: Vector2(64, 64),
+        ),
+      );
 
-      renderWorld.spawn().insert(ExtractedSprite(
-            entity: entity3,
-            texture: texture1, // Same texture as first sprite
-            sourceRect: const Rect.fromLTWH(0, 0, 64, 64),
-            transform: Matrix3.identity(),
-            color: const Color(0xFFFFFFFF),
-            sortKey: 300,
-            anchor: Vector2(0.5, 0.5),
-            size: Vector2(64, 64),
-          ));
+      renderWorld.spawn().insert(
+        ExtractedSprite(
+          entity: entity3,
+          texture: texture1, // Same texture as first sprite
+          sourceRect: const Rect.fromLTWH(0, 0, 64, 64),
+          transform: Matrix3.identity(),
+          color: const Color(0xFFFFFFFF),
+          sortKey: 300,
+          anchor: Vector2(0.5, 0.5),
+          size: Vector2(64, 64),
+        ),
+      );
 
       // Run batch system
       final system = SpriteBatchSystem();
@@ -490,38 +498,44 @@ void main() {
       final entity3 = world.spawn().entity;
 
       // Add in reverse order of sort key
-      renderWorld.spawn().insert(ExtractedSprite(
-            entity: entity3,
-            texture: texture,
-            sourceRect: const Rect.fromLTWH(0, 0, 64, 64),
-            transform: Matrix3.identity(),
-            color: const Color(0xFFFF0000), // Red
-            sortKey: 300,
-            anchor: Vector2(0.5, 0.5),
-            size: Vector2(64, 64),
-          ));
+      renderWorld.spawn().insert(
+        ExtractedSprite(
+          entity: entity3,
+          texture: texture,
+          sourceRect: const Rect.fromLTWH(0, 0, 64, 64),
+          transform: Matrix3.identity(),
+          color: const Color(0xFFFF0000), // Red
+          sortKey: 300,
+          anchor: Vector2(0.5, 0.5),
+          size: Vector2(64, 64),
+        ),
+      );
 
-      renderWorld.spawn().insert(ExtractedSprite(
-            entity: entity1,
-            texture: texture,
-            sourceRect: const Rect.fromLTWH(0, 0, 64, 64),
-            transform: Matrix3.identity(),
-            color: const Color(0xFF00FF00), // Green
-            sortKey: 100,
-            anchor: Vector2(0.5, 0.5),
-            size: Vector2(64, 64),
-          ));
+      renderWorld.spawn().insert(
+        ExtractedSprite(
+          entity: entity1,
+          texture: texture,
+          sourceRect: const Rect.fromLTWH(0, 0, 64, 64),
+          transform: Matrix3.identity(),
+          color: const Color(0xFF00FF00), // Green
+          sortKey: 100,
+          anchor: Vector2(0.5, 0.5),
+          size: Vector2(64, 64),
+        ),
+      );
 
-      renderWorld.spawn().insert(ExtractedSprite(
-            entity: entity2,
-            texture: texture,
-            sourceRect: const Rect.fromLTWH(0, 0, 64, 64),
-            transform: Matrix3.identity(),
-            color: const Color(0xFF0000FF), // Blue
-            sortKey: 200,
-            anchor: Vector2(0.5, 0.5),
-            size: Vector2(64, 64),
-          ));
+      renderWorld.spawn().insert(
+        ExtractedSprite(
+          entity: entity2,
+          texture: texture,
+          sourceRect: const Rect.fromLTWH(0, 0, 64, 64),
+          transform: Matrix3.identity(),
+          color: const Color(0xFF0000FF), // Blue
+          sortKey: 200,
+          anchor: Vector2(0.5, 0.5),
+          size: Vector2(64, 64),
+        ),
+      );
 
       final system = SpriteBatchSystem();
       await system.run(world, renderWorld);
@@ -589,7 +603,9 @@ void main() {
           in renderWorld.query1<ExtractedSprite>().iter()) {
         // Default layer is characters (index 2); sub = (50 * 1000) = 50000.
         expect(
-            extracted.sortKey, DrawLayer.characters.sortKey(subOrder: 50000));
+          extracted.sortKey,
+          DrawLayer.characters.sortKey(subOrder: 50000),
+        );
         expect(extracted.layer, DrawLayer.characters);
         seen++;
       }

@@ -10,17 +10,17 @@ import 'package:flutter_test/flutter_test.dart';
 /// re-show the "Click to play" overlay.
 void main() {
   testWidgets('clicking a focused canvas does not lose focus', (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      home: Focus(
-        autofocus: true,
-        onKeyEvent: (_, __) => KeyEventResult.ignored,
-        child: SelectionArea(
-          child: const Scaffold(
-            body: Center(child: DrifterWidget()),
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Focus(
+          autofocus: true,
+          onKeyEvent: (_, __) => KeyEventResult.ignored,
+          child: SelectionArea(
+            child: const Scaffold(body: Center(child: DrifterWidget())),
           ),
         ),
       ),
-    ));
+    );
     await tester.pump();
     await tester.pump();
 
@@ -30,17 +30,25 @@ void main() {
     // Simulate clicking the overlay to gain focus (first interaction).
     await tester.tap(find.text('Click to play'));
     await tester.pump();
-    expect(focus.hasFocus, isTrue,
-        reason: 'tapping overlay should transfer focus to the game');
+    expect(
+      focus.hasFocus,
+      isTrue,
+      reason: 'tapping overlay should transfer focus to the game',
+    );
     expect(find.text('Click to play'), findsNothing);
 
     // Second click on the canvas — should be a no-op focus-wise.
     await tester.tap(find.byType(CustomPaint).first);
     await tester.pump();
-    expect(focus.hasFocus, isTrue,
-        reason:
-            'clicking inside an already-focused canvas must not lose focus');
-    expect(find.text('Click to play'), findsNothing,
-        reason: 'overlay should stay hidden on re-click');
+    expect(
+      focus.hasFocus,
+      isTrue,
+      reason: 'clicking inside an already-focused canvas must not lose focus',
+    );
+    expect(
+      find.text('Click to play'),
+      findsNothing,
+      reason: 'overlay should stay hidden on re-click',
+    );
   });
 }

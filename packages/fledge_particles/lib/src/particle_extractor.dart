@@ -41,23 +41,26 @@ class ParticleExtractor extends Extractor {
         // emitter didn't specify a sub-order.
         final sub = explicitSub != 0
             ? explicitSub
-            : (p.position.y * 1000)
-                .toInt()
-                .clamp(0, DrawLayerExtension.layerMultiplier - 1);
+            : (p.position.y * 1000).toInt().clamp(
+                0,
+                DrawLayerExtension.layerMultiplier - 1,
+              );
         final sortKey = layer.sortKey(subOrder: sub);
 
-        renderWorld.spawn().insert(ExtractedSprite(
-              entity: entity,
-              texture: texture,
-              sourceRect: sourceRect,
-              transform: _matrixFor(p, size),
-              color: p.color,
-              sortKey: sortKey,
-              layer: layer,
-              layerSubOrder: explicitSub,
-              anchor: _centerAnchor.clone(),
-              size: Vector2(size, size),
-            ));
+        renderWorld.spawn().insert(
+          ExtractedSprite(
+            entity: entity,
+            texture: texture,
+            sourceRect: sourceRect,
+            transform: _matrixFor(p, size),
+            color: p.color,
+            sortKey: sortKey,
+            layer: layer,
+            layerSubOrder: explicitSub,
+            anchor: _centerAnchor.clone(),
+            size: Vector2(size, size),
+          ),
+        );
       }
     }
   }

@@ -22,7 +22,9 @@ void main() {
     test('hashCode is consistent', () {
       const parent = Entity(1, 0);
       expect(
-          const Parent(parent).hashCode, equals(const Parent(parent).hashCode));
+        const Parent(parent).hashCode,
+        equals(const Parent(parent).hashCode),
+      );
     });
 
     test('toString includes entity', () {
@@ -79,7 +81,9 @@ void main() {
       final children = Children();
       children.add(const Entity(1, 0));
       expect(
-          () => children.list.add(const Entity(2, 0)), throwsUnsupportedError);
+        () => children.list.add(const Entity(2, 0)),
+        throwsUnsupportedError,
+      );
     });
 
     test('isNotEmpty returns true when has children', () {

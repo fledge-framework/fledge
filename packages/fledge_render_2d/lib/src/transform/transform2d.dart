@@ -26,12 +26,9 @@ class Transform2D {
   Vector2 scale;
 
   /// Creates a transform with the specified values.
-  Transform2D({
-    Vector2? translation,
-    this.rotation = 0,
-    Vector2? scale,
-  })  : translation = translation ?? Vector2.zero(),
-        scale = scale ?? Vector2(1, 1);
+  Transform2D({Vector2? translation, this.rotation = 0, Vector2? scale})
+    : translation = translation ?? Vector2.zero(),
+      scale = scale ?? Vector2(1, 1);
 
   /// Creates a transform with only translation.
   factory Transform2D.from(double x, double y) =>
@@ -55,17 +52,7 @@ class Transform2D {
     final d = cos * scale.y;
 
     // Combine with translation
-    return Matrix3(
-      a,
-      b,
-      0,
-      c,
-      d,
-      0,
-      translation.x,
-      translation.y,
-      1,
-    );
+    return Matrix3(a, b, 0, c, d, 0, translation.x, translation.y, 1);
   }
 
   /// Set translation from x and y values.
@@ -99,10 +86,10 @@ class Transform2D {
 
   /// Create a copy of this transform.
   Transform2D clone() => Transform2D(
-        translation: translation.clone(),
-        rotation: rotation,
-        scale: scale.clone(),
-      );
+    translation: translation.clone(),
+    rotation: rotation,
+    scale: scale.clone(),
+  );
 
   /// Copy values from another transform.
   void copyFrom(Transform2D other) {
@@ -112,7 +99,8 @@ class Transform2D {
   }
 
   @override
-  String toString() => 'Transform2D('
+  String toString() =>
+      'Transform2D('
       'translation: (${translation.x.toStringAsFixed(2)}, ${translation.y.toStringAsFixed(2)}), '
       'rotation: ${rotationDegrees.toStringAsFixed(1)}°, '
       'scale: (${scale.x.toStringAsFixed(2)}, ${scale.y.toStringAsFixed(2)}))';

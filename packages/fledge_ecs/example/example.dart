@@ -16,10 +16,10 @@ class Velocity {
 class MovementSystem extends System {
   @override
   SystemMeta get meta => SystemMeta(
-        name: 'movement',
-        writes: {ComponentId.of<Position>()},
-        reads: {ComponentId.of<Velocity>()},
-      );
+    name: 'movement',
+    writes: {ComponentId.of<Position>()},
+    reads: {ComponentId.of<Velocity>()},
+  );
 
   @override
   Future<void> run(World world) async {

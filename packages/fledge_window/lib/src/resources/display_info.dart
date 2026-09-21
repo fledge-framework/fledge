@@ -64,9 +64,7 @@ class DisplayInfo {
   /// Creates empty display info (populated during startup).
   ///
   /// This is used internally by the WindowPlugin.
-  DisplayInfo.empty()
-      : _displays = [],
-        _primaryIndex = 0;
+  DisplayInfo.empty() : _displays = [], _primaryIndex = 0;
 
   /// All connected displays.
   List<Display> get displays => List.unmodifiable(_displays);

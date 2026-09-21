@@ -62,11 +62,7 @@ class DebugGizmosLayer extends StatelessWidget {
   final Widget child;
 
   /// Creates a debug gizmos overlay.
-  const DebugGizmosLayer({
-    super.key,
-    required this.app,
-    required this.child,
-  });
+  const DebugGizmosLayer({super.key, required this.app, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -206,8 +202,11 @@ class _GizmoPainter extends CustomPainter {
   }) {
     if (points.isEmpty) return null;
     final path = Path();
-    final first =
-        _worldToScreen(points.first.dx + dx, points.first.dy + dy, size);
+    final first = _worldToScreen(
+      points.first.dx + dx,
+      points.first.dy + dy,
+      size,
+    );
     path.moveTo(first.dx, first.dy);
     for (var i = 1; i < points.length; i++) {
       final p = _worldToScreen(points[i].dx + dx, points[i].dy + dy, size);

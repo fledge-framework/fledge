@@ -128,8 +128,9 @@ class Archetypes {
     Iterable<ComponentId>? excluded,
   }) sync* {
     final requiredArchetype = ArchetypeId.of(required);
-    final excludedArchetype =
-        excluded != null ? ArchetypeId.of(excluded) : null;
+    final excludedArchetype = excluded != null
+        ? ArchetypeId.of(excluded)
+        : null;
 
     for (int i = 0; i < _tables.length; i++) {
       final archetype = _tables[i].archetypeId;

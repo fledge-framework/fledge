@@ -39,10 +39,7 @@ void writePositionsAndVelocities(QueryMut2<Position, Velocity> q) {
 /// Mixed reads/writes are supported across parameters (never within one
 /// parameter). Here Position is read while Velocity is written.
 @system
-void readPositionsWriteVelocities(
-  Query1<Position> r,
-  QueryMut1<Velocity> w,
-) {
+void readPositionsWriteVelocities(Query1<Position> r, QueryMut1<Velocity> w) {
   for (final _ in r.iter()) {}
   for (final _ in w.iter()) {}
 }

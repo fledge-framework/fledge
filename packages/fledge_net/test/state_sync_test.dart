@@ -184,16 +184,14 @@ void main() {
       final s1 = Transform2DNetworkState()..x = 0;
       final s2 = Transform2DNetworkState()..x = 10;
 
-      buffer.add(StateSnapshot(
-        tick: 1,
-        state: s1,
-        timestamp: base,
-      ));
-      buffer.add(StateSnapshot(
-        tick: 2,
-        state: s2,
-        timestamp: base.add(const Duration(milliseconds: 100)),
-      ));
+      buffer.add(StateSnapshot(tick: 1, state: s1, timestamp: base));
+      buffer.add(
+        StateSnapshot(
+          tick: 2,
+          state: s2,
+          timestamp: base.add(const Duration(milliseconds: 100)),
+        ),
+      );
 
       // Query at midpoint
       final renderTime = base.add(const Duration(milliseconds: 50));
@@ -260,9 +258,11 @@ void main() {
       final before = DateTime.now();
       final snapshot = StateSnapshot(tick: 1, state: Transform2DNetworkState());
       expect(
-          snapshot.timestamp
-              .isAfter(before.subtract(const Duration(milliseconds: 1))),
-          true);
+        snapshot.timestamp.isAfter(
+          before.subtract(const Duration(milliseconds: 1)),
+        ),
+        true,
+      );
     });
 
     test('accepts explicit timestamp', () {

@@ -48,11 +48,7 @@ class FledgeUiOverlay extends StatelessWidget {
   final Widget child;
 
   /// Creates a UI overlay.
-  const FledgeUiOverlay({
-    super.key,
-    required this.app,
-    required this.child,
-  });
+  const FledgeUiOverlay({super.key, required this.app, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -149,12 +145,14 @@ class _UiPainter extends CustomPainter {
       fontWeight: text.fontWeight,
     );
     final builder = ui.ParagraphBuilder(style)
-      ..pushStyle(ui.TextStyle(
-        color: text.color,
-        fontSize: text.fontSize,
-        fontFamily: text.fontFamily,
-        fontWeight: text.fontWeight,
-      ))
+      ..pushStyle(
+        ui.TextStyle(
+          color: text.color,
+          fontSize: text.fontSize,
+          fontFamily: text.fontFamily,
+          fontWeight: text.fontWeight,
+        ),
+      )
       ..addText(text.text);
     final paragraph = builder.build()
       ..layout(ui.ParagraphConstraints(width: text.rect.width));

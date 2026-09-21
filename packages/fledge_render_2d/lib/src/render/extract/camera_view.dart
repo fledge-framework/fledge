@@ -29,21 +29,14 @@ class Viewport {
   final double height;
 
   /// Creates a viewport.
-  const Viewport({
-    this.x = 0,
-    this.y = 0,
-    this.width = 1,
-    this.height = 1,
-  });
+  const Viewport({this.x = 0, this.y = 0, this.width = 1, this.height = 1});
 
   /// Full screen viewport.
   static const fullScreen = Viewport();
 
   /// Get pixel rect for the given screen size.
-  RenderSize toPixelSize(RenderSize screenSize) => RenderSize(
-        screenSize.width * width,
-        screenSize.height * height,
-      );
+  RenderSize toPixelSize(RenderSize screenSize) =>
+      RenderSize(screenSize.width * width, screenSize.height * height);
 }
 
 /// Camera view data passed through render graph slots.

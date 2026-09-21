@@ -86,11 +86,7 @@ void main() {
     });
 
     test('addSystems adds multiple systems', () {
-      final app = App()
-        ..addSystems([
-          CounterSystem(),
-          CounterSystem(),
-        ]);
+      final app = App()..addSystems([CounterSystem(), CounterSystem()]);
 
       expect(app.scheduler.systemCount, equals(2));
     });
@@ -195,10 +191,7 @@ void main() {
 
     test('FunctionPlugin executes cleanup function', () {
       var cleaned = false;
-      final plugin = FunctionPlugin(
-        (app) {},
-        cleanup: () => cleaned = true,
-      );
+      final plugin = FunctionPlugin((app) {}, cleanup: () => cleaned = true);
 
       plugin.cleanup();
 

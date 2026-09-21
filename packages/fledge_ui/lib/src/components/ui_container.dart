@@ -60,10 +60,10 @@ class UiContainer {
     this.mode = LayoutMode.stack,
     this.gap = 0.0,
     double padding = 0.0,
-  })  : paddingLeft = padding,
-        paddingTop = padding,
-        paddingRight = padding,
-        paddingBottom = padding;
+  }) : paddingLeft = padding,
+       paddingTop = padding,
+       paddingRight = padding,
+       paddingBottom = padding;
 
   /// Total horizontal padding (left + right).
   double get horizontalPadding => paddingLeft + paddingRight;

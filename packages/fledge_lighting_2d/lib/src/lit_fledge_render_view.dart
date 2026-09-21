@@ -62,10 +62,7 @@ class _LitFledgeRenderPainter extends CustomPainter {
       final base = ambient.color;
       final scaledAlpha = (base.a * ambient.intensity).clamp(0.0, 1.0);
       final paint = Paint()..color = base.withValues(alpha: scaledAlpha);
-      canvas.drawRect(
-        Rect.fromLTWH(0, 0, size.width, size.height),
-        paint,
-      );
+      canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
     }
 
     final drawer = app.world.getResource<SpriteDrawer>();

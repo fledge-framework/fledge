@@ -145,8 +145,10 @@ void main() {
 
       await schedule.run(world);
 
-      expect(order,
-          equals(['first', 'preUpdate', 'update', 'postUpdate', 'last']));
+      expect(
+        order,
+        equals(['first', 'preUpdate', 'update', 'postUpdate', 'last']),
+      );
     });
 
     test('runs non-conflicting systems in parallel', () async {
@@ -156,24 +158,28 @@ void main() {
 
       // Two systems that read different components
       final schedule = Scheduler()
-        ..addSystem(AsyncFunctionSystem(
-          'system1',
-          reads: {ComponentId.of<Position>()},
-          run: (_) async {
-            startTimes['system1'] = DateTime.now();
-            await Future.delayed(const Duration(milliseconds: 50));
-            endTimes['system1'] = DateTime.now();
-          },
-        ))
-        ..addSystem(AsyncFunctionSystem(
-          'system2',
-          reads: {ComponentId.of<Velocity>()},
-          run: (_) async {
-            startTimes['system2'] = DateTime.now();
-            await Future.delayed(const Duration(milliseconds: 50));
-            endTimes['system2'] = DateTime.now();
-          },
-        ));
+        ..addSystem(
+          AsyncFunctionSystem(
+            'system1',
+            reads: {ComponentId.of<Position>()},
+            run: (_) async {
+              startTimes['system1'] = DateTime.now();
+              await Future.delayed(const Duration(milliseconds: 50));
+              endTimes['system1'] = DateTime.now();
+            },
+          ),
+        )
+        ..addSystem(
+          AsyncFunctionSystem(
+            'system2',
+            reads: {ComponentId.of<Velocity>()},
+            run: (_) async {
+              startTimes['system2'] = DateTime.now();
+              await Future.delayed(const Duration(milliseconds: 50));
+              endTimes['system2'] = DateTime.now();
+            },
+          ),
+        );
 
       await schedule.run(world);
 
@@ -189,16 +195,20 @@ void main() {
       final posId = ComponentId.of<Position>();
 
       final schedule = Scheduler()
-        ..addSystem(FunctionSystem(
-          'writer1',
-          writes: {posId},
-          run: (_) => order.add('writer1'),
-        ))
-        ..addSystem(FunctionSystem(
-          'writer2',
-          writes: {posId},
-          run: (_) => order.add('writer2'),
-        ));
+        ..addSystem(
+          FunctionSystem(
+            'writer1',
+            writes: {posId},
+            run: (_) => order.add('writer1'),
+          ),
+        )
+        ..addSystem(
+          FunctionSystem(
+            'writer2',
+            writes: {posId},
+            run: (_) => order.add('writer2'),
+          ),
+        );
 
       await schedule.run(world);
 

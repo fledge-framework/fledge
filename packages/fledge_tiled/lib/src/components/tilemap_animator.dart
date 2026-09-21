@@ -64,7 +64,7 @@ class TileAnimation {
   late final List<double> _frameBoundaries;
 
   TileAnimation({required this.frames})
-      : totalDuration = frames.fold(0.0, (sum, f) => sum + f.duration) {
+    : totalDuration = frames.fold(0.0, (sum, f) => sum + f.duration) {
     // Pre-compute frame boundaries for binary search
     _frameBoundaries = [];
     double accumulated = 0;
@@ -80,10 +80,12 @@ class TileAnimation {
   factory TileAnimation.fromTiled(List<TiledAnimationFrame> tiledFrames) {
     return TileAnimation(
       frames: tiledFrames
-          .map((f) => TileAnimationFrame(
-                tileId: f.tileId,
-                duration: f.durationMs / 1000.0,
-              ))
+          .map(
+            (f) => TileAnimationFrame(
+              tileId: f.tileId,
+              duration: f.durationMs / 1000.0,
+            ),
+          )
           .toList(),
     );
   }
@@ -149,10 +151,7 @@ class TileAnimationFrame {
   /// Duration of this frame in seconds.
   final double duration;
 
-  const TileAnimationFrame({
-    required this.tileId,
-    required this.duration,
-  });
+  const TileAnimationFrame({required this.tileId, required this.duration});
 }
 
 /// Intermediate representation of Tiled animation frame data.
@@ -165,8 +164,5 @@ class TiledAnimationFrame {
   /// Duration in milliseconds (Tiled's native format).
   final int durationMs;
 
-  const TiledAnimationFrame({
-    required this.tileId,
-    required this.durationMs,
-  });
+  const TiledAnimationFrame({required this.tileId, required this.durationMs});
 }

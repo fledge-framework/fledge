@@ -44,7 +44,7 @@ abstract class Extractor {
 /// ```
 class ComponentExtractor<TSource, TExtracted> extends Extractor {
   final TExtracted Function(World world, Entity entity, TSource component)
-      _extractFn;
+  _extractFn;
   final QueryFilter? _filter;
 
   /// Creates a component extractor.
@@ -53,10 +53,10 @@ class ComponentExtractor<TSource, TExtracted> extends Extractor {
   /// An optional [filter] can be provided to narrow the query.
   ComponentExtractor(
     TExtracted Function(World world, Entity entity, TSource component)
-        extract, {
+    extract, {
     QueryFilter? filter,
-  })  : _extractFn = extract,
-        _filter = filter;
+  }) : _extractFn = extract,
+       _filter = filter;
 
   @override
   void extract(World mainWorld, RenderWorld renderWorld) {

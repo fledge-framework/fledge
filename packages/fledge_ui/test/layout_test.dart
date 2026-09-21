@@ -27,22 +27,24 @@ void main() {
       return commands.entity;
     }
 
-    test('topLeft anchor: rect origin equals viewport origin plus offset',
-        () async {
-      final entity = spawnNode(
-        anchor: UiAnchor.topLeft,
-        size: const UiSize(width: 100, height: 50),
-        offset: const UiOffset(x: 10, y: 20),
-      );
+    test(
+      'topLeft anchor: rect origin equals viewport origin plus offset',
+      () async {
+        final entity = spawnNode(
+          anchor: UiAnchor.topLeft,
+          size: const UiSize(width: 100, height: 50),
+          offset: const UiOffset(x: 10, y: 20),
+        );
 
-      await system.run(world);
+        await system.run(world);
 
-      final rect = world.get<UiComputedRect>(entity)!.rect;
-      expect(rect.left, 10);
-      expect(rect.top, 20);
-      expect(rect.width, 100);
-      expect(rect.height, 50);
-    });
+        final rect = world.get<UiComputedRect>(entity)!.rect;
+        expect(rect.left, 10);
+        expect(rect.top, 20);
+        expect(rect.width, 100);
+        expect(rect.height, 50);
+      },
+    );
 
     test('center anchor places rect centred inside the viewport', () async {
       final entity = spawnNode(
@@ -58,20 +60,22 @@ void main() {
       expect(rect.top, 250);
     });
 
-    test('bottomRight anchor pins rect against the viewport far corner',
-        () async {
-      final entity = spawnNode(
-        anchor: UiAnchor.bottomRight,
-        size: const UiSize(width: 120, height: 60),
-      );
+    test(
+      'bottomRight anchor pins rect against the viewport far corner',
+      () async {
+        final entity = spawnNode(
+          anchor: UiAnchor.bottomRight,
+          size: const UiSize(width: 120, height: 60),
+        );
 
-      await system.run(world);
+        await system.run(world);
 
-      final rect = world.get<UiComputedRect>(entity)!.rect;
-      // 800 - 120 = 680; 600 - 60 = 540.
-      expect(rect.left, 680);
-      expect(rect.top, 540);
-    });
+        final rect = world.get<UiComputedRect>(entity)!.rect;
+        // 800 - 120 = 680; 600 - 60 = 540.
+        expect(rect.left, 680);
+        expect(rect.top, 540);
+      },
+    );
 
     test('offset shifts the rect relative to the anchor', () async {
       final entity = spawnNode(
@@ -99,57 +103,65 @@ void main() {
       system = LayoutSystem();
     });
 
-    test('row container lays out children left-to-right respecting gap',
-        () async {
-      final container = (world.spawn()
-            ..insert(const UiNode())
-            ..insert(const UiAnchorComponent(UiAnchor.topLeft))
-            ..insert(const UiSize(width: 300, height: 60))
-            ..insert(const UiContainer(mode: LayoutMode.row, gap: 10)))
-          .entity;
+    test(
+      'row container lays out children left-to-right respecting gap',
+      () async {
+        final container =
+            (world.spawn()
+                  ..insert(const UiNode())
+                  ..insert(const UiAnchorComponent(UiAnchor.topLeft))
+                  ..insert(const UiSize(width: 300, height: 60))
+                  ..insert(const UiContainer(mode: LayoutMode.row, gap: 10)))
+                .entity;
 
-      final a = (world.spawn()
-            ..insert(const UiNode())
-            ..insert(const UiAnchorComponent(UiAnchor.topLeft))
-            ..insert(const UiSize(width: 40, height: 20)))
-          .entity;
-      final b = (world.spawn()
-            ..insert(const UiNode())
-            ..insert(const UiAnchorComponent(UiAnchor.topLeft))
-            ..insert(const UiSize(width: 60, height: 20)))
-          .entity;
-      world.setParent(a, container);
-      world.setParent(b, container);
+        final a =
+            (world.spawn()
+                  ..insert(const UiNode())
+                  ..insert(const UiAnchorComponent(UiAnchor.topLeft))
+                  ..insert(const UiSize(width: 40, height: 20)))
+                .entity;
+        final b =
+            (world.spawn()
+                  ..insert(const UiNode())
+                  ..insert(const UiAnchorComponent(UiAnchor.topLeft))
+                  ..insert(const UiSize(width: 60, height: 20)))
+                .entity;
+        world.setParent(a, container);
+        world.setParent(b, container);
 
-      await system.run(world);
+        await system.run(world);
 
-      final rectA = world.get<UiComputedRect>(a)!.rect;
-      final rectB = world.get<UiComputedRect>(b)!.rect;
+        final rectA = world.get<UiComputedRect>(a)!.rect;
+        final rectB = world.get<UiComputedRect>(b)!.rect;
 
-      // First child starts at container's top-left interior.
-      expect(rectA.left, 0);
-      // Second child starts after first child's width + gap.
-      expect(rectB.left, 40 + 10);
-    });
+        // First child starts at container's top-left interior.
+        expect(rectA.left, 0);
+        // Second child starts after first child's width + gap.
+        expect(rectB.left, 40 + 10);
+      },
+    );
 
     test('column container lays out children top-to-bottom', () async {
-      final container = (world.spawn()
-            ..insert(const UiNode())
-            ..insert(const UiAnchorComponent(UiAnchor.topLeft))
-            ..insert(const UiSize(width: 100, height: 400))
-            ..insert(const UiContainer(mode: LayoutMode.column, gap: 5)))
-          .entity;
+      final container =
+          (world.spawn()
+                ..insert(const UiNode())
+                ..insert(const UiAnchorComponent(UiAnchor.topLeft))
+                ..insert(const UiSize(width: 100, height: 400))
+                ..insert(const UiContainer(mode: LayoutMode.column, gap: 5)))
+              .entity;
 
-      final a = (world.spawn()
-            ..insert(const UiNode())
-            ..insert(const UiAnchorComponent(UiAnchor.topLeft))
-            ..insert(const UiSize(width: 40, height: 20)))
-          .entity;
-      final b = (world.spawn()
-            ..insert(const UiNode())
-            ..insert(const UiAnchorComponent(UiAnchor.topLeft))
-            ..insert(const UiSize(width: 40, height: 30)))
-          .entity;
+      final a =
+          (world.spawn()
+                ..insert(const UiNode())
+                ..insert(const UiAnchorComponent(UiAnchor.topLeft))
+                ..insert(const UiSize(width: 40, height: 20)))
+              .entity;
+      final b =
+          (world.spawn()
+                ..insert(const UiNode())
+                ..insert(const UiAnchorComponent(UiAnchor.topLeft))
+                ..insert(const UiSize(width: 40, height: 30)))
+              .entity;
       world.setParent(a, container);
       world.setParent(b, container);
 
@@ -159,41 +171,46 @@ void main() {
       expect(world.get<UiComputedRect>(b)!.rect.top, 20 + 5);
     });
 
-    test('padding is subtracted from the interior of a stack container',
-        () async {
-      final container = (world.spawn()
-            ..insert(const UiNode())
-            ..insert(const UiAnchorComponent(UiAnchor.topLeft))
-            ..insert(const UiSize(width: 200, height: 100))
-            ..insert(const UiContainer.padded(padding: 10)))
-          .entity;
+    test(
+      'padding is subtracted from the interior of a stack container',
+      () async {
+        final container =
+            (world.spawn()
+                  ..insert(const UiNode())
+                  ..insert(const UiAnchorComponent(UiAnchor.topLeft))
+                  ..insert(const UiSize(width: 200, height: 100))
+                  ..insert(const UiContainer.padded(padding: 10)))
+                .entity;
 
-      final child = (world.spawn()
-            ..insert(const UiNode())
-            ..insert(const UiAnchorComponent(UiAnchor.topLeft)))
-          // No size — should fill the container's padded interior.
-          .entity;
-      world.setParent(child, container);
+        final child =
+            (world.spawn()
+                  ..insert(const UiNode())
+                  ..insert(const UiAnchorComponent(UiAnchor.topLeft)))
+                // No size — should fill the container's padded interior.
+                .entity;
+        world.setParent(child, container);
 
-      await system.run(world);
+        await system.run(world);
 
-      final rect = world.get<UiComputedRect>(child)!.rect;
-      // Container starts at (0,0), padded interior = (10,10) to (190,90).
-      expect(rect.left, 10);
-      expect(rect.top, 10);
-      expect(rect.width, 180);
-      expect(rect.height, 80);
-    });
+        final rect = world.get<UiComputedRect>(child)!.rect;
+        // Container starts at (0,0), padded interior = (10,10) to (190,90).
+        expect(rect.left, 10);
+        expect(rect.top, 10);
+        expect(rect.width, 180);
+        expect(rect.height, 80);
+      },
+    );
   });
 
   test('layout is idempotent — running twice produces the same rect', () async {
     final world = World();
     world.insertResource(ViewportSize(width: 400, height: 300));
-    final entity = (world.spawn()
-          ..insert(const UiNode())
-          ..insert(const UiAnchorComponent(UiAnchor.center))
-          ..insert(const UiSize(width: 80, height: 40)))
-        .entity;
+    final entity =
+        (world.spawn()
+              ..insert(const UiNode())
+              ..insert(const UiAnchorComponent(UiAnchor.center))
+              ..insert(const UiSize(width: 80, height: 40)))
+            .entity;
 
     final system = LayoutSystem();
     await system.run(world);

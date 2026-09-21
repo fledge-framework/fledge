@@ -15,16 +15,17 @@ void main() async {
 
   // Spawn a sprite with transform
   world.spawn()
-    ..insert(Transform2D(
-      translation: Vector2(100, 200),
-      rotation: 0.0,
-      scale: Vector2.all(1.0),
-    ))
+    ..insert(
+      Transform2D(
+        translation: Vector2(100, 200),
+        rotation: 0.0,
+        scale: Vector2.all(1.0),
+      ),
+    )
     ..insert(GlobalTransform2D())
-    ..insert(Sprite(
-      texture: _placeholderTexture(),
-      color: const Color(0xFFFFFFFF),
-    ));
+    ..insert(
+      Sprite(texture: _placeholderTexture(), color: const Color(0xFFFFFFFF)),
+    );
 
   // Spawn an animated sprite
   final walkClip = AnimationClip.fromIndices(
@@ -38,10 +39,9 @@ void main() async {
     ..insert(Transform2D.from(200, 200))
     ..insert(GlobalTransform2D())
     ..insert(Sprite(texture: _placeholderTexture()))
-    ..insert(AnimationPlayer(
-      animations: {'walk': walkClip},
-      initialAnimation: 'walk',
-    ));
+    ..insert(
+      AnimationPlayer(animations: {'walk': walkClip}, initialAnimation: 'walk'),
+    );
 
   // Add transform propagation system
   final scheduler = Scheduler()..addSystem(TransformPropagateSystem());

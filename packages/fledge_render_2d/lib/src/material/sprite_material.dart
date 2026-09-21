@@ -110,10 +110,7 @@ class ColorMaterial extends Material2D {
   final BlendMode blendMode;
 
   /// Creates a color material.
-  ColorMaterial({
-    required this.color,
-    this.blendMode = BlendMode.normal,
-  });
+  ColorMaterial({required this.color, this.blendMode = BlendMode.normal});
 
   @override
   Object get id => (ColorMaterial, blendMode);
@@ -125,10 +122,7 @@ class ColorMaterial extends Material2D {
   }
 
   /// Create a copy with optional overrides.
-  ColorMaterial copyWith({
-    Color? color,
-    BlendMode? blendMode,
-  }) {
+  ColorMaterial copyWith({Color? color, BlendMode? blendMode}) {
     return ColorMaterial(
       color: color ?? this.color,
       blendMode: blendMode ?? this.blendMode,

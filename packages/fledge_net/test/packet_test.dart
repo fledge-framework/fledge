@@ -133,11 +133,7 @@ void main() {
 
     test('handles empty payload', () {
       final packet = Packet(
-        header: PacketHeader(
-          type: PacketType.ping,
-          sequence: 0,
-          timestamp: 0,
-        ),
+        header: PacketHeader(type: PacketType.ping, sequence: 0, timestamp: 0),
         payload: Uint8List(0),
       );
 

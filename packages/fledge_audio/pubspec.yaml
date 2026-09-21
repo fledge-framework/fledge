@@ -6,8 +6,8 @@ homepage: https://fledge-framework.dev
 issue_tracker: https://github.com/fledge-framework/fledge/issues
 
 environment:
-  sdk: ^3.6.0
-  flutter: ">=3.10.0"
+  sdk: ^3.11.0
+  flutter: ">=3.41.0"
 
 resolution: workspace
 
@@ -17,7 +17,11 @@ dependencies:
   fledge_render_2d: ^0.2.0
   flutter:
     sdk: flutter
-  flutter_soloud: ^3.4.8
+  # Widened to include 4.x/5.x. flutter_soloud 4.0 made `SoLoud.play` (and
+  # friends) synchronous — see `audio_event_system.dart` / `spatial_audio_system.dart`
+  # for the corresponding removed `await`s. The SDK floor above matches
+  # flutter_soloud 4.0's own minimum (Dart 3.11 / Flutter 3.41).
+  flutter_soloud: ">=3.4.8 <6.0.0"
   meta: ^1.17.0
 
 dev_dependencies:

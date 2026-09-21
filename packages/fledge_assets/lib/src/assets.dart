@@ -114,16 +114,18 @@ class Assets<T> {
     _pathIndex[path] = id;
     // Fire the async load. Errors are swallowed into a null value —
     // callers can check `ready()`.
-    loader.load(path).then(
-      (v) {
-        final entry = _entries[id];
-        if (entry != null) entry.value = v;
-      },
-      onError: (Object _) {
-        // Deliberately silent; a future revision may add a
-        // diagnostic sink here.
-      },
-    );
+    loader
+        .load(path)
+        .then(
+          (v) {
+            final entry = _entries[id];
+            if (entry != null) entry.value = v;
+          },
+          onError: (Object _) {
+            // Deliberately silent; a future revision may add a
+            // diagnostic sink here.
+          },
+        );
     return Handle<T>.internal(id, this);
   }
 

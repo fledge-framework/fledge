@@ -21,16 +21,16 @@ import '../assets/audio_assets.dart';
 class SpatialAudioSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
-        name: 'SpatialAudioSystem',
-        reads: {
-          ComponentId.of<AudioListener>(),
-          ComponentId.of<AudioSource>(),
-          ComponentId.of<Transform2D>(),
-        },
-        writes: {ComponentId.of<AudioSource>()},
-        resourceReads: {SpatialAudioConfig, VolumeChannels, AudioAssets},
-        resourceWrites: {AudioState},
-      );
+    name: 'SpatialAudioSystem',
+    reads: {
+      ComponentId.of<AudioListener>(),
+      ComponentId.of<AudioSource>(),
+      ComponentId.of<Transform2D>(),
+    },
+    writes: {ComponentId.of<AudioSource>()},
+    resourceReads: {SpatialAudioConfig, VolumeChannels, AudioAssets},
+    resourceWrites: {AudioState},
+  );
 
   @override
   RunCondition? get runCondition => null;
@@ -67,7 +67,8 @@ class SpatialAudioSystem implements System {
       if (source.autoPlay && !source.hasStarted && source.soundKey != null) {
         final sound = assets.getSound(source.soundKey!);
         if (sound != null) {
-          final handle = await soloud.play(
+          // `soloud.play` became synchronous in flutter_soloud 4.0.
+          final handle = soloud.play(
             sound.source,
             volume: 0.0, // updated below
             looping: source.looping,

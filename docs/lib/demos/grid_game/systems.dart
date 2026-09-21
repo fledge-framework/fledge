@@ -22,11 +22,11 @@ enum GridActions { move }
 class MovementSystem extends System {
   @override
   SystemMeta get meta => SystemMeta(
-        name: 'movement',
-        writes: {ComponentId.of<GridPosition>()},
-        reads: {ComponentId.of<Player>()},
-        resourceReads: {ActionState, MoveTimer, GridConfig, WallTime},
-      );
+    name: 'movement',
+    writes: {ComponentId.of<GridPosition>()},
+    reads: {ComponentId.of<Player>()},
+    resourceReads: {ActionState, MoveTimer, GridConfig, WallTime},
+  );
 
   @override
   Future<void> run(World world) async {
@@ -52,13 +52,13 @@ class MovementSystem extends System {
     final dx = mx < -0.5
         ? -1
         : mx > 0.5
-            ? 1
-            : 0;
+        ? 1
+        : 0;
     final dy = my < -0.5
         ? -1
         : my > 0.5
-            ? 1
-            : 0;
+        ? 1
+        : 0;
 
     // Find and move the player
     for (final (_, pos)
@@ -78,14 +78,14 @@ class SpawnSystem extends System {
 
   @override
   SystemMeta get meta => SystemMeta(
-        name: 'spawn',
-        reads: {
-          ComponentId.of<GridPosition>(),
-          ComponentId.of<Player>(),
-          ComponentId.of<Collectible>(),
-        },
-        resourceReads: {SpawnTimer, WallTime, GridConfig},
-      );
+    name: 'spawn',
+    reads: {
+      ComponentId.of<GridPosition>(),
+      ComponentId.of<Player>(),
+      ComponentId.of<Collectible>(),
+    },
+    resourceReads: {SpawnTimer, WallTime, GridConfig},
+  );
 
   @override
   Future<void> run(World world) async {
@@ -132,14 +132,14 @@ class SpawnSystem extends System {
 class CollectionSystem extends System {
   @override
   SystemMeta get meta => SystemMeta(
-        name: 'collection',
-        reads: {
-          ComponentId.of<GridPosition>(),
-          ComponentId.of<Player>(),
-          ComponentId.of<Collectible>(),
-        },
-        resourceWrites: {GameScore},
-      );
+    name: 'collection',
+    reads: {
+      ComponentId.of<GridPosition>(),
+      ComponentId.of<Player>(),
+      ComponentId.of<Collectible>(),
+    },
+    resourceWrites: {GameScore},
+  );
 
   @override
   Future<void> run(World world) async {
@@ -201,9 +201,11 @@ class GridGamePlugin implements Plugin {
         .build();
 
     // Add the input plugin
-    app.addPlugin(InputPlugin.simple(
-      context: InputContext(name: 'gameplay', map: inputMap),
-    ));
+    app.addPlugin(
+      InputPlugin.simple(
+        context: InputContext(name: 'gameplay', map: inputMap),
+      ),
+    );
 
     // Insert resources
     app

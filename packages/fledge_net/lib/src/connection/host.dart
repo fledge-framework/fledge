@@ -49,7 +49,7 @@ class NetworkHost {
 
   /// Optional authenticator for validating client connections.
   final Future<bool> Function(String clientId, Uint8List credentials)?
-      authenticator;
+  authenticator;
 
   /// Room code for joining (generated on creation).
   late final String roomCode;
@@ -162,7 +162,10 @@ class NetworkHost {
 
   /// Broadcast data to all peers except one.
   Future<void> broadcastExcept(
-      int excludeId, PacketType type, Uint8List data) async {
+    int excludeId,
+    PacketType type,
+    Uint8List data,
+  ) async {
     for (final peer in _peers.values) {
       if (peer.isConnected && peer.id != excludeId) {
         await _sendToPeer(peer, type, data);
@@ -254,11 +257,9 @@ class NetworkHost {
 
       default:
         // Forward to game logic
-        _dataController.add(PeerDataEvent(
-          peer,
-          packet.header.type,
-          packet.payload,
-        ));
+        _dataController.add(
+          PeerDataEvent(peer, packet.header.type, packet.payload),
+        );
     }
   }
 
@@ -284,7 +285,10 @@ class NetworkHost {
   }
 
   Future<void> _sendToPeer(
-      Peer peer, PacketType type, Uint8List payload) async {
+    Peer peer,
+    PacketType type,
+    Uint8List payload,
+  ) async {
     final header = PacketHeader(
       type: type,
       sequence: peer.nextSequence,
@@ -306,10 +310,7 @@ class NetworkHost {
 
   Future<void> _sendReject(NetAddress address, String reason) async {
     final builder = PacketBuilder()..writeString(reason);
-    final header = PacketHeader(
-      type: PacketType.connectRejected,
-      sequence: 0,
-    );
+    final header = PacketHeader(type: PacketType.connectRejected, sequence: 0);
     final packet = Packet(header: header, payload: builder.build());
     await transport.send(address, packet.toBytes());
   }

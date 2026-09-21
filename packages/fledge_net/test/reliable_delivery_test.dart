@@ -28,10 +28,7 @@ void main() {
     late Peer peer;
 
     setUp(() {
-      peer = Peer(
-        id: 1,
-        address: const NetAddress('10.0.0.1', 8080),
-      );
+      peer = Peer(id: 1, address: const NetAddress('10.0.0.1', 8080));
     });
 
     test('maxRetransmits is 10', () {

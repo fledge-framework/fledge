@@ -11,8 +11,10 @@ void main() {
       final time = WallTime()..start();
       world.insertResource(time);
 
-      final fade =
-          CameraFadeTransition(duration: 1.0, color: const Color(0xFF000000));
+      final fade = CameraFadeTransition(
+        duration: 1.0,
+        color: const Color(0xFF000000),
+      );
       world.spawn().insert(fade);
 
       time.delta = 0.5;

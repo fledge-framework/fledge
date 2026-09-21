@@ -41,10 +41,12 @@ void main() {
 
     test('user override via insertResource wins', () {
       final app = App()
-        ..insertResource(FixedTimestep(
-          stepDuration: const Duration(milliseconds: 100),
-          maxCatchupSteps: 3,
-        ));
+        ..insertResource(
+          FixedTimestep(
+            stepDuration: const Duration(milliseconds: 100),
+            maxCatchupSteps: 3,
+          ),
+        );
       final ts = app.world.getResource<FixedTimestep>()!;
       expect(ts.stepDuration, equals(const Duration(milliseconds: 100)));
       expect(ts.maxCatchupSteps, equals(3));
@@ -107,11 +109,17 @@ void main() {
 
       scheduler.addSystemToSchedule(_SpySystem('first'), Schedules.fixedFirst);
       scheduler.addSystemToSchedule(
-          _SpySystem('preUpdate'), Schedules.fixedPreUpdate);
+        _SpySystem('preUpdate'),
+        Schedules.fixedPreUpdate,
+      );
       scheduler.addSystemToSchedule(
-          _SpySystem('update'), Schedules.fixedUpdate);
+        _SpySystem('update'),
+        Schedules.fixedUpdate,
+      );
       scheduler.addSystemToSchedule(
-          _SpySystem('postUpdate'), Schedules.fixedPostUpdate);
+        _SpySystem('postUpdate'),
+        Schedules.fixedPostUpdate,
+      );
       scheduler.addSystemToSchedule(_SpySystem('last'), Schedules.fixedLast);
 
       // 210ms → 2 fixed iterations.
@@ -151,10 +159,12 @@ void main() {
     test('preUpdate → fixedUpdate → update in a single tick', () async {
       final app = App()
         ..insertResource(_Log())
-        ..insertResource(FixedTimestep(
-          stepDuration: const Duration(milliseconds: 1),
-          maxCatchupSteps: 5,
-        ))
+        ..insertResource(
+          FixedTimestep(
+            stepDuration: const Duration(milliseconds: 1),
+            maxCatchupSteps: 5,
+          ),
+        )
         ..addSystem(_SpySystem('preUpdate'), schedule: Schedules.preUpdate)
         ..addSystem(_SpySystem('fixedUpdate'), schedule: Schedules.fixedUpdate)
         ..addSystem(_SpySystem('update'), schedule: Schedules.update);
@@ -170,12 +180,21 @@ void main() {
       await app.tick();
 
       final log = app.world.getResource<_Log>()!.entries;
-      expect(log.first, equals('preUpdate'),
-          reason: 'preUpdate should be the first entry of tick 2');
-      expect(log.last, equals('update'),
-          reason: 'update should be the last entry of tick 2');
-      expect(log, contains('fixedUpdate'),
-          reason: 'fixed chain should have fired on the second tick');
+      expect(
+        log.first,
+        equals('preUpdate'),
+        reason: 'preUpdate should be the first entry of tick 2',
+      );
+      expect(
+        log.last,
+        equals('update'),
+        reason: 'update should be the last entry of tick 2',
+      );
+      expect(
+        log,
+        contains('fixedUpdate'),
+        reason: 'fixed chain should have fired on the second tick',
+      );
 
       final firstFixed = log.indexOf('fixedUpdate');
       final lastFixed = log.lastIndexOf('fixedUpdate');
@@ -187,9 +206,9 @@ void main() {
       final app = App()
         ..insertResource(_Log())
         // Huge step → no fixed iteration will fire on a single tick.
-        ..insertResource(FixedTimestep(
-          stepDuration: const Duration(seconds: 10),
-        ))
+        ..insertResource(
+          FixedTimestep(stepDuration: const Duration(seconds: 10)),
+        )
         ..addSystem(_SpySystem('first'), schedule: Schedules.first)
         ..addSystem(_SpySystem('preUpdate'), schedule: Schedules.preUpdate)
         ..addSystem(_SpySystem('fixedUpdate'), schedule: Schedules.fixedUpdate)
@@ -205,8 +224,11 @@ void main() {
       expect(log, contains('update'));
       expect(log, contains('postUpdate'));
       expect(log, contains('last'));
-      expect(log, isNot(contains('fixedUpdate')),
-          reason: 'delta << 10s so no fixed step should fire');
+      expect(
+        log,
+        isNot(contains('fixedUpdate')),
+        reason: 'delta << 10s so no fixed step should fire',
+      );
     });
   });
 }

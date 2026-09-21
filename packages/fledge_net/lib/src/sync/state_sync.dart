@@ -124,11 +124,8 @@ class StateSnapshot<T extends NetworkState> {
   /// The state data.
   final T state;
 
-  StateSnapshot({
-    required this.tick,
-    required this.state,
-    DateTime? timestamp,
-  }) : timestamp = timestamp ?? DateTime.now();
+  StateSnapshot({required this.tick, required this.state, DateTime? timestamp})
+    : timestamp = timestamp ?? DateTime.now();
 }
 
 /// Buffer of recent state snapshots for interpolation.
@@ -190,10 +187,8 @@ class NetworkInterpolation {
   /// Current interpolated state.
   final Transform2DNetworkState currentState = Transform2DNetworkState();
 
-  NetworkInterpolation({
-    int bufferSize = 30,
-    this.interpolationDelay = 100,
-  }) : buffer = StateBuffer(maxSnapshots: bufferSize);
+  NetworkInterpolation({int bufferSize = 30, this.interpolationDelay = 100})
+    : buffer = StateBuffer(maxSnapshots: bufferSize);
 
   /// Add a new received state.
   void addState(int tick, Transform2DNetworkState state) {
@@ -217,8 +212,9 @@ class NetworkInterpolation {
     }
 
     // Interpolate between snapshots
-    final totalDuration =
-        after.timestamp.difference(before.timestamp).inMilliseconds;
+    final totalDuration = after.timestamp
+        .difference(before.timestamp)
+        .inMilliseconds;
     if (totalDuration <= 0) {
       currentState.copyFrom(after.state);
       return;

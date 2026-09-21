@@ -44,11 +44,7 @@ class FledgeRenderView extends StatelessWidget {
   final Color? backgroundColor;
 
   /// Creates a render view.
-  const FledgeRenderView({
-    super.key,
-    required this.app,
-    this.backgroundColor,
-  });
+  const FledgeRenderView({super.key, required this.app, this.backgroundColor});
 
   @override
   Widget build(BuildContext context) {

@@ -11,9 +11,9 @@ import '../raw/gamepad_state.dart';
 class InputPollingSystem implements System {
   @override
   SystemMeta get meta => const SystemMeta(
-        name: 'inputPolling',
-        resourceWrites: {KeyboardState, MouseState, GamepadState},
-      );
+    name: 'inputPolling',
+    resourceWrites: {KeyboardState, MouseState, GamepadState},
+  );
 
   @override
   RunCondition? get runCondition => null;

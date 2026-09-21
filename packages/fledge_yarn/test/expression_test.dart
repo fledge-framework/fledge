@@ -162,7 +162,9 @@ void main() {
     test('assignment with expression rhs', () {
       vars['base'] = 10;
       eval.executeSet(
-          r'$x = $base + 2 * 3', (name, value) => vars[name] = value);
+        r'$x = $base + 2 * 3',
+        (name, value) => vars[name] = value,
+      );
       expect(vars['x'], 16);
     });
 

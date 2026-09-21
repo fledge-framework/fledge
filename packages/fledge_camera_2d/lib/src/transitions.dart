@@ -114,16 +114,12 @@ class CameraWipeTransition extends CameraTransition {
 class CameraTransitionSystem implements System {
   @override
   SystemMeta get meta => const SystemMeta(
-        name: 'CameraTransitionSystem',
-        writes: {},
-        reads: {},
-        resourceReads: {WallTime},
-        after: [
-          'CameraFollowSystem',
-          'CameraShakeSystem',
-          'ParallaxSystem',
-        ],
-      );
+    name: 'CameraTransitionSystem',
+    writes: {},
+    reads: {},
+    resourceReads: {WallTime},
+    after: ['CameraFollowSystem', 'CameraShakeSystem', 'ParallaxSystem'],
+  );
 
   @override
   RunCondition? get runCondition => null;

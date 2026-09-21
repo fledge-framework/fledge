@@ -35,15 +35,15 @@ class CollisionResolutionSystem implements System {
 
   @override
   SystemMeta get meta => SystemMeta(
-        name: 'collision_resolution',
-        reads: {
-          ComponentId.of<Transform2D>(),
-          ComponentId.of<Collider>(),
-          ComponentId.of<CollisionConfig>(),
-        },
-        writes: {ComponentId.of<Velocity>()},
-        resourceReads: {WallTime},
-      );
+    name: 'collision_resolution',
+    reads: {
+      ComponentId.of<Transform2D>(),
+      ComponentId.of<Collider>(),
+      ComponentId.of<CollisionConfig>(),
+    },
+    writes: {ComponentId.of<Velocity>()},
+    resourceReads: {WallTime},
+  );
 
   @override
   RunCondition? get runCondition => null;
@@ -136,7 +136,8 @@ class CollisionResolutionSystem implements System {
       }
 
       // Try X movement only (slide along Y wall)
-      final canMoveX = moveX != 0 &&
+      final canMoveX =
+          moveX != 0 &&
           !_wouldCollide(
             currentX + moveX,
             currentY,
@@ -145,7 +146,8 @@ class CollisionResolutionSystem implements System {
           );
 
       // Try Y movement only (slide along X wall)
-      final canMoveY = moveY != 0 &&
+      final canMoveY =
+          moveY != 0 &&
           !_wouldCollide(
             currentX,
             currentY + moveY,

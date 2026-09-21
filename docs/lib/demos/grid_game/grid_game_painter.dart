@@ -72,7 +72,10 @@ class GridGamePainter extends CustomPainter {
 
   /// Draws a collectible as a circle with shine effect.
   void _drawCollectible(
-      Canvas canvas, ExtractedGridEntity extracted, Paint paint) {
+    Canvas canvas,
+    ExtractedGridEntity extracted,
+    Paint paint,
+  ) {
     final center = extracted.rect.center;
     final radius = extracted.size / 2 - 2;
 
@@ -98,7 +101,10 @@ class GridGamePainter extends CustomPainter {
 
   /// Draws the grid background and empty cell placeholders.
   void _drawGridBackground(
-      Canvas canvas, ExtractedGridConfig config, Paint paint) {
+    Canvas canvas,
+    ExtractedGridConfig config,
+    Paint paint,
+  ) {
     // Draw background
     paint.color = const Color(0xFF1A1A2E);
     canvas.drawRect(
@@ -141,7 +147,8 @@ class GridGamePainter extends CustomPainter {
     // Hash all extracted entities
     for (final (entity, extracted)
         in renderWorld.query1<ExtractedGridEntity>().iter()) {
-      hash ^= entity.hashCode ^
+      hash ^=
+          entity.hashCode ^
           extracted.pixelX.toInt() ^
           (extracted.pixelY.toInt() << 8) ^
           (extracted.entityType.index << 16);

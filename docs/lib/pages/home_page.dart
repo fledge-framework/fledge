@@ -64,9 +64,7 @@ class HomePage extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.3),
-              ),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
             ),
             child: Text(
               'v0.1.11 - Early Preview',
@@ -138,9 +136,7 @@ class HomePage extends StatelessWidget {
                 onPressed: () => context.go('/docs/api/world'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.white,
-                  side: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.6),
-                  ),
+                  side: BorderSide(color: Colors.white.withValues(alpha: 0.6)),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 28,
                     vertical: 16,
@@ -157,7 +153,10 @@ class HomePage extends StatelessWidget {
   }
 
   Widget _buildExternalLinks(
-      BuildContext context, ThemeData theme, bool isDark) {
+    BuildContext context,
+    ThemeData theme,
+    bool isDark,
+  ) {
     return Container(
       width: double.infinity,
       color: isDark ? FledgeTheme.surfaceDark : Colors.grey.shade50,
@@ -197,10 +196,7 @@ class HomePage extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 64, horizontal: 24),
       child: Column(
         children: [
-          Text(
-            'Why Fledge?',
-            style: theme.textTheme.displaySmall,
-          ),
+          Text('Why Fledge?', style: theme.textTheme.displaySmall),
           const SizedBox(height: 48),
           Wrap(
             spacing: 32,
@@ -259,10 +255,7 @@ class HomePage extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 64, horizontal: 24),
       child: Column(
         children: [
-          Text(
-            'Quick Example',
-            style: theme.textTheme.displaySmall,
-          ),
+          Text('Quick Example', style: theme.textTheme.displaySmall),
           const SizedBox(height: 32),
           Container(
             constraints: const BoxConstraints(maxWidth: 700),
@@ -325,7 +318,10 @@ void main() {
   }
 
   Widget _buildCallToAction(
-      BuildContext context, ThemeData theme, bool isDark) {
+    BuildContext context,
+    ThemeData theme,
+    bool isDark,
+  ) {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -399,8 +395,8 @@ void main() {
                 icon: const Icon(Icons.code, size: 18),
                 label: const Text('GitHub'),
                 style: TextButton.styleFrom(
-                  foregroundColor:
-                      theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                  foregroundColor: theme.textTheme.bodyMedium?.color
+                      ?.withValues(alpha: 0.7),
                 ),
               ),
               TextButton.icon(
@@ -408,8 +404,8 @@ void main() {
                 icon: const Icon(Icons.inventory_2, size: 18),
                 label: const Text('pub.dev'),
                 style: TextButton.styleFrom(
-                  foregroundColor:
-                      theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                  foregroundColor: theme.textTheme.bodyMedium?.color
+                      ?.withValues(alpha: 0.7),
                 ),
               ),
               TextButton.icon(
@@ -417,8 +413,8 @@ void main() {
                 icon: const Icon(Icons.bug_report, size: 18),
                 label: const Text('Report Issue'),
                 style: TextButton.styleFrom(
-                  foregroundColor:
-                      theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                  foregroundColor: theme.textTheme.bodyMedium?.color
+                      ?.withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -438,8 +434,9 @@ void main() {
               Text(
                 'Built with ',
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color:
-                      theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5),
+                  color: theme.textTheme.bodySmall?.color?.withValues(
+                    alpha: 0.5,
+                  ),
                 ),
               ),
               Icon(
@@ -450,8 +447,9 @@ void main() {
               Text(
                 ' and Flutter',
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color:
-                      theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5),
+                  color: theme.textTheme.bodySmall?.color?.withValues(
+                    alpha: 0.5,
+                  ),
                 ),
               ),
             ],
@@ -496,11 +494,7 @@ class _ExternalLinkChip extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                icon,
-                size: 18,
-                color: FledgeTheme.primaryColor,
-              ),
+              Icon(icon, size: 18, color: FledgeTheme.primaryColor),
               const SizedBox(width: 8),
               Text(
                 label,
@@ -537,28 +531,16 @@ class _FeatureCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.cardTheme.color,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: theme.dividerColor,
-        ),
+        border: Border.all(color: theme.dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            size: 40,
-            color: FledgeTheme.primaryColor,
-          ),
+          Icon(icon, size: 40, color: FledgeTheme.primaryColor),
           const SizedBox(height: 16),
-          Text(
-            title,
-            style: theme.textTheme.headlineSmall,
-          ),
+          Text(title, style: theme.textTheme.headlineSmall),
           const SizedBox(height: 8),
-          Text(
-            description,
-            style: theme.textTheme.bodyMedium,
-          ),
+          Text(description, style: theme.textTheme.bodyMedium),
         ],
       ),
     );

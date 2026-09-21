@@ -6,9 +6,8 @@ homepage: https://fledge-framework.dev
 issue_tracker: https://github.com/fledge-framework/fledge/issues
 
 environment:
-  sdk: ^3.6.0
-  flutter: ">=3.0.0"
-
+  sdk: ^3.11.0
+  flutter: ">=3.41.0"
 resolution: workspace
 
 dependencies:
@@ -23,6 +22,13 @@ dependencies:
   tiled: ^0.11.1
   vector_math: ^2.2.0
   meta: ^1.17.0
+  # TODO(fledge_tiled 0.3.x): widen to `>=6.6.1 <8.0.0` once we upgrade the
+  # `tiled` dependency to 0.12.x. tiled 0.11.1 still requires `xml ^6.1.0`,
+  # so bumping xml here without also bumping tiled would fail resolution.
+  # tiled 0.12.0 additionally requires Dart SDK >=3.11 and reworks the
+  # external-tileset API (TsxProvider -> ParserProvider, TileMapParser.parseTmx
+  # -> TiledMap.fromString), so the upgrade is deferred until the Fledge
+  # SDK floor moves.
   xml: ^6.6.1
 
 dev_dependencies:

@@ -16,10 +16,8 @@ class AudioInitSystem implements System {
   AudioInitSystem(this.config);
 
   @override
-  SystemMeta get meta => const SystemMeta(
-        name: 'AudioInitSystem',
-        exclusive: true,
-      );
+  SystemMeta get meta =>
+      const SystemMeta(name: 'AudioInitSystem', exclusive: true);
 
   @override
   RunCondition? get runCondition => null;

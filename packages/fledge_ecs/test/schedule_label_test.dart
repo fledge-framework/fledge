@@ -6,7 +6,9 @@ void main() {
     test('equality is name-based', () {
       expect(const Schedule('x'), equals(const Schedule('x')));
       expect(
-          const Schedule('x').hashCode, equals(const Schedule('x').hashCode));
+        const Schedule('x').hashCode,
+        equals(const Schedule('x').hashCode),
+      );
       expect(const Schedule('x'), isNot(equals(const Schedule('y'))));
     });
 
@@ -16,8 +18,7 @@ void main() {
   });
 
   group('Schedules', () {
-    test(
-        'per-frame constants keep the CoreStage.name strings for '
+    test('per-frame constants keep the CoreStage.name strings for '
         'backwards compatibility', () {
       expect(Schedules.first.name, equals(CoreStage.first.name));
       expect(Schedules.preUpdate.name, equals(CoreStage.preUpdate.name));

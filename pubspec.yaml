@@ -3,7 +3,7 @@ description: Fledge - A Bevy-inspired ECS game framework for Flutter
 publish_to: none
 
 environment:
-  sdk: ^3.6.0
+  sdk: ^3.11.0
 
 workspace:
   - packages/fledge_ecs

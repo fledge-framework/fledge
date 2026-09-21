@@ -24,10 +24,7 @@ Sara: How can I help you today?
   final storage = VariableStorage();
 
   // Create and start dialogue runner
-  final runner = DialogueRunner(
-    project: project,
-    variableStorage: storage,
-  );
+  final runner = DialogueRunner(project: project, variableStorage: storage);
 
   runner.startNode('greeting');
 

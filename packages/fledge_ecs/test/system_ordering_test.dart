@@ -11,16 +11,17 @@ void main() {
       final order = <String>[];
       final schedule = Scheduler();
 
-      schedule.addSystem(FunctionSystem(
-        'first',
-        run: (_) => order.add('first'),
-      ));
+      schedule.addSystem(
+        FunctionSystem('first', run: (_) => order.add('first')),
+      );
 
-      schedule.addSystem(FunctionSystem(
-        'second',
-        after: ['first'],
-        run: (_) => order.add('second'),
-      ));
+      schedule.addSystem(
+        FunctionSystem(
+          'second',
+          after: ['first'],
+          run: (_) => order.add('second'),
+        ),
+      );
 
       await schedule.run(World());
 
@@ -31,16 +32,17 @@ void main() {
       final order = <String>[];
       final schedule = Scheduler();
 
-      schedule.addSystem(FunctionSystem(
-        'first',
-        before: ['second'],
-        run: (_) => order.add('first'),
-      ));
+      schedule.addSystem(
+        FunctionSystem(
+          'first',
+          before: ['second'],
+          run: (_) => order.add('first'),
+        ),
+      );
 
-      schedule.addSystem(FunctionSystem(
-        'second',
-        run: (_) => order.add('second'),
-      ));
+      schedule.addSystem(
+        FunctionSystem('second', run: (_) => order.add('second')),
+      );
 
       await schedule.run(World());
 
@@ -52,17 +54,18 @@ void main() {
       final schedule = Scheduler();
 
       // Add second first
-      schedule.addSystem(FunctionSystem(
-        'second',
-        run: (_) => order.add('second'),
-      ));
+      schedule.addSystem(
+        FunctionSystem('second', run: (_) => order.add('second')),
+      );
 
       // Add first with before constraint - should still work
-      schedule.addSystem(FunctionSystem(
-        'first',
-        before: ['second'],
-        run: (_) => order.add('first'),
-      ));
+      schedule.addSystem(
+        FunctionSystem(
+          'first',
+          before: ['second'],
+          run: (_) => order.add('first'),
+        ),
+      );
 
       await schedule.run(World());
 
@@ -74,11 +77,13 @@ void main() {
       final schedule = Scheduler();
 
       // System with after constraint for non-existent system
-      schedule.addSystem(FunctionSystem(
-        'lonely',
-        after: ['nonexistent'],
-        run: (_) => order.add('lonely'),
-      ));
+      schedule.addSystem(
+        FunctionSystem(
+          'lonely',
+          after: ['nonexistent'],
+          run: (_) => order.add('lonely'),
+        ),
+      );
 
       await schedule.run(World());
 
@@ -89,21 +94,21 @@ void main() {
       final order = <String>[];
       final schedule = Scheduler();
 
-      schedule.addSystem(FunctionSystem(
-        'first',
-        run: (_) => order.add('first'),
-      ));
+      schedule.addSystem(
+        FunctionSystem('first', run: (_) => order.add('first')),
+      );
 
-      schedule.addSystem(FunctionSystem(
-        'second',
-        run: (_) => order.add('second'),
-      ));
+      schedule.addSystem(
+        FunctionSystem('second', run: (_) => order.add('second')),
+      );
 
-      schedule.addSystem(FunctionSystem(
-        'third',
-        after: ['first', 'second'],
-        run: (_) => order.add('third'),
-      ));
+      schedule.addSystem(
+        FunctionSystem(
+          'third',
+          after: ['first', 'second'],
+          run: (_) => order.add('third'),
+        ),
+      );
 
       await schedule.run(World());
 
@@ -116,21 +121,21 @@ void main() {
       final order = <String>[];
       final schedule = Scheduler();
 
-      schedule.addSystem(FunctionSystem(
-        'first',
-        before: ['second', 'third'],
-        run: (_) => order.add('first'),
-      ));
+      schedule.addSystem(
+        FunctionSystem(
+          'first',
+          before: ['second', 'third'],
+          run: (_) => order.add('first'),
+        ),
+      );
 
-      schedule.addSystem(FunctionSystem(
-        'second',
-        run: (_) => order.add('second'),
-      ));
+      schedule.addSystem(
+        FunctionSystem('second', run: (_) => order.add('second')),
+      );
 
-      schedule.addSystem(FunctionSystem(
-        'third',
-        run: (_) => order.add('third'),
-      ));
+      schedule.addSystem(
+        FunctionSystem('third', run: (_) => order.add('third')),
+      );
 
       await schedule.run(World());
 
@@ -143,22 +148,25 @@ void main() {
       final order = <String>[];
       final schedule = Scheduler();
 
-      schedule.addSystem(FunctionSystem(
-        'first',
-        run: (_) => order.add('first'),
-      ));
+      schedule.addSystem(
+        FunctionSystem('first', run: (_) => order.add('first')),
+      );
 
-      schedule.addSystem(FunctionSystem(
-        'second',
-        after: ['first'],
-        run: (_) => order.add('second'),
-      ));
+      schedule.addSystem(
+        FunctionSystem(
+          'second',
+          after: ['first'],
+          run: (_) => order.add('second'),
+        ),
+      );
 
-      schedule.addSystem(FunctionSystem(
-        'third',
-        after: ['second'],
-        run: (_) => order.add('third'),
-      ));
+      schedule.addSystem(
+        FunctionSystem(
+          'third',
+          after: ['second'],
+          run: (_) => order.add('third'),
+        ),
+      );
 
       await schedule.run(World());
 
@@ -169,25 +177,31 @@ void main() {
       final order = <String>[];
       final schedule = Scheduler();
 
-      schedule.addSystem(FunctionSystem(
-        'reader1',
-        reads: {ComponentId.of<_Position>()},
-        run: (_) => order.add('reader1'),
-      ));
+      schedule.addSystem(
+        FunctionSystem(
+          'reader1',
+          reads: {ComponentId.of<_Position>()},
+          run: (_) => order.add('reader1'),
+        ),
+      );
 
-      schedule.addSystem(FunctionSystem(
-        'writer',
-        writes: {ComponentId.of<_Position>()},
-        after: ['reader1'],
-        run: (_) => order.add('writer'),
-      ));
+      schedule.addSystem(
+        FunctionSystem(
+          'writer',
+          writes: {ComponentId.of<_Position>()},
+          after: ['reader1'],
+          run: (_) => order.add('writer'),
+        ),
+      );
 
-      schedule.addSystem(FunctionSystem(
-        'reader2',
-        reads: {ComponentId.of<_Position>()},
-        after: ['writer'],
-        run: (_) => order.add('reader2'),
-      ));
+      schedule.addSystem(
+        FunctionSystem(
+          'reader2',
+          reads: {ComponentId.of<_Position>()},
+          after: ['writer'],
+          run: (_) => order.add('reader2'),
+        ),
+      );
 
       await schedule.run(World());
 
@@ -200,20 +214,11 @@ void main() {
       final order = <String>[];
       final schedule = Scheduler();
 
-      schedule.addSystem(FunctionSystem(
-        'a',
-        run: (_) => order.add('a'),
-      ));
+      schedule.addSystem(FunctionSystem('a', run: (_) => order.add('a')));
 
-      schedule.addSystem(FunctionSystem(
-        'b',
-        run: (_) => order.add('b'),
-      ));
+      schedule.addSystem(FunctionSystem('b', run: (_) => order.add('b')));
 
-      schedule.addSystem(FunctionSystem(
-        'c',
-        run: (_) => order.add('c'),
-      ));
+      schedule.addSystem(FunctionSystem('c', run: (_) => order.add('c')));
 
       await schedule.run(World());
 
@@ -226,24 +231,30 @@ void main() {
       final order = <String>[];
       final schedule = Scheduler();
 
-      schedule.addSystem(FunctionSystem(
-        'first',
-        before: ['middle'],
-        run: (_) => order.add('first'),
-      ));
+      schedule.addSystem(
+        FunctionSystem(
+          'first',
+          before: ['middle'],
+          run: (_) => order.add('first'),
+        ),
+      );
 
-      schedule.addSystem(FunctionSystem(
-        'middle',
-        after: ['first'],
-        before: ['last'],
-        run: (_) => order.add('middle'),
-      ));
+      schedule.addSystem(
+        FunctionSystem(
+          'middle',
+          after: ['first'],
+          before: ['last'],
+          run: (_) => order.add('middle'),
+        ),
+      );
 
-      schedule.addSystem(FunctionSystem(
-        'last',
-        after: ['middle'],
-        run: (_) => order.add('last'),
-      ));
+      schedule.addSystem(
+        FunctionSystem(
+          'last',
+          after: ['middle'],
+          run: (_) => order.add('last'),
+        ),
+      );
 
       await schedule.run(World());
 
@@ -263,20 +274,12 @@ void main() {
     });
 
     test('FunctionSystem passes before to meta', () {
-      final system = FunctionSystem(
-        'test',
-        before: ['other'],
-        run: (_) {},
-      );
+      final system = FunctionSystem('test', before: ['other'], run: (_) {});
       expect(system.meta.before, equals(['other']));
     });
 
     test('FunctionSystem passes after to meta', () {
-      final system = FunctionSystem(
-        'test',
-        after: ['other'],
-        run: (_) {},
-      );
+      final system = FunctionSystem('test', after: ['other'], run: (_) {});
       expect(system.meta.after, equals(['other']));
     });
 
@@ -304,22 +307,23 @@ void main() {
       final order = <String>[];
       final app = App();
 
-      app.addSystem(FunctionSystem(
-        'last',
-        after: ['middle'],
-        run: (_) => order.add('last'),
-      ));
+      app.addSystem(
+        FunctionSystem(
+          'last',
+          after: ['middle'],
+          run: (_) => order.add('last'),
+        ),
+      );
 
-      app.addSystem(FunctionSystem(
-        'middle',
-        after: ['first'],
-        run: (_) => order.add('middle'),
-      ));
+      app.addSystem(
+        FunctionSystem(
+          'middle',
+          after: ['first'],
+          run: (_) => order.add('middle'),
+        ),
+      );
 
-      app.addSystem(FunctionSystem(
-        'first',
-        run: (_) => order.add('first'),
-      ));
+      app.addSystem(FunctionSystem('first', run: (_) => order.add('first')));
 
       await app.tick();
 

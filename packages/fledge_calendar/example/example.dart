@@ -4,16 +4,15 @@ import 'package:fledge_ecs/fledge_ecs.dart';
 
 void main() async {
   // Set up app with calendar plugin
-  final app =
-      App()
-        ..addPlugin(const WallTimePlugin()) // Real-time delta (wall clock)
-        ..addPlugin(
-          const CalendarPlugin(
-            config: CalendarConfig.farmingSim(),
-            initialHour: 6,
-            initialDay: 1,
-          ),
-        );
+  final app = App()
+    ..addPlugin(const WallTimePlugin()) // Real-time delta (wall clock)
+    ..addPlugin(
+      const CalendarPlugin(
+        config: CalendarConfig.farmingSim(),
+        initialHour: 6,
+        initialDay: 1,
+      ),
+    );
 
   // Initialize
   await app.tick();

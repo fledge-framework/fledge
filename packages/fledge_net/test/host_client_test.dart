@@ -346,10 +346,7 @@ void main() {
 
       hostTransport.sentPackets.clear();
 
-      await host.broadcast(
-        PacketType.stateUpdate,
-        Uint8List.fromList([42]),
-      );
+      await host.broadcast(PacketType.stateUpdate, Uint8List.fromList([42]));
 
       // Should have sent to both peers
       expect(hostTransport.sentPackets.length, 2);
@@ -397,7 +394,10 @@ void main() {
       hostTransport.sentPackets.clear();
 
       await host.sendTo(
-          peerId, PacketType.stateUpdate, Uint8List.fromList([1]));
+        peerId,
+        PacketType.stateUpdate,
+        Uint8List.fromList([1]),
+      );
       expect(hostTransport.sentPackets.length, 1);
     });
 
@@ -437,10 +437,7 @@ void main() {
       unawaited(client.connect('10.0.0.1', 7777).catchError((_) => false));
       await Future<void>.delayed(Duration.zero);
 
-      expect(
-        () => client.connect('10.0.0.1', 7778),
-        throwsStateError,
-      );
+      expect(() => client.connect('10.0.0.1', 7778), throwsStateError);
     });
 
     test('disconnect when already disconnected is safe', () async {

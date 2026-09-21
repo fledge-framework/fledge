@@ -16,20 +16,24 @@ void main() async {
   final player = app.world.spawn()
     ..insert(Transform2D.from(0, 0))
     ..insert(GlobalTransform2D())
-    ..insert(Sprite(
-      texture: const TextureHandle(id: 0, width: 32, height: 32),
-      color: const Color(0xFF00FF00),
-      customSize: Vector2(32, 32),
-    ));
+    ..insert(
+      Sprite(
+        texture: const TextureHandle(id: 0, width: 32, height: 32),
+        color: const Color(0xFF00FF00),
+        customSize: Vector2(32, 32),
+      ),
+    );
 
   // Spawn a camera that follows the player.
   app.world.spawn()
     ..insert(Transform2D.from(0, 0))
     ..insert(GlobalTransform2D())
-    ..insert(Camera2D(
-      projection: OrthographicProjection(viewportHeight: 600),
-      pixelPerfect: true,
-    ))
+    ..insert(
+      Camera2D(
+        projection: OrthographicProjection(viewportHeight: 600),
+        pixelPerfect: true,
+      ),
+    )
     ..insert(CameraFollow(target: player.entity, smoothing: 0.15))
     ..insert(CameraShake());
 

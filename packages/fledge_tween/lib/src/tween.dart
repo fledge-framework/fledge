@@ -86,10 +86,10 @@ class Tween<T> {
   /// contravariance check — building the flipped tween through
   /// [reversed] keeps the dispatch on the concrete type.
   Tween<T> reversed() => Tween<T>(
-        from: to,
-        to: from,
-        duration: duration,
-        curve: curve,
-        lerp: lerp,
-      );
+    from: to,
+    to: from,
+    duration: duration,
+    curve: curve,
+    lerp: lerp,
+  );
 }

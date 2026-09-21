@@ -22,10 +22,10 @@ import '../world/render_world.dart';
 class RenderExtractionSystem implements System {
   @override
   SystemMeta get meta => const SystemMeta(
-        name: 'renderExtraction',
-        resourceReads: {Extractors},
-        resourceWrites: {RenderWorld},
-      );
+    name: 'renderExtraction',
+    resourceReads: {Extractors},
+    resourceWrites: {RenderWorld},
+  );
 
   @override
   RunCondition? get runCondition => null;

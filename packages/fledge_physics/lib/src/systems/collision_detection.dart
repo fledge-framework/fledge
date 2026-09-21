@@ -49,20 +49,20 @@ class CollisionDetectionSystem implements System {
 
   @override
   SystemMeta get meta => SystemMeta(
-        name: 'collision_detection',
-        reads: {
-          ComponentId.of<Transform2D>(),
-          ComponentId.of<Collider>(),
-          ComponentId.of<CollisionConfig>(),
-        },
-        // Detection writes only the event queue — no more component
-        // churn from per-frame CollisionEvent insert/remove. We still
-        // declare an explicit ordering vs resolution because both
-        // systems live in Schedules.update and resolution clamps
-        // velocities before integration.
-        eventWrites: {CollisionEvent},
-        after: const ['collision_resolution'],
-      );
+    name: 'collision_detection',
+    reads: {
+      ComponentId.of<Transform2D>(),
+      ComponentId.of<Collider>(),
+      ComponentId.of<CollisionConfig>(),
+    },
+    // Detection writes only the event queue — no more component
+    // churn from per-frame CollisionEvent insert/remove. We still
+    // declare an explicit ordering vs resolution because both
+    // systems live in Schedules.update and resolution clamps
+    // velocities before integration.
+    eventWrites: {CollisionEvent},
+    after: const ['collision_resolution'],
+  );
 
   @override
   RunCondition? get runCondition => null;
@@ -148,10 +148,9 @@ class CollisionDetectionSystem implements System {
         if (!_intersects(broadBounds[i], broadBounds[j])) continue;
 
         if (_shapesIntersect(shapes[i], shapes[j])) {
-          writer.send(CollisionEvent(
-            entityA: entities[i],
-            entityB: entities[j],
-          ));
+          writer.send(
+            CollisionEvent(entityA: entities[i], entityB: entities[j]),
+          );
         }
       }
     }

@@ -278,15 +278,11 @@ class QueryIter1<T1> extends Iterable<(Entity, T1)> {
   final List<Entity> _snapshot;
 
   QueryIter1(this._archetypes, this._entities, this._state)
-      : _snapshot = _state.snapshotEntities(_archetypes);
+    : _snapshot = _state.snapshotEntities(_archetypes);
 
   @override
-  Iterator<(Entity, T1)> get iterator => _QueryIterator1(
-        _archetypes,
-        _entities,
-        _state,
-        _snapshot,
-      );
+  Iterator<(Entity, T1)> get iterator =>
+      _QueryIterator1(_archetypes, _entities, _state, _snapshot);
 }
 
 class _QueryIterator1<T1> implements Iterator<(Entity, T1)> {
@@ -343,15 +339,11 @@ class QueryIter2<T1, T2> extends Iterable<(Entity, T1, T2)> {
   final List<Entity> _snapshot;
 
   QueryIter2(this._archetypes, this._entities, this._state)
-      : _snapshot = _state.snapshotEntities(_archetypes);
+    : _snapshot = _state.snapshotEntities(_archetypes);
 
   @override
-  Iterator<(Entity, T1, T2)> get iterator => _QueryIterator2(
-        _archetypes,
-        _entities,
-        _state,
-        _snapshot,
-      );
+  Iterator<(Entity, T1, T2)> get iterator =>
+      _QueryIterator2(_archetypes, _entities, _state, _snapshot);
 }
 
 class _QueryIterator2<T1, T2> implements Iterator<(Entity, T1, T2)> {
@@ -391,11 +383,7 @@ class _QueryIterator2<T1, T2> implements Iterator<(Entity, T1, T2)> {
       final column1 = table.getColumn(componentId1);
       final column2 = table.getColumn(componentId2);
       final row = location.row;
-      _current = (
-        entity,
-        column1![row] as T1,
-        column2![row] as T2,
-      );
+      _current = (entity, column1![row] as T1, column2![row] as T2);
       return true;
     }
 
@@ -415,15 +403,11 @@ class QueryIter3<T1, T2, T3> extends Iterable<(Entity, T1, T2, T3)> {
   final List<Entity> _snapshot;
 
   QueryIter3(this._archetypes, this._entities, this._state)
-      : _snapshot = _state.snapshotEntities(_archetypes);
+    : _snapshot = _state.snapshotEntities(_archetypes);
 
   @override
-  Iterator<(Entity, T1, T2, T3)> get iterator => _QueryIterator3(
-        _archetypes,
-        _entities,
-        _state,
-        _snapshot,
-      );
+  Iterator<(Entity, T1, T2, T3)> get iterator =>
+      _QueryIterator3(_archetypes, _entities, _state, _snapshot);
 }
 
 class _QueryIterator3<T1, T2, T3> implements Iterator<(Entity, T1, T2, T3)> {
@@ -490,15 +474,11 @@ class QueryIter4<T1, T2, T3, T4> extends Iterable<(Entity, T1, T2, T3, T4)> {
   final List<Entity> _snapshot;
 
   QueryIter4(this._archetypes, this._entities, this._state)
-      : _snapshot = _state.snapshotEntities(_archetypes);
+    : _snapshot = _state.snapshotEntities(_archetypes);
 
   @override
-  Iterator<(Entity, T1, T2, T3, T4)> get iterator => _QueryIterator4(
-        _archetypes,
-        _entities,
-        _state,
-        _snapshot,
-      );
+  Iterator<(Entity, T1, T2, T3, T4)> get iterator =>
+      _QueryIterator4(_archetypes, _entities, _state, _snapshot);
 }
 
 class _QueryIterator4<T1, T2, T3, T4>

@@ -48,7 +48,8 @@ class ExpressionEvaluator {
     final tokens = _tokenize(source);
     if (tokens.isEmpty || tokens.first.type != _TokenType.variable) {
       throw FormatException(
-          'Expected variable at start of set expression: "$source"');
+        'Expected variable at start of set expression: "$source"',
+      );
     }
     if (tokens.length < 3) {
       // Need at least: variable, op, rhs, end
@@ -81,7 +82,8 @@ class ExpressionEvaluator {
         assign(name, current / _asNum(rhs));
       default:
         throw FormatException(
-            'Expected assignment operator in "$source", got "${opToken.lexeme}"');
+          'Expected assignment operator in "$source", got "${opToken.lexeme}"',
+        );
     }
   }
 }
@@ -155,8 +157,14 @@ List<_Token> _tokenize(String source) {
 
     if (c == '"' || c == "'") {
       final (value, end) = _readString(source, i);
-      tokens.add(_Token(_TokenType.string, source.substring(start, end), start,
-          literal: value));
+      tokens.add(
+        _Token(
+          _TokenType.string,
+          source.substring(start, end),
+          start,
+          literal: value,
+        ),
+      );
       i = end;
       continue;
     }
@@ -176,8 +184,9 @@ List<_Token> _tokenize(String source) {
       while (i < n && _isIdentPart(source[i])) {
         i++;
       }
-      tokens
-          .add(_Token(_TokenType.variable, source.substring(start, i), start));
+      tokens.add(
+        _Token(_TokenType.variable, source.substring(start, i), start),
+      );
       continue;
     }
 
@@ -326,7 +335,8 @@ class _Parser {
   void expectEnd() {
     if (!_atEnd) {
       throw FormatException(
-          'Unexpected token "${_peek().lexeme}" at position ${_peek().position}');
+        'Unexpected token "${_peek().lexeme}" at position ${_peek().position}',
+      );
     }
   }
 
@@ -438,7 +448,8 @@ class _Parser {
         return value;
       default:
         throw FormatException(
-            'Unexpected token "${tok.lexeme}" at position ${tok.position}');
+          'Unexpected token "${tok.lexeme}" at position ${tok.position}',
+        );
     }
   }
 }

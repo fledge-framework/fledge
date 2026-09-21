@@ -13,10 +13,10 @@ class TransitionFadeSystem implements System {
 
   @override
   SystemMeta get meta => const SystemMeta(
-        name: 'TransitionFadeSystem',
-        resourceReads: {WallTime},
-        resourceWrites: {TransitionState},
-      );
+    name: 'TransitionFadeSystem',
+    resourceReads: {WallTime},
+    resourceWrites: {TransitionState},
+  );
 
   @override
   RunCondition? get runCondition => null;

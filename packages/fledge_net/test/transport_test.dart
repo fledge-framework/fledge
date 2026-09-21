@@ -62,13 +62,15 @@ void main() {
       final after = DateTime.now();
 
       expect(
-          packet.receivedAt
-              .isAfter(before.subtract(const Duration(milliseconds: 1))),
-          true);
+        packet.receivedAt.isAfter(
+          before.subtract(const Duration(milliseconds: 1)),
+        ),
+        true,
+      );
       expect(
-          packet.receivedAt
-              .isBefore(after.add(const Duration(milliseconds: 1))),
-          true);
+        packet.receivedAt.isBefore(after.add(const Duration(milliseconds: 1))),
+        true,
+      );
     });
 
     test('accepts explicit receivedAt', () {

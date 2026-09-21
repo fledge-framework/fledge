@@ -102,11 +102,7 @@ extension AudioCommands on World {
   /// ```
   void setVolume(AudioChannel channel, double volume, {Duration? fade}) {
     eventWriter<SetChannelVolumeRequest>().send(
-      SetChannelVolumeRequest(
-        channel,
-        volume,
-        fadeDuration: fade,
-      ),
+      SetChannelVolumeRequest(channel, volume, fadeDuration: fade),
     );
   }
 
@@ -127,11 +123,7 @@ extension AudioCommands on World {
     bool isMusic = false,
   }) {
     eventWriter<PreloadAudioRequest>().send(
-      PreloadAudioRequest(
-        assetPath: assetPath,
-        key: key,
-        isMusic: isMusic,
-      ),
+      PreloadAudioRequest(assetPath: assetPath, key: key, isMusic: isMusic),
     );
   }
 

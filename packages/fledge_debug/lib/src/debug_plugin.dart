@@ -57,10 +57,7 @@ class DebugPlugin implements Plugin {
       schedule: Schedules.first,
     );
     app.addSystem(const SystemStatsEndSystem(), schedule: Schedules.last);
-    app.addSystem(
-      const OverlayPopulateSystem(),
-      schedule: Schedules.preUpdate,
-    );
+    app.addSystem(const OverlayPopulateSystem(), schedule: Schedules.preUpdate);
 
     // Snapshot ambiguities at build time so the overlay has data on
     // its very first paint. Games that add plugins after the debug

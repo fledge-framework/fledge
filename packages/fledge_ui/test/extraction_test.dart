@@ -21,58 +21,63 @@ void main() {
       extractor = UiExtractor();
     });
 
-    test('text UI entity produces an ExtractedUiText with the right rect',
-        () async {
-      final entity = (mainWorld.spawn()
-            ..insert(const UiNode())
-            ..insert(const UiAnchorComponent(UiAnchor.topLeft))
-            ..insert(const UiSize(width: 120, height: 20))
-            ..insert(const UiOffset(x: 8, y: 8))
-            ..insert(UiText(text: 'Score: 0', fontSize: 16)))
-          .entity;
+    test(
+      'text UI entity produces an ExtractedUiText with the right rect',
+      () async {
+        final entity =
+            (mainWorld.spawn()
+                  ..insert(const UiNode())
+                  ..insert(const UiAnchorComponent(UiAnchor.topLeft))
+                  ..insert(const UiSize(width: 120, height: 20))
+                  ..insert(const UiOffset(x: 8, y: 8))
+                  ..insert(UiText(text: 'Score: 0', fontSize: 16)))
+                .entity;
 
-      await layout.run(mainWorld);
-      extractor.extract(mainWorld, renderWorld);
+        await layout.run(mainWorld);
+        extractor.extract(mainWorld, renderWorld);
 
-      final results = <ExtractedUiText>[];
-      for (final (_, e) in renderWorld.query1<ExtractedUiText>().iter()) {
-        results.add(e);
-      }
+        final results = <ExtractedUiText>[];
+        for (final (_, e) in renderWorld.query1<ExtractedUiText>().iter()) {
+          results.add(e);
+        }
 
-      expect(results, hasLength(1));
-      expect(results.single.text, 'Score: 0');
-      expect(results.single.rect.left, 8);
-      expect(results.single.rect.top, 8);
-      expect(results.single.rect.width, 120);
-      expect(results.single.rect.height, 20);
-      expect(mainWorld.isAlive(entity), isTrue);
-    });
+        expect(results, hasLength(1));
+        expect(results.single.text, 'Score: 0');
+        expect(results.single.rect.left, 8);
+        expect(results.single.rect.top, 8);
+        expect(results.single.rect.width, 120);
+        expect(results.single.rect.height, 20);
+        expect(mainWorld.isAlive(entity), isTrue);
+      },
+    );
 
-    test('image UI entity produces an ExtractedUiImage with tint + texture',
-        () async {
-      const texture = TextureHandle(id: 42, width: 32, height: 32);
-      mainWorld.spawn()
-        ..insert(const UiNode())
-        ..insert(const UiAnchorComponent(UiAnchor.center))
-        ..insert(const UiSize(width: 32, height: 32))
-        ..insert(const UiImage(texture: texture, tint: Color(0xFFFF00FF)));
+    test(
+      'image UI entity produces an ExtractedUiImage with tint + texture',
+      () async {
+        const texture = TextureHandle(id: 42, width: 32, height: 32);
+        mainWorld.spawn()
+          ..insert(const UiNode())
+          ..insert(const UiAnchorComponent(UiAnchor.center))
+          ..insert(const UiSize(width: 32, height: 32))
+          ..insert(const UiImage(texture: texture, tint: Color(0xFFFF00FF)));
 
-      await layout.run(mainWorld);
-      extractor.extract(mainWorld, renderWorld);
+        await layout.run(mainWorld);
+        extractor.extract(mainWorld, renderWorld);
 
-      final results = renderWorld
-          .query1<ExtractedUiImage>()
-          .iter()
-          .map((r) => r.$2)
-          .toList();
+        final results = renderWorld
+            .query1<ExtractedUiImage>()
+            .iter()
+            .map((r) => r.$2)
+            .toList();
 
-      expect(results, hasLength(1));
-      expect(results.single.texture.id, 42);
-      expect(results.single.tint, const Color(0xFFFF00FF));
-      // Centred inside 400×300 viewport → (184, 134).
-      expect(results.single.rect.left, 184);
-      expect(results.single.rect.top, 134);
-    });
+        expect(results, hasLength(1));
+        expect(results.single.texture.id, 42);
+        expect(results.single.tint, const Color(0xFFFF00FF));
+        // Centred inside 400×300 viewport → (184, 134).
+        expect(results.single.rect.left, 184);
+        expect(results.single.rect.top, 134);
+      },
+    );
 
     test('solid UiRect (no radius) produces an ExtractedUiRect', () async {
       mainWorld.spawn()
@@ -98,20 +103,22 @@ void main() {
       expect(results.single.rect.bottom, 290);
     });
 
-    test('rounded UiRect carries the borderRadius through the extractor',
-        () async {
-      mainWorld.spawn()
-        ..insert(const UiNode())
-        ..insert(const UiAnchorComponent(UiAnchor.center))
-        ..insert(const UiSize(width: 100, height: 40))
-        ..insert(const UiRect(color: Color(0xFF123456), borderRadius: 8));
+    test(
+      'rounded UiRect carries the borderRadius through the extractor',
+      () async {
+        mainWorld.spawn()
+          ..insert(const UiNode())
+          ..insert(const UiAnchorComponent(UiAnchor.center))
+          ..insert(const UiSize(width: 100, height: 40))
+          ..insert(const UiRect(color: Color(0xFF123456), borderRadius: 8));
 
-      await layout.run(mainWorld);
-      extractor.extract(mainWorld, renderWorld);
+        await layout.run(mainWorld);
+        extractor.extract(mainWorld, renderWorld);
 
-      final result = renderWorld.query1<ExtractedUiRect>().iter().single.$2;
-      expect(result.borderRadius, 8);
-    });
+        final result = renderWorld.query1<ExtractedUiRect>().iter().single.$2;
+        expect(result.borderRadius, 8);
+      },
+    );
 
     test('entity with UiNode but no UiComputedRect is skipped', () {
       mainWorld.spawn().insert(const UiNode());
@@ -122,40 +129,43 @@ void main() {
       expect(renderWorld.query1<ExtractedUiElement>().iter().isEmpty, isTrue);
     });
 
-    test('extracted elements land in the DrawLayer.ui sort-key range',
-        () async {
-      mainWorld.spawn()
-        ..insert(const UiNode())
-        ..insert(const UiAnchorComponent(UiAnchor.topLeft))
-        ..insert(UiText(text: 'A'));
-      mainWorld.spawn()
-        ..insert(const UiNode())
-        ..insert(const UiAnchorComponent(UiAnchor.topLeft))
-        ..insert(UiText(text: 'B'));
+    test(
+      'extracted elements land in the DrawLayer.ui sort-key range',
+      () async {
+        mainWorld.spawn()
+          ..insert(const UiNode())
+          ..insert(const UiAnchorComponent(UiAnchor.topLeft))
+          ..insert(UiText(text: 'A'));
+        mainWorld.spawn()
+          ..insert(const UiNode())
+          ..insert(const UiAnchorComponent(UiAnchor.topLeft))
+          ..insert(UiText(text: 'B'));
 
-      await layout.run(mainWorld);
-      extractor.extract(mainWorld, renderWorld);
+        await layout.run(mainWorld);
+        extractor.extract(mainWorld, renderWorld);
 
-      final keys = <int>[];
-      for (final (_, e) in renderWorld.query1<ExtractedUiElement>().iter()) {
-        keys.add(e.sortKey);
-      }
-      // Both keys should sit in `DrawLayer.ui`'s sort-key range.
-      const uiStart =
-          DrawLayerExtension.layerMultiplier * 5; // DrawLayer.ui index = 5
-      for (final k in keys) {
-        expect(k, greaterThanOrEqualTo(uiStart));
-        expect(k, lessThan(uiStart + DrawLayerExtension.layerMultiplier));
-      }
-    });
+        final keys = <int>[];
+        for (final (_, e) in renderWorld.query1<ExtractedUiElement>().iter()) {
+          keys.add(e.sortKey);
+        }
+        // Both keys should sit in `DrawLayer.ui`'s sort-key range.
+        const uiStart =
+            DrawLayerExtension.layerMultiplier * 5; // DrawLayer.ui index = 5
+        for (final k in keys) {
+          expect(k, greaterThanOrEqualTo(uiStart));
+          expect(k, lessThan(uiStart + DrawLayerExtension.layerMultiplier));
+        }
+      },
+    );
 
     test('re-extraction after clear reflects mutated text', () async {
-      final entity = (mainWorld.spawn()
-            ..insert(const UiNode())
-            ..insert(const UiAnchorComponent(UiAnchor.topLeft))
-            ..insert(const UiSize(width: 100, height: 20))
-            ..insert(UiText(text: 'Score: 0')))
-          .entity;
+      final entity =
+          (mainWorld.spawn()
+                ..insert(const UiNode())
+                ..insert(const UiAnchorComponent(UiAnchor.topLeft))
+                ..insert(const UiSize(width: 100, height: 20))
+                ..insert(UiText(text: 'Score: 0')))
+              .entity;
 
       await layout.run(mainWorld);
       extractor.extract(mainWorld, renderWorld);

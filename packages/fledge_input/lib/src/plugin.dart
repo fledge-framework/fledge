@@ -116,8 +116,9 @@ class InputPlugin<S extends Enum> implements Plugin {
     if (stateBindings != null) {
       for (final entry in stateBindings!.entries) {
         final contextName = entry.value;
-        final context =
-            contexts.where((c) => c.name == contextName).firstOrNull;
+        final context = contexts
+            .where((c) => c.name == contextName)
+            .firstOrNull;
         if (context != null) {
           registry.registerForState(context, entry.key);
         }

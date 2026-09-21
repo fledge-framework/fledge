@@ -82,7 +82,8 @@ void main() {
 
       final stateB = Transform2DNetworkState()
         ..x = 15
-        ..y = 20 // unchanged
+        ..y =
+            20 // unchanged
         ..rotation = 1.5;
 
       // Create delta: what changed from A to B.

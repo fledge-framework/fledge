@@ -210,22 +210,24 @@ extension TypeRegistryExtension on TypeRegistry {
     required T Function(List<dynamic> args) constructor,
     required List<dynamic> Function(T instance) getFields,
   }) {
-    registerComponent(ComponentTypeInfo<T>(
-      type: T,
-      name: name,
-      fields: fields,
-      fromJson: (json) {
-        final args = fields.map((f) => json[f.name]).toList();
-        return constructor(args);
-      },
-      toJson: (instance) {
-        final values = getFields(instance);
-        final map = <String, dynamic>{};
-        for (var i = 0; i < fields.length; i++) {
-          map[fields[i].name] = values[i];
-        }
-        return map;
-      },
-    ));
+    registerComponent(
+      ComponentTypeInfo<T>(
+        type: T,
+        name: name,
+        fields: fields,
+        fromJson: (json) {
+          final args = fields.map((f) => json[f.name]).toList();
+          return constructor(args);
+        },
+        toJson: (instance) {
+          final values = getFields(instance);
+          final map = <String, dynamic>{};
+          for (var i = 0; i < fields.length; i++) {
+            map[fields[i].name] = values[i];
+          }
+          return map;
+        },
+      ),
+    );
   }
 }

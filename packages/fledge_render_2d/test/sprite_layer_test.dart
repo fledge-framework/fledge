@@ -19,11 +19,9 @@ ExtractedSprite _extractAt({
   gt.translation = Vector2(0, y);
 
   world.spawn()
-    ..insert(Sprite(
-      texture: _texture,
-      layer: layer,
-      layerSubOrder: layerSubOrder,
-    ))
+    ..insert(
+      Sprite(texture: _texture, layer: layer, layerSubOrder: layerSubOrder),
+    )
     ..insert(gt);
 
   SpriteExtractor().extract(world, renderWorld);
@@ -89,8 +87,10 @@ void main() {
       // Sort key must not bleed into the foreground layer.
       expect(extracted.sortKey, lessThan(DrawLayer.foreground.sortKey()));
       // And it must still be inside the characters range.
-      expect(extracted.sortKey,
-          greaterThanOrEqualTo(DrawLayer.characters.sortKey()));
+      expect(
+        extracted.sortKey,
+        greaterThanOrEqualTo(DrawLayer.characters.sortKey()),
+      );
     });
   });
 }

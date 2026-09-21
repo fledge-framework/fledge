@@ -18,10 +18,10 @@ class DisplaySyncSystem implements System {
 
   @override
   SystemMeta get meta => const SystemMeta(
-        name: 'DisplaySyncSystem',
-        resourceWrites: {DisplayInfo},
-        eventWrites: {WindowOperationFailed},
-      );
+    name: 'DisplaySyncSystem',
+    resourceWrites: {DisplayInfo},
+    eventWrites: {WindowOperationFailed},
+  );
 
   @override
   RunCondition? get runCondition => null;
@@ -48,11 +48,8 @@ class DisplaySyncSystem implements System {
       primaryDisplay = await screenRetriever.getPrimaryDisplay();
     } catch (e) {
       world.eventWriter<WindowOperationFailed>().send(
-            WindowOperationFailed(
-              operation: 'syncDisplays',
-              reason: e.toString(),
-            ),
-          );
+        WindowOperationFailed(operation: 'syncDisplays', reason: e.toString()),
+      );
       return;
     }
 
@@ -65,20 +62,22 @@ class DisplaySyncSystem implements System {
       final isPrimary = d.id == primaryDisplay.id;
       if (isPrimary) primaryIndex = i;
 
-      displays.add(Display(
-        index: i,
-        name: d.name ?? 'Display $i',
-        size: Size(d.size.width, d.size.height),
-        bounds: Rect.fromLTWH(
-          d.visiblePosition?.dx ?? 0,
-          d.visiblePosition?.dy ?? 0,
-          d.visibleSize?.width ?? d.size.width,
-          d.visibleSize?.height ?? d.size.height,
+      displays.add(
+        Display(
+          index: i,
+          name: d.name ?? 'Display $i',
+          size: Size(d.size.width, d.size.height),
+          bounds: Rect.fromLTWH(
+            d.visiblePosition?.dx ?? 0,
+            d.visiblePosition?.dy ?? 0,
+            d.visibleSize?.width ?? d.size.width,
+            d.visibleSize?.height ?? d.size.height,
+          ),
+          scaleFactor: (d.scaleFactor ?? 1.0).toDouble(),
+          refreshRate: 60.0,
+          isPrimary: isPrimary,
         ),
-        scaleFactor: (d.scaleFactor ?? 1.0).toDouble(),
-        refreshRate: 60.0,
-        isPrimary: isPrimary,
-      ));
+      );
     }
 
     // Only update if something changed

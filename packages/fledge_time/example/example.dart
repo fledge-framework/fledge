@@ -13,10 +13,9 @@ import 'package:fledge_time/fledge_time.dart';
 /// (`Calendar`, `CalendarPlugin`, `CalendarConfig`) is the same class
 /// re-exported through here.
 void main() async {
-  final app =
-      App()
-        ..addPlugin(const WallTimePlugin())
-        ..addPlugin(const CalendarPlugin(config: CalendarConfig.rpg()));
+  final app = App()
+    ..addPlugin(const WallTimePlugin())
+    ..addPlugin(const CalendarPlugin(config: CalendarConfig.rpg()));
 
   // The re-exported Calendar resource is inserted by the plugin.
   // Games read `timeString`, `calendarString`, and the per-frame

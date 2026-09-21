@@ -16,15 +16,15 @@ class FrameStatsSystem implements System {
 
   @override
   SystemMeta get meta => const SystemMeta(
-        name: 'debug_frame_stats',
-        resourceReads: {WallTime},
-        resourceWrites: {FrameStats},
-        // WallTime is written by `wallTimeUpdate` in the same schedule
-        // (`Schedules.first`). Declare the dependency explicitly so
-        // ordering doesn't fall back to registration order — see
-        // `App.checkScheduleOrdering()` for why that matters.
-        after: ['wallTimeUpdate'],
-      );
+    name: 'debug_frame_stats',
+    resourceReads: {WallTime},
+    resourceWrites: {FrameStats},
+    // WallTime is written by `wallTimeUpdate` in the same schedule
+    // (`Schedules.first`). Declare the dependency explicitly so
+    // ordering doesn't fall back to registration order — see
+    // `App.checkScheduleOrdering()` for why that matters.
+    after: ['wallTimeUpdate'],
+  );
 
   @override
   RunCondition? get runCondition => null;

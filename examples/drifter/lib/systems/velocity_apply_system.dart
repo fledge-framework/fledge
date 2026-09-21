@@ -14,19 +14,19 @@ import 'package:fledge_render_2d/fledge_render_2d.dart';
 class VelocityApplySystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
-        name: 'VelocityApplySystem',
-        reads: {ComponentId.of<Velocity>()},
-        writes: {ComponentId.of<Transform2D>()},
-        resourceReads: {WallTime},
-        // Explicit ordering: run after both physics systems. Detection
-        // reads Transform2D and we write it, so on paper either order
-        // works — but detection expects pre-integration positions, so
-        // we integrate AFTER it. Consequence: collision events land
-        // one frame later than the position that caused them. That's
-        // fine for pickups; games that need tighter timing can split
-        // integrate into a separate stage.
-        after: const ['collision_resolution', 'collision_detection'],
-      );
+    name: 'VelocityApplySystem',
+    reads: {ComponentId.of<Velocity>()},
+    writes: {ComponentId.of<Transform2D>()},
+    resourceReads: {WallTime},
+    // Explicit ordering: run after both physics systems. Detection
+    // reads Transform2D and we write it, so on paper either order
+    // works — but detection expects pre-integration positions, so
+    // we integrate AFTER it. Consequence: collision events land
+    // one frame later than the position that caused them. That's
+    // fine for pickups; games that need tighter timing can split
+    // integrate into a separate stage.
+    after: const ['collision_resolution', 'collision_detection'],
+  );
 
   @override
   RunCondition? get runCondition => null;

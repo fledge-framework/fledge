@@ -35,11 +35,8 @@ abstract class TilemapLoader {
 /// - [path]: Path to the image file (relative or absolute depending on loader)
 /// - [width]: Expected width in pixels (from tileset metadata)
 /// - [height]: Expected height in pixels (from tileset metadata)
-typedef TextureLoader = Future<TextureHandle> Function(
-  String path,
-  int width,
-  int height,
-);
+typedef TextureLoader =
+    Future<TextureHandle> Function(String path, int width, int height);
 
 /// Provider for loading TMX/TSX content from different sources.
 ///

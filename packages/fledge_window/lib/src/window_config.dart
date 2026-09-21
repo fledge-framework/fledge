@@ -79,15 +79,15 @@ class WindowConfig {
   const WindowConfig.fullscreen({
     String title = 'Fledge Game',
     int? targetDisplay,
-  })  : mode = WindowMode.fullscreen,
-        title = title,
-        windowedSize = null,
-        windowedPosition = null,
-        targetDisplay = targetDisplay,
-        minSize = null,
-        maxSize = null,
-        alwaysOnTop = false,
-        resizable = true;
+  }) : mode = WindowMode.fullscreen,
+       title = title,
+       windowedSize = null,
+       windowedPosition = null,
+       targetDisplay = targetDisplay,
+       minSize = null,
+       maxSize = null,
+       alwaysOnTop = false,
+       resizable = true;
 
   /// Creates a borderless windowed configuration.
   ///
@@ -98,15 +98,15 @@ class WindowConfig {
   const WindowConfig.borderless({
     String title = 'Fledge Game',
     int? targetDisplay,
-  })  : mode = WindowMode.borderless,
-        title = title,
-        windowedSize = null,
-        windowedPosition = null,
-        targetDisplay = targetDisplay,
-        minSize = null,
-        maxSize = null,
-        alwaysOnTop = false,
-        resizable = true;
+  }) : mode = WindowMode.borderless,
+       title = title,
+       windowedSize = null,
+       windowedPosition = null,
+       targetDisplay = targetDisplay,
+       minSize = null,
+       maxSize = null,
+       alwaysOnTop = false,
+       resizable = true;
 
   /// Creates a windowed configuration with optional size.
   ///
@@ -118,15 +118,15 @@ class WindowConfig {
     Size? minSize,
     Size? maxSize,
     bool resizable = true,
-  })  : mode = WindowMode.windowed,
-        title = title,
-        windowedSize = size,
-        windowedPosition = position,
-        targetDisplay = null,
-        minSize = minSize,
-        maxSize = maxSize,
-        alwaysOnTop = false,
-        resizable = resizable;
+  }) : mode = WindowMode.windowed,
+       title = title,
+       windowedSize = size,
+       windowedPosition = position,
+       targetDisplay = null,
+       minSize = minSize,
+       maxSize = maxSize,
+       alwaysOnTop = false,
+       resizable = resizable;
 
   /// Default size for windowed mode when no size is specified.
   static const Size defaultWindowedSize = Size(1280, 720);

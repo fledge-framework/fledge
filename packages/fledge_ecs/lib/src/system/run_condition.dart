@@ -100,12 +100,14 @@ class RunConditions {
   /// Creates a condition that always returns true.
   ///
   /// Useful as a default or for testing.
-  static RunCondition always() => (world) => true;
+  static RunCondition always() =>
+      (world) => true;
 
   /// Creates a condition that always returns false.
   ///
   /// Useful for temporarily disabling a system.
-  static RunCondition never() => (world) => false;
+  static RunCondition never() =>
+      (world) => false;
 
   /// Creates a condition that runs only when a specific event type has events.
   ///

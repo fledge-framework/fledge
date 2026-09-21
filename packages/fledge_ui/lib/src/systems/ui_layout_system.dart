@@ -39,22 +39,22 @@ const double _kApproximateLineHeightFactor = 1.2;
 class LayoutSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
-        name: 'ui_layout',
-        reads: {
-          ComponentId.of<UiNode>(),
-          ComponentId.of<UiSize>(),
-          ComponentId.of<UiOffset>(),
-          ComponentId.of<UiAnchorComponent>(),
-          ComponentId.of<UiContainer>(),
-          ComponentId.of<UiText>(),
-          ComponentId.of<UiImage>(),
-          ComponentId.of<UiRect>(),
-          ComponentId.of<Parent>(),
-          ComponentId.of<Children>(),
-        },
-        writes: {ComponentId.of<UiComputedRect>()},
-        resourceReads: {ViewportSize},
-      );
+    name: 'ui_layout',
+    reads: {
+      ComponentId.of<UiNode>(),
+      ComponentId.of<UiSize>(),
+      ComponentId.of<UiOffset>(),
+      ComponentId.of<UiAnchorComponent>(),
+      ComponentId.of<UiContainer>(),
+      ComponentId.of<UiText>(),
+      ComponentId.of<UiImage>(),
+      ComponentId.of<UiRect>(),
+      ComponentId.of<Parent>(),
+      ComponentId.of<Children>(),
+    },
+    writes: {ComponentId.of<UiComputedRect>()},
+    resourceReads: {ViewportSize},
+  );
 
   @override
   RunCondition? get runCondition => null;
@@ -128,7 +128,11 @@ class LayoutSystem implements System {
         _layoutRow(world, children.children.toList(), interior, container.gap);
       case LayoutMode.column:
         _layoutColumn(
-            world, children.children.toList(), interior, container.gap);
+          world,
+          children.children.toList(),
+          interior,
+          container.gap,
+        );
     }
   }
 

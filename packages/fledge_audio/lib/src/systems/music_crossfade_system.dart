@@ -7,11 +7,11 @@ import '../resources/audio_state.dart';
 class MusicCrossfadeSystem implements System {
   @override
   SystemMeta get meta => const SystemMeta(
-        name: 'MusicCrossfadeSystem',
-        resourceReads: {WallTime},
-        resourceWrites: {AudioState},
-        eventWrites: {MusicChanged},
-      );
+    name: 'MusicCrossfadeSystem',
+    resourceReads: {WallTime},
+    resourceWrites: {AudioState},
+    eventWrites: {MusicChanged},
+  );
 
   @override
   RunCondition? get runCondition => null;
@@ -70,11 +70,11 @@ class MusicCrossfadeSystem implements System {
 
       if (state.currentMusicKey != null) {
         world.eventWriter<MusicChanged>().send(
-              MusicChanged(
-                previousKey: previousKey,
-                newKey: state.currentMusicKey!,
-              ),
-            );
+          MusicChanged(
+            previousKey: previousKey,
+            newKey: state.currentMusicKey!,
+          ),
+        );
       }
     }
   }

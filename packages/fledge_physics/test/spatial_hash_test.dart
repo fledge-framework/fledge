@@ -16,11 +16,15 @@ void main() {
       hash.insert(42, const Rect.fromLTWH(0, 0, 10, 10));
       // Querying inside cell (0,0) returns 42.
       expect(
-          hash.queryOverlapping(const Rect.fromLTWH(1, 1, 1, 1)), contains(42));
+        hash.queryOverlapping(const Rect.fromLTWH(1, 1, 1, 1)),
+        contains(42),
+      );
       // Querying at the top-right corner (in cell (1,1)) also returns
       // 42 because floor(10/10) == 1.
-      expect(hash.queryOverlapping(const Rect.fromLTWH(9.5, 9.5, 0.5, 0.5)),
-          contains(42));
+      expect(
+        hash.queryOverlapping(const Rect.fromLTWH(9.5, 9.5, 0.5, 0.5)),
+        contains(42),
+      );
     });
 
     test('non-overlapping AABBs do not surface each other', () {
@@ -37,10 +41,14 @@ void main() {
       final hash = SpatialHash(cellSize: 10);
       // Big AABB spans a 4x4 block of cells.
       hash.insert(99, const Rect.fromLTWH(0, 0, 40, 40));
-      final result =
-          hash.queryOverlapping(const Rect.fromLTWH(0, 0, 40, 40)).toList();
-      expect(result.where((i) => i == 99).length, 1,
-          reason: 'entity should be deduplicated across cells it occupies');
+      final result = hash
+          .queryOverlapping(const Rect.fromLTWH(0, 0, 40, 40))
+          .toList();
+      expect(
+        result.where((i) => i == 99).length,
+        1,
+        reason: 'entity should be deduplicated across cells it occupies',
+      );
     });
 
     test('handles negative coordinates via record-keyed cells', () {
@@ -72,8 +80,7 @@ void main() {
     // than the naive O(n^2). If someone rewrites the hash later and
     // regresses to nearest-neighbour-only or accidentally puts everyone
     // into one cell, this catches it.
-    test(
-        '500 entities on a scattered grid produce <10% of naive O(n^2) '
+    test('500 entities on a scattered grid produce <10% of naive O(n^2) '
         'candidate pairs', () {
       const gridSide = 25; // 25x25 = 625 slots, 500 populated
       const spacing = 50.0; // entities well-separated
@@ -84,12 +91,9 @@ void main() {
       for (var i = 0; i < 500; i++) {
         final gx = i % gridSide;
         final gy = i ~/ gridSide;
-        entities.add(Rect.fromLTWH(
-          gx * spacing,
-          gy * spacing,
-          colliderSize,
-          colliderSize,
-        ));
+        entities.add(
+          Rect.fromLTWH(gx * spacing, gy * spacing, colliderSize, colliderSize),
+        );
       }
 
       final hash = SpatialHash(cellSize: cellSize);
@@ -108,13 +112,20 @@ void main() {
       final naivePairs = entities.length * (entities.length - 1) ~/ 2;
       // Guardrail: broad-phase should cut pair count to well under
       // 10% of naive.
-      expect(candidatePairs, lessThan(naivePairs ~/ 10),
-          reason: 'spatial hash should slash candidate pairs vs naive '
-              'O(n^2) — naive=$naivePairs, hash=$candidatePairs');
+      expect(
+        candidatePairs,
+        lessThan(naivePairs ~/ 10),
+        reason:
+            'spatial hash should slash candidate pairs vs naive '
+            'O(n^2) — naive=$naivePairs, hash=$candidatePairs',
+      );
       // Sanity: for well-separated entities there are essentially no
       // real overlapping pairs.
-      expect(candidatePairs, lessThan(entities.length),
-          reason: 'well-separated grid should surface very few pairs');
+      expect(
+        candidatePairs,
+        lessThan(entities.length),
+        reason: 'well-separated grid should surface very few pairs',
+      );
     });
 
     test('overlapping AABBs are surfaced as candidate pairs', () {

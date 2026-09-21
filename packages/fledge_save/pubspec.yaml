@@ -14,9 +14,8 @@ topics:
   - persistence
 
 environment:
-  sdk: ^3.7.1
-  flutter: ">=1.17.0"
-
+  sdk: ^3.11.0
+  flutter: ">=3.41.0"
 dependencies:
   flutter:
     sdk: flutter

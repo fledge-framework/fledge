@@ -40,10 +40,7 @@ class CodeTab {
   /// The code content for this tab.
   final String code;
 
-  const CodeTab({
-    required this.label,
-    required this.code,
-  });
+  const CodeTab({required this.label, required this.code});
 }
 
 class _TabbedCodeBlockState extends State<TabbedCodeBlock> {
@@ -57,10 +54,12 @@ class _TabbedCodeBlockState extends State<TabbedCodeBlock> {
     final borderColor = widget.isDark
         ? FledgeTheme.secondaryColor.withValues(alpha: 0.3)
         : const Color(0xFFCBD5E1);
-    final headerColor =
-        widget.isDark ? FledgeTheme.phantom : const Color(0xFFE2E8F0);
-    final codeColor =
-        widget.isDark ? FledgeTheme.surfaceDark : const Color(0xFFF8FAFC);
+    final headerColor = widget.isDark
+        ? FledgeTheme.phantom
+        : const Color(0xFFE2E8F0);
+    final codeColor = widget.isDark
+        ? FledgeTheme.surfaceDark
+        : const Color(0xFFF8FAFC);
     final mutedColor = theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6);
     const radius = Radius.circular(8);
 
@@ -77,8 +76,10 @@ class _TabbedCodeBlockState extends State<TabbedCodeBlock> {
           Container(
             decoration: BoxDecoration(
               color: headerColor,
-              borderRadius:
-                  const BorderRadius.only(topLeft: radius, topRight: radius),
+              borderRadius: const BorderRadius.only(
+                topLeft: radius,
+                topRight: radius,
+              ),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Row(
@@ -102,8 +103,10 @@ class _TabbedCodeBlockState extends State<TabbedCodeBlock> {
                   onTap: _copyCode,
                   borderRadius: BorderRadius.circular(4),
                   child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -132,7 +135,9 @@ class _TabbedCodeBlockState extends State<TabbedCodeBlock> {
             decoration: BoxDecoration(
               color: codeColor,
               borderRadius: const BorderRadius.only(
-                  bottomLeft: radius, bottomRight: radius),
+                bottomLeft: radius,
+                bottomRight: radius,
+              ),
             ),
             padding: const EdgeInsets.all(16),
             child: SingleChildScrollView(
@@ -176,8 +181,8 @@ class _TabbedCodeBlockState extends State<TabbedCodeBlock> {
               decoration: BoxDecoration(
                 color: isSelected
                     ? (widget.isDark
-                        ? FledgeTheme.primaryColor.withValues(alpha: 0.2)
-                        : Colors.white)
+                          ? FledgeTheme.primaryColor.withValues(alpha: 0.2)
+                          : Colors.white)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(4),
                 boxShadow: isSelected
@@ -195,8 +200,8 @@ class _TabbedCodeBlockState extends State<TabbedCodeBlock> {
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: isSelected
                       ? (widget.isDark
-                          ? FledgeTheme.primaryColor
-                          : FledgeTheme.primaryColor)
+                            ? FledgeTheme.primaryColor
+                            : FledgeTheme.primaryColor)
                       : mutedColor,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                 ),
@@ -259,15 +264,19 @@ class _TabbedCodeBlockState extends State<TabbedCodeBlock> {
     final spans = <TextSpan>[];
     for (final node in nodes) {
       if (node.value != null) {
-        spans.add(TextSpan(
-          text: node.value as String,
-          style: theme[node.className],
-        ));
+        spans.add(
+          TextSpan(text: node.value as String, style: theme[node.className]),
+        );
       } else if (node.children != null) {
-        spans.add(TextSpan(
-          style: theme[node.className],
-          children: _convertNodesToSpans(node.children as List<dynamic>, theme),
-        ));
+        spans.add(
+          TextSpan(
+            style: theme[node.className],
+            children: _convertNodesToSpans(
+              node.children as List<dynamic>,
+              theme,
+            ),
+          ),
+        );
       }
     }
     return spans;

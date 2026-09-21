@@ -67,8 +67,5 @@ class SystemStats {
 /// `System.run` with the elapsed microseconds. It is defined here now
 /// so games can build their own decorators against a stable signature
 /// even before the scheduler-side hook lands.
-typedef SystemProfilerHook = void Function(
-  String scheduleName,
-  String systemName,
-  int durationMicros,
-);
+typedef SystemProfilerHook =
+    void Function(String scheduleName, String systemName, int durationMicros);

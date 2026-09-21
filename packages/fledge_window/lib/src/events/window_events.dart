@@ -17,10 +17,7 @@ class WindowModeChanged {
   final WindowMode newMode;
 
   /// Creates a window mode changed event.
-  const WindowModeChanged({
-    required this.previousMode,
-    required this.newMode,
-  });
+  const WindowModeChanged({required this.previousMode, required this.newMode});
 
   @override
   String toString() => 'WindowModeChanged($previousMode -> $newMode)';
@@ -42,10 +39,7 @@ class WindowResized {
   final Size newSize;
 
   /// Creates a window resized event.
-  const WindowResized({
-    required this.previousSize,
-    required this.newSize,
-  });
+  const WindowResized({required this.previousSize, required this.newSize});
 
   @override
   String toString() =>

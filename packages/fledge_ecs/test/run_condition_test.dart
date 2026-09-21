@@ -94,11 +94,13 @@ void main() {
       world.insertResource(GameState(isPlaying: true));
 
       final notPlaying = RunConditions.not(
-          RunConditions.resource<GameState>((s) => s.isPlaying));
+        RunConditions.resource<GameState>((s) => s.isPlaying),
+      );
       expect(notPlaying(world), isFalse);
 
       final notPaused = RunConditions.not(
-          RunConditions.resource<GameState>((s) => s.isPaused));
+        RunConditions.resource<GameState>((s) => s.isPaused),
+      );
       expect(notPaused(world), isTrue);
     });
 
@@ -148,10 +150,7 @@ void main() {
     test('FunctionSystem without runIf always runs', () {
       final world = World();
 
-      final system = FunctionSystem(
-        'unconditionalSystem',
-        run: (world) {},
-      );
+      final system = FunctionSystem('unconditionalSystem', run: (world) {});
 
       expect(system.shouldRun(world), isTrue);
     });
@@ -183,15 +182,19 @@ void main() {
       final executed = <String>[];
 
       final schedule = Scheduler()
-        ..addSystem(FunctionSystem(
-          'unconditional',
-          run: (_) => executed.add('unconditional'),
-        ))
-        ..addSystem(FunctionSystem(
-          'conditional',
-          runIf: RunConditions.resource<GameState>((s) => s.isPlaying),
-          run: (_) => executed.add('conditional'),
-        ));
+        ..addSystem(
+          FunctionSystem(
+            'unconditional',
+            run: (_) => executed.add('unconditional'),
+          ),
+        )
+        ..addSystem(
+          FunctionSystem(
+            'conditional',
+            runIf: RunConditions.resource<GameState>((s) => s.isPlaying),
+            run: (_) => executed.add('conditional'),
+          ),
+        );
 
       await schedule.run(world);
 
@@ -206,11 +209,13 @@ void main() {
       final executed = <String>[];
 
       final schedule = Scheduler()
-        ..addSystem(FunctionSystem(
-          'conditional',
-          runIf: RunConditions.resource<GameState>((s) => s.isPlaying),
-          run: (_) => executed.add('conditional'),
-        ));
+        ..addSystem(
+          FunctionSystem(
+            'conditional',
+            runIf: RunConditions.resource<GameState>((s) => s.isPlaying),
+            run: (_) => executed.add('conditional'),
+          ),
+        );
 
       // First run - condition false
       await schedule.run(world);
@@ -232,17 +237,21 @@ void main() {
       final executed = <String>[];
 
       final schedule = Scheduler()
-        ..addSystem(FunctionSystem(
-          'skipped',
-          writes: {posId},
-          runIf: RunConditions.never(),
-          run: (_) => executed.add('skipped'),
-        ))
-        ..addSystem(FunctionSystem(
-          'dependent',
-          writes: {posId},
-          run: (_) => executed.add('dependent'),
-        ));
+        ..addSystem(
+          FunctionSystem(
+            'skipped',
+            writes: {posId},
+            runIf: RunConditions.never(),
+            run: (_) => executed.add('skipped'),
+          ),
+        )
+        ..addSystem(
+          FunctionSystem(
+            'dependent',
+            writes: {posId},
+            run: (_) => executed.add('dependent'),
+          ),
+        );
 
       await schedule.run(world);
 

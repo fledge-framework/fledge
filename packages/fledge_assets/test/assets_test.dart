@@ -54,10 +54,7 @@ void main() {
       final assets = Assets<String>();
       const id = HandleId(0);
       assets.addWithId(id, 'a');
-      expect(
-        () => assets.addWithId(id, 'b'),
-        throwsA(isA<StateError>()),
-      );
+      expect(() => assets.addWithId(id, 'b'), throwsA(isA<StateError>()));
     });
 
     test('subsequent add() does not collide with reserved ids', () {
@@ -74,8 +71,11 @@ void main() {
       final assets = Assets<String>();
       final h = assets.load('p', loader);
 
-      expect(h.get(), isNull,
-          reason: 'load is async — value should not appear synchronously');
+      expect(
+        h.get(),
+        isNull,
+        reason: 'load is async — value should not appear synchronously',
+      );
       expect(h.isReady, isFalse);
 
       // Let the microtask + zero-delay complete.
@@ -92,11 +92,18 @@ void main() {
       final h1 = assets.load('p', loader);
       final h2 = assets.load('p', loader);
 
-      expect(h1.id, equals(h2.id),
-          reason: 'both handles should point at the same entry');
-      expect(assets.refCount(h1.id), 2,
-          reason: 'the second load bumps refcount rather than starting a '
-              'second loader invocation');
+      expect(
+        h1.id,
+        equals(h2.id),
+        reason: 'both handles should point at the same entry',
+      );
+      expect(
+        assets.refCount(h1.id),
+        2,
+        reason:
+            'the second load bumps refcount rather than starting a '
+            'second loader invocation',
+      );
       expect(loader.calls, 1);
     });
 

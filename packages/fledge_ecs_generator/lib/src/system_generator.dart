@@ -81,11 +81,13 @@ class SystemGenerator extends GeneratorForAnnotation<SystemAnnotation> {
     }
     if (analysis.resourceReads.isNotEmpty) {
       buffer.writeln(
-          '    resourceReads: {${analysis.resourceReads.join(', ')}},');
+        '    resourceReads: {${analysis.resourceReads.join(', ')}},',
+      );
     }
     if (analysis.resourceWrites.isNotEmpty) {
       buffer.writeln(
-          '    resourceWrites: {${analysis.resourceWrites.join(', ')}},');
+        '    resourceWrites: {${analysis.resourceWrites.join(', ')}},',
+      );
     }
     if (analysis.eventReads.isNotEmpty) {
       buffer.writeln('    eventReads: {${analysis.eventReads.join(', ')}},');
@@ -105,7 +107,8 @@ class SystemGenerator extends GeneratorForAnnotation<SystemAnnotation> {
     // Generate shouldRun method
     buffer.writeln('  @override');
     buffer.writeln(
-        '  bool shouldRun(World world) => runCondition?.call(world) ?? true;');
+      '  bool shouldRun(World world) => runCondition?.call(world) ?? true;',
+    );
     buffer.writeln();
 
     // Generate run method
@@ -326,17 +329,21 @@ class SystemGenerator extends GeneratorForAnnotation<SystemAnnotation> {
     // Generate query setup: pick the queryN or queryMutN factory based on
     // the parameter's declared type.
     if (typeArgs.isNotEmpty) {
-      final typeArgsStr = typeArgs.map((t) {
-        if (t is InterfaceType) {
-          return t.element.name!;
-        }
-        return t.toString();
-      }).join(', ');
+      final typeArgsStr = typeArgs
+          .map((t) {
+            if (t is InterfaceType) {
+              return t.element.name!;
+            }
+            return t.toString();
+          })
+          .join(', ');
 
-      final method =
-          isMut ? 'queryMut${typeArgs.length}' : 'query${typeArgs.length}';
-      analysis.parameterSetup
-          .add('final $paramName = world.$method<$typeArgsStr>();');
+      final method = isMut
+          ? 'queryMut${typeArgs.length}'
+          : 'query${typeArgs.length}';
+      analysis.parameterSetup.add(
+        'final $paramName = world.$method<$typeArgsStr>();',
+      );
     }
   }
 }

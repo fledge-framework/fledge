@@ -20,9 +20,15 @@ Matrix3 _similarity({
   final cos = math.cos(rotation) * scale;
   final sin = math.sin(rotation) * scale;
   return Matrix3(
-    cos, sin, 0, // col 0
-    -sin, cos, 0, // col 1
-    translateX, translateY, 1, // col 2
+    cos,
+    sin,
+    0, // col 0
+    -sin,
+    cos,
+    0, // col 1
+    translateX,
+    translateY,
+    1, // col 2
   );
 }
 

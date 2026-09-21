@@ -74,9 +74,7 @@ class TransitionState {
   /// Creates a transition state.
   ///
   /// [fadeDuration] - How long fade in/out takes in seconds (default: 0.3)
-  TransitionState({
-    this.fadeDuration = 0.3,
-  });
+  TransitionState({this.fadeDuration = 0.3});
 
   /// Whether a transition is currently in progress.
   bool get isTransitioning => phase != TransitionPhase.idle;

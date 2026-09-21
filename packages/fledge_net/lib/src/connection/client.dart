@@ -139,11 +139,13 @@ class NetworkClient {
       await _sendConnect();
 
       // Wait for response or timeout
-      final result = await _connectCompleter!.future.timeout(connectionTimeout,
-          onTimeout: () {
-        _setState(ClientState.failed, 'Connection timeout');
-        return false;
-      });
+      final result = await _connectCompleter!.future.timeout(
+        connectionTimeout,
+        onTimeout: () {
+          _setState(ClientState.failed, 'Connection timeout');
+          return false;
+        },
+      );
 
       return result;
     } catch (e) {
@@ -255,10 +257,7 @@ class NetworkClient {
 
       default:
         // Forward to game logic
-        _dataController.add(HostDataEvent(
-          packet.header.type,
-          packet.payload,
-        ));
+        _dataController.add(HostDataEvent(packet.header.type, packet.payload));
     }
   }
 
@@ -319,11 +318,13 @@ class NetworkClient {
 
     // Queue reliable packets for retransmission
     if (type.isReliable) {
-      _pendingReliable.add(_ClientPendingPacket(
-        sequence: header.sequence,
-        data: data,
-        sentTime: DateTime.now(),
-      ));
+      _pendingReliable.add(
+        _ClientPendingPacket(
+          sequence: header.sequence,
+          data: data,
+          sentTime: DateTime.now(),
+        ),
+      );
     }
   }
 

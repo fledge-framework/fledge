@@ -48,18 +48,14 @@ class SpriteBundle {
     Color color = const Color(0xFFFFFFFF),
     Vector2? anchor,
     bool visible = true,
-  })  : sprite = Sprite(
-          texture: texture,
-          color: color,
-          anchor: anchor,
-        ),
-        transform = Transform2D(
-          translation: Vector2(x, y),
-          rotation: rotation,
-          scale: Vector2(scaleX, scaleY),
-        ),
-        globalTransform = GlobalTransform2D(),
-        visibility = visible ? null : Visibility(false);
+  }) : sprite = Sprite(texture: texture, color: color, anchor: anchor),
+       transform = Transform2D(
+         translation: Vector2(x, y),
+         rotation: rotation,
+         scale: Vector2(scaleX, scaleY),
+       ),
+       globalTransform = GlobalTransform2D(),
+       visibility = visible ? null : Visibility(false);
 
   /// Creates a sprite bundle from existing components.
   SpriteBundle.fromComponents({

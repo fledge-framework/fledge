@@ -34,53 +34,62 @@ void main() {
   });
 
   group('Prediction runs on Schedules.fixedUpdate', () {
-    test('a ~300ms tick with a 100ms step yields exactly 3 fixed-update runs',
-        () async {
-      final counter = _RunCounter();
-
-      final app = App()
-        ..insertResource(FixedTimestep(
-          stepDuration: const Duration(milliseconds: 100),
-          maxCatchupSteps: 10,
-        ))
-        ..insertResource(counter)
-        // Pin the frame delta at just over 300ms — App.tick prefers
-        // WallTime.delta when the WallTime resource is present, so this
-        // is deterministic and does not depend on wall-clock timing.
-        // The extra millisecond guards against IEEE-754 rounding:
-        // repeated subtraction of 0.1 from exactly 0.3 leaves a
-        // slightly-negative residual, which would give only 2
-        // iterations instead of 3.
-        ..insertResource(WallTime()..delta = 0.301)
-        ..addPlugin(NetworkPlugin(
-          config: NetworkConfig(mode: NetworkMode.client),
-        ))
-        ..addSystem(_PredictionSpy(), schedule: Schedules.fixedUpdate);
-
-      await app.tick();
-
-      expect(counter.value, equals(3),
-          reason: '~300ms of frame delta / 100ms fixed step should drive '
-              'exactly 3 fixed iterations, so the prediction system '
-              'should have run 3 times.');
-    });
-
     test(
-        'prediction on Schedules.update runs once per frame regardless of '
+      'a ~300ms tick with a 100ms step yields exactly 3 fixed-update runs',
+      () async {
+        final counter = _RunCounter();
+
+        final app = App()
+          ..insertResource(
+            FixedTimestep(
+              stepDuration: const Duration(milliseconds: 100),
+              maxCatchupSteps: 10,
+            ),
+          )
+          ..insertResource(counter)
+          // Pin the frame delta at just over 300ms — App.tick prefers
+          // WallTime.delta when the WallTime resource is present, so this
+          // is deterministic and does not depend on wall-clock timing.
+          // The extra millisecond guards against IEEE-754 rounding:
+          // repeated subtraction of 0.1 from exactly 0.3 leaves a
+          // slightly-negative residual, which would give only 2
+          // iterations instead of 3.
+          ..insertResource(WallTime()..delta = 0.301)
+          ..addPlugin(
+            NetworkPlugin(config: NetworkConfig(mode: NetworkMode.client)),
+          )
+          ..addSystem(_PredictionSpy(), schedule: Schedules.fixedUpdate);
+
+        await app.tick();
+
+        expect(
+          counter.value,
+          equals(3),
+          reason:
+              '~300ms of frame delta / 100ms fixed step should drive '
+              'exactly 3 fixed iterations, so the prediction system '
+              'should have run 3 times.',
+        );
+      },
+    );
+
+    test('prediction on Schedules.update runs once per frame regardless of '
         'FixedTimestep — sanity check that fixedUpdate is the correct '
         'schedule for prediction', () async {
       final fixedCounter = _RunCounter();
       final updateCounter = _RunCounter();
 
       final app = App()
-        ..insertResource(FixedTimestep(
-          stepDuration: const Duration(milliseconds: 100),
-          maxCatchupSteps: 10,
-        ))
+        ..insertResource(
+          FixedTimestep(
+            stepDuration: const Duration(milliseconds: 100),
+            maxCatchupSteps: 10,
+          ),
+        )
         ..insertResource(WallTime()..delta = 0.301)
-        ..addPlugin(NetworkPlugin(
-          config: NetworkConfig(mode: NetworkMode.client),
-        ));
+        ..addPlugin(
+          NetworkPlugin(config: NetworkConfig(mode: NetworkMode.client)),
+        );
 
       // Two counter resources, each with a dedicated spy so their
       // resource writes don't conflict.

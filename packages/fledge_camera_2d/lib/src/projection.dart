@@ -156,9 +156,8 @@ class OrthographicProjection extends Projection {
   /// Creates a projection with pixel-perfect mapping.
   ///
   /// One world unit = one screen pixel.
-  factory OrthographicProjection.pixelPerfect() => OrthographicProjection(
-        scalingMode: ScalingMode.none,
-      );
+  factory OrthographicProjection.pixelPerfect() =>
+      OrthographicProjection(scalingMode: ScalingMode.none);
 
   /// The effective render size after applying [letterbox], if set.
   RenderSize _effectiveRenderSize(RenderSize screenSize) {
@@ -285,10 +284,22 @@ class IsometricProjection extends Projection {
     //   | 0   0  1  0 |
     //   | 0   0  0  1 |
     return Matrix4(
-      1, 0.5, 0, 0, // col 0
-      -1, 0.5, 0, 0, // col 1
-      0, 0, 1, 0, // col 2
-      0, 0, 0, 1, // col 3
+      1,
+      0.5,
+      0,
+      0, // col 0
+      -1,
+      0.5,
+      0,
+      0, // col 1
+      0,
+      0,
+      1,
+      0, // col 2
+      0,
+      0,
+      0,
+      1, // col 3
     );
   }
 
@@ -319,10 +330,8 @@ class IsometricProjection extends Projection {
   /// Convert a world-space point directly to isometric screen-pixel
   /// coordinates, ignoring [screenSize] scaling. Useful for tests
   /// and gameplay code that speaks in "iso pixels".
-  Vector2 worldToIso(Vector2 world) => Vector2(
-        world.x - world.y,
-        (world.x + world.y) * 0.5,
-      );
+  Vector2 worldToIso(Vector2 world) =>
+      Vector2(world.x - world.y, (world.x + world.y) * 0.5);
 }
 
 /// Parametric oblique projection.
@@ -378,10 +387,22 @@ class ObliqueProjection extends Projection {
     //   | 0  0  1  0 |
     //   | 0  0  0  1 |
     return Matrix4(
-      1, 0, 0, 0, // col 0
-      c, s, 0, 0, // col 1
-      0, 0, 1, 0, // col 2
-      0, 0, 0, 1, // col 3
+      1,
+      0,
+      0,
+      0, // col 0
+      c,
+      s,
+      0,
+      0, // col 1
+      0,
+      0,
+      1,
+      0, // col 2
+      0,
+      0,
+      0,
+      1, // col 3
     );
   }
 

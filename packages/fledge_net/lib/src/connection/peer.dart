@@ -129,11 +129,9 @@ class Peer {
 
   /// Add a reliable packet to the pending queue.
   void addPendingReliable(int sequence, Uint8List data) {
-    _pendingReliable.add(_PendingPacket(
-      sequence: sequence,
-      data: data,
-      sentTime: DateTime.now(),
-    ));
+    _pendingReliable.add(
+      _PendingPacket(sequence: sequence, data: data, sentTime: DateTime.now()),
+    );
   }
 
   /// Maximum number of retransmit attempts before dropping a packet.
@@ -230,8 +228,10 @@ class CongestionController {
   void onPacketAcked(int size) {
     bytesInFlight = (bytesInFlight - size).clamp(0, bytesInFlight);
     // Additive increase
-    congestionWindow =
-        (congestionWindow + _increaseStep).clamp(_minWindow, _maxWindow);
+    congestionWindow = (congestionWindow + _increaseStep).clamp(
+      _minWindow,
+      _maxWindow,
+    );
   }
 
   /// React to packet loss by halving the window.

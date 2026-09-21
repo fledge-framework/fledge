@@ -7,10 +7,7 @@ class AnimationFrame {
   final double duration;
 
   /// Creates an animation frame.
-  const AnimationFrame({
-    required this.index,
-    required this.duration,
-  });
+  const AnimationFrame({required this.index, required this.duration});
 
   @override
   String toString() => 'AnimationFrame(index: $index, duration: $duration)';
@@ -68,11 +65,7 @@ class AnimationClip {
     for (var i = startIndex; i <= endIndex; i++) {
       frames.add(AnimationFrame(index: i, duration: frameDuration));
     }
-    return AnimationClip(
-      name: name,
-      frames: frames,
-      looping: looping,
-    );
+    return AnimationClip(name: name, frames: frames, looping: looping);
   }
 
   /// Creates an animation clip from a list of indices.
@@ -107,11 +100,7 @@ class AnimationClip {
     for (var i = 0; i < indices.length; i++) {
       frames.add(AnimationFrame(index: indices[i], duration: durations[i]));
     }
-    return AnimationClip(
-      name: name,
-      frames: frames,
-      looping: looping,
-    );
+    return AnimationClip(name: name, frames: frames, looping: looping);
   }
 
   /// Number of frames in the animation.

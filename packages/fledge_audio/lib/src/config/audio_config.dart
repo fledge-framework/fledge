@@ -37,11 +37,11 @@ class AudioConfig {
 
   /// Configuration with spatial audio disabled.
   const AudioConfig.nonSpatial()
-      : masterVolume = 1.0,
-        channels = const AudioChannelConfig(),
-        spatialConfig = const SpatialAudioConfig(enabled: false),
-        pauseOnFocusLoss = true,
-        maxConcurrentSounds = 32;
+    : masterVolume = 1.0,
+      channels = const AudioChannelConfig(),
+      spatialConfig = const SpatialAudioConfig(enabled: false),
+      pauseOnFocusLoss = true,
+      maxConcurrentSounds = 32;
 }
 
 /// Volume levels for audio channels.
@@ -94,9 +94,9 @@ class SpatialAudioConfig {
 
   /// Default configuration for 2D games.
   const SpatialAudioConfig.default2D()
-      : enabled = true,
-        maxDistance = 1000.0,
-        referenceDistance = 100.0,
-        rolloffFactor = 1.0,
-        maxPan = 0.8;
+    : enabled = true,
+      maxDistance = 1000.0,
+      referenceDistance = 100.0,
+      rolloffFactor = 1.0,
+      maxPan = 0.8;
 }

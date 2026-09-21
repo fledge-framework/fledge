@@ -42,7 +42,8 @@ class _DrifterPageState extends State<DrifterPage> {
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
 
-    final isCtrlOrCmd = HardwareKeyboard.instance.isControlPressed ||
+    final isCtrlOrCmd =
+        HardwareKeyboard.instance.isControlPressed ||
         HardwareKeyboard.instance.isMetaPressed;
     if (isCtrlOrCmd && event.logicalKey == LogicalKeyboardKey.keyK) {
       _openSearch();
@@ -88,8 +89,9 @@ class _DrifterPageState extends State<DrifterPage> {
                 Text(
                   'Demo',
                   style: theme.textTheme.headlineMedium?.copyWith(
-                    color: theme.textTheme.bodyMedium?.color
-                        ?.withValues(alpha: 0.6),
+                    color: theme.textTheme.bodyMedium?.color?.withValues(
+                      alpha: 0.6,
+                    ),
                   ),
                 ),
               ],
@@ -242,8 +244,9 @@ class _DrifterPageState extends State<DrifterPage> {
                   'collision, high score in memory, pause-on-blur) runs '
                   'normally on the web.',
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.textTheme.bodyMedium?.color
-                        ?.withValues(alpha: 0.8),
+                    color: theme.textTheme.bodyMedium?.color?.withValues(
+                      alpha: 0.8,
+                    ),
                   ),
                 ),
               ],
@@ -274,23 +277,23 @@ class _DrifterPageState extends State<DrifterPage> {
     final rows = <(String, String)>[
       (
         'fledge_ecs',
-        'App + World, resources, stage ordering, marker components'
+        'App + World, resources, stage ordering, marker components',
       ),
       (
         'fledge_render_2d',
-        'Transform2D, TransformPropagateSystem, RenderPlugin + extractors to a render world'
+        'Transform2D, TransformPropagateSystem, RenderPlugin + extractors to a render world',
       ),
       (
         'fledge_input',
-        'InputWidget with caller-owned FocusNode, pause-on-blur, arrow/WASD actions'
+        'InputWidget with caller-owned FocusNode, pause-on-blur, arrow/WASD actions',
       ),
       (
         'fledge_physics + fledge_tiled',
-        'Velocity, Colliders with layer bits, sensor pickups, CollisionEvents'
+        'Velocity, Colliders with layer bits, sensor pickups, CollisionEvents',
       ),
       (
         'fledge_save',
-        'HighScore auto-discovered as a Saveable world resource (desktop only)'
+        'HighScore auto-discovered as a Saveable world resource (desktop only)',
       ),
     ];
 
@@ -305,30 +308,33 @@ class _DrifterPageState extends State<DrifterPage> {
         ),
         const SizedBox(height: 16),
         Table(
-          columnWidths: const {
-            0: IntrinsicColumnWidth(),
-            1: FlexColumnWidth(),
-          },
+          columnWidths: const {0: IntrinsicColumnWidth(), 1: FlexColumnWidth()},
           defaultVerticalAlignment: TableCellVerticalAlignment.top,
           children: [
             for (final (pkg, desc) in rows)
-              TableRow(children: [
-                Padding(
-                  padding: const EdgeInsets.only(right: 16, bottom: 8, top: 8),
-                  child: Text(
-                    pkg,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontFamily: 'monospace',
-                      color: FledgeTheme.primaryColor,
-                      fontWeight: FontWeight.w600,
+              TableRow(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      right: 16,
+                      bottom: 8,
+                      top: 8,
+                    ),
+                    child: Text(
+                      pkg,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontFamily: 'monospace',
+                        color: FledgeTheme.primaryColor,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8, top: 8),
-                  child: Text(desc, style: theme.textTheme.bodyMedium),
-                ),
-              ]),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8, top: 8),
+                    child: Text(desc, style: theme.textTheme.bodyMedium),
+                  ),
+                ],
+              ),
           ],
         ),
       ],

@@ -14,8 +14,9 @@ import 'package:flutter_test/flutter_test.dart';
 /// new velocity landed too late to be clamped — and the player walked
 /// straight through walls. This test pins the current ordering down.
 void main() {
-  testWidgets('player velocity is clamped by a solid wall in its path',
-      (tester) async {
+  testWidgets('player velocity is clamped by a solid wall in its path', (
+    tester,
+  ) async {
     final app = buildApp();
     await app.tick(); // warm up plugins
     clearScene(app);
@@ -26,21 +27,23 @@ void main() {
     world.spawn()
       ..insert(Transform2D.from(40, 100))
       ..insert(Velocity.stationary())
-      ..insert(Collider.single(
-        RectangleShape(x: -10, y: -10, width: 20, height: 20),
-      ))
-      ..insert(const CollisionConfig(
-        layer: Layers.player,
-        mask: Layers.solid | Layers.pickup,
-      ))
+      ..insert(
+        Collider.single(RectangleShape(x: -10, y: -10, width: 20, height: 20)),
+      )
+      ..insert(
+        const CollisionConfig(
+          layer: Layers.player,
+          mask: Layers.solid | Layers.pickup,
+        ),
+      )
       ..insert(const Player());
 
     // A solid wall blocking rightward travel.
     world.spawn()
       ..insert(Transform2D.from(80, 60))
-      ..insert(Collider.single(
-        RectangleShape(x: 0, y: 0, width: 8, height: 80),
-      ))
+      ..insert(
+        Collider.single(RectangleShape(x: 0, y: 0, width: 8, height: 80)),
+      )
       ..insert(const CollisionConfig.solid())
       ..insert(const Wall());
 
@@ -62,11 +65,18 @@ void main() {
     }
 
     final endX = playerTransform.translation.x;
-    expect(endX, greaterThan(startX),
-        reason: 'player should have moved toward the wall');
-    expect(endX, lessThanOrEqualTo(70.0 + 0.5),
-        reason: 'player should be stopped at the wall face (wall.left=80 minus '
-            'player half-size 10 == 70), not clipped through it');
+    expect(
+      endX,
+      greaterThan(startX),
+      reason: 'player should have moved toward the wall',
+    );
+    expect(
+      endX,
+      lessThanOrEqualTo(70.0 + 0.5),
+      reason:
+          'player should be stopped at the wall face (wall.left=80 minus '
+          'player half-size 10 == 70), not clipped through it',
+    );
   });
 }
 

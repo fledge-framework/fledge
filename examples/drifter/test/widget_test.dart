@@ -8,9 +8,11 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   testWidgets('widget boots and exposes the HUD', (tester) async {
-    await tester.pumpWidget(const MaterialApp(
-      home: Scaffold(body: Center(child: DrifterWidget())),
-    ));
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: Center(child: DrifterWidget())),
+      ),
+    );
     await tester.pump();
     await tester.pump();
 
@@ -20,8 +22,9 @@ void main() {
     expect(find.textContaining('Pickups left:'), findsOneWidget);
 
     // An InputWidget is in the tree and owns a FocusNode we can inspect.
-    final InputWidget inputWidget =
-        tester.widget<InputWidget>(find.byType(InputWidget));
+    final InputWidget inputWidget = tester.widget<InputWidget>(
+      find.byType(InputWidget),
+    );
     expect(inputWidget.focusNode, isNotNull);
   });
 
@@ -29,13 +32,15 @@ void main() {
     // Wrap in an outer Focus(autofocus: true) so the DrifterWidget's
     // InputWidget can't claim primary focus on mount — mirrors the
     // docs-embedded scenario that made the pause behaviour necessary.
-    await tester.pumpWidget(MaterialApp(
-      home: Focus(
-        autofocus: true,
-        onKeyEvent: (_, __) => KeyEventResult.ignored,
-        child: const Scaffold(body: Center(child: DrifterWidget())),
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Focus(
+          autofocus: true,
+          onKeyEvent: (_, __) => KeyEventResult.ignored,
+          child: const Scaffold(body: Center(child: DrifterWidget())),
+        ),
       ),
-    ));
+    );
     await tester.pump();
     await tester.pump();
 
@@ -43,44 +48,51 @@ void main() {
   });
 
   testWidgets(
-      'arrow key held while focused moves the player after ticks elapse',
-      (tester) async {
-    await tester.pumpWidget(const MaterialApp(
-      home: Scaffold(body: Center(child: DrifterWidget())),
-    ));
-    await tester.pump();
+    'arrow key held while focused moves the player after ticks elapse',
+    (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(body: Center(child: DrifterWidget())),
+        ),
+      );
+      await tester.pump();
 
-    final InputWidget inputWidget =
-        tester.widget<InputWidget>(find.byType(InputWidget));
-    final world = inputWidget.world;
-    final gameFocus = inputWidget.focusNode!;
+      final InputWidget inputWidget = tester.widget<InputWidget>(
+        find.byType(InputWidget),
+      );
+      final world = inputWidget.world;
+      final gameFocus = inputWidget.focusNode!;
 
-    // Find the player's transform.
-    Transform2D playerTransform() {
-      for (final (_, t, _) in world.query2<Transform2D, Player>().iter()) {
-        return t;
+      // Find the player's transform.
+      Transform2D playerTransform() {
+        for (final (_, t, _) in world.query2<Transform2D, Player>().iter()) {
+          return t;
+        }
+        throw StateError('no player');
       }
-      throw StateError('no player');
-    }
 
-    final startX = playerTransform().translation.x;
+      final startX = playerTransform().translation.x;
 
-    // Focus the game (in the live app this happens on user click; in a
-    // test we can call requestFocus directly).
-    gameFocus.requestFocus();
-    await tester.pump();
-    expect(gameFocus.hasFocus, isTrue);
-    expect(find.text('Click to play'), findsNothing);
+      // Focus the game (in the live app this happens on user click; in a
+      // test we can call requestFocus directly).
+      gameFocus.requestFocus();
+      await tester.pump();
+      expect(gameFocus.hasFocus, isTrue);
+      expect(find.text('Click to play'), findsNothing);
 
-    // Hold arrow-right for a few simulated frames.
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowRight);
-    for (var i = 0; i < 30; i++) {
-      await tester.pump(const Duration(milliseconds: 16));
-    }
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowRight);
+      // Hold arrow-right for a few simulated frames.
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowRight);
+      for (var i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowRight);
 
-    final endX = playerTransform().translation.x;
-    expect(endX, greaterThan(startX),
-        reason: 'arrow-right should move the player right');
-  });
+      final endX = playerTransform().translation.x;
+      expect(
+        endX,
+        greaterThan(startX),
+        reason: 'arrow-right should move the player right',
+      );
+    },
+  );
 }

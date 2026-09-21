@@ -60,15 +60,20 @@ void main() {
       mainWorld.spawn()
         ..insert(Transform2D.identity())
         ..insert(gt)
-        ..insert(Light2D.directional(
-          color: const Color(0xFFFFFFFF),
-          direction: Vector2(3, 4),
-        ));
+        ..insert(
+          Light2D.directional(
+            color: const Color(0xFFFFFFFF),
+            direction: Vector2(3, 4),
+          ),
+        );
 
       LightExtractor().extract(mainWorld, renderWorld);
 
-      final extracted =
-          renderWorld.query1<ExtractedLight>().iter().map((r) => r.$2).toList();
+      final extracted = renderWorld
+          .query1<ExtractedLight>()
+          .iter()
+          .map((r) => r.$2)
+          .toList();
       expect(extracted, hasLength(1));
       expect(extracted.single.type, LightType.directional);
       expect(extracted.single.direction.length, closeTo(1.0, 1e-6));

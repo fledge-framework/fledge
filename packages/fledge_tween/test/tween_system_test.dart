@@ -12,10 +12,8 @@ class _FixedDeltaSystem implements System {
   _FixedDeltaSystem(this.deltaSeconds);
 
   @override
-  SystemMeta get meta => const SystemMeta(
-        name: 'fixedDelta',
-        resourceWrites: {WallTime},
-      );
+  SystemMeta get meta =>
+      const SystemMeta(name: 'fixedDelta', resourceWrites: {WallTime});
 
   @override
   RunCondition? get runCondition => null;
@@ -46,16 +44,16 @@ void main() {
       final app = _appWithFixedDelta(0.5);
 
       app.world.spawn().insert(
-            Tweener(
-              tween: Tween<double>(
-                from: 0,
-                to: 100,
-                duration: const Duration(seconds: 1),
-                lerp: lerpDouble,
-              ),
-              onSample: (v) => samples.add(v as double),
-            ),
-          );
+        Tweener(
+          tween: Tween<double>(
+            from: 0,
+            to: 100,
+            duration: const Duration(seconds: 1),
+            lerp: lerpDouble,
+          ),
+          onSample: (v) => samples.add(v as double),
+        ),
+      );
 
       // Frame 1: elapsed becomes 0.5s → sample == 50.
       await app.tick();
@@ -101,40 +99,42 @@ void main() {
   });
 
   group('TweenSystem — loop mode', () {
-    test('resets elapsed after each cycle and never fires onComplete',
-        () async {
-      var completeCount = 0;
-      final samples = <double>[];
-      final app = _appWithFixedDelta(0.6);
+    test(
+      'resets elapsed after each cycle and never fires onComplete',
+      () async {
+        var completeCount = 0;
+        final samples = <double>[];
+        final app = _appWithFixedDelta(0.6);
 
-      app.world.spawn().insert(
-            Tweener(
-              tween: Tween<double>(
-                from: 0,
-                to: 1,
-                duration: const Duration(seconds: 1),
-                lerp: lerpDouble,
-              ),
-              onSample: (v) => samples.add(v as double),
-              onComplete: () => completeCount++,
-              loop: TweenLoopMode.loop,
+        app.world.spawn().insert(
+          Tweener(
+            tween: Tween<double>(
+              from: 0,
+              to: 1,
+              duration: const Duration(seconds: 1),
+              lerp: lerpDouble,
             ),
-          );
+            onSample: (v) => samples.add(v as double),
+            onComplete: () => completeCount++,
+            loop: TweenLoopMode.loop,
+          ),
+        );
 
-      // Frame 1: elapsed = 0.6 → sample ~ 0.6.
-      await app.tick();
-      // Frame 2: elapsed = 1.2 → clamps to 1.0, sampled value == 1.0,
-      // then elapsed resets to 0.
-      await app.tick();
-      // Frame 3: elapsed = 0.6 again after reset → sample ~ 0.6.
-      await app.tick();
+        // Frame 1: elapsed = 0.6 → sample ~ 0.6.
+        await app.tick();
+        // Frame 2: elapsed = 1.2 → clamps to 1.0, sampled value == 1.0,
+        // then elapsed resets to 0.
+        await app.tick();
+        // Frame 3: elapsed = 0.6 again after reset → sample ~ 0.6.
+        await app.tick();
 
-      expect(completeCount, 0);
-      expect(samples.length, 3);
-      expect(samples[0], closeTo(0.6, 1e-9));
-      expect(samples[1], closeTo(1.0, 1e-9));
-      expect(samples[2], closeTo(0.6, 1e-9));
-    });
+        expect(completeCount, 0);
+        expect(samples.length, 3);
+        expect(samples[0], closeTo(0.6, 1e-9));
+        expect(samples[1], closeTo(1.0, 1e-9));
+        expect(samples[2], closeTo(0.6, 1e-9));
+      },
+    );
   });
 
   group('TweenSystem — pingPong mode', () {
@@ -144,18 +144,18 @@ void main() {
       final app = _appWithFixedDelta(0.6);
 
       app.world.spawn().insert(
-            Tweener(
-              tween: Tween<double>(
-                from: 0,
-                to: 1,
-                duration: const Duration(seconds: 1),
-                lerp: lerpDouble,
-              ),
-              onSample: (v) => samples.add(v as double),
-              onComplete: () => completeCount++,
-              loop: TweenLoopMode.pingPong,
-            ),
-          );
+        Tweener(
+          tween: Tween<double>(
+            from: 0,
+            to: 1,
+            duration: const Duration(seconds: 1),
+            lerp: lerpDouble,
+          ),
+          onSample: (v) => samples.add(v as double),
+          onComplete: () => completeCount++,
+          loop: TweenLoopMode.pingPong,
+        ),
+      );
 
       // Frame 1: forward, elapsed 0.6 → ~0.6.
       await app.tick();

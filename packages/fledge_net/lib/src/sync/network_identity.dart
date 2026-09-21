@@ -51,8 +51,8 @@ class NetworkSyncConfig {
     Set<ComponentId>? syncedComponents,
     Set<ComponentId>? interpolatedComponents,
     this.syncRate = 20,
-  })  : syncedComponents = syncedComponents ?? {},
-        interpolatedComponents = interpolatedComponents ?? {};
+  }) : syncedComponents = syncedComponents ?? {},
+       interpolatedComponents = interpolatedComponents ?? {};
 }
 
 /// Registry for networked entities.
@@ -127,8 +127,6 @@ class PendingDespawn {
   final int netId;
   final DateTime requestTime;
 
-  PendingDespawn({
-    required this.netId,
-    DateTime? requestTime,
-  }) : requestTime = requestTime ?? DateTime.now();
+  PendingDespawn({required this.netId, DateTime? requestTime})
+    : requestTime = requestTime ?? DateTime.now();
 }

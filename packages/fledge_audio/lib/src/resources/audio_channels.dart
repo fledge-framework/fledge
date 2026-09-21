@@ -94,8 +94,10 @@ class VolumeChannels {
     _fades.forEach((channel, fade) {
       fade.elapsed += deltaSecs;
       final t = (fade.elapsed / fade.durationSecs).clamp(0.0, 1.0);
-      _volumes[channel] =
-          (fade.start + (fade.target - fade.start) * t).clamp(0.0, 1.0);
+      _volumes[channel] = (fade.start + (fade.target - fade.start) * t).clamp(
+        0.0,
+        1.0,
+      );
       if (t >= 1.0) {
         _volumes[channel] = fade.target;
         completed.add(channel);

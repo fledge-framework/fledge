@@ -17,18 +17,20 @@ class LightExtractor extends Extractor {
   void extract(World mainWorld, RenderWorld renderWorld) {
     for (final (entity, light, globalTransform)
         in mainWorld.query2<Light2D, GlobalTransform2D>().iter()) {
-      renderWorld.spawn().insert(ExtractedLight(
-            entity: entity,
-            type: light.type,
-            position: Vector2(globalTransform.x, globalTransform.y),
-            color: light.color,
-            intensity: light.intensity,
-            radius: light.radius,
-            innerRadius: light.innerRadius,
-            angle: light.angle,
-            direction: light.direction.clone(),
-            castsShadow: light.castsShadow,
-          ));
+      renderWorld.spawn().insert(
+        ExtractedLight(
+          entity: entity,
+          type: light.type,
+          position: Vector2(globalTransform.x, globalTransform.y),
+          color: light.color,
+          intensity: light.intensity,
+          radius: light.radius,
+          innerRadius: light.innerRadius,
+          angle: light.angle,
+          direction: light.direction.clone(),
+          castsShadow: light.castsShadow,
+        ),
+      );
     }
   }
 }

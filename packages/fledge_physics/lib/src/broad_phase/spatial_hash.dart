@@ -43,7 +43,7 @@ class SpatialHash {
   /// Creates a spatial hash with the given [cellSize] (defaults to 64px,
   /// a reasonable game-scale). Must be > 0.
   SpatialHash({this.cellSize = 64.0})
-      : assert(cellSize > 0, 'cellSize must be positive');
+    : assert(cellSize > 0, 'cellSize must be positive');
 
   /// Adds [entityIndex] to every grid cell that overlaps [aabb].
   ///

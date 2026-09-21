@@ -33,11 +33,11 @@ class InputMovementSystem implements System {
 
   @override
   SystemMeta get meta => SystemMeta(
-        name: 'InputMovementSystem',
-        reads: {ComponentId.of<Player>(), ComponentId.of<Transform2D>()},
-        writes: {ComponentId.of<Velocity>()},
-        resourceReads: {ActionState},
-      );
+    name: 'InputMovementSystem',
+    reads: {ComponentId.of<Player>(), ComponentId.of<Transform2D>()},
+    writes: {ComponentId.of<Velocity>()},
+    resourceReads: {ActionState},
+  );
 
   @override
   RunCondition? get runCondition => null;
@@ -50,8 +50,9 @@ class InputMovementSystem implements System {
     final actions = world.getResource<ActionState>();
     if (actions == null) return;
 
-    final (mx, my) =
-        actions.vector2Value(ActionId.fromEnum(DrifterAction.move));
+    final (mx, my) = actions.vector2Value(
+      ActionId.fromEnum(DrifterAction.move),
+    );
 
     // Normalise so diagonal speed matches orthogonal speed.
     final mag = math.sqrt(mx * mx + my * my);

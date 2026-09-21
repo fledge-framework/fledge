@@ -9,8 +9,9 @@ import 'package:flutter_test/flutter_test.dart';
 /// directly (no Flutter widgets, no rendering) and asserts the ECS-side
 /// state transitions.
 void main() {
-  testWidgets('player overlapping a pickup collects it and bumps the score',
-      (tester) async {
+  testWidgets('player overlapping a pickup collects it and bumps the score', (
+    tester,
+  ) async {
     final app = buildApp()..tick(); // first tick lets plugins warm up
     await tester.pump();
 
@@ -22,25 +23,29 @@ void main() {
     world.spawn()
       ..insert(Transform2D.from(50, 50))
       ..insert(Velocity.stationary())
-      ..insert(Collider.single(
-        RectangleShape(x: -10, y: -10, width: 20, height: 20),
-      ))
-      ..insert(const CollisionConfig(
-        layer: Layers.player,
-        mask: Layers.solid | Layers.pickup,
-      ))
+      ..insert(
+        Collider.single(RectangleShape(x: -10, y: -10, width: 20, height: 20)),
+      )
+      ..insert(
+        const CollisionConfig(
+          layer: Layers.player,
+          mask: Layers.solid | Layers.pickup,
+        ),
+      )
       ..insert(const Player());
 
     final pickupEntity = world.spawn()
       ..insert(Transform2D.from(50, 50))
-      ..insert(Collider.single(
-        RectangleShape(x: -8, y: -8, width: 16, height: 16),
-      ))
-      ..insert(const CollisionConfig(
-        layer: Layers.pickup,
-        mask: Layers.player,
-        isSensor: true,
-      ))
+      ..insert(
+        Collider.single(RectangleShape(x: -8, y: -8, width: 16, height: 16)),
+      )
+      ..insert(
+        const CollisionConfig(
+          layer: Layers.pickup,
+          mask: Layers.player,
+          isSensor: true,
+        ),
+      )
       ..insert(const Pickup());
 
     expect(world.getResource<RunScore>()!.value, 0);
@@ -56,29 +61,42 @@ void main() {
     await app.tick();
     await app.tick();
 
-    expect(world.isAlive(pickupEntity.entity), isFalse,
-        reason: 'collected pickup should be despawned');
+    expect(
+      world.isAlive(pickupEntity.entity),
+      isFalse,
+      reason: 'collected pickup should be despawned',
+    );
     expect(world.getResource<RunScore>()!.value, 1);
-    expect(world.getResource<HighScore>()!.value, 1,
-        reason: 'high score should track run score when it rises');
+    expect(
+      world.getResource<HighScore>()!.value,
+      1,
+      reason: 'high score should track run score when it rises',
+    );
   });
 
   testWidgets(
-      'high score persists run-to-run but run score resets on spawnScene',
-      (tester) async {
-    final app = buildApp()..tick();
-    await tester.pump();
+    'high score persists run-to-run but run score resets on spawnScene',
+    (tester) async {
+      final app = buildApp()..tick();
+      await tester.pump();
 
-    // Pretend the player collected three pickups.
-    app.world.getResource<RunScore>()!.value = 3;
-    app.world.getResource<HighScore>()!.value = 3;
+      // Pretend the player collected three pickups.
+      app.world.getResource<RunScore>()!.value = 3;
+      app.world.getResource<HighScore>()!.value = 3;
 
-    clearScene(app);
-    spawnScene(app);
+      clearScene(app);
+      spawnScene(app);
 
-    expect(app.world.getResource<RunScore>()!.value, 0,
-        reason: 'spawnScene starts a fresh run');
-    expect(app.world.getResource<HighScore>()!.value, 3,
-        reason: 'HighScore is persisted across scenes');
-  });
+      expect(
+        app.world.getResource<RunScore>()!.value,
+        0,
+        reason: 'spawnScene starts a fresh run',
+      );
+      expect(
+        app.world.getResource<HighScore>()!.value,
+        3,
+        reason: 'HighScore is persisted across scenes',
+      );
+    },
+  );
 }

@@ -111,9 +111,7 @@ class NetworkPlugin implements Plugin {
   /// Initial network configuration.
   final NetworkConfig config;
 
-  NetworkPlugin({
-    NetworkConfig? config,
-  }) : config = config ?? NetworkConfig();
+  NetworkPlugin({NetworkConfig? config}) : config = config ?? NetworkConfig();
 
   @override
   void build(App app) {

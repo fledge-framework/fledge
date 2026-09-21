@@ -27,11 +27,7 @@ Future<Image> createSolidColorImage(
 /// Uses `Picture.toImageSync`, available since Flutter 3.7. Prefer
 /// this when the image is produced during app construction (before
 /// the first frame paints) and the caller cannot easily await.
-Image createSolidColorImageSync(
-  Color color, {
-  int width = 1,
-  int height = 1,
-}) {
+Image createSolidColorImageSync(Color color, {int width = 1, int height = 1}) {
   final picture = _recordSolidColor(color, width, height);
   return picture.toImageSync(width, height);
 }

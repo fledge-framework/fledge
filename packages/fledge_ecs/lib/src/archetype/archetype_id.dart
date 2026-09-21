@@ -35,10 +35,7 @@ class ArchetypeId {
   /// The components are sorted to ensure consistent ordering.
   factory ArchetypeId.of(Iterable<ComponentId> componentIds) {
     final sorted = componentIds.toList()..sort();
-    return ArchetypeId._(
-      List.unmodifiable(sorted),
-      _computeHash(sorted),
-    );
+    return ArchetypeId._(List.unmodifiable(sorted), _computeHash(sorted));
   }
 
   /// Creates an empty archetype (entity with no components).

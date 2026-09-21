@@ -27,13 +27,19 @@ void main() {
 
       h1.drop();
       expect(assets.refCount(h1.id), 1);
-      expect(assets.get(h1.id), 'hello',
-          reason: 'entry stays while any handle holds a ref');
+      expect(
+        assets.get(h1.id),
+        'hello',
+        reason: 'entry stays while any handle holds a ref',
+      );
 
       h2.drop();
       expect(assets.refCount(h1.id), 0);
-      expect(assets.get(h1.id), isNull,
-          reason: 'entry should be evicted at refcount 0');
+      expect(
+        assets.get(h1.id),
+        isNull,
+        reason: 'entry should be evicted at refcount 0',
+      );
     });
 
     test('double-drop on the same instance is idempotent', () {
@@ -44,8 +50,11 @@ void main() {
       h.drop();
       h.drop(); // second drop must NOT free the entry the clone owns.
 
-      expect(assets.refCount(h.id), 1,
-          reason: 'clone still holds one live reference');
+      expect(
+        assets.refCount(h.id),
+        1,
+        reason: 'clone still holds one live reference',
+      );
       expect(clone.get(), 'once');
     });
 

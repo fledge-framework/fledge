@@ -71,10 +71,6 @@ class ExtractedTile with ExtractedData, SortableExtractedData {
   }
 
   /// Returns the destination rectangle for this tile.
-  Rect get destRect => Rect.fromLTWH(
-        position.dx,
-        position.dy,
-        tileWidth,
-        tileHeight,
-      );
+  Rect get destRect =>
+      Rect.fromLTWH(position.dx, position.dy, tileWidth, tileHeight);
 }

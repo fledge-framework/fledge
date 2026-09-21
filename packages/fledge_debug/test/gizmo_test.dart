@@ -22,20 +22,22 @@ void main() {
   Entity spawnEntityWithCollider(App app) {
     return (app.world.spawn()
           ..insert(Transform2D.from(50, 50))
-          ..insert(GlobalTransform2D()
-            ..translation.x = 50
-            ..translation.y = 50)
-          ..insert(Collider.single(const RectangleShape(
-            x: -10,
-            y: -10,
-            width: 20,
-            height: 20,
-          ))))
+          ..insert(
+            GlobalTransform2D()
+              ..translation.x = 50
+              ..translation.y = 50,
+          )
+          ..insert(
+            Collider.single(
+              const RectangleShape(x: -10, y: -10, width: 20, height: 20),
+            ),
+          ))
         .entity;
   }
 
-  testWidgets('DebugGizmosLayer passes through when no gizmos enabled',
-      (tester) async {
+  testWidgets('DebugGizmosLayer passes through when no gizmos enabled', (
+    tester,
+  ) async {
     final app = buildApp();
 
     await tester.pumpWidget(
@@ -44,10 +46,7 @@ void main() {
         child: SizedBox(
           width: 200,
           height: 200,
-          child: DebugGizmosLayer(
-            app: app,
-            child: const _MarkerChild(),
-          ),
+          child: DebugGizmosLayer(app: app, child: const _MarkerChild()),
         ),
       ),
     );
@@ -58,8 +57,9 @@ void main() {
     expect(find.byType(CustomPaint), findsNothing);
   });
 
-  testWidgets('DebugGizmosLayer inserts a CustomPaint when a gizmo is on',
-      (tester) async {
+  testWidgets('DebugGizmosLayer inserts a CustomPaint when a gizmo is on', (
+    tester,
+  ) async {
     final app = buildApp(config: const DebugConfig(showAabbGizmos: true));
     spawnEntityWithCollider(app);
 
@@ -69,10 +69,7 @@ void main() {
         child: SizedBox(
           width: 200,
           height: 200,
-          child: DebugGizmosLayer(
-            app: app,
-            child: const _MarkerChild(),
-          ),
+          child: DebugGizmosLayer(app: app, child: const _MarkerChild()),
         ),
       ),
     );
@@ -104,17 +101,19 @@ void main() {
     // ellipse and polygon in the mix.
     app.world.spawn()
       ..insert(Transform2D.from(30, 30))
-      ..insert(GlobalTransform2D()
-        ..translation.x = 30
-        ..translation.y = 30)
-      ..insert(const Collider(shapes: [
-        EllipseShape(centerX: 0, centerY: 0, radiusX: 8, radiusY: 8),
-        PolygonShape(points: [
-          Offset(0, 0),
-          Offset(10, 0),
-          Offset(10, 10),
-        ]),
-      ]));
+      ..insert(
+        GlobalTransform2D()
+          ..translation.x = 30
+          ..translation.y = 30,
+      )
+      ..insert(
+        const Collider(
+          shapes: [
+            EllipseShape(centerX: 0, centerY: 0, radiusX: 8, radiusY: 8),
+            PolygonShape(points: [Offset(0, 0), Offset(10, 0), Offset(10, 10)]),
+          ],
+        ),
+      );
 
     // The painter itself is private; instead of grabbing it, pump
     // paintings through the widget-tree tests. Here we simply assert
@@ -133,13 +132,12 @@ void main() {
     recorder.endRecording();
   });
 
-  testWidgets('camera-frustum gizmo tolerates a missing camera',
-      (tester) async {
+  testWidgets('camera-frustum gizmo tolerates a missing camera', (
+    tester,
+  ) async {
     // No camera entity spawned — the frustum branch should exit
     // cleanly, not throw.
-    final app = buildApp(
-      config: const DebugConfig(showCameraFrustum: true),
-    );
+    final app = buildApp(config: const DebugConfig(showCameraFrustum: true));
 
     await tester.pumpWidget(
       Directionality(
@@ -147,10 +145,7 @@ void main() {
         child: SizedBox(
           width: 200,
           height: 200,
-          child: DebugGizmosLayer(
-            app: app,
-            child: const _MarkerChild(),
-          ),
+          child: DebugGizmosLayer(app: app, child: const _MarkerChild()),
         ),
       ),
     );

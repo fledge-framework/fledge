@@ -35,10 +35,7 @@ class FledgeTheme {
           side: BorderSide(color: Colors.grey.shade200),
         ),
       ),
-      dividerTheme: DividerThemeData(
-        color: Colors.grey.shade200,
-        thickness: 1,
-      ),
+      dividerTheme: DividerThemeData(color: Colors.grey.shade200, thickness: 1),
     );
   }
 
@@ -81,9 +78,7 @@ class FledgeTheme {
         ),
       ),
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          foregroundColor: purpleLight,
-        ),
+        style: TextButton.styleFrom(foregroundColor: purpleLight),
       ),
     );
   }
@@ -139,8 +134,6 @@ class FledgeTheme {
   }
 
   // Code block styling
-  static TextStyle get codeStyle => GoogleFonts.firaCode(
-        fontSize: 14,
-        height: 1.5,
-      );
+  static TextStyle get codeStyle =>
+      GoogleFonts.firaCode(fontSize: 14, height: 1.5);
 }

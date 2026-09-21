@@ -45,13 +45,17 @@ App buildApp({SaveConfig? saveConfig}) {
     ..addPlugin(WallTimePlugin())
     ..addPlugin(RenderPlugin())
     ..addPlugin(const CameraPlugin())
-    ..addPlugin(InputPlugin.simple(
-      context: InputContext(name: 'gameplay', map: buildInputMap()),
-    ))
+    ..addPlugin(
+      InputPlugin.simple(
+        context: InputContext(name: 'gameplay', map: buildInputMap()),
+      ),
+    )
     ..addPlugin(PhysicsPlugin())
-    ..addPlugin(SavePlugin(
-      config: saveConfig ?? const SaveConfig(gameDirectory: 'Drifter'),
-    ))
+    ..addPlugin(
+      SavePlugin(
+        config: saveConfig ?? const SaveConfig(gameDirectory: 'Drifter'),
+      ),
+    )
     ..addPlugin(const UiPlugin())
     // DebugPlugin's default config paints FPS + entity count +
     // `checkScheduleOrdering()` output. AABB / collider / camera-
@@ -145,27 +149,35 @@ Entity _spawnPlayer(World world, GameBounds bounds) {
     ..insert(Transform2D.from(bounds.width / 2, bounds.height / 2))
     ..insert(GlobalTransform2D())
     ..insert(Velocity.stationary())
-    ..insert(Collider.single(RectangleShape(
-      x: -kPlayerHalfSize,
-      y: -kPlayerHalfSize,
-      width: kPlayerHalfSize * 2,
-      height: kPlayerHalfSize * 2,
-    )))
-    ..insert(const CollisionConfig(
-      layer: Layers.player,
-      mask: Layers.solid | Layers.pickup,
-    ))
+    ..insert(
+      Collider.single(
+        RectangleShape(
+          x: -kPlayerHalfSize,
+          y: -kPlayerHalfSize,
+          width: kPlayerHalfSize * 2,
+          height: kPlayerHalfSize * 2,
+        ),
+      ),
+    )
+    ..insert(
+      const CollisionConfig(
+        layer: Layers.player,
+        mask: Layers.solid | Layers.pickup,
+      ),
+    )
     // The player is a green square. The old painter drew a rounded
     // rect with an outline; the sprite pipeline draws a plain
     // rect — an acceptable visual regression for Phase 3e. Anchor
     // defaults to (0.5, 0.5), matching the transform-at-centre
     // convention used by the collider.
-    ..insert(Sprite(
-      texture: kSolidColorTexture,
-      color: const Color(0xFF00DD00),
-      customSize: Vector2(kPlayerHalfSize * 2, kPlayerHalfSize * 2),
-      layer: DrawLayer.characters,
-    ))
+    ..insert(
+      Sprite(
+        texture: kSolidColorTexture,
+        color: const Color(0xFF00DD00),
+        customSize: Vector2(kPlayerHalfSize * 2, kPlayerHalfSize * 2),
+        layer: DrawLayer.characters,
+      ),
+    )
     ..insert(const Player());
   return player.entity;
 }
@@ -181,9 +193,11 @@ void _spawnCamera(World world, GameBounds bounds, Entity player) {
   world.spawn()
     ..insert(Transform2D.from(bounds.width / 2, bounds.height / 2))
     ..insert(GlobalTransform2D())
-    ..insert(Camera2D(
-      projection: OrthographicProjection(viewportHeight: bounds.height),
-    ))
+    ..insert(
+      Camera2D(
+        projection: OrthographicProjection(viewportHeight: bounds.height),
+      ),
+    )
     // Smooth follow — 0.15 damping gives a soft catch-up that stays
     // out of the player's way during quick reversals.
     ..insert(CameraFollow(target: player, smoothing: 0.15));
@@ -208,22 +222,26 @@ void _spawnPerimeter(World world, GameBounds bounds) {
     world.spawn()
       ..insert(Transform2D.from(x, y))
       ..insert(GlobalTransform2D())
-      ..insert(Collider.single(
-        RectangleShape(x: 0, y: 0, width: width, height: height),
-      ))
+      ..insert(
+        Collider.single(
+          RectangleShape(x: 0, y: 0, width: width, height: height),
+        ),
+      )
       ..insert(const CollisionConfig.solid())
       // Walls anchor at (0, 0) since their transform sits at the
       // rectangle's top-left — matches how the collider is
       // constructed (RectangleShape starts at 0,0 and extends
       // right/down). Ground layer so walls always render below
       // player/pickups.
-      ..insert(Sprite(
-        texture: kSolidColorTexture,
-        color: const Color(0xFF4CAF50),
-        customSize: Vector2(width, height),
-        anchor: Vector2(0, 0),
-        layer: DrawLayer.ground,
-      ))
+      ..insert(
+        Sprite(
+          texture: kSolidColorTexture,
+          color: const Color(0xFF4CAF50),
+          customSize: Vector2(width, height),
+          anchor: Vector2(0, 0),
+          layer: DrawLayer.ground,
+        ),
+      )
       ..insert(const Wall());
   }
 }
@@ -240,11 +258,9 @@ void _spawnHud(World world) {
     ..insert(const UiAnchorComponent(UiAnchor.topLeft))
     ..insert(const UiOffset(x: 8, y: 8))
     ..insert(const UiSize(width: 160, height: 22))
-    ..insert(UiText(
-      text: 'Score: 0',
-      fontSize: 16,
-      color: const Color(0xFFFFD700),
-    ))
+    ..insert(
+      UiText(text: 'Score: 0', fontSize: 16, color: const Color(0xFFFFD700)),
+    )
     ..insert(const ScoreLabel());
 
   world.spawn()
@@ -252,12 +268,14 @@ void _spawnHud(World world) {
     ..insert(const UiAnchorComponent(UiAnchor.topRight))
     ..insert(const UiOffset(x: -8, y: 8))
     ..insert(const UiSize(width: 160, height: 22))
-    ..insert(UiText(
-      text: 'Best: 0',
-      fontSize: 16,
-      color: const Color(0xFFFFD700),
-      align: TextAlign.right,
-    ))
+    ..insert(
+      UiText(
+        text: 'Best: 0',
+        fontSize: 16,
+        color: const Color(0xFFFFD700),
+        align: TextAlign.right,
+      ),
+    )
     ..insert(const HighScoreLabel());
 }
 
@@ -269,26 +287,34 @@ void _spawnPickups(World world, GameBounds bounds, int count, Random rng) {
     world.spawn()
       ..insert(Transform2D.from(x, y))
       ..insert(GlobalTransform2D())
-      ..insert(Collider.single(RectangleShape(
-        x: -kPickupRadius,
-        y: -kPickupRadius,
-        width: kPickupRadius * 2,
-        height: kPickupRadius * 2,
-      )))
-      ..insert(const CollisionConfig(
-        layer: Layers.pickup,
-        mask: Layers.player,
-        isSensor: true,
-      ))
+      ..insert(
+        Collider.single(
+          RectangleShape(
+            x: -kPickupRadius,
+            y: -kPickupRadius,
+            width: kPickupRadius * 2,
+            height: kPickupRadius * 2,
+          ),
+        ),
+      )
+      ..insert(
+        const CollisionConfig(
+          layer: Layers.pickup,
+          mask: Layers.player,
+          isSensor: true,
+        ),
+      )
       // Pickups become gold squares — the old painter drew circles
       // with a highlight, but we no longer synthesise that in the
       // sprite pipeline. Characters layer so they draw over walls.
-      ..insert(Sprite(
-        texture: kSolidColorTexture,
-        color: const Color(0xFFFFD700),
-        customSize: Vector2(kPickupRadius * 2, kPickupRadius * 2),
-        layer: DrawLayer.characters,
-      ))
+      ..insert(
+        Sprite(
+          texture: kSolidColorTexture,
+          color: const Color(0xFFFFD700),
+          customSize: Vector2(kPickupRadius * 2, kPickupRadius * 2),
+          layer: DrawLayer.characters,
+        ),
+      )
       ..insert(const Pickup());
   }
 }

@@ -27,12 +27,12 @@ final math.Random _defaultRng = math.Random();
 class ParticleEmitSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
-        name: 'ParticleEmitSystem',
-        writes: {ComponentId.of<ParticleEmitter>()},
-        reads: {ComponentId.of<GlobalTransform2D>()},
-        resourceReads: const {WallTime},
-        before: const ['ParticleUpdateSystem', 'ParticleReapSystem'],
-      );
+    name: 'ParticleEmitSystem',
+    writes: {ComponentId.of<ParticleEmitter>()},
+    reads: {ComponentId.of<GlobalTransform2D>()},
+    resourceReads: const {WallTime},
+    before: const ['ParticleUpdateSystem', 'ParticleReapSystem'],
+  );
 
   @override
   RunCondition? get runCondition => null;
@@ -90,12 +90,12 @@ class ParticleEmitSystem implements System {
 class ParticleUpdateSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
-        name: 'ParticleUpdateSystem',
-        writes: {ComponentId.of<ParticleEmitter>()},
-        resourceReads: const {WallTime},
-        after: const ['ParticleEmitSystem'],
-        before: const ['ParticleReapSystem'],
-      );
+    name: 'ParticleUpdateSystem',
+    writes: {ComponentId.of<ParticleEmitter>()},
+    resourceReads: const {WallTime},
+    after: const ['ParticleEmitSystem'],
+    before: const ['ParticleReapSystem'],
+  );
 
   @override
   RunCondition? get runCondition => null;
@@ -145,10 +145,10 @@ class ParticleUpdateSystem implements System {
 class ParticleReapSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
-        name: 'ParticleReapSystem',
-        writes: {ComponentId.of<ParticleEmitter>()},
-        after: const ['ParticleEmitSystem', 'ParticleUpdateSystem'],
-      );
+    name: 'ParticleReapSystem',
+    writes: {ComponentId.of<ParticleEmitter>()},
+    after: const ['ParticleEmitSystem', 'ParticleUpdateSystem'],
+  );
 
   @override
   RunCondition? get runCondition => null;

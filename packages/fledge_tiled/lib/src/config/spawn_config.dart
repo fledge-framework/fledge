@@ -28,7 +28,8 @@ class TileLayerConfig {
     EntityCommands entity,
     String layerName,
     Collider collider,
-  )? onColliderSpawn;
+  )?
+  onColliderSpawn;
 
   const TileLayerConfig({
     this.generateColliders = false,
@@ -54,10 +55,7 @@ class ObjectTypeConfig {
   /// based on the object's properties.
   final void Function(EntityCommands entity, TiledObjectData object)? onSpawn;
 
-  const ObjectTypeConfig({
-    this.createCollider = true,
-    this.onSpawn,
-  });
+  const ObjectTypeConfig({this.createCollider = true, this.onSpawn});
 }
 
 /// Configuration for tilemap spawning.

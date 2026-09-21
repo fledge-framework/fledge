@@ -255,7 +255,8 @@ class App {
         '`stage:` is deprecated; prefer `schedule: Schedules.foo`.',
       );
     }
-    final target = schedule ??
+    final target =
+        schedule ??
         (stage != null ? _stageToSchedule(stage) : Schedules.update);
     scheduler.addSystemToSchedule(system, target);
   }
@@ -611,7 +612,8 @@ class App {
   void resetToGameCheckpoint() {
     if (_gameCheckpointEntities == null) {
       throw StateError(
-          'No game checkpoint set. Call markGameCheckpoint() first.');
+        'No game checkpoint set. Call markGameCheckpoint() first.',
+      );
     }
     world.despawnExcept(_gameCheckpointEntities!);
     world.events.clear();
@@ -649,8 +651,10 @@ class AppRunner {
   final App app;
   final Duration targetFrameTime;
 
-  AppRunner(this.app,
-      {this.targetFrameTime = const Duration(milliseconds: 16)});
+  AppRunner(
+    this.app, {
+    this.targetFrameTime = const Duration(milliseconds: 16),
+  });
 
   /// Runs the app with frame timing.
   ///

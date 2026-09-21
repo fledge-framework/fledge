@@ -16,14 +16,14 @@ import 'transform2d.dart';
 class TransformPropagateSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
-        name: 'transform_propagate',
-        writes: {ComponentId.of<GlobalTransform2D>()},
-        reads: {
-          ComponentId.of<Transform2D>(),
-          ComponentId.of<Parent>(),
-          ComponentId.of<Children>(),
-        },
-      );
+    name: 'transform_propagate',
+    writes: {ComponentId.of<GlobalTransform2D>()},
+    reads: {
+      ComponentId.of<Transform2D>(),
+      ComponentId.of<Parent>(),
+      ComponentId.of<Children>(),
+    },
+  );
 
   @override
   RunCondition? get runCondition => null;
