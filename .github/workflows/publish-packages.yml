@@ -64,33 +64,42 @@ jobs:
           VERSION=${{ steps.version.outputs.VERSION }}
           DATE=$(date +%Y-%m-%d)
 
-          # Generate changelog content for this release
+          # Generate the release-body content for this tag.
+          # We always regenerate CHANGES.md because the GitHub Release
+          # step below needs it fresh even on re-runs.
           git-cliff --config cliff.toml --latest --strip header > CHANGES.md
 
-          # Store for GitHub release
+          # Store for the GitHub release step.
           {
             echo 'content<<EOF'
             cat CHANGES.md
             echo 'EOF'
           } >> $GITHUB_OUTPUT
 
-          # Create new changelog entry
-          echo "## [$VERSION] - $DATE" > CHANGELOG_NEW.md
-          echo "" >> CHANGELOG_NEW.md
-          cat CHANGES.md >> CHANGELOG_NEW.md
-          echo "" >> CHANGELOG_NEW.md
+          # Idempotency guard: if CHANGELOG.md already has a [VERSION]
+          # entry (from a previous workflow run for this same tag), do
+          # not prepend a duplicate block. This keeps re-runs of the
+          # release workflow clean.
+          if grep -q "^## \[$VERSION\]" CHANGELOG.md 2>/dev/null; then
+            echo "Root CHANGELOG.md already has [$VERSION]; skipping prepend."
+            rm CHANGES.md
+          else
+            # First run for this version: prepend a fresh entry.
+            echo "## [$VERSION] - $DATE" > CHANGELOG_NEW.md
+            echo "" >> CHANGELOG_NEW.md
+            cat CHANGES.md >> CHANGELOG_NEW.md
+            echo "" >> CHANGELOG_NEW.md
 
-          # Prepend to existing changelog or create new one
-          if [ -f CHANGELOG.md ]; then
-            # Skip the header if it exists
-            tail -n +3 CHANGELOG.md >> CHANGELOG_NEW.md 2>/dev/null || true
+            if [ -f CHANGELOG.md ]; then
+              # Skip the header if it exists
+              tail -n +3 CHANGELOG.md >> CHANGELOG_NEW.md 2>/dev/null || true
+            fi
+
+            echo "# Changelog" > CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            cat CHANGELOG_NEW.md >> CHANGELOG.md
+            rm CHANGELOG_NEW.md CHANGES.md
           fi
-
-          # Add header
-          echo "# Changelog" > CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          cat CHANGELOG_NEW.md >> CHANGELOG.md
-          rm CHANGELOG_NEW.md CHANGES.md
 
       - name: Generate per-package changelogs
         run: |
@@ -126,6 +135,14 @@ jobs:
           for pkg in "${PACKAGES[@]}"; do
             echo "Generating changelog for $pkg..."
             PKG_DIR="packages/$pkg"
+
+            # Idempotency guard: if this package's CHANGELOG already has
+            # a [$VERSION] entry, skip. Lets the workflow re-run cleanly
+            # against the same tag without producing duplicate blocks.
+            if grep -q "^## \[$VERSION\]" "$PKG_DIR/CHANGELOG.md" 2>/dev/null; then
+              echo "  $pkg CHANGELOG already has [$VERSION]; skipping."
+              continue
+            fi
 
             # Generate changelog for commits affecting this package
             # Uses --include-path to filter commits by path
@@ -201,6 +218,13 @@ jobs:
           # because pub validates hosted deps resolve at their declared
           # constraint.
           #
+          # This step is idempotent: for each package we query
+          # pub.dev to see whether the current version is already
+          # uploaded, and skip when it is. That means the workflow can
+          # be re-run against the same tag without needing a version
+          # bump — the first run publishes what's new, later runs
+          # short-circuit into a green success.
+          #
           # Shims (fledge_render, fledge_time) publish last because they
           # depend on the merged/renamed packages.
           PACKAGES=(
@@ -239,9 +263,52 @@ jobs:
             "fledge_time"
           )
 
+          VERSION=${{ steps.version.outputs.VERSION }}
+          FAILED=()
+
           for pkg in "${PACKAGES[@]}"; do
-            echo "Publishing $pkg..."
-            cd packages/$pkg
-            dart pub publish --force
-            cd ../..
+            echo ""
+            echo "=== $pkg $VERSION ==="
+
+            # Ask pub.dev whether this exact version is already
+            # published. 200 = yes, skip. 404 = no (either the whole
+            # package doesn't exist yet, or just this version — either
+            # way, we should attempt to publish).
+            HTTP_STATUS=$(curl -sS -o /dev/null -w "%{http_code}" \
+              "https://pub.dev/api/packages/$pkg/versions/$VERSION" || echo "000")
+
+            case "$HTTP_STATUS" in
+              200)
+                echo "  ✓ $pkg $VERSION already on pub.dev, skipping."
+                ;;
+              404)
+                echo "  → $pkg $VERSION not on pub.dev, publishing..."
+                if (cd packages/$pkg && dart pub publish --force); then
+                  echo "  ✓ Published $pkg $VERSION."
+                else
+                  echo "  ✗ Publish of $pkg failed."
+                  FAILED+=("$pkg")
+                fi
+                ;;
+              *)
+                echo "  ! Unexpected HTTP $HTTP_STATUS from pub.dev for $pkg $VERSION."
+                echo "  ! Attempting publish anyway; if it succeeds, treat as first-time."
+                if (cd packages/$pkg && dart pub publish --force); then
+                  echo "  ✓ Published $pkg $VERSION (after unexpected pre-check)."
+                else
+                  echo "  ✗ Publish of $pkg failed."
+                  FAILED+=("$pkg")
+                fi
+                ;;
+            esac
           done
+
+          if [ ${#FAILED[@]} -gt 0 ]; then
+            echo ""
+            echo "The following packages failed to publish:"
+            printf '  - %s\n' "${FAILED[@]}"
+            exit 1
+          fi
+
+          echo ""
+          echo "All packages either already published or successfully published."
