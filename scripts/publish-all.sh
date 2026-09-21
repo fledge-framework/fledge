@@ -42,11 +42,6 @@ cd "$REPO_ROOT"
 # Package publish order. Each package must be already on pub.dev before
 # any package that depends on it publishes — pub validates hosted deps
 # resolve at their declared constraint.
-#
-# `fledge_render` and `fledge_time` are re-export shims marked
-# discontinued on pub.dev — they still exist as workspace members for
-# a deprecation window, but no new versions are published, so they are
-# absent from this list.
 PACKAGES=(
   # Foundation: no in-tree deps.
   "fledge_ecs_annotations"

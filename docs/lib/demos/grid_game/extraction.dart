@@ -1,13 +1,13 @@
 import 'dart:ui';
 
 import 'package:fledge_ecs/fledge_ecs.dart';
-import 'package:fledge_render/fledge_render.dart';
+import 'package:fledge_render_2d/fledge_render_2d.dart';
 
 import 'components.dart';
 import 'resources.dart';
 
-// Re-export the fledge_render classes used by other files in this demo
-export 'package:fledge_render/fledge_render.dart'
+// Re-export the fledge_render_2d classes used by other files in this demo
+export 'package:fledge_render_2d/fledge_render_2d.dart'
     show
         RenderWorld,
         Extractor,

@@ -66,13 +66,6 @@ Fledge brings the power of modern ECS architecture to Flutter, enabling you to b
 | [fledge_calendar](packages/fledge_calendar) | Game calendar and day/night cycles | [![pub](https://img.shields.io/pub/v/fledge_calendar.svg)](https://pub.dev/packages/fledge_calendar) |
 | [fledge_net](packages/fledge_net) | Multiplayer networking | [![pub](https://img.shields.io/pub/v/fledge_net.svg)](https://pub.dev/packages/fledge_net) |
 
-### Deprecated shims
-
-| Package | Successor |
-|---------|-----------|
-| [fledge_render](packages/fledge_render) | Merged into [fledge_render_2d](packages/fledge_render_2d) |
-| [fledge_time](packages/fledge_time) | Renamed to [fledge_calendar](packages/fledge_calendar) |
-
 ## Quick Start
 
 Add Fledge to your project:

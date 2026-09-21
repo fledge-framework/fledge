@@ -10,7 +10,6 @@ workspace:
   - packages/fledge_ecs_annotations
   - packages/fledge_ecs_generator
   - packages/fledge_assets
-  - packages/fledge_render
   - packages/fledge_render_2d
   - packages/fledge_camera_2d
   - packages/fledge_lighting_2d
@@ -25,7 +24,6 @@ workspace:
   - packages/fledge_yarn
   - packages/fledge_save
   - packages/fledge_calendar
-  - packages/fledge_time
   - packages/fledge_tween
   - packages/fledge_particles
   - packages/fledge_net
@@ -158,16 +156,9 @@ melos:
       run: |
         set -eu
         : "${VERSION:?VERSION must be set, e.g. VERSION=0.2.3 melos run release}"
-        # Publishable packages only. `fledge_render` and `fledge_time`
-        # are re-export shims marked discontinued on pub.dev; they
-        # stay in the workspace as compile-time aliases but never get
-        # a new version cut.
         args=""
         for pubspec in packages/fledge_*/pubspec.yaml; do
           name=$(sed -nE 's/^name:[[:space:]]*(.*)/\1/p' "$pubspec" | head -n1)
-          case "$name" in
-            fledge_render|fledge_time) continue ;;
-          esac
           args="$args -V $name:$VERSION"
         done
         # $args is intentionally unquoted here for word-splitting.

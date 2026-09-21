@@ -20,8 +20,8 @@ dependencies:
   # Fledge Input
   fledge_input: ^0.2.2
 
-  # Fledge Render (for two-world architecture)
-  fledge_render: ^0.2.2
+  # Fledge Render 2D (two-world architecture + 2D components).
+  fledge_render_2d: ^0.2.2
 
   # Drifter example — embedded as an interactive demo.
   drifter_example:

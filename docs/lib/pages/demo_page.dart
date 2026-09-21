@@ -1273,7 +1273,7 @@ import 'dart:ui';
 
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_ecs_annotations/fledge_ecs_annotations.dart';
-import 'package:fledge_render/fledge_render.dart';
+import 'package:fledge_render_2d/fledge_render_2d.dart';
 
 // Generated code - run: dart run build_runner build
 part 'extraction.g.dart';
@@ -1572,7 +1572,7 @@ InputPlugin createInputPlugin() {
 const _widgetCode = '''
 import 'package:flutter/material.dart';
 import 'package:fledge_ecs/fledge_ecs.dart' hide State;
-import 'package:fledge_render/fledge_render.dart';
+import 'package:fledge_render_2d/fledge_render_2d.dart';
 
 /// Game widget demonstrating the two-world architecture.
 ///
@@ -1657,7 +1657,7 @@ const _mainCode = '''
 import 'package:flutter/material.dart';
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_input/fledge_input.dart';
-import 'package:fledge_render/fledge_render.dart';
+import 'package:fledge_render_2d/fledge_render_2d.dart';
 import 'package:fledge_window/fledge_window.dart';
 
 void main() async {

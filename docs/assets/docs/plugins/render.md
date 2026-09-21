@@ -2,10 +2,8 @@
 
 The `fledge_render_2d` package is Fledge's rendering package. It ships two things:
 
-1. **Core render infrastructure** — `RenderPlugin`, `Extractors`, `RenderWorld`, `RenderLayer`, and the render graph. Previously lived in a separate `fledge_render` package; Phase 3 merged the two.
+1. **Core render infrastructure** — `RenderPlugin`, `Extractors`, `RenderWorld`, `RenderLayer`, and the render graph.
 2. **2D component set** — `Transform2D` / `GlobalTransform2D`, `Sprite`, `AtlasSprite`, `AnimationPlayer`, materials, `Orientation`, `Visibility`, and scene transitions.
-
-`fledge_render` remains as a deprecated re-export shim for one release. New code should depend on `fledge_render_2d` directly.
 
 ## Installation
 

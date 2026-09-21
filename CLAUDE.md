@@ -8,8 +8,8 @@ Fledge is a Bevy-inspired ECS game framework for Dart/Flutter, organized as a Me
 
 Package tiers (see `CONTRIBUTING.md` for exact dependency order):
 - **Core**: `fledge_ecs`, `fledge_ecs_annotations`, `fledge_ecs_generator`
-- **Render**: `fledge_render_2d` (2D infra + components; `fledge_render` is a deprecated re-export shim to be deleted in a future release)
-- **Plugins**: `fledge_audio`, `fledge_input`, `fledge_window`, `fledge_tiled`, `fledge_physics`, `fledge_yarn`, `fledge_save`, `fledge_calendar` (`fledge_time` is a deprecated re-export shim), `fledge_net`
+- **Render**: `fledge_render_2d` (2D infra + components)
+- **Plugins**: `fledge_audio`, `fledge_input`, `fledge_window`, `fledge_tiled`, `fledge_physics`, `fledge_yarn`, `fledge_save`, `fledge_calendar`, `fledge_net`
 
 ## Commands
 

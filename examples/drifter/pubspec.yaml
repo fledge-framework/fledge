@@ -15,7 +15,6 @@ dependencies:
     sdk: flutter
   fledge_assets: ^0.2.2
   fledge_ecs: ^0.2.2
-  fledge_render: ^0.2.2
   fledge_render_2d: ^0.2.2
   fledge_camera_2d: ^0.2.2
   fledge_input: ^0.2.2
