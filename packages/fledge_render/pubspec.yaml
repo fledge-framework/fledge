@@ -1,6 +1,6 @@
 name: fledge_render
 description: Deprecated - merged into fledge_render_2d. Re-export shim; import package:fledge_render_2d/fledge_render_2d.dart directly.
-version: 0.2.0
+version: 0.2.1
 repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_render
 homepage: https://fledge-framework.dev
 issue_tracker: https://github.com/fledge-framework/fledge/issues
