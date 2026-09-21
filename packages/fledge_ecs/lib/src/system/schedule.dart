@@ -47,11 +47,24 @@ class SystemStage {
     final newIndex = _systems.length;
     final systemName = system.meta.name;
 
-    // Build dependencies based on conflicts
+    // Build dependencies based on conflicts.
+    //
+    // Skip the conflict-driven edge when either system names the other in
+    // `before:`/`after:` — the explicit declaration wins over
+    // registration order. Without this, declaring `before: A` on a system
+    // that gets registered after A produces a cycle: the conflict rule
+    // adds `new depends on A` while the explicit `before` adds
+    // `A depends on new`.
     for (int i = 0; i < _systems.length; i++) {
-      if (system.meta.conflictsWith(_systems[i].system.meta)) {
-        node.dependencies.add(i);
+      final otherMeta = _systems[i].system.meta;
+      if (!system.meta.conflictsWith(otherMeta)) continue;
+      if (system.meta.before.contains(otherMeta.name) ||
+          system.meta.after.contains(otherMeta.name) ||
+          otherMeta.before.contains(systemName) ||
+          otherMeta.after.contains(systemName)) {
+        continue;
       }
+      node.dependencies.add(i);
     }
 
     // Handle explicit `after` constraints
@@ -98,6 +111,53 @@ class SystemStage {
     _nameToIndex[systemName] = newIndex;
 
     _systems.add(node);
+
+    // Fail fast if the declared ordering forms a cycle. Without this the
+    // scheduler would only report a generic "Deadlock detected" at runtime.
+    _assertAcyclic();
+  }
+
+  /// Walk the dependency graph looking for a cycle. Throws with a path
+  /// that names every system involved.
+  void _assertAcyclic() {
+    final unvisited = 0;
+    final onStack = 1;
+    final done = 2;
+    final state = List<int>.filled(_systems.length, unvisited);
+    final path = <int>[];
+
+    List<int>? visit(int index) {
+      state[index] = onStack;
+      path.add(index);
+      for (final dep in _systems[index].dependencies) {
+        if (state[dep] == onStack) {
+          final start = path.indexOf(dep);
+          return path.sublist(start);
+        }
+        if (state[dep] == unvisited) {
+          final found = visit(dep);
+          if (found != null) return found;
+        }
+      }
+      state[index] = done;
+      path.removeLast();
+      return null;
+    }
+
+    for (var i = 0; i < _systems.length; i++) {
+      if (state[i] != unvisited) continue;
+      final cycle = visit(i);
+      if (cycle != null) {
+        final names = cycle
+            .map((idx) => _systems[idx].system.meta.name)
+            .toList();
+        throw StateError(
+          'Cycle detected in stage "$name" among systems: '
+          '${names.join(" -> ")} -> ${names.first}. '
+          'Check the before:/after: declarations on these systems.',
+        );
+      }
+    }
   }
 
   /// Runs all systems in this stage, parallelizing where possible.

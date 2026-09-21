@@ -302,6 +302,147 @@ void main() {
     });
   });
 
+  group('Explicit ordering wins over conflict edges', () {
+    test(
+      'B declared before: A wins when A is registered first and B conflicts',
+      () async {
+        final order = <String>[];
+        final schedule = Scheduler();
+
+        schedule.addSystem(
+          FunctionSystem(
+            'A',
+            writes: {ComponentId.of<_Position>()},
+            run: (_) => order.add('A'),
+          ),
+        );
+
+        schedule.addSystem(
+          FunctionSystem(
+            'B',
+            writes: {ComponentId.of<_Position>()},
+            before: ['A'],
+            run: (_) => order.add('B'),
+          ),
+        );
+
+        await schedule.run(World());
+
+        expect(order, equals(['B', 'A']));
+      },
+    );
+
+    test(
+      'A declared after: B wins when A is registered first and B conflicts',
+      () async {
+        final order = <String>[];
+        final schedule = Scheduler();
+
+        schedule.addSystem(
+          FunctionSystem(
+            'A',
+            writes: {ComponentId.of<_Position>()},
+            after: ['B'],
+            run: (_) => order.add('A'),
+          ),
+        );
+
+        schedule.addSystem(
+          FunctionSystem(
+            'B',
+            writes: {ComponentId.of<_Position>()},
+            run: (_) => order.add('B'),
+          ),
+        );
+
+        await schedule.run(World());
+
+        expect(order, equals(['B', 'A']));
+      },
+    );
+
+    test('pending before: on a not-yet-registered system wins', () async {
+      final order = <String>[];
+      final schedule = Scheduler();
+
+      // B is added first, declaring `before: A`. A doesn't exist yet so
+      // this goes through the pending-before path.
+      schedule.addSystem(
+        FunctionSystem(
+          'B',
+          writes: {ComponentId.of<_Position>()},
+          before: ['A'],
+          run: (_) => order.add('B'),
+        ),
+      );
+
+      // A conflicts with B, but the pending-before entry must beat the
+      // conflict-driven `A depends on B` that would otherwise be added.
+      schedule.addSystem(
+        FunctionSystem(
+          'A',
+          writes: {ComponentId.of<_Position>()},
+          run: (_) => order.add('A'),
+        ),
+      );
+
+      await schedule.run(World());
+
+      expect(order, equals(['B', 'A']));
+    });
+
+    test('pending after: on a not-yet-registered system wins', () async {
+      final order = <String>[];
+      final schedule = Scheduler();
+
+      // B declares `after: A` before A exists.
+      schedule.addSystem(
+        FunctionSystem(
+          'B',
+          writes: {ComponentId.of<_Position>()},
+          after: ['A'],
+          run: (_) => order.add('B'),
+        ),
+      );
+
+      // Registering A must not add a `B depends on A` edge (from the
+      // pending-after) and simultaneously an `A depends on B` conflict
+      // edge; that would deadlock.
+      schedule.addSystem(
+        FunctionSystem(
+          'A',
+          writes: {ComponentId.of<_Position>()},
+          run: (_) => order.add('A'),
+        ),
+      );
+
+      await schedule.run(World());
+
+      expect(order, equals(['A', 'B']));
+    });
+
+    test('real cycle in explicit ordering throws a clear error', () {
+      final schedule = Scheduler();
+
+      schedule.addSystem(
+        FunctionSystem('A', before: ['B'], run: (_) {}),
+      );
+
+      expect(
+        () => schedule.addSystem(
+          FunctionSystem('B', before: ['A'], run: (_) {}),
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            allOf(contains('Cycle detected'), contains('A'), contains('B')),
+          ),
+        ),
+      );
+    });
+  });
+
   group('App with system ordering', () {
     test('systems respect ordering in App', () async {
       final order = <String>[];
