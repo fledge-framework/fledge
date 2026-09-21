@@ -1,3 +1,11 @@
+## 0.2.3
+
+ - **FIX**(fledge_calendar): order CalendarSystem after wallTimeUpdate. ([f61ce1e6](https://github.com/fledge-framework/fledge/commit/f61ce1e69778a51f5f4ea3befe0e4b99076ee763))
+ - **FIX**: bump versions to stable. ([13c9aa7f](https://github.com/fledge-framework/fledge/commit/13c9aa7f0d2702dabaa7088a8679c2113f8d295d))
+ - **FEAT**: adopt CalendarPlugin. ([815b8576](https://github.com/fledge-framework/fledge/commit/815b8576d960004c378f99d379a4d0949dbdf8ef))
+ - **FEAT**: upgrade tiled version. ([306fdb67](https://github.com/fledge-framework/fledge/commit/306fdb6708c06ff8c29a1a745a9899677bf9ce27))
+ - **FEAT**: v0.2 engine restructure — 2D/2.5D desktop game engine. ([bf7c2b6c](https://github.com/fledge-framework/fledge/commit/bf7c2b6cc47837c998786f25bc87997f474c5b1d))
+
 # Changelog
 
 ## [0.2.2] - 2026-09-21

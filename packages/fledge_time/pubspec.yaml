@@ -1,6 +1,6 @@
 name: fledge_time
 description: Deprecated - merged into fledge_calendar. Re-export shim; import package:fledge_calendar/fledge_calendar.dart directly.
-version: 0.2.2
+version: 0.2.3
 resolution: workspace
 
 repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_time
@@ -18,4 +18,4 @@ environment:
   sdk: ^3.11.0
   flutter: ">=3.41.0"
 dependencies:
-  fledge_calendar: ^0.2.2
+  fledge_calendar: ^0.2.3
