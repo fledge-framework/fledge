@@ -94,10 +94,22 @@ jobs:
       - name: Run tests
         run: melos run test
 
-  # Pana measures pub scores; the analysis itself is platform-agnostic.
+  # Pana measures pub.dev package scores; the analysis itself is
+  # platform-agnostic, so Linux-only is fine.
+  #
+  # `continue-on-error: true` — during a coordinated multi-package
+  # release (like v0.2.0), pana fails on any package that has an
+  # unreleased cross-Fledge dep at the new version: pana runs
+  # `dart pub get` in an isolated sandbox with no workspace, so
+  # `fledge_ecs: ^0.2.0` can't resolve until the new version is on
+  # pub.dev. That's expected transitional noise, not a real regression.
+  # Pana still runs and reports scores in the job output; CI just
+  # doesn't fail on it. Remove the flag once v0.2.0 is published and
+  # cross-package deps resolve cleanly again.
   pana:
     name: Pana Analysis
     runs-on: ubuntu-latest
+    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
