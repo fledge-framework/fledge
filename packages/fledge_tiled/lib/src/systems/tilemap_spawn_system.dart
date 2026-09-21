@@ -92,11 +92,7 @@ class TilemapSpawnedEvent {
   /// through the modern asset store.
   final Handle<TilemapAsset>? handle;
 
-  const TilemapSpawnedEvent({
-    required this.entity,
-    this.assetKey,
-    this.handle,
-  });
+  const TilemapSpawnedEvent({required this.entity, this.assetKey, this.handle});
 }
 
 /// System that spawns entities from loaded tilemaps.

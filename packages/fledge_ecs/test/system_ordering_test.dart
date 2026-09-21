@@ -424,14 +424,11 @@ void main() {
     test('real cycle in explicit ordering throws a clear error', () {
       final schedule = Scheduler();
 
-      schedule.addSystem(
-        FunctionSystem('A', before: ['B'], run: (_) {}),
-      );
+      schedule.addSystem(FunctionSystem('A', before: ['B'], run: (_) {}));
 
       expect(
-        () => schedule.addSystem(
-          FunctionSystem('B', before: ['A'], run: (_) {}),
-        ),
+        () =>
+            schedule.addSystem(FunctionSystem('B', before: ['A'], run: (_) {})),
         throwsA(
           isA<StateError>().having(
             (e) => e.message,

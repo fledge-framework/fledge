@@ -24,10 +24,7 @@ void main() {
     expect(events, hasLength(1));
     expect(events.single.scene, 'level2');
     expect(events.single.metadata, {'spawnX': 100});
-    expect(
-      world.getResource<TransitionState>()!.phase,
-      TransitionPhase.idle,
-    );
+    expect(world.getResource<TransitionState>()!.phase, TransitionPhase.idle);
   });
 
   test('TransitionFadeSystem does not emit while fade in is still running', () {
@@ -47,9 +44,6 @@ void main() {
     world.updateEvents();
 
     expect(world.eventReader<TransitionCompleted>().read(), isEmpty);
-    expect(
-      world.getResource<TransitionState>()!.phase,
-      TransitionPhase.fadeIn,
-    );
+    expect(world.getResource<TransitionState>()!.phase, TransitionPhase.fadeIn);
   });
 }
