@@ -73,6 +73,7 @@ export 'src/plugin.dart';
 // Components
 export 'src/components/collision_config.dart';
 export 'src/components/collision_event.dart';
+export 'src/components/contact_yield.dart';
 export 'src/components/velocity.dart';
 
 // Layers
@@ -94,4 +95,5 @@ export 'src/physics_mode.dart';
 // Systems
 export 'src/systems/collision_detection.dart';
 export 'src/systems/collision_resolution.dart';
+export 'src/systems/contact_yield_tracker.dart';
 export 'src/systems/velocity_integration.dart';

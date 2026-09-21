@@ -74,6 +74,24 @@ class CollisionConfig {
   /// through each other.
   final bool blocksDynamic;
 
+  /// After this much continuous contact with another dynamic body
+  /// that also has [yieldAfter] set, blocking between the two turns
+  /// off (they pass through each other) until they separate. When
+  /// they separate the yield resets and blocking resumes.
+  ///
+  /// Contact time is measured in the physics clock — deterministic
+  /// under [PhysicsMode.fixed], approximate under
+  /// [PhysicsMode.variable]. When two bodies with different
+  /// `yieldAfter` values meet, the pair yields at
+  /// `min(a.yieldAfter, b.yieldAfter)`.
+  ///
+  /// Only applies to dynamic-vs-dynamic blocking (both bodies must
+  /// also carry [blocksDynamic]) — static walls never yield to
+  /// dynamic bodies.
+  ///
+  /// Default: `null`, so pairs stay blocked forever.
+  final Duration? yieldAfter;
+
   /// Creates a collision configuration.
   ///
   /// By default, belongs to all layers, collides with all layers,
@@ -84,6 +102,7 @@ class CollisionConfig {
     this.mask = CollisionLayers.all,
     this.isSensor = false,
     this.blocksDynamic = false,
+    this.yieldAfter,
   });
 
   /// Creates a sensor configuration (generates events, no blocking).
@@ -94,7 +113,8 @@ class CollisionConfig {
     this.layer = CollisionLayers.trigger,
     this.mask = CollisionLayers.all,
   })  : isSensor = true,
-        blocksDynamic = false;
+        blocksDynamic = false,
+        yieldAfter = null;
 
   /// Creates a solid configuration (blocks movement).
   ///
@@ -104,6 +124,7 @@ class CollisionConfig {
     this.layer = CollisionLayers.solid,
     this.mask = CollisionLayers.all,
     this.blocksDynamic = false,
+    this.yieldAfter,
   }) : isSensor = false;
 
   /// Returns true if this entity can collide with another.

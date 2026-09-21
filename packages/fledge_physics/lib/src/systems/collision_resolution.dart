@@ -5,9 +5,11 @@ import 'package:fledge_render_2d/fledge_render_2d.dart';
 
 import '../collision/collision_shapes.dart';
 import '../components/collision_config.dart';
+import '../components/contact_yield.dart';
 import '../components/velocity.dart';
 import '../layers/collision_layers.dart';
 import '../physics_mode.dart';
+import 'contact_yield_tracker.dart';
 
 /// Adjusts velocity to prevent movement into solid colliders.
 ///
@@ -62,6 +64,7 @@ class CollisionResolutionSystem implements System {
     },
     writes: {ComponentId.of<Velocity>()},
     resourceReads: mode == PhysicsMode.fixed ? {FixedTimestep} : {WallTime},
+    eventWrites: {ContactYieldStarted, ContactYieldEnded},
   );
 
   @override
@@ -126,9 +129,17 @@ class CollisionResolutionSystem implements System {
             layer: layer,
             mask: mask,
             isDynamic: isDynamic,
+            yieldAfter: config?.yieldAfter,
           ),
         );
       }
+    }
+
+    // Update the per-pair yield tracker (if any pair has yieldAfter
+    // set and the game has installed the tracker resource).
+    final tracker = world.getResource<ContactYieldTracker>();
+    if (tracker != null) {
+      _updateYieldTracker(world, blockers, tracker, dt);
     }
 
     // Resolve collisions for all moving entities
@@ -146,12 +157,19 @@ class CollisionResolutionSystem implements System {
       //  - self is never a blocker;
       //  - layer/mask must agree in both directions;
       //  - dynamic blockers only apply when we ALSO opted into
-      //    dynamic-vs-dynamic blocking.
+      //    dynamic-vs-dynamic blocking;
+      //  - a yielding pair (post-yieldAfter, still in contact) is
+      //    skipped so bodies pass through each other.
       final relevantColliders = <Rect>[];
       for (final b in blockers) {
         if (b.entity == entity) continue;
         if (b.isDynamic && !myBlocksDynamic) continue;
         if ((myLayer & b.mask) == 0 || (b.layer & myMask) == 0) continue;
+        if (b.isDynamic &&
+            tracker != null &&
+            tracker.isYielding(entity, b.entity)) {
+          continue;
+        }
         relevantColliders.add(b.bounds);
       }
 
@@ -247,11 +265,113 @@ class _Blocker {
   final int mask;
   final bool isDynamic;
 
+  /// Per-entity yield threshold; used when both members of a dynamic
+  /// pair carry `yieldAfter` in their `CollisionConfig`.
+  final Duration? yieldAfter;
+
   _Blocker({
     required this.bounds,
     required this.entity,
     required this.layer,
     required this.mask,
     required this.isDynamic,
+    this.yieldAfter,
   });
+}
+
+/// Advance per-pair contact ages, flip the yielding state where the
+/// threshold has been crossed, and emit yield events. The resolver's
+/// blocker filter reads back through [ContactYieldTracker.isYielding].
+void _updateYieldTracker(
+  World world,
+  List<_Blocker> blockers,
+  ContactYieldTracker tracker,
+  double dt,
+) {
+  // Filter to dynamic bodies with a yieldAfter threshold — only those
+  // can participate in a yielding pair.
+  final candidates = <_Blocker>[];
+  for (final b in blockers) {
+    if (!b.isDynamic) continue;
+    if (b.yieldAfter == null) continue;
+    candidates.add(b);
+  }
+
+  final ageMap = tracker.ageMap;
+  final yieldingSet = tracker.yieldingSet;
+  final yieldingEntities = tracker.yieldingEntities;
+
+  if (candidates.length < 2) {
+    // Nothing to age; if the tracker held any stale yielding pairs,
+    // fire ends and clear.
+    if (ageMap.isNotEmpty || yieldingSet.isNotEmpty) {
+      for (final key in yieldingSet.toList()) {
+        final pair = yieldingEntities[key];
+        if (pair != null) {
+          world
+              .eventWriter<ContactYieldEnded>()
+              .send(ContactYieldEnded(pair.$1, pair.$2));
+        }
+      }
+      ageMap.clear();
+      yieldingSet.clear();
+      yieldingEntities.clear();
+    }
+    return;
+  }
+
+  final touchedPairs = <int>{};
+
+  for (var i = 0; i < candidates.length; i++) {
+    final a = candidates[i];
+    for (var j = i + 1; j < candidates.length; j++) {
+      final b = candidates[j];
+      if (a.entity == b.entity) continue;
+
+      // Layer/mask must agree in both directions — otherwise this
+      // pair wouldn't block in the first place and yielding has no
+      // meaning.
+      if ((a.layer & b.mask) == 0 || (b.layer & a.mask) == 0) continue;
+
+      if (!a.bounds.overlaps(b.bounds)) continue;
+
+      final key = contactYieldPairKey(a.entity, b.entity);
+      touchedPairs.add(key);
+
+      final prev = ageMap[key] ?? 0.0;
+      final next = prev + dt;
+      ageMap[key] = next;
+
+      // Pick the pair's threshold (min of the two non-null yieldAfters).
+      final aY = a.yieldAfter!.inMicroseconds / 1e6;
+      final bY = b.yieldAfter!.inMicroseconds / 1e6;
+      final threshold = aY < bY ? aY : bY;
+
+      if (!yieldingSet.contains(key) && next >= threshold) {
+        yieldingSet.add(key);
+        yieldingEntities[key] = (a.entity, b.entity);
+        world
+            .eventWriter<ContactYieldStarted>()
+            .send(ContactYieldStarted(a.entity, b.entity));
+      }
+    }
+  }
+
+  // Any pair we didn't touch this frame has separated. Drop its age
+  // and, if it was yielding, emit an end event.
+  final toDrop = <int>[];
+  ageMap.forEach((key, _) {
+    if (!touchedPairs.contains(key)) toDrop.add(key);
+  });
+  for (final key in toDrop) {
+    ageMap.remove(key);
+    if (yieldingSet.remove(key)) {
+      final pair = yieldingEntities.remove(key);
+      if (pair != null) {
+        world
+            .eventWriter<ContactYieldEnded>()
+            .send(ContactYieldEnded(pair.$1, pair.$2));
+      }
+    }
+  }
 }

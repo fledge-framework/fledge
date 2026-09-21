@@ -1,9 +1,11 @@
 import 'package:fledge_ecs/fledge_ecs.dart';
 
 import 'components/collision_event.dart';
+import 'components/contact_yield.dart';
 import 'physics_mode.dart';
 import 'systems/collision_detection.dart';
 import 'systems/collision_resolution.dart';
+import 'systems/contact_yield_tracker.dart';
 import 'systems/velocity_integration.dart';
 
 /// Physics and collision handling plugin.
@@ -88,6 +90,15 @@ class PhysicsPlugin implements Plugin {
     // Register the CollisionEvent queue up front so consumers can read
     // it without needing to know the plugin's internals.
     app.addEvent<CollisionEvent>();
+
+    // Yield events + tracker. The resolver only touches the tracker
+    // when it exists, so games that never use `yieldAfter` still get
+    // the bookkeeping installed for free — the tracker's per-frame
+    // work short-circuits when fewer than two eligible dynamic
+    // bodies exist.
+    app.addEvent<ContactYieldStarted>();
+    app.addEvent<ContactYieldEnded>();
+    app.insertResource(ContactYieldTracker());
 
     final schedule = config.mode == PhysicsMode.fixed
         ? Schedules.fixedUpdate
