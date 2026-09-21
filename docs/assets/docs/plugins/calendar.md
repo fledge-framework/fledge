@@ -53,7 +53,7 @@ CalendarConfig(
   daysPerSeason: 28,         // Days per season
   seasonsPerYear: 4,         // Seasons per year
   realSecondsPerGameMinute: 7.0,  // Time scale (~3 hours real time per game day)
-  dayStartHour: 6,           // When day "starts" (for calculations)
+  dayStartHour: 6,           // Wake-up hour / curfew reference (day counter still ticks at midnight)
   defaultCurfewHour: 26,     // Curfew at 2 AM (optional)
   dayNames: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
   seasonNames: ['Spring', 'Summer', 'Fall', 'Winter'],
@@ -188,8 +188,31 @@ time.setTime(newDay: 5);
 time.skipToHour(6);  // Skip to next 6 AM
 
 // Skip to next morning
-time.skipToNextMorning();  // Next day at dayStartHour
+time.skipToNextMorning();  // Next dayStartHour (see below)
 ```
+
+`skipToNextMorning()` moves the clock to the next `dayStartHour`. The day counter increments at midnight, so it only advances `day` if the current hour is at or after `dayStartHour`:
+
+| Called at | Result |
+|-----------|--------|
+| Day 5, 10 PM | Day 6, 6 AM |
+| Day 6, 2 AM (clock already passed midnight) | Day 6, 6 AM |
+| Day 5, 6 AM exactly | Day 6, 6 AM |
+
+#### Events for time changes you make
+
+`setTime`, `skipToHour`, and `skipToNextMorning` can be called from **any schedule**. They set the `*ChangedThisFrame` flags immediately (visible to systems that run later in the same frame), and they also record the pre-change values so that `CalendarSystem` emits the matching events on its next run:
+
+```dart
+// In an update-schedule system, after CalendarSystem already ran this frame
+time.skipToNextMorning(); // day 5 22:00 -> day 6 06:00
+
+// Next frame: exactly one DayChangedEvent(5 -> 6) and one
+// HourChangedEvent(22 -> 6), plus SeasonChangedEvent / YearChangedEvent
+// if the skip crossed those boundaries. Nothing the frame after.
+```
+
+Several changes before the next `CalendarSystem` run coalesce into one set of events spanning the whole change (two `skipToNextMorning()` calls from day 5 give a single `DayChangedEvent(5 -> 7)`). A `skipToHour` that lands past curfew also produces a `CurfewTriggeredEvent`. `loadFromJson` discards any pending changes.
 
 ## Curfew System
 
@@ -220,9 +243,22 @@ time.curfewHour = null; // Disable curfew
 
 // Detect when curfew is reached
 if (time.curfewTriggeredThisFrame) {
-  // This fires exactly once when time crosses the curfew hour
+  // This fires exactly once per waking day, when time crosses the curfew hour
   startFadeToBlack();
   time.skipToNextMorning();
+}
+```
+
+This pattern is safe with any curfew value:
+
+- **Curfew before midnight** (e.g. `22`): `skipToNextMorning()` at 10 PM goes to the next day at 6 AM. If the player stays up instead, curfew does **not** fire again after midnight — it re-arms at `dayStartHour`.
+- **Curfew after midnight** (e.g. `26` = 2 AM): the day counter already advanced at midnight, so `skipToNextMorning()` at 2 AM stays on that day and moves to 6 AM — the player doesn't lose a day.
+
+Either way, the resulting `DayChangedEvent` / `HourChangedEvent` are delivered on the next frame (see [Events for time changes you make](#events-for-time-changes-you-make)), so the same pattern works from an event reader:
+
+```dart
+for (final event in world.eventReader<CurfewTriggeredEvent>().read()) {
+  world.getResource<Calendar>()!.skipToNextMorning();
 }
 ```
 
@@ -285,11 +321,12 @@ App()
   .addSystem(CalendarSystem());
 ```
 
-The system:
-1. Resets change flags (`beginFrame()`)
-2. Advances time based on `WallTime.delta` and the time scale
-3. Sets change flags when boundaries are crossed
-4. Sends time events
+The system (registered in `Schedules.first` by the plugin), each frame:
+1. Takes pending changes made outside the system since its last run (`takePendingChanges()` — from `setTime`, `skipToHour`, `skipToNextMorning`)
+2. Resets change flags (`beginFrame()`; pending changes are not cleared by this)
+3. Advances time based on `WallTime.delta` and the time scale, setting change flags when boundaries are crossed
+4. Sends events for the pending changes first (old value = before the change, new value = value at the start of this frame; only for values that actually differ)
+5. Sends events for boundaries crossed by this frame's advance
 
 ## CalendarPlugin
 
@@ -426,7 +463,7 @@ time.loadFromJson(json);
 | `daysPerSeason` | `int` | 28 | Days per season |
 | `seasonsPerYear` | `int` | 4 | Seasons per year |
 | `realSecondsPerGameMinute` | `double` | 7.0 | Time scale |
-| `dayStartHour` | `int` | 6 | Hour when "day" begins |
+| `dayStartHour` | `int` | 6 | Wake-up hour for `skipToNextMorning`, zero point for `normalizedTimeOfDay` and curfew; the day counter increments at midnight |
 | `defaultCurfewHour` | `int?` | null | Default curfew hour (null = disabled) |
 | `dayNames` | `List<String>?` | null | Custom day names |
 | `seasonNames` | `List<String>?` | null | Custom season names |
@@ -452,9 +489,10 @@ time.loadFromJson(json);
 | `update(deltaSeconds)` | Advance time by delta |
 | `pause()` | Pause time progression |
 | `resume()` | Resume time progression |
-| `setTime({day, hour, minute})` | Set time directly |
-| `skipToHour(hour)` | Skip to next occurrence of hour |
-| `skipToNextMorning()` | Skip to next day's start |
+| `setTime({newDay, newHour, newMinute})` | Set time directly (events on next `CalendarSystem` run) |
+| `skipToHour(hour)` | Skip to next occurrence of hour (events on next run) |
+| `skipToNextMorning()` | Skip to next `dayStartHour`; `day` only advances if hour ≥ `dayStartHour` (events on next run) |
+| `takePendingChanges()` | Consume out-of-system changes as `CalendarPendingChanges?` (used by `CalendarSystem`) |
 | `isDaytime({dayStart, dayEnd})` | Check if daytime |
 | `isNighttime({dayStart, dayEnd})` | Check if nighttime |
 

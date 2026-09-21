@@ -22,9 +22,14 @@ class CalendarConfig {
   /// - 60.0 = real-time (1 hour real = 1 hour game)
   final double realSecondsPerGameMinute;
 
-  /// Hour when a new "day" starts (for daily reset events).
+  /// Hour when the player's waking day starts. Default: 6 (6 AM).
   ///
-  /// Default: 6 (6 AM). The day counter increments when this hour is reached.
+  /// This is the hour `Calendar.skipToNextMorning` wakes up at, the zero
+  /// point of `Calendar.normalizedTimeOfDay`, and the reference point for
+  /// curfew hours (a curfew of 26 means 2 AM, 20 hours after a 6 AM start).
+  ///
+  /// It does **not** control when the day counter increments: `Calendar.day`
+  /// increments at midnight (hour 0), and `DayChangedEvent` fires then.
   final int dayStartHour;
 
   /// Custom names for days of the week.

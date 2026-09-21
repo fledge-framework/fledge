@@ -34,6 +34,15 @@ void main() async {
 }
 ```
 
+## Skipping Time
+
+```dart
+// e.g. from a sleep or curfew handler, in any schedule
+calendar.skipToNextMorning();
+```
+
+`skipToNextMorning()`, `skipToHour()` and `setTime()` can be called from any schedule: `CalendarSystem` emits exactly one `DayChangedEvent` / `HourChangedEvent` (and season/year events when crossed) for the change on its next run. The day counter increments at midnight, so skipping at 2 AM stays on the same day and just moves to `dayStartHour`; a pre-midnight curfew does not re-trigger after midnight.
+
 ## Documentation
 
 See the [Fledge documentation site](https://fledge-framework.dev/docs/plugins/calendar) for guides, API reference, and advanced usage.

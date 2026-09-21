@@ -20,3 +20,6 @@ environment:
 dependencies:
   fledge_ecs: ^0.2.1
   meta: ^1.17.0
+
+dev_dependencies:
+  test: ^1.25.0

@@ -1,3 +1,5 @@
+import 'package:meta/meta.dart';
+
 import '../config/calendar_config.dart';
 
 /// Resource tracking in-game calendar time (day/hour/minute, seasons,
@@ -78,6 +80,19 @@ class Calendar {
   late int _previousYear;
   bool _wasPastCurfew = false;
 
+  // === Pending out-of-system changes ===
+  //
+  // Recorded by [skipToNextMorning], [skipToHour] and [setTime] so that
+  // [CalendarSystem] can emit the matching events on its next run even
+  // though the edge flags set by those calls are cleared by [beginFrame].
+  // Each slot holds the value from *before the first* un-consumed change
+  // (multiple changes coalesce). Not cleared by [beginFrame].
+  int? _pendingOldHour;
+  int? _pendingOldDay;
+  int? _pendingOldSeason;
+  int? _pendingOldYear;
+  bool _pendingCurfew = false;
+
   /// Curfew hour (null = no curfew).
   ///
   /// Uses 24+ hour format relative to dayStartHour:
@@ -127,39 +142,38 @@ class Calendar {
       hour++;
       hourChangedThisFrame = true;
 
-      // Edge-detect curfew transition (was NOT past, now IS past)
-      if (_curfewHour != null) {
-        final nowPastCurfew = isPastCurfew;
-        if (nowPastCurfew && !_wasPastCurfew) {
-          curfewTriggeredThisFrame = true;
-        }
-        _wasPastCurfew = nowPastCurfew;
-      }
-
       if (hour >= config.hoursPerDay) {
+        // The day counter increments at midnight. Curfew tracking is NOT
+        // reset here: the player's waking day runs from dayStartHour to
+        // dayStartHour the next morning, so a curfew that was already
+        // passed before midnight stays passed. [isPastCurfew] naturally
+        // becomes false again at dayStartHour, which re-arms the trigger.
         hour = 0;
         day++;
         dayChangedThisFrame = true;
-        // Reset curfew tracking for new day
-        _wasPastCurfew = false;
-
-        // Edge-detect season change
-        if (config.useSeasons) {
-          final currentSeason = season;
-          if (currentSeason != _previousSeason) {
-            seasonChangedThisFrame = true;
-            _previousSeason = currentSeason;
-
-            // Edge-detect year change
-            final currentYear = year;
-            if (currentYear != _previousYear) {
-              yearChangedThisFrame = true;
-              _previousYear = currentYear;
-            }
-          }
-        }
+        _checkSeasonYearChange();
       }
+
+      // Edge-detect curfew transition (was NOT past, now IS past)
+      _updateCurfewEdge();
     }
+  }
+
+  /// Returns true if this call detected a curfew crossing.
+  bool _updateCurfewEdge() {
+    if (_curfewHour == null) return false;
+    final nowPastCurfew = isPastCurfew;
+    final triggered = nowPastCurfew && !_wasPastCurfew;
+    if (triggered) curfewTriggeredThisFrame = true;
+    _wasPastCurfew = nowPastCurfew;
+    return triggered;
+  }
+
+  int _hoursSinceStart(int h) {
+    final startHour = config.dayStartHour;
+    return (h >= startHour)
+        ? h - startHour
+        : h + config.hoursPerDay - startHour;
   }
 
   // === Time Accessors ===
@@ -322,18 +336,47 @@ class Calendar {
   }
 
   // === Time Control ===
+  //
+  // These methods may be called from any schedule. Besides setting the
+  // this-frame edge flags, they record the pre-change values so the next
+  // [CalendarSystem] run emits exactly one set of Hour/Day/Season/Year
+  // (and Curfew) events for the change — see [takePendingChanges].
 
   /// Set time directly.
+  ///
+  /// Records pending changes (so [CalendarSystem] emits events for them on
+  /// its next run) and re-evaluates season/year state. Does not itself fire
+  /// a curfew trigger; curfew is re-evaluated on the next hour tick.
   void setTime({int? newDay, int? newHour, int? newMinute}) {
+    _recordPending();
+    final oldHour = hour;
+    final oldDay = day;
     if (newDay != null) day = newDay;
     if (newHour != null) hour = newHour.clamp(0, config.hoursPerDay - 1);
     if (newMinute != null) minute = newMinute.clamp(0, 59);
     changedThisFrame = true;
+    if (hour != oldHour) hourChangedThisFrame = true;
+    if (day != oldDay) dayChangedThisFrame = true;
+    _checkSeasonYearChange();
   }
 
   /// Skip to the next occurrence of a specific hour.
+  ///
+  /// If [targetHour] is not later today, skips to that hour tomorrow
+  /// (the day counter increments, as it would passing midnight). Fires a
+  /// curfew trigger if the skip lands past curfew and curfew had not
+  /// already been passed in the current waking day.
   void skipToHour(int targetHour) {
     if (targetHour < 0 || targetHour >= config.hoursPerDay) return;
+
+    _recordPending();
+
+    // Did the skip pass through dayStartHour (start of a new waking day)?
+    var hoursSkipped = (targetHour - hour) % config.hoursPerDay;
+    if (hoursSkipped == 0) hoursSkipped = config.hoursPerDay;
+    if (_hoursSinceStart(hour) + hoursSkipped >= config.hoursPerDay) {
+      _wasPastCurfew = false;
+    }
 
     if (hour < targetHour) {
       hour = targetHour;
@@ -341,8 +384,6 @@ class Calendar {
       hour = targetHour;
       day++;
       dayChangedThisFrame = true;
-      // Reset curfew tracking for new day
-      _wasPastCurfew = false;
     }
     minute = 0;
     _accumulator = 0.0;
@@ -350,13 +391,7 @@ class Calendar {
     changedThisFrame = true;
 
     // Update curfew edge detection
-    if (_curfewHour != null) {
-      final nowPastCurfew = isPastCurfew;
-      if (nowPastCurfew && !_wasPastCurfew) {
-        curfewTriggeredThisFrame = true;
-      }
-      _wasPastCurfew = nowPastCurfew;
-    }
+    if (_updateCurfewEdge()) _pendingCurfew = true;
 
     _checkSeasonYearChange();
   }
@@ -364,18 +399,62 @@ class Calendar {
   /// Skip to the next morning (dayStartHour).
   ///
   /// Used when player goes to sleep or passes out from curfew.
+  ///
+  /// The day counter only increments if the current hour is at or after
+  /// [CalendarConfig.dayStartHour]. Before that (e.g. passing out at 2 AM
+  /// after the day already rolled over at midnight) it stays on the same
+  /// day and just moves the clock forward to the morning.
   void skipToNextMorning() {
-    day++;
+    _recordPending();
+
+    final oldHour = hour;
+    final oldDay = day;
+    if (hour >= config.dayStartHour) day++;
     hour = config.dayStartHour;
     minute = 0;
     _accumulator = 0.0;
-    dayChangedThisFrame = true;
-    hourChangedThisFrame = true;
     changedThisFrame = true;
-    // Reset curfew tracking for new day
-    _wasPastCurfew = false;
+    if (day != oldDay) dayChangedThisFrame = true;
+    if (hour != oldHour) hourChangedThisFrame = true;
+    // New waking day: re-arm curfew tracking.
+    _wasPastCurfew = isPastCurfew;
 
     _checkSeasonYearChange();
+  }
+
+  /// Consume and clear changes made by [skipToNextMorning], [skipToHour]
+  /// or [setTime] since the last call.
+  ///
+  /// Returns null if nothing is pending. [CalendarSystem] calls this at
+  /// the start of each run and emits events for the returned changes;
+  /// games using [CalendarSystem] should not call it themselves.
+  CalendarPendingChanges? takePendingChanges() {
+    final oldHour = _pendingOldHour;
+    if (oldHour == null) return null;
+    final changes = CalendarPendingChanges(
+      oldHour: oldHour,
+      oldDay: _pendingOldDay!,
+      oldSeason: _pendingOldSeason!,
+      oldYear: _pendingOldYear!,
+      curfewTriggered: _pendingCurfew,
+    );
+    _clearPending();
+    return changes;
+  }
+
+  void _recordPending() {
+    _pendingOldHour ??= hour;
+    _pendingOldDay ??= day;
+    _pendingOldSeason ??= season;
+    _pendingOldYear ??= year;
+  }
+
+  void _clearPending() {
+    _pendingOldHour = null;
+    _pendingOldDay = null;
+    _pendingOldSeason = null;
+    _pendingOldYear = null;
+    _pendingCurfew = false;
   }
 
   void _checkSeasonYearChange() {
@@ -385,12 +464,12 @@ class Calendar {
     if (currentSeason != _previousSeason) {
       seasonChangedThisFrame = true;
       _previousSeason = currentSeason;
+    }
 
-      final currentYear = year;
-      if (currentYear != _previousYear) {
-        yearChangedThisFrame = true;
-        _previousYear = currentYear;
-      }
+    final currentYear = year;
+    if (currentYear != _previousYear) {
+      yearChangedThisFrame = true;
+      _previousYear = currentYear;
     }
   }
 
@@ -404,7 +483,8 @@ class Calendar {
 
   /// Reset change tracking at frame start.
   ///
-  /// Call this at the beginning of each frame before update().
+  /// Call this at the beginning of each frame before update(). Does not
+  /// clear pending out-of-system changes (see [takePendingChanges]).
   void beginFrame() {
     changedThisFrame = false;
     hourChangedThisFrame = false;
@@ -441,11 +521,45 @@ class Calendar {
       _curfewHour = config.defaultCurfewHour;
     }
     _accumulator = 0.0;
+    _clearPending();
     // Reset edge detection state
     _previousSeason = season;
     _previousYear = year;
     _wasPastCurfew = isPastCurfew;
   }
+}
+
+/// Changes made to a [Calendar] outside [CalendarSystem] (via
+/// [Calendar.skipToNextMorning], [Calendar.skipToHour] or
+/// [Calendar.setTime]) that have not yet been turned into events.
+///
+/// Returned by [Calendar.takePendingChanges]. Each `old*` value is the
+/// calendar's value before the first un-consumed change.
+@immutable
+class CalendarPendingChanges {
+  /// Hour before the change.
+  final int oldHour;
+
+  /// Day before the change.
+  final int oldDay;
+
+  /// Season index before the change.
+  final int oldSeason;
+
+  /// Year before the change.
+  final int oldYear;
+
+  /// Whether a change crossed the curfew (e.g. [Calendar.skipToHour]).
+  final bool curfewTriggered;
+
+  /// Creates a pending-changes snapshot.
+  const CalendarPendingChanges({
+    required this.oldHour,
+    required this.oldDay,
+    required this.oldSeason,
+    required this.oldYear,
+    this.curfewTriggered = false,
+  });
 }
 
 /// Deprecated alias for [Calendar].

@@ -122,22 +122,64 @@ Configure save system behavior:
 
 ```dart
 SaveConfig(
-  gameDirectory: 'MyGame',  // Subdirectory in app documents (default: 'saves')
+  gameDirectory: 'MyGame',  // Subdirectory for saves (default: 'saves')
   formatVersion: 1,         // Increment for breaking changes (default: 1)
   defaultSlot: 'save',      // Default slot name when none specified (default: 'save')
+  migrations: {},           // Migration steps keyed by from-version (default: none)
+  keepBackup: false,        // Keep the previous save as <slot>.backup.json (default: false)
+  baseDirectory: null,      // Override the app documents directory (default: null)
 )
 ```
 
+`baseDirectory` replaces the `path_provider` application documents directory; saves then live in `<baseDirectory>/<gameDirectory>/`. It is handy for tests (point it at a temp dir), portable installs, or a user-chosen save location.
+
 ### Version Migration
 
-The `formatVersion` helps manage breaking changes. During load, saves with a version higher than the current `formatVersion` are rejected (can't load from future versions).
+Bump `formatVersion` whenever the save shape changes, and register one `SaveMigration` step per version bump in `migrations`, keyed by the version it migrates **from**:
 
 ```dart
-// When loading, check version and migrate if needed
-if (saveData['version'] < currentVersion) {
-  saveData = migrateSaveData(saveData);
+SaveConfig(
+  formatVersion: 3,
+  migrations: {
+    // v1 -> v2: 'coins' was renamed to 'gold'
+    1: (data) {
+      final progress = data['resources']['progress'] as Map<String, dynamic>;
+      progress['gold'] = progress.remove('coins');
+      return data;
+    },
+    // v2 -> v3: new 'prestigePoints' field
+    2: (data) {
+      data['resources']['progress']['prestigePoints'] = 0;
+      return data;
+    },
+  },
+)
+```
+
+Each step receives the whole decoded save file (`version`, `timestamp`, `metadata`, `resources`) and returns the next version's data; `SaveManager` sets `version` for you after each step. On `load()`, a v1 file runs `migrations[1]` then `migrations[2]` before any resource is restored.
+
+Rules:
+
+- A file whose `version` is **greater** than `formatVersion` is refused (`load()` returns `null`) — you can't load a save from a newer build.
+- If any step in the chain is missing, the load fails (`null`, with a message on the `fledge_save` log) and no resource is touched.
+- If `migrations` is empty (the default), older files load as-is with no migration, exactly as before migrations existed. Rely on defaults in `loadFromSaveJson` (see [Backwards Compatibility](#backwards-compatibility)) in that case.
+- A file with no `version` key is treated as version `0`, so it needs a `migrations[0]` step once you register any migrations.
+
+### Backups and Crash Safety
+
+Every `save()` writes to `<slot>.json.tmp` first (flushed to disk), then renames it over `<slot>.json`. A crash or power loss mid-save leaves the previous `<slot>.json` intact; the leftover `.tmp` is ignored and never listed as a slot.
+
+With `keepBackup: true`, the previous `<slot>.json` is moved to `<slot>.backup.json` before the new file takes its place, giving you one-save-deep rollback:
+
+```dart
+if (await saveManager.load(world, slotName: 'slot1') == null &&
+    await saveManager.hasBackup('slot1')) {
+  // Current save is corrupt or unreadable - fall back to the previous one
+  await saveManager.load(world, slotName: 'slot1', fromBackup: true);
 }
 ```
+
+Backups are not returned by `listSaveSlots()`, and `deleteSave()` removes a slot's backup and any leftover temp file along with it.
 
 ## SaveManager
 
@@ -145,7 +187,7 @@ The `SaveManager` resource handles file I/O and coordinates saves across resourc
 
 ### Initialization
 
-Call `initialize()` during startup to check for existing save files:
+`initialize()` is optional. `save()` creates the save directory on demand, and `load()` / `listSaveSlots()` work without it. Call it at startup if you want the directory created and the slot list cached up front:
 
 ```dart
 final saveManager = world.getResource<SaveManager>()!;
@@ -198,7 +240,12 @@ if (metadata != null) {
   final inventory = world.getResource<Inventory>()!;
   print('Loaded ${inventory.items.length} items');
 }
+
+// Load the previous save instead (requires keepBackup: true)
+await saveManager.load(world, slotName: 'slot1', fromBackup: true);
 ```
+
+`load()` applies any registered [migrations](#version-migration) before restoring resources. It returns `null` if the file is missing or unreadable, was written by a newer `formatVersion`, or a migration step is missing; in all of those cases no resource is modified. Failures are logged via `dart:developer` under the `fledge_save` name rather than thrown. Note that a save written without metadata also returns `null`, so use `hasSaveFile()` first if you need to tell the two apart.
 
 ### Deleting Saves
 
@@ -242,12 +289,13 @@ void gameLoop() {
 
 ## Save File Format
 
-Save files are stored as JSON in the application documents directory:
+Save files are stored as JSON in the application documents directory (or `SaveConfig.baseDirectory` when set):
 
 ```
 Documents/
   MyGame/
     slot1.json
+    slot1.backup.json   # only with keepBackup: true
     slot2.json
     autosave.json
 ```
@@ -372,13 +420,17 @@ class GameState with Saveable {
 ### 4. Version Your Save Format
 
 ```dart
-// In your game, track format changes
-const saveFormatVersion = 2;
-
-// Document breaking changes
+// Document breaking changes next to their migrations
 // v1: Initial format
-// v2: Added 'prestigePoints' to progress, renamed 'coins' to 'gold'
+// v2: Renamed 'coins' to 'gold'
+// v3: Added 'prestigePoints' to progress
+SaveConfig(
+  formatVersion: 3,
+  migrations: {1: renameCoinsToGold, 2: addPrestigePoints},
+)
 ```
+
+Never ship a `formatVersion` bump without the matching migration step, or every existing save becomes unloadable.
 
 ## API Reference
 
@@ -389,15 +441,21 @@ const saveFormatVersion = 2;
 | `gameDirectory` | `String` | Subdirectory for saves (default: `'saves'`) |
 | `formatVersion` | `int` | Save format version for migration (default: `1`) |
 | `defaultSlot` | `String` | Default slot name when none specified (default: `'save'`) |
+| `migrations` | `Map<int, SaveMigration>` | Migration steps keyed by from-version (default: `{}`) |
+| `keepBackup` | `bool` | Keep the previous save as `<slot>.backup.json` (default: `false`) |
+| `baseDirectory` | `String?` | Overrides the app documents directory (default: `null`) |
 
 ### SaveManager
 
 | Method | Description |
 |--------|-------------|
-| `initialize()` | Check for existing saves and cache slot info |
-| `save(world, {slotName, metadata})` | Save game state to a slot |
-| `load(world, {slotName})` | Load game state from a slot (returns metadata or null) |
-| `deleteSave([slotName])` | Delete a save file |
+| `initialize()` | Optional: create the save directory and cache slot info |
+| `save(world, {slotName, metadata})` | Save game state to a slot (atomic temp-file + rename) |
+| `load(world, {slotName, fromBackup})` | Migrate and load game state from a slot or its backup (returns metadata or null) |
+| `hasSaveFile([slotName])` | Whether a slot has a save file |
+| `hasBackup([slotName])` | Whether a slot has a backup file |
+| `listSaveSlots()` | List save slots, newest first (excludes backups/temp files) |
+| `deleteSave([slotName])` | Delete a save file, its backup, and any temp file |
 | `hasSaveFile([slotName])` | Check if save exists |
 | `listSaveSlots()` | List all save slots (newest first) |
 | `requestSave({metadata})` | Request a save (for event-driven saves) |

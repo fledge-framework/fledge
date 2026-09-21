@@ -47,6 +47,33 @@ void main() async {
 }
 ```
 
+## Migrations and Backups
+
+```dart
+SavePlugin(
+  config: SaveConfig(
+    gameDirectory: 'MyGame',
+    formatVersion: 2,
+    // Keyed by the version each step migrates FROM.
+    migrations: {
+      1: (data) {
+        final inv = data['resources']['inventory'] as Map<String, dynamic>;
+        inv['items'] = inv.remove('itemIds') ?? [];
+        return data;
+      },
+    },
+    keepBackup: true, // previous save kept as <slot>.backup.json
+  ),
+);
+
+// Later: fall back to the previous save if the current one won't load.
+await saveManager.load(world, slotName: 'slot1', fromBackup: true);
+```
+
+- Saves are written atomically (`<slot>.json.tmp`, then renamed), so a crash mid-save never truncates the current file.
+- Files from a newer `formatVersion`, or with a missing migration step, are refused (`load` returns `null`) without touching resources. With no `migrations` registered, older files load as-is.
+- `baseDirectory` overrides the app documents directory (useful for tests).
+
 ## Documentation
 
 See the [Fledge documentation site](https://fledge-framework.dev/docs/plugins/save) for guides, API reference, and advanced usage.

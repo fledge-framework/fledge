@@ -21,6 +21,7 @@ dependencies:
     sdk: flutter
   # Auto-discovery uses `World.resourcesOfType<T>()`, added in fledge_ecs 0.1.13.
   fledge_ecs: ^0.2.1
+  path: ^1.9.0
   path_provider: ^2.1.0
   meta: ^1.17.0
 

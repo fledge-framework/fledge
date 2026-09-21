@@ -11,7 +11,9 @@ class HourChangedEvent {
 
 /// Event fired when a new game day starts.
 ///
-/// Fired when the hour reaches [CalendarConfig.dayStartHour].
+/// Fired when the clock passes midnight, or when the day counter is
+/// advanced outside the system (e.g. `Calendar.skipToNextMorning`), in
+/// which case it arrives on the next `CalendarSystem` run.
 class DayChangedEvent {
   /// Previous day value.
   final int oldDay;
