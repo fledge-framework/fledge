@@ -173,73 +173,67 @@ void main() {
     // Before the fix, resolution stopped a moving body 1–3 px short of
     // a standing body — bounds never overlapped, so the yield timer
     // never started and the pair was blocked forever.
-    test(
-      'walking into a STANDING body still triggers yieldAfter '
-      '(regression for Batch 5 #22)',
-      () async {
-        final world = _yieldWorld();
-        const cfg = CollisionConfig(
-          blocksDynamic: true,
-          yieldAfter: Duration(milliseconds: 100),
-        );
-        // Bodies are 1 px apart on the X axis — the mover would hit
-        // the standing body on its next step. Resolution zeros the
-        // velocity so their bounds never overlap in practice.
-        final a = _dyn(world, 0, 0, vx: 4, config: cfg);
-        final b = _dyn(world, 5, 0, config: cfg);
-        final resolver = const CollisionResolutionSystem.fixed();
-        final tracker = world.getResource<ContactYieldTracker>()!;
+    test('walking into a STANDING body still triggers yieldAfter '
+        '(regression for Batch 5 #22)', () async {
+      final world = _yieldWorld();
+      const cfg = CollisionConfig(
+        blocksDynamic: true,
+        yieldAfter: Duration(milliseconds: 100),
+      );
+      // Bodies are 1 px apart on the X axis — the mover would hit
+      // the standing body on its next step. Resolution zeros the
+      // velocity so their bounds never overlap in practice.
+      final a = _dyn(world, 0, 0, vx: 4, config: cfg);
+      final b = _dyn(world, 5, 0, config: cfg);
+      final resolver = const CollisionResolutionSystem.fixed();
+      final tracker = world.getResource<ContactYieldTracker>()!;
 
-        for (var step = 0; step < 15; step++) {
-          // Re-arm the intent each step; resolution zeroes it.
-          world.get<Velocity>(a.entity)!.x = 4;
-          await resolver.run(world);
-          if (tracker.isYielding(a.entity, b.entity)) break;
-        }
-
-        expect(
-          tracker.isYielding(a.entity, b.entity),
-          isTrue,
-          reason:
-              'A walking into a standing B should yield after the '
-              'configured contact time even when their bounds never '
-              'quite overlap because resolution keeps stopping the mover.',
-        );
-
-        // Once yielding, blocking is off — A's velocity is preserved.
+      for (var step = 0; step < 15; step++) {
+        // Re-arm the intent each step; resolution zeroes it.
         world.get<Velocity>(a.entity)!.x = 4;
         await resolver.run(world);
-        expect(world.get<Velocity>(a.entity)!.x, 4.0);
-      },
-    );
+        if (tracker.isYielding(a.entity, b.entity)) break;
+      }
 
-    test(
-      'two bodies walking toward each other also start the yield timer '
-      '(regression for Batch 5 #22)',
-      () async {
-        final world = _yieldWorld();
-        const cfg = CollisionConfig(
-          blocksDynamic: true,
-          yieldAfter: Duration(milliseconds: 100),
-        );
-        // Same 1 px gap, but this time both bodies are trying to
-        // close it. Resolution will still zero both velocities, but
-        // the predicted-bounds check has to catch the pair.
-        final a = _dyn(world, 0, 0, vx: 4, config: cfg);
-        final b = _dyn(world, 5, 0, vx: -4, config: cfg);
-        final resolver = const CollisionResolutionSystem.fixed();
-        final tracker = world.getResource<ContactYieldTracker>()!;
+      expect(
+        tracker.isYielding(a.entity, b.entity),
+        isTrue,
+        reason:
+            'A walking into a standing B should yield after the '
+            'configured contact time even when their bounds never '
+            'quite overlap because resolution keeps stopping the mover.',
+      );
 
-        for (var step = 0; step < 15; step++) {
-          world.get<Velocity>(a.entity)!.x = 4;
-          world.get<Velocity>(b.entity)!.x = -4;
-          await resolver.run(world);
-          if (tracker.isYielding(a.entity, b.entity)) break;
-        }
+      // Once yielding, blocking is off — A's velocity is preserved.
+      world.get<Velocity>(a.entity)!.x = 4;
+      await resolver.run(world);
+      expect(world.get<Velocity>(a.entity)!.x, 4.0);
+    });
 
-        expect(tracker.isYielding(a.entity, b.entity), isTrue);
-      },
-    );
+    test('two bodies walking toward each other also start the yield timer '
+        '(regression for Batch 5 #22)', () async {
+      final world = _yieldWorld();
+      const cfg = CollisionConfig(
+        blocksDynamic: true,
+        yieldAfter: Duration(milliseconds: 100),
+      );
+      // Same 1 px gap, but this time both bodies are trying to
+      // close it. Resolution will still zero both velocities, but
+      // the predicted-bounds check has to catch the pair.
+      final a = _dyn(world, 0, 0, vx: 4, config: cfg);
+      final b = _dyn(world, 5, 0, vx: -4, config: cfg);
+      final resolver = const CollisionResolutionSystem.fixed();
+      final tracker = world.getResource<ContactYieldTracker>()!;
+
+      for (var step = 0; step < 15; step++) {
+        world.get<Velocity>(a.entity)!.x = 4;
+        world.get<Velocity>(b.entity)!.x = -4;
+        await resolver.run(world);
+        if (tracker.isYielding(a.entity, b.entity)) break;
+      }
+
+      expect(tracker.isYielding(a.entity, b.entity), isTrue);
+    });
 
     test('pair with only one side setting yieldAfter never yields', () async {
       final world = _yieldWorld();
