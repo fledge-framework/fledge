@@ -1,5 +1,6 @@
 import 'package:fledge_ecs/fledge_ecs.dart';
 
+import 'active_camera_view_system.dart';
 import 'follow.dart';
 import 'parallax.dart';
 import 'shake.dart';
@@ -41,6 +42,14 @@ class CameraPlugin implements Plugin {
     app.addSystem(CameraShakeSystem(), schedule: Schedules.postUpdate);
     app.addSystem(ParallaxSystem(), schedule: Schedules.postUpdate);
     app.addSystem(CameraTransitionSystem(), schedule: Schedules.postUpdate);
+    // Publishes the active camera's world position into
+    // ActiveCameraView (fledge_render_2d) so the widget render path
+    // can translate its canvas to follow the camera. Runs after the
+    // above so it picks up the fresh camera position.
+    app.addSystem(
+      const ActiveCameraViewSystem(),
+      schedule: Schedules.postUpdate,
+    );
   }
 
   @override

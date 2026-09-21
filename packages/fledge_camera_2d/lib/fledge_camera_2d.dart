@@ -22,6 +22,7 @@
 /// - [CameraPlugin] — wires the systems into an `App`.
 library;
 
+export 'src/active_camera_view_system.dart';
 export 'src/camera2d.dart';
 export 'src/camera_driver.dart';
 export 'src/camera_plugin.dart';

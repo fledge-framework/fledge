@@ -2,7 +2,12 @@ import 'dart:ui' show BlendMode, Canvas, Color, Paint, Rect;
 
 import 'package:fledge_ecs/fledge_ecs.dart' show App;
 import 'package:fledge_render_2d/fledge_render_2d.dart'
-    show CanvasSpriteDrawer, RenderWorld, SpriteDrawer, renderSpritesToDrawer;
+    show
+        CanvasSpriteDrawer,
+        RenderWorld,
+        SpriteDrawer,
+        renderSpritesToDrawer,
+        withActiveCameraCanvas;
 import 'package:flutter/widgets.dart'
     show
         BuildContext,
@@ -80,7 +85,13 @@ class _LitFledgeRenderPainter extends CustomPainter {
     final canvasDrawer = drawer is CanvasSpriteDrawer ? drawer : null;
     canvasDrawer?.beginFrame(canvas);
     try {
-      renderSpritesToDrawer(renderWorld, drawer);
+      // Sprite pass and additive lights follow the active camera
+      // (Batch 3 item 15). The ambient-multiply pass stays in screen
+      // space — it's a full-viewport rect and shouldn't scroll with
+      // the world.
+      withActiveCameraCanvas(app.world, canvas, size, () {
+        renderSpritesToDrawer(renderWorld, drawer);
+      });
     } finally {
       canvasDrawer?.endFrame();
     }
@@ -102,9 +113,11 @@ class _LitFledgeRenderPainter extends CustomPainter {
       canvas.drawRect(fullRect, paint);
     }
 
-    // Additive light pass. Runs on the same canvas so the underlying
-    // sprite pixels get brightened directly.
-    renderLightsToCanvas(renderWorld, canvas, size);
+    // Additive light pass — runs in world space so light discs stay
+    // aligned with the sprites they light up.
+    withActiveCameraCanvas(app.world, canvas, size, () {
+      renderLightsToCanvas(renderWorld, canvas, size);
+    });
   }
 
   @override

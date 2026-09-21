@@ -76,6 +76,7 @@ export 'src/transform/transform2d.dart';
 // moved to the `fledge_camera_2d` package. Add `CameraPlugin` from
 // `package:fledge_camera_2d/fledge_camera_2d.dart` alongside
 // `RenderPlugin` in your app.
+export 'src/render/camera_view.dart';
 export 'src/render/extract/camera_view.dart';
 
 // Sprite

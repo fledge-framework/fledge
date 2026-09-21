@@ -13,7 +13,7 @@ import 'package:fledge_physics/fledge_physics.dart'
         PolylineShape,
         RectangleShape;
 import 'package:fledge_render_2d/fledge_render_2d.dart'
-    show GlobalTransform2D, RenderSize;
+    show GlobalTransform2D, RenderSize, withActiveCameraCanvas;
 import 'package:flutter/widgets.dart'
     show
         BuildContext,
@@ -111,15 +111,20 @@ class _GizmoPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final world = app.world;
 
-    if (config.showAabbGizmos) {
-      _paintAabbs(world, canvas, size);
-    }
-    if (config.showColliderGizmos) {
-      _paintColliders(world, canvas, size);
-    }
-    if (config.showCameraFrustum) {
-      _paintCameraFrustum(world, canvas, size);
-    }
+    // Gizmos draw in world space, so follow the active camera the
+    // same way the sprite pass does. Falls through to world = screen
+    // when no ActiveCameraView resource is installed.
+    withActiveCameraCanvas(world, canvas, size, () {
+      if (config.showAabbGizmos) {
+        _paintAabbs(world, canvas, size);
+      }
+      if (config.showColliderGizmos) {
+        _paintColliders(world, canvas, size);
+      }
+      if (config.showCameraFrustum) {
+        _paintCameraFrustum(world, canvas, size);
+      }
+    });
   }
 
   void _paintAabbs(World world, Canvas canvas, Size size) {

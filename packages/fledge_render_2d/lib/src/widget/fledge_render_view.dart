@@ -12,6 +12,7 @@ import 'package:flutter/widgets.dart'
         Widget;
 
 import '../backend/canvas_render_context.dart' show CanvasSpriteDrawer;
+import '../render/camera_view.dart' show withActiveCameraCanvas;
 import '../render/world/render_world.dart' show RenderWorld;
 import '../sprite/extracted_sprite.dart' show ExtractedSprite;
 import '../sprite/sprite.dart' show TextureHandle;
@@ -87,7 +88,14 @@ class _FledgeRenderPainter extends CustomPainter {
     final canvasDrawer = drawer is CanvasSpriteDrawer ? drawer : null;
     canvasDrawer?.beginFrame(canvas);
     try {
-      renderSpritesToDrawer(renderWorld, drawer);
+      // Camera-aware sprite pass: if the app has an ActiveCameraView
+      // resource, translate the canvas so the camera's world position
+      // sits at the widget centre. Games without a camera (or before
+      // the camera plugin has run its first tick) fall through to a
+      // no-op — sprites draw at their raw world coordinates.
+      withActiveCameraCanvas(app.world, canvas, size, () {
+        renderSpritesToDrawer(renderWorld, drawer);
+      });
     } finally {
       canvasDrawer?.endFrame();
     }
