@@ -116,9 +116,14 @@ class SpriteBatchSystem implements RenderSystem {
         () => SpriteBatch(sprite.texture),
       );
 
-      // Compute destination rect based on size and anchor
-      final anchorOffsetX = (sprite.anchor.x - 0.5) * sprite.size.x;
-      final anchorOffsetY = (sprite.anchor.y - 0.5) * sprite.size.y;
+      // Compute destination rect based on size and anchor. Anchor is
+      // normalised in [0..1] and describes where inside the sprite
+      // the entity's transform points; the local destRect extends
+      // AWAY from that anchor. Feet anchor (0.5, 1.0) should have
+      // the sprite's bottom edge at the entity position → the rect's
+      // centre is `size.y / 2` ABOVE origin, hence `(0.5 - anchor)`.
+      final anchorOffsetX = (0.5 - sprite.anchor.x) * sprite.size.x;
+      final anchorOffsetY = (0.5 - sprite.anchor.y) * sprite.size.y;
 
       final destRect = Rect.fromCenter(
         center: Offset(anchorOffsetX, anchorOffsetY),

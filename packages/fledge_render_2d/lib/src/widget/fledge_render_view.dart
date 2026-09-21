@@ -133,8 +133,14 @@ void renderSpritesToDrawer(RenderWorld renderWorld, SpriteDrawer drawer) {
 /// widget path produces identical geometry to the render-graph
 /// path.
 BackendSpriteData _toBackendSprite(ExtractedSprite s) {
-  final anchorOffsetX = (s.anchor.x - 0.5) * s.size.x;
-  final anchorOffsetY = (s.anchor.y - 0.5) * s.size.y;
+  // `anchor` is normalised in [0..1] and describes where inside the
+  // sprite the entity's transform points at. Feet anchor (0.5, 1.0)
+  // should place the entity at the sprite's BOTTOM edge, so the local
+  // destRect must extend UPward by `size.y` from the entity position.
+  // Hence `(0.5 - anchor) * size` instead of `(anchor - 0.5) * size`,
+  // which was mirrored.
+  final anchorOffsetX = (0.5 - s.anchor.x) * s.size.x;
+  final anchorOffsetY = (0.5 - s.anchor.y) * s.size.y;
   final destRect = Rect.fromCenter(
     center: Offset(anchorOffsetX, anchorOffsetY),
     width: s.size.x,
