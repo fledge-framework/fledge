@@ -9,10 +9,10 @@ environment:
 resolution: workspace
 
 dependencies:
-  fledge_ecs: ^0.2.1
-  fledge_ecs_annotations: ^0.2.1
+  fledge_ecs: ^0.2.2
+  fledge_ecs_annotations: ^0.2.2
 
 dev_dependencies:
   build_runner: ^2.4.0
-  fledge_ecs_generator: ^0.2.1
+  fledge_ecs_generator: ^0.2.2
   lints: ^6.0.0

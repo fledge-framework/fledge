@@ -15,13 +15,13 @@ dependencies:
     sdk: flutter
 
   # Fledge ECS
-  fledge_ecs: ^0.2.1
+  fledge_ecs: ^0.2.2
 
   # Fledge Input
-  fledge_input: ^0.2.1
+  fledge_input: ^0.2.2
 
   # Fledge Render (for two-world architecture)
-  fledge_render: ^0.2.1
+  fledge_render: ^0.2.2
 
   # Drifter example — embedded as an interactive demo.
   drifter_example:
