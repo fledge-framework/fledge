@@ -88,6 +88,10 @@ export 'src/broad_phase/spatial_hash.dart';
 export 'src/pathfinding/collision_grid.dart';
 export 'src/pathfinding/pathfinder.dart';
 
+// Modes / timing
+export 'src/physics_mode.dart';
+
 // Systems
 export 'src/systems/collision_detection.dart';
 export 'src/systems/collision_resolution.dart';
+export 'src/systems/velocity_integration.dart';

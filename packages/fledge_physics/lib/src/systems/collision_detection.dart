@@ -56,12 +56,11 @@ class CollisionDetectionSystem implements System {
       ComponentId.of<CollisionConfig>(),
     },
     // Detection writes only the event queue — no more component
-    // churn from per-frame CollisionEvent insert/remove. We still
-    // declare an explicit ordering vs resolution because both
-    // systems live in Schedules.update and resolution clamps
-    // velocities before integration.
+    // churn from per-frame CollisionEvent insert/remove. Explicit
+    // ordering: resolution clamps Velocity, integration then moves
+    // Transform2D, and detection sees the final post-move positions.
     eventWrites: {CollisionEvent},
-    after: const ['collision_resolution'],
+    after: const ['collision_resolution', 'velocity_integration'],
   );
 
   @override

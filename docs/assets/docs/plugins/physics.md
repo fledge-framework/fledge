@@ -40,20 +40,41 @@ void main() async {
 
 ## Core Concepts
 
-### Collision Detection vs Resolution
+### Collision Resolution, Integration, Detection
 
-fledge_physics provides two complementary systems:
+fledge_physics runs three systems per step, in a fixed order:
 
-1. **Collision Resolution** - Adjusts velocity to prevent entities from moving into solid colliders. Runs *before* position is updated.
+1. **Collision Resolution** - Clamps `Velocity` to zero on axes that would move the entity into a solid collider.
+2. **Velocity Integration** - Applies the clamped `Velocity` to `Transform2D` (`translation += velocity × dt`).
+3. **Collision Detection** - Generates `CollisionEvent`s on entities that overlap after the move.
 
-2. **Collision Detection** - Generates `CollisionEvent` components on entities that overlap. Runs *after* position is updated.
+The order is declared on each system's `SystemMeta`, so plugin registration order doesn't matter.
 
-This two-phase approach ensures:
-- Entities can't walk through walls (resolution)
-- You still receive events for touching walls (detection)
-- Trigger zones generate events without blocking (sensors)
+This layout ensures:
+- Entities can't walk through walls (resolution zeroes the blocked axis; integration then can't move them into it).
+- You still receive events for touching walls (detection).
+- Trigger zones generate events without blocking (sensors).
 
 The resolution system uses **wall-sliding**: when an entity is blocked diagonally, it allows movement along the unblocked axis. For example, walking into a wall at an angle will slide along the wall rather than stopping completely.
+
+### Fixed timestep vs variable timestep
+
+`PhysicsPlugin` runs in one of two modes, selected via `PhysicsConfig.mode`:
+
+| Mode | Schedule | dt source |
+|------|----------|-----------|
+| `PhysicsMode.variable` (default) | `Schedules.update` | `WallTime.delta` |
+| `PhysicsMode.fixed` | `Schedules.fixedUpdate` | `FixedTimestep.stepSeconds` |
+
+In both modes, `Velocity` is expressed in **pixels per 60 Hz frame**. `Velocity(0, 4)` produces 240 px/s regardless of mode or step. This means the exact same game code and existing tuning survive the switch.
+
+Fixed mode is required for deterministic simulation — netcode prediction, replays, lockstep multiplayer. Systems that write `Velocity` (input, AI, knockback) must run in `Schedules.fixedPreUpdate` or declare `before: ['collision_resolution']`.
+
+```dart
+app.addPlugin(PhysicsPlugin(
+  config: PhysicsConfig(mode: PhysicsMode.fixed),
+));
+```
 
 ### Static vs Dynamic Entities
 

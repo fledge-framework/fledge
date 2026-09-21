@@ -7,11 +7,24 @@ import '../collision/collision_shapes.dart';
 import '../components/collision_config.dart';
 import '../components/velocity.dart';
 import '../layers/collision_layers.dart';
+import '../physics_mode.dart';
 
 /// Adjusts velocity to prevent movement into solid colliders.
 ///
 /// Implements wall-sliding: if blocked diagonally, still allows
 /// movement along unblocked axes.
+///
+/// ## Timing
+///
+/// The dt source depends on [PhysicsMode]:
+///
+/// - [PhysicsMode.variable] (default) reads `WallTime.delta`.
+///   Schedule in `Schedules.update`.
+/// - [PhysicsMode.fixed] reads `FixedTimestep.stepSeconds`. Schedule
+///   in `Schedules.fixedUpdate` alongside [VelocityIntegrationSystem].
+///
+/// Velocity is interpreted as pixels per 60 Hz frame in either mode
+/// so game code and existing tests survive the mode switch.
 ///
 /// ## Layer Filtering
 ///
@@ -30,8 +43,14 @@ import '../layers/collision_layers.dart';
 ///
 /// Only dynamic entities have their movement resolved against static ones.
 class CollisionResolutionSystem implements System {
-  /// Creates a collision resolution system.
-  const CollisionResolutionSystem();
+  /// Which clock this system reads.
+  final PhysicsMode mode;
+
+  /// Creates a variable-timestep resolution system.
+  const CollisionResolutionSystem() : mode = PhysicsMode.variable;
+
+  /// Creates a fixed-timestep resolution system.
+  const CollisionResolutionSystem.fixed() : mode = PhysicsMode.fixed;
 
   @override
   SystemMeta get meta => SystemMeta(
@@ -42,7 +61,7 @@ class CollisionResolutionSystem implements System {
       ComponentId.of<CollisionConfig>(),
     },
     writes: {ComponentId.of<Velocity>()},
-    resourceReads: {WallTime},
+    resourceReads: mode == PhysicsMode.fixed ? {FixedTimestep} : {WallTime},
   );
 
   @override
@@ -53,11 +72,20 @@ class CollisionResolutionSystem implements System {
 
   @override
   Future<void> run(World world) async {
-    final time = world.getResource<WallTime>();
-    if (time == null || time.delta == 0) return;
+    final double dt;
+    if (mode == PhysicsMode.fixed) {
+      final ft = world.getResource<FixedTimestep>();
+      if (ft == null) return;
+      dt = ft.stepSeconds;
+    } else {
+      final wt = world.getResource<WallTime>();
+      if (wt == null || wt.delta == 0) return;
+      dt = wt.delta;
+    }
+    if (dt <= 0) return;
 
-    // Scale factor for velocity (matches VelocityApplySystem)
-    final timeScale = time.delta / 0.01667;
+    // Scale factor for velocity — pixels-per-60Hz-frame → pixels-per-step.
+    final timeScale = dt / physicsReferenceFrameSeconds;
 
     // Build list of static collider shapes with layer info
     // Static = has Collider, no Velocity, not a sensor
