@@ -110,21 +110,22 @@ void main() {
       expect(rst.ssin, closeTo(1.5 * math.sin(r), 1e-6));
     });
 
-    test('non-zero source origin folds through offset', () {
-      // Atlas region starting at (64, 128), same size 32×32; sprite
-      // centred at origin. The RSTransform anchor lands at the
-      // source's top-left (64, 128), so tx/ty should shift by that
-      // amount when scale=1, rotation=0.
+    test('non-zero source origin: source top-left maps to destRect.topLeft', () {
+      // `Canvas.drawRawAtlas` subtracts the source rect's top-left
+      // internally when mapping corners through the RSTransform, so
+      // the atlas position does NOT re-appear in tx/ty. The
+      // RSTransform's job is only to place the dest rect's local
+      // origin (its top-left) inside world space.
       final rst = composeSpriteRSTransform(
         transform: Matrix3.identity(),
         sourceRect: const Rect.fromLTWH(64, 128, 32, 32),
         destRect: const Rect.fromLTRB(-16, -16, 16, 16),
       );
-      // x_world at src (64, 128) = 1 * (destL - k * srcL) = -16 - 64
-      //                          = -80.
-      // y_world = destT - srcT = -16 - 128 = -144.
-      expect(rst.tx, closeTo(-80, 1e-6));
-      expect(rst.ty, closeTo(-144, 1e-6));
+      // Regression for the "atlas / tile frames draw shifted" bug —
+      // Porios's render goldens flagged this. Expected: tx = destL,
+      // ty = destT (source coordinates handled by drawRawAtlas).
+      expect(rst.tx, closeTo(-16, 1e-6));
+      expect(rst.ty, closeTo(-16, 1e-6));
     });
 
     test('handles zero-sized source rect without dividing by zero', () {

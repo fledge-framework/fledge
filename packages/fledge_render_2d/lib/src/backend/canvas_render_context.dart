@@ -316,23 +316,23 @@ SpriteRSTransform composeSpriteRSTransform({
   final rsScos = a * k;
   final rsSsin = b * k;
 
-  // Composition: local point (x_l, y_l) = (x_src * k + destRect.left
-  // - sourceRect.left * k, y_src * k + destRect.top - sourceRect.top
-  // * k). Then world = M * local. Expanded, this gives:
+  // `Canvas.drawRawAtlas` maps each source-rect corner *relative to
+  // the source rect's top-left* — i.e. (srcL, srcT) is treated as
+  // local (0, 0) and mapped to (tx, ty). The compose function
+  // therefore does NOT need to subtract `sourceRect.topLeft` here.
+  // We only compose the local-quad offset (destRect.topLeft) with
+  // the world transform:
   //
-  //   x_world = (a*k) * x_src + (c*k) * y_src
-  //           + a * (destL - k*srcL) + c * (destT - k*srcT) + e
-  //   y_world = (b*k) * x_src + (d*k) * y_src
-  //           + b * (destL - k*srcL) + d * (destT - k*srcT) + f
+  //   x_world = (a*k) * u + (c*k) * v + a * destL + c * destT + e
+  //   y_world = (b*k) * u + (d*k) * v + b * destL + d * destT + f
   //
-  // where c = -b and d = a for our similarity transform. Match
-  // against the RSTransform form to read off tx/ty.
+  // where (u, v) is the source-rect-local corner (Skia handles the
+  // subtraction), c = -b, and d = a for our similarity transform.
+  // Match against the RSTransform form to read off tx/ty.
   final c = -b;
   final d = a;
-  final offX = destRect.left - k * sourceRect.left;
-  final offY = destRect.top - k * sourceRect.top;
-  final tx = a * offX + c * offY + e;
-  final ty = b * offX + d * offY + f;
+  final tx = a * destRect.left + c * destRect.top + e;
+  final ty = b * destRect.left + d * destRect.top + f;
 
   return SpriteRSTransform(
     scos: rsScos,
