@@ -8,7 +8,7 @@ Full-featured audio plugin for [Fledge](https://fledge-framework.dev) games — 
 
 ```yaml
 dependencies:
-  fledge_audio: ^0.2.0
+  fledge_audio: ^0.2.1
 ```
 
 ## Quick Start

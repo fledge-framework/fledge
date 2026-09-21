@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1] - 2026-09-20
+
+### Changed
+
+- SDK floor bumped to Dart `>=3.11.0` / Flutter `>=3.41.0` (was 3.6 / 3.38). Matches the workspace-wide floor.
+
+
 ## [0.2.0] - 2026-09-20
 
 ### Deprecated

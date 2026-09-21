@@ -8,7 +8,7 @@ Annotations for the [Fledge](https://fledge-framework.dev) ECS framework. Used w
 
 ```yaml
 dependencies:
-  fledge_ecs_annotations: ^0.2.0
+  fledge_ecs_annotations: ^0.2.1
 ```
 
 ## Quick Start

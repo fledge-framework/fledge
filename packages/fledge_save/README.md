@@ -8,7 +8,7 @@ Save/load system for [Fledge](https://fledge-framework.dev) games. Resource seri
 
 ```yaml
 dependencies:
-  fledge_save: ^0.2.0
+  fledge_save: ^0.2.1
 ```
 
 ## Quick Start

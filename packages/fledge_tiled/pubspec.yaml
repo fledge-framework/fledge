@@ -1,6 +1,6 @@
 name: fledge_tiled
 description: Tiled tilemap support for the Fledge ECS game framework. Load TMX/TSX maps and integrate with the Fledge render system.
-version: 0.2.0
+version: 0.2.1
 repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_tiled
 homepage: https://fledge-framework.dev
 issue_tracker: https://github.com/fledge-framework/fledge/issues
@@ -13,23 +13,16 @@ resolution: workspace
 dependencies:
   flutter:
     sdk: flutter
-  fledge_assets: ^0.2.0
-  fledge_ecs: ^0.2.0
-  fledge_physics: ^0.2.0
-  fledge_render: ^0.2.0
-  fledge_render_2d: ^0.2.0
-  fledge_camera_2d: ^0.2.0
-  tiled: ^0.11.1
+  fledge_assets: ^0.2.1
+  fledge_ecs: ^0.2.1
+  fledge_physics: ^0.2.1
+  fledge_render: ^0.2.1
+  fledge_render_2d: ^0.2.1
+  fledge_camera_2d: ^0.2.1
+  tiled: ^0.12.0
   vector_math: ^2.2.0
   meta: ^1.17.0
-  # TODO(fledge_tiled 0.3.x): widen to `>=6.6.1 <8.0.0` once we upgrade the
-  # `tiled` dependency to 0.12.x. tiled 0.11.1 still requires `xml ^6.1.0`,
-  # so bumping xml here without also bumping tiled would fail resolution.
-  # tiled 0.12.0 additionally requires Dart SDK >=3.11 and reworks the
-  # external-tileset API (TsxProvider -> ParserProvider, TileMapParser.parseTmx
-  # -> TiledMap.fromString), so the upgrade is deferred until the Fledge
-  # SDK floor moves.
-  xml: ^6.6.1
+  xml: ^7.0.0
 
 dev_dependencies:
   flutter_test:

@@ -8,7 +8,7 @@ Multiplayer networking for [Fledge](https://fledge-framework.dev) games — host
 
 ```yaml
 dependencies:
-  fledge_net: ^0.2.0
+  fledge_net: ^0.2.1
 ```
 
 ## Quick Start

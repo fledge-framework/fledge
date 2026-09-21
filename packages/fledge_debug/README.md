@@ -8,7 +8,7 @@ Runtime observability for [Fledge](https://fledge-framework.dev) — FPS / entit
 
 ```yaml
 dependencies:
-  fledge_debug: ^0.2.0
+  fledge_debug: ^0.2.1
 ```
 
 ## Quick Start

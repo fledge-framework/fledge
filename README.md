@@ -79,7 +79,7 @@ Add Fledge to your project:
 
 ```yaml
 dependencies:
-  fledge_ecs: ^0.2.0
+  fledge_ecs: ^0.2.1
 ```
 
 Create your first ECS app:

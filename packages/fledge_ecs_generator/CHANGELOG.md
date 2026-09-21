@@ -1,10 +1,12 @@
 # Changelog
 
-## [Unreleased]
+## [0.2.1] - 2026-09-20
 
 ### Changed
 
 - Widened the `analyzer` dependency constraint from `^12.0.0` to `>=12.0.0 <15.0.0` so the package accepts the current stable `analyzer` (14.x) alongside 12.x/13.x. The generator only touches `Element`/`InterfaceType` APIs that are stable across all three major versions. Clears the pana "constraint doesn't accept latest stable" signal.
+- SDK floor bumped to Dart `>=3.11.0` (was 3.6). Matches the workspace-wide floor.
+
 
 ## [0.2.0] - 2026-09-20
 

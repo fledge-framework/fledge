@@ -1,5 +1,5 @@
 import 'package:fledge_physics/fledge_physics.dart';
-import 'package:tiled/tiled.dart' show TileLayer, TileMapParser;
+import 'package:tiled/tiled.dart' show TileLayer, TiledMap;
 
 import '../resources/tilemap_assets.dart';
 
@@ -115,7 +115,7 @@ CollisionGrid extractCollisionGridFromTmx(
 
   try {
     // Parse TMX without loading external tilesets (we only need layer data)
-    final tiledMap = TileMapParser.parseTmx(tmxContent);
+    final tiledMap = TiledMap.parseTmx(tmxContent);
 
     // Process collision layers
     for (final layer in tiledMap.layers) {

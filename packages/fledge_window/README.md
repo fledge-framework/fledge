@@ -8,7 +8,7 @@ Window management plugin for [Fledge](https://fledge-framework.dev) games. Fulls
 
 ```yaml
 dependencies:
-  fledge_window: ^0.2.0
+  fledge_window: ^0.2.1
 ```
 
 ## Quick Start

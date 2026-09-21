@@ -1,16 +1,12 @@
 # Changelog
 
-## Unreleased
+## [0.2.1] - 2026-09-20
 
 ### Changed
 
-- Widened `flutter_soloud` constraint to `>=3.4.8 <6.0.0` so pub can resolve
-  the current stable 4.x/5.x line. The 4.0.0 release made `SoLoud.play`
-  (and friends) synchronous; the internal call sites no longer `await`
-  the returned `SoundHandle`.
-- Bumped the SDK floor to Dart `>=3.11.0` and Flutter `>=3.41.0`, matching
-  flutter_soloud 4.0's own minimum. This is required for pub to pick a 4.x/5.x
-  version when this package is consumed.
+- Widened `flutter_soloud` constraint to `>=4.0.0 <6.0.0` (was `^3.4.8`) so pub can resolve the current stable 4.x/5.x line. The 4.0.0 release made `SoLoud.play`, `play3d`, and `speechText` synchronous (return `SoundHandle` directly instead of `Future<SoundHandle>`); the internal call sites in `audio_event_system.dart` and `spatial_audio_system.dart` no longer `await` them.
+- SDK floor bumped to Dart `>=3.11.0` / Flutter `>=3.41.0` (was 3.6 / 3.38). Required by `flutter_soloud` 4.x+ and the workspace-wide floor.
+
 
 ## [0.2.0] - 2026-09-20
 

@@ -15,8 +15,8 @@ depend on `fledge_render_2d` directly.
 
 ```yaml
 dependencies:
--  fledge_render: ^0.2.0
-+  fledge_render_2d: ^0.2.0
+-  fledge_render: ^0.2.1
++  fledge_render_2d: ^0.2.1
 ```
 
 ```dart

@@ -8,7 +8,7 @@ Retained-mode game HUD/UI for [Fledge](https://fledge-framework.dev) — anchor-
 
 ```yaml
 dependencies:
-  fledge_ui: ^0.2.0
+  fledge_ui: ^0.2.1
 ```
 
 ## Quick Start

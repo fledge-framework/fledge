@@ -8,7 +8,7 @@
 
 ```yaml
 dependencies:
-  fledge_tiled: ^0.2.0
+  fledge_tiled: ^0.2.1
 ```
 
 ## Quick Start

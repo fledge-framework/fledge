@@ -20,8 +20,8 @@ typedefs), but new code should depend on `fledge_calendar` directly.
 
 ```yaml
 dependencies:
--  fledge_time: ^0.2.0
-+  fledge_calendar: ^0.2.0
+-  fledge_time: ^0.2.1
++  fledge_calendar: ^0.2.1
 ```
 
 ```dart

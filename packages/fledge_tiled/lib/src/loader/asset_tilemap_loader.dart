@@ -71,15 +71,13 @@ class AssetTilemapLoader implements TilemapLoader {
     Future<String> Function(String path) tsxLoader, {
     String sourcePath = '',
   }) async {
-    // Pre-load all TSX files referenced in the TMX
-    final tsxProviders = await _loadTsxProviders(
-      tmxContent,
-      basePath,
-      tsxLoader,
-    );
+    // Pre-load all TSX files referenced in the TMX and expose them through a
+    // ParserProvider so that `TiledMap.parseTmx` can resolve external tilesets
+    // synchronously.
+    final provider = await _loadTsxProvider(tmxContent, basePath, tsxLoader);
 
     // Parse the TMX file
-    final tiledMap = TileMapParser.parseTmx(tmxContent, tsxList: tsxProviders);
+    final tiledMap = TiledMap.parseTmx(tmxContent, providers: [provider]);
 
     // Load all tilesets
     final loadedTilesets = <LoadedTileset>[];
@@ -222,33 +220,32 @@ class AssetTilemapLoader implements TilemapLoader {
     );
   }
 
-  /// Pre-loads all TSX files referenced in the TMX content.
-  Future<List<TsxProvider>> _loadTsxProviders(
+  /// Pre-loads all TSX files referenced in the TMX content and wraps them in a
+  /// [ParserProvider] keyed by the source path exactly as it appears in the
+  /// map (paths are always relative to the map file — see [ParserProvider]).
+  Future<_FledgeTsxProvider> _loadTsxProvider(
     String tmxContent,
     String basePath,
     Future<String> Function(String path) loadString,
   ) async {
-    // Parse the TMX to find tileset sources
+    // Parse the TMX to find tileset sources.
     final doc = XmlDocument.parse(tmxContent);
     final tilesetElements = doc.rootElement.findElements('tileset');
 
-    final providers = <TsxProvider>[];
+    final contents = <String, String>{};
 
     for (final element in tilesetElements) {
       final source = element.getAttribute('source');
-      if (source != null) {
-        final tsxPath = _resolvePath(basePath, source);
+      if (source == null) continue;
 
-        // Load the TSX content if not cached
-        if (!_tsxCache.containsKey(tsxPath)) {
-          _tsxCache[tsxPath] = await loadString(tsxPath);
-        }
+      final tsxPath = _resolvePath(basePath, source);
 
-        providers.add(_FledgeTsxProvider(source, _tsxCache[tsxPath]!));
-      }
+      // Load the TSX content if not cached (cache is shared across map loads).
+      final content = _tsxCache[tsxPath] ??= await loadString(tsxPath);
+      contents[source] = content;
     }
 
-    return providers;
+    return _FledgeTsxProvider(contents);
   }
 
   List<CollisionShape> _parseCollisionObject(TiledObject obj) {
@@ -300,24 +297,22 @@ class AssetTilemapLoader implements TilemapLoader {
   }
 }
 
-/// TSX provider that provides pre-loaded external tileset content.
-class _FledgeTsxProvider extends TsxProvider {
-  final String _filename;
-  final String _content;
-  Parser? _cachedParser;
+/// [ParserProvider] that serves pre-loaded external tileset (TSX) content.
+///
+/// The provider is populated up-front with a map of `source` path (exactly as
+/// written in the TMX, i.e. relative to the map file) to the TSX content.
+/// Parsed [Parser]s are cached per-path so subsequent lookups reuse them.
+class _FledgeTsxProvider implements ParserProvider {
+  final Map<String, String> _contents;
+  final Map<String, Parser> _parserCache = {};
 
-  _FledgeTsxProvider(this._filename, this._content);
+  _FledgeTsxProvider(this._contents);
 
   @override
-  String get filename => _filename;
+  bool canProvide(String path) => _contents.containsKey(path);
 
   @override
-  Parser getSource(String fileName) {
-    // Parse and cache the TSX content
-    _cachedParser ??= XmlParser(XmlDocument.parse(_content).rootElement);
-    return _cachedParser!;
+  Parser getSource(String path) {
+    return _parserCache[path] ??= Parser.fromString(_contents[path]!);
   }
-
-  @override
-  Parser? getCachedSource() => _cachedParser;
 }
