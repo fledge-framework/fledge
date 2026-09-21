@@ -139,7 +139,7 @@ class CollisionResolutionSystem implements System {
     // set and the game has installed the tracker resource).
     final tracker = world.getResource<ContactYieldTracker>();
     if (tracker != null) {
-      _updateYieldTracker(world, blockers, tracker, dt);
+      _updateYieldTracker(world, blockers, tracker, dt, timeScale);
     }
 
     // Resolve collisions for all moving entities
@@ -282,11 +282,23 @@ class _Blocker {
 /// Advance per-pair contact ages, flip the yielding state where the
 /// threshold has been crossed, and emit yield events. The resolver's
 /// blocker filter reads back through [ContactYieldTracker.isYielding].
+///
+/// A pair counts as "in contact" this step when either:
+///
+/// 1. Their bounds *currently* overlap (bodies pushed into each other
+///    or already occupying the same space).
+/// 2. Their bounds *would* overlap if each moved by its velocity this
+///    step (Δ = velocity × timeScale). This case covers the very
+///    common scenario where the resolver clamps velocity BEFORE two
+///    blocksDynamic bodies actually touch — bug 22 in the Porios
+///    Batch 5 handoff. Without this check the pair sits a fraction of
+///    a pixel apart forever and contact age never accumulates.
 void _updateYieldTracker(
   World world,
   List<_Blocker> blockers,
   ContactYieldTracker tracker,
   double dt,
+  double timeScale,
 ) {
   // Filter to dynamic bodies with a yieldAfter threshold — only those
   // can participate in a yielding pair.
@@ -333,7 +345,7 @@ void _updateYieldTracker(
       // meaning.
       if ((a.layer & b.mask) == 0 || (b.layer & a.mask) == 0) continue;
 
-      if (!a.bounds.overlaps(b.bounds)) continue;
+      if (!_pairInContact(world, a, b, timeScale)) continue;
 
       final key = contactYieldPairKey(a.entity, b.entity);
       touchedPairs.add(key);
@@ -374,4 +386,38 @@ void _updateYieldTracker(
       }
     }
   }
+}
+
+/// True when [a] and [b] are in contact this step for the purposes of
+/// yield-timer accounting.
+///
+/// Uses two signals:
+///
+/// - Their current world-space bounds already overlap.
+/// - OR the predicted post-move bounds (each translated by
+///   `velocity × timeScale`) overlap. This mirrors what the resolver
+///   would compute one loop iteration later, so any pair whose
+///   movement it is about to clamp is counted as in contact this
+///   step. Fixes the "walk into a standing body" corner case where
+///   the pair sat a fraction of a pixel apart forever and never
+///   overlapped.
+bool _pairInContact(World world, _Blocker a, _Blocker b, double timeScale) {
+  if (a.bounds.overlaps(b.bounds)) return true;
+  final aNext = _predictedBounds(world, a, timeScale);
+  final bNext = _predictedBounds(world, b, timeScale);
+  return aNext.overlaps(bNext) ||
+      aNext.overlaps(b.bounds) ||
+      a.bounds.overlaps(bNext);
+}
+
+/// Translate [blocker]'s bounds by its velocity × [timeScale] so the
+/// contact check can see where the mover WOULD be if the resolver did
+/// not clamp it. Non-dynamic bodies keep their current bounds. A
+/// dynamic body without a Velocity component (odd but possible)
+/// likewise stays put.
+Rect _predictedBounds(World world, _Blocker blocker, double timeScale) {
+  if (!blocker.isDynamic) return blocker.bounds;
+  final v = world.get<Velocity>(blocker.entity);
+  if (v == null || !v.isMoving) return blocker.bounds;
+  return blocker.bounds.translate(v.x * timeScale, v.y * timeScale);
 }
