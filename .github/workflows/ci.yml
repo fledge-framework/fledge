@@ -100,20 +100,24 @@ jobs:
       - name: Run tests
         run: melos run test
 
-  # Pana measures pub.dev package scores; the analysis itself is
-  # platform-agnostic, so Linux-only is fine.
+  # Pana measures pub.dev package scores.
   #
-  # `continue-on-error: true` — during a coordinated multi-package
-  # release (like v0.2.0), pana fails on any package that has an
-  # unreleased cross-Fledge dep at the new version: pana runs
-  # `dart pub get` in an isolated sandbox with no workspace, so
-  # `fledge_ecs: ^0.2.0` can't resolve until the new version is on
-  # pub.dev. That's expected transitional noise, not a real regression.
-  # Pana still runs and reports scores in the job output; CI just
-  # doesn't fail on it. Remove the flag once v0.2.0 is published and
-  # cross-package deps resolve cleanly again.
+  # Only runs on tag pushes (releases) or manual dispatch — NOT on
+  # regular main pushes or PRs. Reasoning: pana runs `dart pub get` in
+  # an isolated sandbox with no workspace, so during a coordinated
+  # multi-package release it can't resolve cross-Fledge deps at the
+  # new version until they're actually on pub.dev. Running pana before
+  # the release lands guarantees red job cards on every commit that
+  # includes a version bump. Deferring to tag push means pana runs
+  # after `publish-packages.yml` has uploaded the new versions, so
+  # constraints resolve cleanly.
+  #
+  # `continue-on-error: true` kept as belt-and-suspenders — if pana
+  # transiently fails on the tag-push run (pub.dev propagation lag,
+  # score-threshold quirks), the workflow still succeeds.
   pana:
     name: Pana Analysis
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     continue-on-error: true
     strategy:
@@ -157,9 +161,12 @@ jobs:
         run: dart pub global activate pana
 
       - name: Run Pana on ${{ matrix.package }}
+        # `dart pub global run pana` (not just `pana`) so we don't depend
+        # on `~/.pub-cache/bin` being on PATH — which caused exit 127
+        # after pana printed its score in earlier runs.
         run: |
           cd packages/${{ matrix.package }}
-          pana --no-warning --exit-code-threshold 0
+          dart pub global run pana --no-warning --exit-code-threshold 0
 
   build-examples:
     name: Build Examples (${{ matrix.os }})
