@@ -11,21 +11,23 @@ void main() {
   });
 
   group('Duplicate system names in one schedule', () {
-    test('two systems with the same name can coexist without dropping one',
-        () async {
-      final order = <String>[];
-      final schedule = Scheduler();
-      // Two independent systems named "propagate". Both should run.
-      schedule.addSystem(
-        FunctionSystem('propagate', run: (_) => order.add('propagate#1')),
-      );
-      schedule.addSystem(
-        FunctionSystem('propagate', run: (_) => order.add('propagate#2')),
-      );
-      await schedule.run(World());
-      expect(order.length, 2);
-      expect(order.toSet(), {'propagate#1', 'propagate#2'});
-    });
+    test(
+      'two systems with the same name can coexist without dropping one',
+      () async {
+        final order = <String>[];
+        final schedule = Scheduler();
+        // Two independent systems named "propagate". Both should run.
+        schedule.addSystem(
+          FunctionSystem('propagate', run: (_) => order.add('propagate#1')),
+        );
+        schedule.addSystem(
+          FunctionSystem('propagate', run: (_) => order.add('propagate#2')),
+        );
+        await schedule.run(World());
+        expect(order.length, 2);
+        expect(order.toSet(), {'propagate#1', 'propagate#2'});
+      },
+    );
 
     test(
       'after: [name] runs downstream of EVERY registered system with that name',
@@ -48,8 +50,12 @@ void main() {
         await schedule.run(World());
         // Both propagate instances must land before follow, in some order.
         final pIndices = [order.indexOf('p1'), order.indexOf('p2')];
-        expect(order.indexOf('follow'),
-            greaterThan(pIndices[0].compareTo(pIndices[1]) < 0 ? pIndices[1] : pIndices[0]));
+        expect(
+          order.indexOf('follow'),
+          greaterThan(
+            pIndices[0].compareTo(pIndices[1]) < 0 ? pIndices[1] : pIndices[0],
+          ),
+        );
       },
     );
 

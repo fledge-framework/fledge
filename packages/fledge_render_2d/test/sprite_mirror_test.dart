@@ -51,11 +51,7 @@ Future<Image> _rasterise({
   drawer.drawSpriteBatch(handle, [
     BackendSpriteData(
       sourceRect: const Rect.fromLTWH(0, 0, 4, 4),
-      destRect: Rect.fromCenter(
-        center: Offset.zero,
-        width: 4,
-        height: 4,
-      ),
+      destRect: Rect.fromCenter(center: Offset.zero, width: 4, height: 4),
       transform: Matrix3.identity()..setValues(1, 0, 0, 0, 1, 0, 2, 2, 1),
       color: const Color(0xFFFFFFFF),
       flipFlags: flipFlags,
@@ -92,10 +88,16 @@ void main() {
       outputSize: 4,
     );
     final bytes = await out.toByteData();
-    expect(_isRedish(_pixelArgb(bytes!, 0, 2, 4)), isTrue,
-        reason: 'left column should be red');
-    expect(_isBluish(_pixelArgb(bytes, 3, 2, 4)), isTrue,
-        reason: 'right column should be blue');
+    expect(
+      _isRedish(_pixelArgb(bytes!, 0, 2, 4)),
+      isTrue,
+      reason: 'left column should be red',
+    );
+    expect(
+      _isBluish(_pixelArgb(bytes, 3, 2, 4)),
+      isTrue,
+      reason: 'right column should be blue',
+    );
   });
 
   test('flipX: colours swap left/right (regression for Batch 3 #16)', () async {
@@ -107,10 +109,16 @@ void main() {
       outputSize: 4,
     );
     final bytes = await out.toByteData();
-    expect(_isBluish(_pixelArgb(bytes!, 0, 2, 4)), isTrue,
-        reason: 'flipX should put blue on the left');
-    expect(_isRedish(_pixelArgb(bytes, 3, 2, 4)), isTrue,
-        reason: 'flipX should put red on the right');
+    expect(
+      _isBluish(_pixelArgb(bytes!, 0, 2, 4)),
+      isTrue,
+      reason: 'flipX should put blue on the left',
+    );
+    expect(
+      _isRedish(_pixelArgb(bytes, 3, 2, 4)),
+      isTrue,
+      reason: 'flipX should put red on the right',
+    );
   });
 
   test('flipY: same-column colours are unchanged (X still ok)', () async {

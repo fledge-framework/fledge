@@ -324,31 +324,28 @@ void main() {
       expect(feetAnchor.anchor.y, 1.0);
     });
 
-    test(
-      'AtlasSpriteExtractor forwards the anchor onto ExtractedSprite '
-      '(regression for Batch 4 #21)',
-      () {
-        const texture = TextureHandle(id: 1, width: 64, height: 64);
-        final atlas = TextureAtlas.grid(texture: texture, columns: 2, rows: 2);
+    test('AtlasSpriteExtractor forwards the anchor onto ExtractedSprite '
+        '(regression for Batch 4 #21)', () {
+      const texture = TextureHandle(id: 1, width: 64, height: 64);
+      final atlas = TextureAtlas.grid(texture: texture, columns: 2, rows: 2);
 
-        final world = World();
-        final renderWorld = RenderWorld();
-        final gt = GlobalTransform2D()
-          ..matrix.setValues(1, 0, 0, 0, 1, 0, 0, 0, 1);
-        world.spawn()
-          ..insert(AtlasSprite(atlas: atlas, anchor: Vector2(0.5, 1.0)))
-          ..insert(gt);
+      final world = World();
+      final renderWorld = RenderWorld();
+      final gt = GlobalTransform2D()
+        ..matrix.setValues(1, 0, 0, 0, 1, 0, 0, 0, 1);
+      world.spawn()
+        ..insert(AtlasSprite(atlas: atlas, anchor: Vector2(0.5, 1.0)))
+        ..insert(gt);
 
-        AtlasSpriteExtractor().extract(world, renderWorld);
+      AtlasSpriteExtractor().extract(world, renderWorld);
 
-        var seen = 0;
-        for (final (_, s) in renderWorld.query1<ExtractedSprite>().iter()) {
-          expect(s.anchor.x, 0.5);
-          expect(s.anchor.y, 1.0);
-          seen++;
-        }
-        expect(seen, 1);
-      },
-    );
+      var seen = 0;
+      for (final (_, s) in renderWorld.query1<ExtractedSprite>().iter()) {
+        expect(s.anchor.x, 0.5);
+        expect(s.anchor.y, 1.0);
+        seen++;
+      }
+      expect(seen, 1);
+    });
   });
 }

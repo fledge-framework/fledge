@@ -14,8 +14,7 @@ void main() {
       world.spawn()
         ..insert(Transform2D.from(120, 80))
         ..insert(
-          GlobalTransform2D()
-            ..matrix.setValues(1, 0, 0, 0, 1, 0, 120, 80, 1),
+          GlobalTransform2D()..matrix.setValues(1, 0, 0, 0, 1, 0, 120, 80, 1),
         )
         ..insert(Camera2D());
 
@@ -62,28 +61,25 @@ void main() {
       expect(world.getResource<ActiveCameraView>(), isNull);
     });
 
-    test(
-      'updates the existing resource in place on subsequent runs',
-      () async {
-        final world = World();
-        final e = world.spawn()
-          ..insert(
-            GlobalTransform2D()..matrix.setValues(1, 0, 0, 0, 1, 0, 1, 2, 1),
-          )
-          ..insert(Camera2D());
-        await const ActiveCameraViewSystem().run(world);
-        final first = world.getResource<ActiveCameraView>();
-        world
-            .get<GlobalTransform2D>(e.entity)!
-            .matrix
-            .setValues(1, 0, 0, 0, 1, 0, 50, 60, 1);
-        await const ActiveCameraViewSystem().run(world);
-        final second = world.getResource<ActiveCameraView>();
-        // Same instance is reused.
-        expect(identical(first, second), isTrue);
-        expect(second!.x, 50);
-        expect(second.y, 60);
-      },
-    );
+    test('updates the existing resource in place on subsequent runs', () async {
+      final world = World();
+      final e = world.spawn()
+        ..insert(
+          GlobalTransform2D()..matrix.setValues(1, 0, 0, 0, 1, 0, 1, 2, 1),
+        )
+        ..insert(Camera2D());
+      await const ActiveCameraViewSystem().run(world);
+      final first = world.getResource<ActiveCameraView>();
+      world
+          .get<GlobalTransform2D>(e.entity)!
+          .matrix
+          .setValues(1, 0, 0, 0, 1, 0, 50, 60, 1);
+      await const ActiveCameraViewSystem().run(world);
+      final second = world.getResource<ActiveCameraView>();
+      // Same instance is reused.
+      expect(identical(first, second), isTrue);
+      expect(second!.x, 50);
+      expect(second.y, 60);
+    });
   });
 }

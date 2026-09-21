@@ -24,10 +24,7 @@ class ActiveCameraViewSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
     name: 'active_camera_view',
-    reads: {
-      ComponentId.of<Camera2D>(),
-      ComponentId.of<GlobalTransform2D>(),
-    },
+    reads: {ComponentId.of<Camera2D>(), ComponentId.of<GlobalTransform2D>()},
     resourceWrites: {ActiveCameraView},
     after: const [
       'CameraFollowSystem',

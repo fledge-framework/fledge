@@ -60,7 +60,10 @@ class ActiveCameraView {
 Offset? activeCameraCanvasOffset(World world, Size viewportSize) {
   final view = world.getResource<ActiveCameraView>();
   if (view == null) return null;
-  return Offset(viewportSize.width / 2 - view.x, viewportSize.height / 2 - view.y);
+  return Offset(
+    viewportSize.width / 2 - view.x,
+    viewportSize.height / 2 - view.y,
+  );
 }
 
 /// Convenience wrapper that pushes a camera-aware translation onto

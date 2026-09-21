@@ -232,10 +232,7 @@ class CameraFollowSystem implements System {
         if (cameraGlobal != null) {
           cameraGlobal.matrix.setFrom(transform.toMatrix());
         } else {
-          world.insert(
-            cameraEntity,
-            GlobalTransform2D(transform.toMatrix()),
-          );
+          world.insert(cameraEntity, GlobalTransform2D(transform.toMatrix()));
         }
       }
     }

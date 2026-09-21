@@ -8,10 +8,7 @@ void main() {
   group('ActiveCameraView / activeCameraCanvasOffset', () {
     test('null when no resource is installed (world = screen fallback)', () {
       final world = World();
-      expect(
-        activeCameraCanvasOffset(world, const Size(400, 300)),
-        isNull,
-      );
+      expect(activeCameraCanvasOffset(world, const Size(400, 300)), isNull);
     });
 
     test(
@@ -28,8 +25,7 @@ void main() {
     test(
       'when camera moves right, world content translates left on canvas',
       () {
-        final world = World()
-          ..insertResource(ActiveCameraView(x: 100, y: 50));
+        final world = World()..insertResource(ActiveCameraView(x: 100, y: 50));
         final offset = activeCameraCanvasOffset(world, const Size(400, 300));
         // widget centre - camera pos = (200 - 100, 150 - 50) = (100, 100).
         // Content at world (100, 50) then draws at canvas (200, 150).
