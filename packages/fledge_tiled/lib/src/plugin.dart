@@ -1,6 +1,6 @@
 import 'package:fledge_assets/fledge_assets.dart';
 import 'package:fledge_ecs/fledge_ecs.dart';
-import 'package:fledge_render/fledge_render.dart' show Extractors;
+import 'package:fledge_render_2d/fledge_render_2d.dart' show Extractors;
 
 import 'extraction/tilemap_extractor.dart';
 import 'resources/tiled_assets.dart' show TilemapAsset, TilesetAsset;

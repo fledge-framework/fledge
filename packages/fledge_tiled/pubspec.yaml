@@ -16,7 +16,6 @@ dependencies:
   fledge_assets: ^0.2.1
   fledge_ecs: ^0.2.1
   fledge_physics: ^0.2.1
-  fledge_render: ^0.2.1
   fledge_render_2d: ^0.2.1
   fledge_camera_2d: ^0.2.1
   tiled: ^0.12.0

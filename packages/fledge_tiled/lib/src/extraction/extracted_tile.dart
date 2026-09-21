@@ -1,8 +1,7 @@
 import 'dart:ui' show Color, Offset, Rect;
 
-import 'package:fledge_render/fledge_render.dart'
-    show ExtractedData, SortableExtractedData;
-import 'package:fledge_render_2d/fledge_render_2d.dart' show TextureHandle;
+import 'package:fledge_render_2d/fledge_render_2d.dart'
+    show ExtractedData, SortableExtractedData, TextureHandle;
 
 /// Extracted tile data for the render world.
 ///
