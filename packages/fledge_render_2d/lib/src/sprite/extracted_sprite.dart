@@ -120,10 +120,9 @@ class SpriteExtractor extends Extractor {
       );
       final sub = sprite.layerSubOrder != 0
           ? sprite.layerSubOrder
-          : (renderMatrix.storage[7] * 1000).toInt().clamp(
-              0,
-              DrawLayerExtension.layerMultiplier - 1,
-            );
+          : (renderMatrix.storage[7] * DrawLayerExtension.ySortScale)
+              .toInt()
+              .clamp(0, DrawLayerExtension.layerMultiplier - 1);
       final sortKey = layer.sortKey(subOrder: sub);
 
       renderWorld.spawn().insert(

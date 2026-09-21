@@ -588,7 +588,7 @@ void main() {
       const texture = TextureHandle(id: 1, width: 64, height: 64);
 
       final globalTransform = GlobalTransform2D();
-      // y=50 -> sub = 50000 (well inside 0..99999 range)
+      // y=50 → sub = 50 * ySortScale = 500 (well inside 0..99999).
       globalTransform.translation = Vector2(100, 50);
 
       world.spawn()
@@ -601,15 +601,49 @@ void main() {
       var seen = 0;
       for (final (_, extracted)
           in renderWorld.query1<ExtractedSprite>().iter()) {
-        // Default layer is characters (index 2); sub = (50 * 1000) = 50000.
+        // Default layer is characters (index 2); sub = 50 * 10 = 500.
         expect(
           extracted.sortKey,
-          DrawLayer.characters.sortKey(subOrder: 50000),
+          DrawLayer.characters.sortKey(
+            subOrder: 50 * DrawLayerExtension.ySortScale,
+          ),
         );
         expect(extracted.layer, DrawLayer.characters);
         seen++;
       }
       expect(seen, 1);
     });
+
+    test(
+      'Y-sort distinguishes entities past y = 100 (regression for Batch 3 #13)',
+      () {
+        final world = World();
+        final renderWorld = RenderWorld();
+        const texture = TextureHandle(id: 1, width: 8, height: 8);
+
+        void spawnAt(double y) {
+          final gt = GlobalTransform2D();
+          gt.translation = Vector2(0, y);
+          world.spawn()
+            ..insert(Sprite(texture: texture))
+            ..insert(gt);
+        }
+
+        spawnAt(100);
+        spawnAt(500);
+        spawnAt(1000);
+
+        SpriteExtractor().extract(world, renderWorld);
+
+        final keys = <int>[];
+        for (final (_, extracted)
+            in renderWorld.query1<ExtractedSprite>().iter()) {
+          keys.add(extracted.sortKey);
+        }
+        keys.sort();
+        // All three must have distinct sort keys (no clamp saturation).
+        expect(keys.toSet().length, 3);
+      },
+    );
   });
 }

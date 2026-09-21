@@ -41,10 +41,9 @@ class AtlasSpriteExtractor extends Extractor {
       // from y-position, clamped inside the layer's range.
       final sub = atlasSprite.layerSubOrder != 0
           ? atlasSprite.layerSubOrder
-          : (renderMatrix.storage[7] * 1000).toInt().clamp(
-              0,
-              DrawLayerExtension.layerMultiplier - 1,
-            );
+          : (renderMatrix.storage[7] * DrawLayerExtension.ySortScale)
+              .toInt()
+              .clamp(0, DrawLayerExtension.layerMultiplier - 1);
       final sortKey = atlasSprite.layer.sortKey(subOrder: sub);
 
       renderWorld.spawn().insert(

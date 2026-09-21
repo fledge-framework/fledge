@@ -79,6 +79,15 @@ extension DrawLayerExtension on DrawLayer {
   /// Each layer has 100,000 possible sub-order values.
   static const int layerMultiplier = 100000;
 
+  /// Scale factor applied to Y-position when deriving sub-order for
+  /// Y-sorting.
+  ///
+  /// With `y * 10` and a `layerMultiplier` of 100 000, entities up to
+  /// y = 9 999.9 land in distinct sort-key buckets — enough for maps
+  /// tens of screens tall. The precision is 0.1 pixel, plenty for
+  /// stable top-down sorting.
+  static const int ySortScale = 10;
+
   /// Computes a sort key for this layer.
   ///
   /// The [subOrder] parameter allows for sub-sorting within the layer,
@@ -86,7 +95,8 @@ extension DrawLayerExtension on DrawLayer {
   ///
   /// ```dart
   /// // Character at y=150.5
-  /// final key = DrawLayer.characters.sortKey(subOrder: (y * 1000).toInt());
+  /// final key = DrawLayer.characters.sortKey(
+  ///     subOrder: (y * DrawLayerExtension.ySortScale).toInt());
   /// ```
   ///
   /// [subOrder] should be in the range 0-99,999 to stay within the layer's
