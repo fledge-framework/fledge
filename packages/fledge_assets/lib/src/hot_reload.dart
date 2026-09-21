@@ -94,7 +94,8 @@ class HotReloadWatcher {
 
   /// Test helper: pretend a file changed on disk, so tests don't need
   /// a real filesystem watcher (which is racy on macOS in CI).
-  void debugFireChange(String path) => _onEvent(WatchEvent(ChangeType.MODIFY,
+  void debugFireChange(String path) => _onEvent(WatchEvent(
+      ChangeType.MODIFY,
       // Absolute path for realism; the matcher below falls back to
       // basename comparison so relative registrations still work.
       path));

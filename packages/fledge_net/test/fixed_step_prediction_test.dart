@@ -34,8 +34,7 @@ void main() {
   });
 
   group('Prediction runs on Schedules.fixedUpdate', () {
-    test(
-        'a ~300ms tick with a 100ms step yields exactly 3 fixed-update runs',
+    test('a ~300ms tick with a 100ms step yields exactly 3 fixed-update runs',
         () async {
       final counter = _RunCounter();
 
@@ -61,8 +60,7 @@ void main() {
       await app.tick();
 
       expect(counter.value, equals(3),
-          reason:
-              '~300ms of frame delta / 100ms fixed step should drive '
+          reason: '~300ms of frame delta / 100ms fixed step should drive '
               'exactly 3 fixed iterations, so the prediction system '
               'should have run 3 times.');
     });

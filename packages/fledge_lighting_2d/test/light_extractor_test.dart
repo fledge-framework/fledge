@@ -48,9 +48,7 @@ void main() {
     });
 
     test('skips entities without GlobalTransform2D', () {
-      mainWorld
-          .spawn()
-          .insert(Light2D.point(color: const Color(0xFFFFFFFF)));
+      mainWorld.spawn().insert(Light2D.point(color: const Color(0xFFFFFFFF)));
 
       LightExtractor().extract(mainWorld, renderWorld);
 
@@ -69,11 +67,8 @@ void main() {
 
       LightExtractor().extract(mainWorld, renderWorld);
 
-      final extracted = renderWorld
-          .query1<ExtractedLight>()
-          .iter()
-          .map((r) => r.$2)
-          .toList();
+      final extracted =
+          renderWorld.query1<ExtractedLight>().iter().map((r) => r.$2).toList();
       expect(extracted, hasLength(1));
       expect(extracted.single.type, LightType.directional);
       expect(extracted.single.direction.length, closeTo(1.0, 1e-6));

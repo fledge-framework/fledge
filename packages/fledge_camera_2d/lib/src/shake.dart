@@ -133,8 +133,10 @@ class CameraShakeSystem implements System {
       final intensity = shake.intensity;
       // Random offsets in [-1, 1] scaled by max*intensity. `nextDouble`
       // gives [0,1); mapped to [-1, 1) is close enough.
-      final ox = shake.maxOffsetX * intensity * (shake.rng.nextDouble() * 2 - 1);
-      final oy = shake.maxOffsetY * intensity * (shake.rng.nextDouble() * 2 - 1);
+      final ox =
+          shake.maxOffsetX * intensity * (shake.rng.nextDouble() * 2 - 1);
+      final oy =
+          shake.maxOffsetY * intensity * (shake.rng.nextDouble() * 2 - 1);
       final orot = shake.maxRotationRadians *
           intensity *
           (shake.rng.nextDouble() * 2 - 1);

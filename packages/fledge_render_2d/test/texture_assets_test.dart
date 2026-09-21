@@ -77,16 +77,15 @@ void main() {
       expect(image, isNotNull);
     });
 
-    test('Assets<Texture>.add path takes precedence over legacy map',
-        () async {
+    test('Assets<Texture>.add path takes precedence over legacy map', () async {
       final app = App()..addPlugin(RenderPlugin());
       final assets = app.world.getResource<Assets<Texture>>()!;
       final drawer =
           app.world.getResource<SpriteDrawer>()! as CanvasSpriteDrawer;
 
       // Reserve id 42 in the asset store.
-      final texture = Texture(
-          createSolidColorImageSync(const Color(0xFFAA0000)), 1, 1);
+      final texture =
+          Texture(createSolidColorImageSync(const Color(0xFFAA0000)), 1, 1);
       assets.addWithId(const HandleId(42), texture);
 
       // The legacy handle for id 42 resolves through Assets<Texture>.

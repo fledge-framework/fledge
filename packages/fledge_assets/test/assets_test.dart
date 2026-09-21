@@ -115,8 +115,7 @@ void main() {
       expect(loader.calls, 2);
     });
 
-    test('reload on an add()-only entry is a no-op (no path/loader)',
-        () async {
+    test('reload on an add()-only entry is a no-op (no path/loader)', () async {
       final assets = Assets<String>();
       final h = assets.add('static');
       await assets.reload(h.id);

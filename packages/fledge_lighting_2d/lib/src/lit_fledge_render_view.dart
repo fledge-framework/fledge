@@ -2,11 +2,7 @@ import 'dart:ui' show Canvas, Paint, Rect;
 
 import 'package:fledge_ecs/fledge_ecs.dart' show App;
 import 'package:fledge_render_2d/fledge_render_2d.dart'
-    show
-        CanvasSpriteDrawer,
-        RenderWorld,
-        SpriteDrawer,
-        renderSpritesToDrawer;
+    show CanvasSpriteDrawer, RenderWorld, SpriteDrawer, renderSpritesToDrawer;
 import 'package:flutter/widgets.dart'
     show
         BuildContext,

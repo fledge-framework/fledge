@@ -46,9 +46,7 @@ class _DrifterWidgetState extends State<DrifterWidget>
     // layout system anchors HUD elements against the actual canvas
     // rect, not the CameraPlugin's default 1280×720.
     final bounds = _app.world.getResource<GameBounds>()!;
-    _app.world
-        .getResource<ViewportSize>()
-        ?.update(bounds.width, bounds.height);
+    _app.world.getResource<ViewportSize>()?.update(bounds.width, bounds.height);
     spawnScene(_app);
 
     _ticker = AnimationController(

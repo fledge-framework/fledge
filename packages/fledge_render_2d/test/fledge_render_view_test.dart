@@ -106,8 +106,7 @@ void main() {
       expect(recorder.calls.first.batch.length, 1);
     });
 
-    testWidgets(
-        'canvas backend drives drawRawAtlas end-to-end without asserts',
+    testWidgets('canvas backend drives drawRawAtlas end-to-end without asserts',
         (tester) async {
       // The default drawer installed by `RenderPlugin` is
       // `CanvasSpriteDrawer`. If it received malformed buffers
@@ -237,8 +236,7 @@ void main() {
 
   group('createSolidColorImage', () {
     test('sync version yields a 1×1 image by default', () {
-      final ui.Image image =
-          createSolidColorImageSync(const Color(0xFFFFFFFF));
+      final ui.Image image = createSolidColorImageSync(const Color(0xFFFFFFFF));
       expect(image.width, 1);
       expect(image.height, 1);
     });

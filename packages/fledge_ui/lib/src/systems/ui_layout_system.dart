@@ -67,8 +67,7 @@ class LayoutSystem implements System {
     final viewport = world.getResource<ViewportSize>();
     if (viewport == null) return;
 
-    final viewportRect =
-        Rect.fromLTWH(0, 0, viewport.width, viewport.height);
+    final viewportRect = Rect.fromLTWH(0, 0, viewport.width, viewport.height);
 
     // Find root UI nodes — UiNode entities with no Parent. Materialise
     // to a list because we mutate archetypes while inserting

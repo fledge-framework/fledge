@@ -27,8 +27,7 @@ void main() {
     });
 
     test('reverse flips progress', () {
-      final fade =
-          CameraFadeTransition(duration: 1.0, reverse: true);
+      final fade = CameraFadeTransition(duration: 1.0, reverse: true);
       fade.elapsed = 0.25;
       expect(fade.progress, closeTo(0.25, 1e-9));
       expect(fade.effectiveProgress, closeTo(0.75, 1e-9));

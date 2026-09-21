@@ -85,8 +85,7 @@ class CameraFollowSystem implements System {
       if (targetTransform == null) {
         if (!follow.warnedMissingTarget) {
           // ignore: avoid_print
-          print(
-              '[fledge_camera_2d] CameraFollow.target (${follow.target}) has '
+          print('[fledge_camera_2d] CameraFollow.target (${follow.target}) has '
               'no GlobalTransform2D; skipping this camera.');
           follow.warnedMissingTarget = true;
         }

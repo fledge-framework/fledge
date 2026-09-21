@@ -171,7 +171,7 @@ void main() {
       final child = (world.spawn()
             ..insert(const UiNode())
             ..insert(const UiAnchorComponent(UiAnchor.topLeft)))
-            // No size — should fill the container's padded interior.
+          // No size — should fill the container's padded interior.
           .entity;
       world.setParent(child, container);
 
@@ -186,8 +186,7 @@ void main() {
     });
   });
 
-  test('layout is idempotent — running twice produces the same rect',
-      () async {
+  test('layout is idempotent — running twice produces the same rect', () async {
     final world = World();
     world.insertResource(ViewportSize(width: 400, height: 300));
     final entity = (world.spawn()

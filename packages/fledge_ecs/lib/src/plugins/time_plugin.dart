@@ -97,7 +97,8 @@ class WallTimeUpdateSystem implements System {
 }
 
 /// Deprecated alias for [WallTimeUpdateSystem].
-@Deprecated('Renamed to WallTimeUpdateSystem in v0.2. Use WallTimeUpdateSystem.')
+@Deprecated(
+    'Renamed to WallTimeUpdateSystem in v0.2. Use WallTimeUpdateSystem.')
 typedef TimeUpdateSystem = WallTimeUpdateSystem;
 
 /// Plugin that provides wall-clock time tracking.

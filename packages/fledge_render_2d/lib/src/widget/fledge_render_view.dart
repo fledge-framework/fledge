@@ -15,8 +15,7 @@ import '../backend/canvas_render_context.dart' show CanvasSpriteDrawer;
 import '../render/world/render_world.dart' show RenderWorld;
 import '../sprite/extracted_sprite.dart' show ExtractedSprite;
 import '../sprite/sprite.dart' show TextureHandle;
-import '../sprite/sprite_render_node.dart'
-    show BackendSpriteData, SpriteDrawer;
+import '../sprite/sprite_render_node.dart' show BackendSpriteData, SpriteDrawer;
 
 /// A widget that paints an [App]'s render world through the installed
 /// [SpriteDrawer].

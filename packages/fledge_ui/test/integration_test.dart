@@ -54,8 +54,7 @@ void main() {
     expect(find.byType(FledgeUiOverlay), findsOneWidget);
   });
 
-  testWidgets('score-style updates are reflected across ticks',
-      (tester) async {
+  testWidgets('score-style updates are reflected across ticks', (tester) async {
     final app = App()
       ..addPlugin(RenderPlugin())
       ..addPlugin(const CameraPlugin())
@@ -78,8 +77,7 @@ void main() {
     await app.tick();
 
     final renderWorld = app.world.getResource<RenderWorld>()!;
-    final result =
-        renderWorld.query1<ExtractedUiText>().iter().single.$2;
+    final result = renderWorld.query1<ExtractedUiText>().iter().single.$2;
     expect(result.text, 'Score: 7');
   });
 

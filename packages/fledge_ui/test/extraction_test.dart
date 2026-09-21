@@ -109,8 +109,7 @@ void main() {
       await layout.run(mainWorld);
       extractor.extract(mainWorld, renderWorld);
 
-      final result =
-          renderWorld.query1<ExtractedUiRect>().iter().single.$2;
+      final result = renderWorld.query1<ExtractedUiRect>().iter().single.$2;
       expect(result.borderRadius, 8);
     });
 
@@ -142,7 +141,8 @@ void main() {
         keys.add(e.sortKey);
       }
       // Both keys should sit in `DrawLayer.ui`'s sort-key range.
-      const uiStart = DrawLayerExtension.layerMultiplier * 5; // DrawLayer.ui index = 5
+      const uiStart =
+          DrawLayerExtension.layerMultiplier * 5; // DrawLayer.ui index = 5
       for (final k in keys) {
         expect(k, greaterThanOrEqualTo(uiStart));
         expect(k, lessThan(uiStart + DrawLayerExtension.layerMultiplier));

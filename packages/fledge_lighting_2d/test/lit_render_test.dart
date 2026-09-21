@@ -9,8 +9,7 @@ import 'package:vector_math/vector_math.dart';
 
 void main() {
   group('LitFledgeRenderView + LightingPlugin', () {
-    test('LightingPlugin registers an extractor and inserts ambient',
-        () {
+    test('LightingPlugin registers an extractor and inserts ambient', () {
       final app = App();
       app.addPlugin(RenderPlugin());
       app.addPlugin(const LightingPlugin(ambient: AmbientLight.dark));
@@ -90,10 +89,7 @@ void main() {
 
       final renderWorld = app.world.getResource<RenderWorld>()!;
       expect(
-        renderWorld
-            .query1<ExtractedLight>()
-            .iter()
-            .length,
+        renderWorld.query1<ExtractedLight>().iter().length,
         3,
       );
 

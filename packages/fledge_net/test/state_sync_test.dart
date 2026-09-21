@@ -258,8 +258,7 @@ void main() {
 
     test('auto-populates timestamp', () {
       final before = DateTime.now();
-      final snapshot =
-          StateSnapshot(tick: 1, state: Transform2DNetworkState());
+      final snapshot = StateSnapshot(tick: 1, state: Transform2DNetworkState());
       expect(
           snapshot.timestamp
               .isAfter(before.subtract(const Duration(milliseconds: 1))),
