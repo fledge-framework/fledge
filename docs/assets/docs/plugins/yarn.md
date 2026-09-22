@@ -77,9 +77,22 @@ The sun was setting over the village.  // No character prefix
 
 ### With Tags
 
+Tags attach metadata to a line for the game to react to:
+
 ```yarn
-Sara: I'm so happy! #emotion:happy #animation:wave
+Sara: I'm so happy! #excited #wave
 ```
+
+**Tag grammar.** Tags match `#(\w+)` — a `#` followed by one or more
+letters, digits or underscores. The tag ends at the first character
+that isn't one of those, so a colon or a dot terminates the tag:
+
+- `#energy_2` → one tag `energy_2`.
+- `#energy:2` → one tag `energy`; the `:2` is not part of the tag.
+- `#quest.step1` → one tag `quest`.
+
+Games that need composite values should use underscores
+(`#quest_step_1`) or split into multiple tags (`#quest #step_1`).
 
 ## Choices
 

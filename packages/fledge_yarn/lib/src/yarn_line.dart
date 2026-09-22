@@ -19,6 +19,19 @@ class DialogueLine extends YarnLine {
   final String text;
 
   /// Optional tags attached to this line (e.g., `#excited #whisper`).
+  ///
+  /// ## Tag grammar
+  ///
+  /// Tags are parsed with the pattern `#(\w+)`. A tag ends at the
+  /// first character that is not a letter, digit, or underscore, so:
+  ///
+  /// - `#energy_2` → parses as `energy_2` (one tag).
+  /// - `#energy:2` → parses as `energy` (the `:2` is discarded).
+  /// - `#quest.step1` → parses as `quest` for the same reason.
+  ///
+  /// Games that need composite tag values should encode them with
+  /// underscores (`#quest_step_1`) or split into multiple tags
+  /// (`#quest #step_1`).
   final List<String> tags;
 
   /// Optional line ID for localization.
@@ -63,6 +76,9 @@ class Choice {
   final List<YarnLine> body;
 
   /// Optional tags attached to this choice.
+  ///
+  /// Uses the same grammar as [DialogueLine.tags] — see that doc
+  /// comment for the tag grammar and worked examples.
   final List<String> tags;
 
   /// Whether this choice is currently available (condition passed).
