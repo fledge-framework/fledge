@@ -15,9 +15,14 @@ class AudioInitSystem implements System {
 
   AudioInitSystem(this.config);
 
+  /// The `SystemMeta.name` of [AudioInitSystem]. Games that order
+  /// their own systems relative to this one use it in `before:` /
+  /// `after:`.
+  static const String systemName = 'AudioInitSystem';
+
   @override
   SystemMeta get meta =>
-      const SystemMeta(name: 'AudioInitSystem', exclusive: true);
+      const SystemMeta(name: systemName, exclusive: true);
 
   @override
   RunCondition? get runCondition => null;

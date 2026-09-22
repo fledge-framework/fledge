@@ -19,9 +19,14 @@ import '../assets/audio_assets.dart';
 /// Entities without a `Transform2D` are treated as positioned at the
 /// listener (no falloff, centred pan), which matches the non-spatial path.
 class SpatialAudioSystem implements System {
+  /// The `SystemMeta.name` of [SpatialAudioSystem]. Games that order
+  /// their own systems relative to this one use it in `before:` /
+  /// `after:`.
+  static const String systemName = 'SpatialAudioSystem';
+
   @override
   SystemMeta get meta => SystemMeta(
-    name: 'SpatialAudioSystem',
+    name: systemName,
     reads: {
       ComponentId.of<AudioListener>(),
       ComponentId.of<AudioSource>(),
