@@ -41,25 +41,20 @@ void main() {
       expect(view.y, -7);
     });
 
-    test(
-      'pixelPerfect rounds the offset to whole pixels '
-      '(regression for Batch 6 #24)',
-      () {
-        // Odd viewport width, camera at a half-pixel: without
-        // pixelPerfect the offset is fractional.
-        final world = World()
-          ..insertResource(ActiveCameraView(x: 100.5, y: 50.5));
-        final unsnapped =
-            activeCameraCanvasOffset(world, const Size(401, 301))!;
-        expect(unsnapped.dx, closeTo(100.0, 1e-9));
-        expect(unsnapped.dy, closeTo(100.0, 1e-9));
-        // With pixelPerfect set, both coordinates round.
-        world.getResource<ActiveCameraView>()!.pixelPerfect = true;
-        final snapped =
-            activeCameraCanvasOffset(world, const Size(401, 301))!;
-        expect(snapped.dx.roundToDouble(), snapped.dx);
-        expect(snapped.dy.roundToDouble(), snapped.dy);
-      },
-    );
+    test('pixelPerfect rounds the offset to whole pixels '
+        '(regression for Batch 6 #24)', () {
+      // Odd viewport width, camera at a half-pixel: without
+      // pixelPerfect the offset is fractional.
+      final world = World()
+        ..insertResource(ActiveCameraView(x: 100.5, y: 50.5));
+      final unsnapped = activeCameraCanvasOffset(world, const Size(401, 301))!;
+      expect(unsnapped.dx, closeTo(100.0, 1e-9));
+      expect(unsnapped.dy, closeTo(100.0, 1e-9));
+      // With pixelPerfect set, both coordinates round.
+      world.getResource<ActiveCameraView>()!.pixelPerfect = true;
+      final snapped = activeCameraCanvasOffset(world, const Size(401, 301))!;
+      expect(snapped.dx.roundToDouble(), snapped.dx);
+      expect(snapped.dy.roundToDouble(), snapped.dy);
+    });
   });
 }

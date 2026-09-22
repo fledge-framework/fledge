@@ -97,7 +97,8 @@ class DialogueRunner {
 
   /// Whether dialogue can continue (not ended or inactive).
   bool get canContinue =>
-      _state == DialogueRunnerState.line || _state == DialogueRunnerState.choices;
+      _state == DialogueRunnerState.line ||
+      _state == DialogueRunnerState.choices;
 
   /// Whether the runner is waiting for a choice selection.
   bool get isWaitingForChoice => _state == DialogueRunnerState.choices;

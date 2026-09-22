@@ -23,14 +23,8 @@ class ScheduleOrderingReportSystem implements System {
     // to games that install the window / audio / tilemap plugins.
     // Names refer to systems that may not exist in every app — the
     // scheduler ignores unresolved after-names.
-    after: [
-      'WindowInitSystem',
-      'AudioInitSystem',
-      'wallTimeUpdate',
-    ],
-    before: [
-      'tilemap_spawn',
-    ],
+    after: ['WindowInitSystem', 'AudioInitSystem', 'wallTimeUpdate'],
+    before: ['tilemap_spawn'],
     resourceWrites: {ScheduleOrderingReport},
     eventReads: {RefreshScheduleOrderingReportRequested},
   );

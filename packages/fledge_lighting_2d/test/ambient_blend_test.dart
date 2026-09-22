@@ -20,19 +20,13 @@ void main() {
       expect(AmbientLight.dark.blend, AmbientBlend.underSprites);
     });
 
-    test(
-      'bounds is null by default and can carry a world-space Rect '
-      '(regression for Batch 6 #25)',
-      () {
-        expect(const AmbientLight().bounds, isNull);
-        const map = Rect.fromLTWH(0, 0, 320, 240);
-        const custom = AmbientLight(
-          blend: AmbientBlend.overSprites,
-          bounds: map,
-        );
-        expect(custom.bounds, map);
-      },
-    );
+    test('bounds is null by default and can carry a world-space Rect '
+        '(regression for Batch 6 #25)', () {
+      expect(const AmbientLight().bounds, isNull);
+      const map = Rect.fromLTWH(0, 0, 320, 240);
+      const custom = AmbientLight(blend: AmbientBlend.overSprites, bounds: map);
+      expect(custom.bounds, map);
+    });
   });
 
   // Rasterisation checks: cover the intended pixel outcomes of each

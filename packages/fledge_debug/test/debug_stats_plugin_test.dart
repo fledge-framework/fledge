@@ -19,8 +19,7 @@ void main() {
   });
 
   test('DebugPlugin(overlay: false) skips OverlayPopulateSystem', () async {
-    final app = App()
-      ..addPlugin(const DebugPlugin(overlay: false));
+    final app = App()..addPlugin(const DebugPlugin(overlay: false));
     // Stats resources still installed.
     expect(app.world.getResource<FrameStats>(), isNotNull);
     // DebugConfig now inserted (Item 29 keeps existing; there was
@@ -39,9 +38,9 @@ void main() {
 
     // Fire the request. On the next tick the system drains it and
     // publishes a fresh report.
-    app.world
-        .eventWriter<RefreshScheduleOrderingReportRequested>()
-        .send(const RefreshScheduleOrderingReportRequested());
+    app.world.eventWriter<RefreshScheduleOrderingReportRequested>().send(
+      const RefreshScheduleOrderingReportRequested(),
+    );
     await app.tick();
     final after = app.world.getResource<ScheduleOrderingReport>()!;
     expect(after, isNotNull);
@@ -51,21 +50,18 @@ void main() {
     expect(after.count, greaterThanOrEqualTo(0));
   });
 
-  test(
-    'stats systems in Schedules.first do not add fresh ambiguities '
-    'to checkScheduleOrdering (Batch 7 #30)',
-    () {
-      // Sanity: an app with DebugStatsPlugin alone has no
-      // registration-order ambiguities.
-      final app = App()..addPlugin(const DebugStatsPlugin());
-      final issues = app.checkScheduleOrdering();
-      expect(
-        issues.where((i) => i.stage == 'first'),
-        isEmpty,
-        reason:
-            'Stats systems in Schedules.first should declare their '
-            'ordering explicitly.',
-      );
-    },
-  );
+  test('stats systems in Schedules.first do not add fresh ambiguities '
+      'to checkScheduleOrdering (Batch 7 #30)', () {
+    // Sanity: an app with DebugStatsPlugin alone has no
+    // registration-order ambiguities.
+    final app = App()..addPlugin(const DebugStatsPlugin());
+    final issues = app.checkScheduleOrdering();
+    expect(
+      issues.where((i) => i.stage == 'first'),
+      isEmpty,
+      reason:
+          'Stats systems in Schedules.first should declare their '
+          'ordering explicitly.',
+    );
+  });
 }

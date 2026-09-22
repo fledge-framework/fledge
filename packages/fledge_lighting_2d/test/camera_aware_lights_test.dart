@@ -14,8 +14,11 @@ import 'package:vector_math/vector_math.dart';
 ///   under a translated canvas.
 /// - A point / spot light at the camera's world position must NOT be
 ///   culled by the world-viewport reject.
-Future<Image> _rasterise(void Function(Canvas c) body,
-    {int width = 8, int height = 8}) async {
+Future<Image> _rasterise(
+  void Function(Canvas c) body, {
+  int width = 8,
+  int height = 8,
+}) async {
   final recorder = PictureRecorder();
   final canvas = Canvas(recorder);
   body(canvas);
@@ -37,17 +40,18 @@ void main() {
     () async {
       final rw = RenderWorld();
       rw.spawn().insert(
-            ExtractedLight(entity: const Entity(0, 0),
-              type: LightType.directional,
-              position: Vector2.zero(),
-              color: const Color(0xFF00FF00),
-              intensity: 1.0,
-              radius: 0,
-              innerRadius: 0,
-              direction: Vector2(0, 0),
-              angle: 0,
-            ),
-          );
+        ExtractedLight(
+          entity: const Entity(0, 0),
+          type: LightType.directional,
+          position: Vector2.zero(),
+          color: const Color(0xFF00FF00),
+          intensity: 1.0,
+          radius: 0,
+          innerRadius: 0,
+          direction: Vector2(0, 0),
+          angle: 0,
+        ),
+      );
       // Camera at (1000, 1000), viewport 8x8. Under the camera wrap
       // the canvas is translated by (4 - 1000, 4 - 1000). Test that
       // the directional light still fills every visible pixel.
@@ -79,17 +83,18 @@ void main() {
       // Point light exactly where the camera is looking. Under the
       // camera wrap it should render at the canvas centre.
       rw.spawn().insert(
-            ExtractedLight(entity: const Entity(0, 0),
-              type: LightType.point,
-              position: Vector2(1000, 1000),
-              color: const Color(0xFFFFFFFF),
-              intensity: 1.0,
-              radius: 4,
-              innerRadius: 0,
-              direction: Vector2(0, 0),
-              angle: 0,
-            ),
-          );
+        ExtractedLight(
+          entity: const Entity(0, 0),
+          type: LightType.point,
+          position: Vector2(1000, 1000),
+          color: const Color(0xFFFFFFFF),
+          intensity: 1.0,
+          radius: 4,
+          innerRadius: 0,
+          direction: Vector2(0, 0),
+          angle: 0,
+        ),
+      );
       final image = await _rasterise((canvas) {
         canvas.translate(4 - 1000, 4 - 1000);
         renderLightsToCanvas(
@@ -108,27 +113,30 @@ void main() {
     },
   );
 
-  test('renderLightsToCanvas without worldViewport keeps the old behaviour',
-      () async {
-    final rw = RenderWorld();
-    rw.spawn().insert(
-          ExtractedLight(entity: const Entity(0, 0),
-            type: LightType.directional,
-            position: Vector2.zero(),
-            color: const Color(0xFF0000FF),
-            intensity: 1.0,
-            radius: 0,
-            innerRadius: 0,
-            direction: Vector2(0, 0),
-            angle: 0,
-          ),
-        );
-    // No camera translate, no worldViewport: fill the screen.
-    final image = await _rasterise((canvas) {
-      renderLightsToCanvas(rw, canvas, const Size(8, 8));
-    });
-    final bytes = await image.toByteData();
-    final b = _pixel(bytes!, 4, 4, 8) & 0xff;
-    expect(b, greaterThan(0));
-  });
+  test(
+    'renderLightsToCanvas without worldViewport keeps the old behaviour',
+    () async {
+      final rw = RenderWorld();
+      rw.spawn().insert(
+        ExtractedLight(
+          entity: const Entity(0, 0),
+          type: LightType.directional,
+          position: Vector2.zero(),
+          color: const Color(0xFF0000FF),
+          intensity: 1.0,
+          radius: 0,
+          innerRadius: 0,
+          direction: Vector2(0, 0),
+          angle: 0,
+        ),
+      );
+      // No camera translate, no worldViewport: fill the screen.
+      final image = await _rasterise((canvas) {
+        renderLightsToCanvas(rw, canvas, const Size(8, 8));
+      });
+      final bytes = await image.toByteData();
+      final b = _pixel(bytes!, 4, 4, 8) & 0xff;
+      expect(b, greaterThan(0));
+    },
+  );
 }
