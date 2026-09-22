@@ -54,9 +54,14 @@ class CollisionResolutionSystem implements System {
   /// Creates a fixed-timestep resolution system.
   const CollisionResolutionSystem.fixed() : mode = PhysicsMode.fixed;
 
+  /// The `SystemMeta.name` of [CollisionResolutionSystem]. Games that
+  /// order their own systems relative to this one use it in
+  /// `before:` / `after:`.
+  static const String systemName = 'collision_resolution';
+
   @override
   SystemMeta get meta => SystemMeta(
-    name: 'collision_resolution',
+    name: systemName,
     reads: {
       ComponentId.of<Transform2D>(),
       ComponentId.of<Collider>(),

@@ -8,6 +8,8 @@ import '../collision/collision_shapes.dart';
 import '../components/collision_config.dart';
 import '../components/collision_event.dart';
 import '../layers/collision_layers.dart';
+import 'collision_resolution.dart';
+import 'velocity_integration.dart';
 
 /// Detects collisions between entities and writes [CollisionEvent]s to
 /// the ECS event queue.
@@ -47,9 +49,14 @@ class CollisionDetectionSystem implements System {
   /// Creates a collision detection system.
   const CollisionDetectionSystem({this.spatialHashCellSize = 64.0});
 
+  /// The `SystemMeta.name` of [CollisionDetectionSystem]. Games that
+  /// order their own systems relative to this one use it in
+  /// `before:` / `after:`.
+  static const String systemName = 'collision_detection';
+
   @override
   SystemMeta get meta => SystemMeta(
-    name: 'collision_detection',
+    name: systemName,
     reads: {
       ComponentId.of<Transform2D>(),
       ComponentId.of<Collider>(),
@@ -60,7 +67,10 @@ class CollisionDetectionSystem implements System {
     // ordering: resolution clamps Velocity, integration then moves
     // Transform2D, and detection sees the final post-move positions.
     eventWrites: {CollisionEvent},
-    after: const ['collision_resolution', 'velocity_integration'],
+    after: const [
+      CollisionResolutionSystem.systemName,
+      VelocityIntegrationSystem.systemName,
+    ],
   );
 
   @override

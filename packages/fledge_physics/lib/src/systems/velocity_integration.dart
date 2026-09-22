@@ -3,6 +3,7 @@ import 'package:fledge_render_2d/fledge_render_2d.dart';
 
 import '../components/velocity.dart';
 import '../physics_mode.dart';
+import 'collision_resolution.dart';
 
 /// Advances `Transform2D` by `Velocity` scaled to real time.
 ///
@@ -29,12 +30,17 @@ class VelocityIntegrationSystem implements System {
   /// Creates a fixed-timestep integration system.
   const VelocityIntegrationSystem.fixed() : mode = PhysicsMode.fixed;
 
+  /// The `SystemMeta.name` of [VelocityIntegrationSystem]. Games that
+  /// order their own systems relative to this one use it in
+  /// `before:` / `after:`.
+  static const String systemName = 'velocity_integration';
+
   @override
   SystemMeta get meta => SystemMeta(
-    name: 'velocity_integration',
+    name: systemName,
     reads: {ComponentId.of<Velocity>()},
     writes: {ComponentId.of<Transform2D>()},
-    after: const ['collision_resolution'],
+    after: const [CollisionResolutionSystem.systemName],
     resourceReads: mode == PhysicsMode.fixed ? {FixedTimestep} : {WallTime},
   );
 

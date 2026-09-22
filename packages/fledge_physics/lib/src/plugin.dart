@@ -77,7 +77,8 @@ import 'systems/velocity_integration.dart';
 ///
 /// Anything that writes `Velocity` (input, AI steering, knockback)
 /// must run in `Schedules.preUpdate` / `Schedules.fixedPreUpdate` or
-/// declare `before: ['collision_resolution']` in its `SystemMeta`.
+/// declare `before: [CollisionResolutionSystem.systemName]` in its
+/// `SystemMeta`.
 class PhysicsPlugin implements Plugin {
   /// Configuration for the physics plugin.
   final PhysicsConfig config;
