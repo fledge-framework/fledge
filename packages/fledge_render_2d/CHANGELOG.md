@@ -1,3 +1,27 @@
+## 0.3.1
+
+ - **REFACTOR**(fledge_render): combine core systems from fledge_render_flutter. ([4126c272](https://github.com/fledge-framework/fledge/commit/4126c272f2ddd3a198a285c5a80afdbea79aa126))
+ - **FIX**(fledge_render_2d): canvas drawer supports mirrored sprites. ([fc2b3440](https://github.com/fledge-framework/fledge/commit/fc2b34408cf39ea7ff0420a6b7100ff9ba41cad0))
+ - **FIX**(fledge_render_2d): Y-sort keeps working past y = 100 px. ([faa9fd04](https://github.com/fledge-framework/fledge/commit/faa9fd04fab36f3a2b61b74155d9223eaba802ce))
+ - **FIX**(fledge_render_2d): sprite anchor formula no longer mirrored. ([dcd70d65](https://github.com/fledge-framework/fledge/commit/dcd70d65a88a2cc51aaf9a4b95e0fecfb15ff91f))
+ - **FIX**(fledge_render_2d): atlas/tile frames no longer draw offset by source position. ([c786f3b2](https://github.com/fledge-framework/fledge/commit/c786f3b28483f558c18078eb4417eff40a00850e))
+ - **FIX**: bump versions to stable. ([13c9aa7f](https://github.com/fledge-framework/fledge/commit/13c9aa7f0d2702dabaa7088a8679c2113f8d295d))
+ - **FIX**(fledge_render_2d): fix null safety error on private field. ([6378bb1e](https://github.com/fledge-framework/fledge/commit/6378bb1eb375413aebc469a49353bbcf126f615c))
+ - **FIX**(fledge): update dependencies, upgrade melos to v7. ([e513327a](https://github.com/fledge-framework/fledge/commit/e513327a9f77e28d2126f9140e146a9b322c7b94))
+ - **FIX**: update dependencies to latest stable versions. ([9e696757](https://github.com/fledge-framework/fledge/commit/9e696757bef8acc802da081690dc918e51f20b9d))
+ - **FEAT**(fledge_render_2d): expose systemName on transform / animation / transition systems. ([5813ff7a](https://github.com/fledge-framework/fledge/commit/5813ff7a34bba1623b5abdec394d8bcfa304e6d6))
+ - **FEAT**(fledge_render_2d): pixel-snap the camera canvas offset when pixelPerfect. ([3137dc16](https://github.com/fledge-framework/fledge/commit/3137dc16178b2d2c35eb4aa9d6d08eae13ccdbe9))
+ - **FEAT**: camera-aware widget render path. ([6b8ff1b7](https://github.com/fledge-framework/fledge/commit/6b8ff1b7f1eaf6a930a73d7a4c5a0c4e26f12385))
+ - **FEAT**(fledge_render_2d): AtlasSprite gains an anchor field. ([d713ff50](https://github.com/fledge-framework/fledge/commit/d713ff5000a9673fc30b363d7833cf5a1a6be499))
+ - **FEAT**(fledge_render_2d): render interpolation between fixed ticks. ([6179b2d5](https://github.com/fledge-framework/fledge/commit/6179b2d5d1392d5719448521f100bbac640b6b7a))
+ - **FEAT**(fledge_render_2d): emit TransitionCompleted when a fade transition finishes. ([85d3f225](https://github.com/fledge-framework/fledge/commit/85d3f2250be1ff9b952a5ddf50c6db9eaf78a097))
+ - **FEAT**: upgrade tiled version. ([306fdb67](https://github.com/fledge-framework/fledge/commit/306fdb6708c06ff8c29a1a745a9899677bf9ce27))
+ - **FEAT**: v0.2 engine restructure — 2D/2.5D desktop game engine. ([bf7c2b6c](https://github.com/fledge-framework/fledge/commit/bf7c2b6cc47837c998786f25bc87997f474c5b1d))
+ - **FEAT**(fledge_save): create fledge_save package. ([48a3a327](https://github.com/fledge-framework/fledge/commit/48a3a327b9c0950ec320d7f805cce19bf7a300f6))
+ - **FEAT**(fledge_tiled): add CulledTilemapExtractor. ([8ad8e658](https://github.com/fledge-framework/fledge/commit/8ad8e65817ad8074f55929085fe6d8747da6e114))
+ - **FEAT**(fledge_tiled): refactor TilemapSpawnConfig API. ([35b12d1e](https://github.com/fledge-framework/fledge/commit/35b12d1eaa72f7e703f6820b4e0f8d69452f509e))
+ - **FEAT**: initial commit. ([0e057c5a](https://github.com/fledge-framework/fledge/commit/0e057c5a4646a51d2f7f4c6bd5ed552b745b1b7d))
+
 ## 0.3.0
 
  - **REFACTOR**(fledge_render): combine core systems from fledge_render_flutter. ([4126c272](https://github.com/fledge-framework/fledge/commit/4126c272f2ddd3a198a285c5a80afdbea79aa126))

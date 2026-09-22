@@ -1,6 +1,6 @@
 name: fledge_tween
 description: Easing curves and tweens for the Fledge ECS game framework. Interpolate values over time with configurable curves and loop modes.
-version: 0.3.0
+version: 0.3.1
 repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_tween
 homepage: https://fledge-framework.dev
 issue_tracker: https://github.com/fledge-framework/fledge/issues
@@ -11,7 +11,7 @@ environment:
 resolution: workspace
 
 dependencies:
-  fledge_ecs: ^0.3.0
+  fledge_ecs: ^0.3.1
   flutter:
     sdk: flutter
   meta: ^1.17.0
