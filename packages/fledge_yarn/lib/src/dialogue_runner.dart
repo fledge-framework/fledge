@@ -17,6 +17,13 @@ enum DialogueState {
   /// Waiting for the player to select a choice.
   choices,
 
+  /// A pausing command handler has run and the runner is holding
+  /// until [DialogueRunner.resume] is called. Statements after the
+  /// pausing command have NOT been processed yet, so the pause is
+  /// exact — matches the "pause here" semantics [CommandHandler]
+  /// exposes via [CommandHandler.registerPausing].
+  paused,
+
   /// Dialogue has ended (reached end of node or stop command).
   ended,
 }
@@ -179,6 +186,18 @@ class DialogueRunner {
     _processNext();
   }
 
+  /// Resume the runner after a pausing command has held it.
+  ///
+  /// See [CommandHandler.registerPausing]. Call this once the game-
+  /// side work triggered by a `<<pausingCommand>>` is done and the
+  /// dialogue can move on. No-op unless the runner is currently in
+  /// [DialogueState.paused].
+  void resume() {
+    if (_state != DialogueState.paused) return;
+    _state = DialogueState.inactive;
+    _processNext();
+  }
+
   /// Stop the current dialogue.
   void stop() {
     _state = DialogueState.ended;
@@ -220,6 +239,10 @@ class DialogueRunner {
         case CommandLine():
           _executeCommand(line);
           _lineIndex++;
+          // A pausing command handler flipped _state = paused. Stop
+          // processing here; DialogueRunner.resume() picks up at the
+          // next statement.
+          if (_state == DialogueState.paused) return;
           break;
 
         case ConditionalBlock():
@@ -306,7 +329,18 @@ class DialogueRunner {
         break;
 
       default:
-        // Try custom handler
+        // Pausing handler takes priority — it runs synchronously,
+        // then the runner stops until DialogueRunner.resume() is
+        // called. Statements between the pausing command and the
+        // next line / choice haven't been processed yet, so the
+        // pause is exact.
+        if (commandHandler != null &&
+            commandHandler!.hasPausingHandler(command)) {
+          commandHandler!.executePausing(command, args);
+          _state = DialogueState.paused;
+          return;
+        }
+        // Fall back to the regular handler.
         commandHandler?.execute(command, args);
     }
   }
