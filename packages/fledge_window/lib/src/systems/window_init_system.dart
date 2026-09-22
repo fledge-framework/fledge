@@ -30,9 +30,14 @@ class WindowInitSystem implements System {
 
   WindowInitSystem(this.config);
 
+  /// The `SystemMeta.name` of [WindowInitSystem]. Games that order
+  /// their own systems relative to this one use it in `before:` /
+  /// `after:`.
+  static const String systemName = 'WindowInitSystem';
+
   @override
   SystemMeta get meta =>
-      const SystemMeta(name: 'WindowInitSystem', exclusive: true);
+      const SystemMeta(name: systemName, exclusive: true);
 
   @override
   RunCondition? get runCondition => null;
