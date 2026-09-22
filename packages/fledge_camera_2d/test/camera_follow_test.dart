@@ -154,12 +154,16 @@ void main() {
                 ..insert(CameraFollow.marker(smoothing: 1.0)))
               .entity;
 
-      // First run — no marker anywhere. Camera stays put and the
-      // system logs a "no target" warning (the follow.target is
-      // still Entity.placeholder).
+      // First run — no marker anywhere. Camera stays put. In marker
+      // mode the system stays silent because a target-less start-up
+      // is the normal shape it exists for (Batch 6 item 27).
       await CameraFollowSystem().run(world);
       expect(world.get<Transform2D>(cameraEntity)!.translation.x, 0);
       expect(world.get<Transform2D>(cameraEntity)!.translation.y, 0);
+      expect(
+        world.get<CameraFollow>(cameraEntity)!.warnedMissingTarget,
+        isFalse,
+      );
 
       // Spawn a target with the marker.
       final target = world.spawn()

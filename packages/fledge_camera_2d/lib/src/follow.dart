@@ -155,12 +155,17 @@ class CameraFollowSystem implements System {
         in world.query3<CameraFollow, Camera2D, Transform2D>().iter()) {
       // Resolve the follow target. Explicit target wins; otherwise
       // fall back to the CameraFollowTarget marker.
+      final markerMode = follow.target == Entity.placeholder;
       Entity target = follow.target;
-      if (target == Entity.placeholder) {
+      if (markerMode) {
         target = resolveMarker();
       }
       if (target == Entity.placeholder) {
-        if (!follow.warnedMissingTarget) {
+        // Explicit-target mode with no target: user error, warn once.
+        // Marker mode with no marker yet: the normal camera-before-
+        // player start-up. Skip silently — the moment the marker
+        // appears the camera picks it up.
+        if (!markerMode && !follow.warnedMissingTarget) {
           // ignore: avoid_print
           print(
             '[fledge_camera_2d] CameraFollow has no target: neither '
