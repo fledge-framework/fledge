@@ -111,7 +111,17 @@ class _LitFledgeRenderPainter extends CustomPainter {
       final paint = Paint()
         ..color = tint.withValues(alpha: 1.0)
         ..blendMode = BlendMode.multiply;
-      canvas.drawRect(fullRect, paint);
+      final ambientBounds = ambient.bounds;
+      if (ambientBounds == null) {
+        // Legacy behaviour — full viewport in screen space.
+        canvas.drawRect(fullRect, paint);
+      } else {
+        // Clip to the requested world-space rect. Applied inside the
+        // camera-aware canvas transform so it moves with the world.
+        withActiveCameraCanvas(app.world, canvas, size, () {
+          canvas.drawRect(ambientBounds, paint);
+        });
+      }
     }
 
     // Additive light pass — runs in world space so light discs stay

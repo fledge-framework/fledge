@@ -1,4 +1,4 @@
-import 'dart:ui' show Color;
+import 'dart:ui' show Color, Rect;
 
 /// How [AmbientLight] is applied to the scene by
 /// [LitFledgeRenderView].
@@ -47,11 +47,27 @@ class AmbientLight {
   /// Where the ambient rect is drawn relative to sprites.
   final AmbientBlend blend;
 
+  /// Optional **world-space** rectangle that limits where the ambient
+  /// rect is drawn.
+  ///
+  /// - `null` (the default): the ambient rect covers the full
+  ///   viewport, matching the behaviour before this field existed.
+  /// - non-null: clip the ambient fill to this rect. Useful when the
+  ///   camera can look past a map's edge and the game doesn't want
+  ///   the ambient tint to hang off into empty screen space
+  ///   (Batch 6 item 25 — Porios's `computerStore` map exposed the
+  ///   50 px "interact highlight" fringe past the map bounds).
+  ///
+  /// The rect is in world coordinates; the widget applies the active
+  /// camera transform to it before painting.
+  final Rect? bounds;
+
   /// Creates an ambient-light resource.
   const AmbientLight({
     this.color = const Color(0xFFFFFFFF),
     this.intensity = 0.5,
     this.blend = AmbientBlend.underSprites,
+    this.bounds,
   });
 
   /// A neutral half-lit ambient — everything visible, just dim.
