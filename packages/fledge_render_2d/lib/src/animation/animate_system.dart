@@ -21,9 +21,13 @@ class AnimateSystem implements System {
   /// This should be set each frame before running the system.
   double deltaTime = 0;
 
+  /// The `SystemMeta.name` of [AnimateSystem]. Games that order their
+  /// own systems relative to this one use it in `before:` / `after:`.
+  static const String systemName = 'animate';
+
   @override
   SystemMeta get meta => SystemMeta(
-    name: 'animate',
+    name: systemName,
     writes: {ComponentId.of<AtlasSprite>(), ComponentId.of<Sprite>()},
     reads: {ComponentId.of<AnimationPlayer>()},
   );
@@ -73,9 +77,14 @@ class AnimationTime {
 
 /// System that uses AnimationTime resource for delta time.
 class AnimateSystemWithResource implements System {
+  /// The `SystemMeta.name` of [AnimateSystemWithResource]. Games
+  /// that order their own systems relative to this one use it in
+  /// `before:` / `after:`.
+  static const String systemName = 'animate_with_resource';
+
   @override
   SystemMeta get meta => SystemMeta(
-    name: 'animate_with_resource',
+    name: systemName,
     writes: {ComponentId.of<AtlasSprite>(), ComponentId.of<Sprite>()},
     reads: {ComponentId.of<AnimationPlayer>()},
     resourceReads: {AnimationTime},

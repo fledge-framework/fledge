@@ -13,9 +13,14 @@ import 'transform2d.dart';
 class SnapshotPreviousTransformSystem implements System {
   const SnapshotPreviousTransformSystem();
 
+  /// The `SystemMeta.name` of [SnapshotPreviousTransformSystem].
+  /// Games that order their own systems relative to this one use it
+  /// in `before:` / `after:`.
+  static const String systemName = 'snapshot_previous_transform';
+
   @override
   SystemMeta get meta => SystemMeta(
-    name: 'snapshot_previous_transform',
+    name: systemName,
     reads: {ComponentId.of<Transform2D>()},
     writes: {ComponentId.of<PreviousTransform2D>()},
   );

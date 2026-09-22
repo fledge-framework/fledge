@@ -11,9 +11,14 @@ class TransitionFadeSystem implements System {
   /// Creates a transition fade system.
   const TransitionFadeSystem();
 
+  /// The `SystemMeta.name` of [TransitionFadeSystem]. Games that
+  /// order their own systems relative to this one use it in
+  /// `before:` / `after:`.
+  static const String systemName = 'TransitionFadeSystem';
+
   @override
   SystemMeta get meta => const SystemMeta(
-    name: 'TransitionFadeSystem',
+    name: systemName,
     resourceReads: {WallTime},
     resourceWrites: {TransitionState},
     eventWrites: {TransitionCompleted},

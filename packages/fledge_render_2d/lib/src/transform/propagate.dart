@@ -14,9 +14,14 @@ import 'transform2d.dart';
 /// 1. Updates root entities (no parent) - GlobalTransform = LocalTransform
 /// 2. Propagates to children - GlobalTransform = Parent.Global * Local
 class TransformPropagateSystem implements System {
+  /// The `SystemMeta.name` of [TransformPropagateSystem]. Games that
+  /// order their own systems relative to this one use it in `before:`
+  /// / `after:`.
+  static const String systemName = 'transform_propagate';
+
   @override
   SystemMeta get meta => SystemMeta(
-    name: 'transform_propagate',
+    name: systemName,
     writes: {ComponentId.of<GlobalTransform2D>()},
     reads: {
       ComponentId.of<Transform2D>(),
