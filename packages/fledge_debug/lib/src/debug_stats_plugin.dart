@@ -21,9 +21,10 @@ import 'systems/system_stats_system.dart';
 /// - [SystemStats] — per-frame monotonic start/end + per-schedule
 ///   system counts.
 /// - [ScheduleOrderingReport] — public snapshot of
-///   `App.checkScheduleOrdering()` output, refreshed on
-///   [RefreshScheduleOrderingReportRequested] (and once at plugin
-///   build time).
+///   `App.checkScheduleOrdering()` output, seeded with an empty list
+///   at build time, refreshed on the first tick against the fully-
+///   built schedule, and again whenever a
+///   [RefreshScheduleOrderingReportRequested] event fires.
 ///
 /// Systems added:
 ///

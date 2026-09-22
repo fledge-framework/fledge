@@ -8,9 +8,16 @@ import '../resources/schedule_ordering_report.dart';
 /// Registered by [DebugStatsPlugin] and by [DebugPlugin]. Reads the
 /// event queue, re-runs `Scheduler.checkOrderingAmbiguities()` on the
 /// scheduler it was built with, and publishes the fresh list.
+///
+/// Also runs once on the first tick with no request event, so games
+/// see a fresh report against the fully-built schedule without having
+/// to fire a startup [RefreshScheduleOrderingReportRequested] from
+/// their own debug plugin. Later ticks only re-run on request.
 class ScheduleOrderingReportSystem implements System {
   /// The scheduler whose stages the report describes.
   final Scheduler scheduler;
+
+  bool _initialReportBuilt = false;
 
   /// Creates the report-refresh system for [scheduler].
   ScheduleOrderingReportSystem(this.scheduler);
@@ -38,9 +45,11 @@ class ScheduleOrderingReportSystem implements System {
   @override
   Future<void> run(World world) {
     final reader = world.eventReader<RefreshScheduleOrderingReportRequested>();
-    if (reader.isEmpty) return Future.value();
-    // Drain the queue.
+    final hasRequest = reader.isNotEmpty;
+    if (!hasRequest && _initialReportBuilt) return Future.value();
+    // Drain any pending requests.
     for (final _ in reader.read()) {}
+    _initialReportBuilt = true;
     final issues = scheduler.checkOrderingAmbiguities();
     final items = issues
         .map((a) => '${a.stage}: ${a.systemA} <-> ${a.systemB}')

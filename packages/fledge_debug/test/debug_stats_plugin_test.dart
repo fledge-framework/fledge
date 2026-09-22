@@ -30,6 +30,25 @@ void main() {
     expect(app.world.getResource<ScheduleOrderingReport>(), isNotNull);
   });
 
+  test('ScheduleOrderingReport auto-refreshes on the first tick '
+      'without a request event (follow-up D)', () async {
+    // A late-registered system whose ordering would be missed by any
+    // report snapshot taken before it was added.
+    final app = App()..addPlugin(const DebugStatsPlugin());
+    app.addSystem(const _LateStub(), schedule: Schedules.update);
+
+    // Build-time snapshot exists but predates _LateStub.
+    final before = app.world.getResource<ScheduleOrderingReport>()!;
+
+    // The first tick auto-refreshes without any RefreshScheduleOrdering
+    // ReportRequested being sent.
+    await app.tick();
+
+    final after = app.world.getResource<ScheduleOrderingReport>()!;
+    expect(after, isNot(same(before)),
+        reason: 'first tick installs a fresh report instance');
+  });
+
   test('ScheduleOrderingReport refreshes on request event', () async {
     final app = App()..addPlugin(const DebugStatsPlugin());
     // Initial snapshot exists.
@@ -50,6 +69,15 @@ void main() {
     expect(after.count, greaterThanOrEqualTo(0));
   });
 
+  test('later ticks do not re-run the report without a request', () async {
+    final app = App()..addPlugin(const DebugStatsPlugin());
+    await app.tick(); // first tick refreshes
+    final first = app.world.getResource<ScheduleOrderingReport>()!;
+    await app.tick(); // no request → resource must be the same instance
+    await app.tick();
+    expect(app.world.getResource<ScheduleOrderingReport>(), same(first));
+  });
+
   test('stats systems in Schedules.first do not add fresh ambiguities '
       'to checkScheduleOrdering (Batch 7 #30)', () {
     // Sanity: an app with DebugStatsPlugin alone has no
@@ -64,4 +92,20 @@ void main() {
           'ordering explicitly.',
     );
   });
+}
+
+class _LateStub implements System {
+  const _LateStub();
+
+  @override
+  SystemMeta get meta => const SystemMeta(name: 'late_stub');
+
+  @override
+  RunCondition? get runCondition => null;
+
+  @override
+  bool shouldRun(World world) => true;
+
+  @override
+  Future<void> run(World world) => Future.value();
 }
