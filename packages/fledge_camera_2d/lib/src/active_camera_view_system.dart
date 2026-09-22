@@ -1,8 +1,9 @@
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart'
-    show ActiveCameraView, GlobalTransform2D;
+    show ActiveCameraView, GlobalTransform2D, TransformPropagateSystem;
 
 import 'camera2d.dart';
+import 'follow.dart';
 
 /// Publishes the active camera's world position into
 /// [ActiveCameraView] each frame so `fledge_render_2d`'s widget
@@ -21,13 +22,18 @@ import 'camera2d.dart';
 class ActiveCameraViewSystem implements System {
   const ActiveCameraViewSystem();
 
+  /// The `SystemMeta.name` of [ActiveCameraViewSystem]. Games that
+  /// order their own systems relative to this one use it in
+  /// `before:` / `after:`.
+  static const String systemName = 'active_camera_view';
+
   @override
   SystemMeta get meta => SystemMeta(
-    name: 'active_camera_view',
+    name: systemName,
     reads: {ComponentId.of<Camera2D>(), ComponentId.of<GlobalTransform2D>()},
     resourceWrites: {ActiveCameraView},
     after: const [
-      'CameraFollowSystem',
+      CameraFollowSystem.systemName,
       'CameraShakeSystem',
       'CameraTransitionSystem',
       // ParallaxSystem writes GlobalTransform2D on parallax entities.
@@ -39,7 +45,7 @@ class ActiveCameraViewSystem implements System {
       // propagation in postUpdate (Batch 6 item 26) don't generate a
       // fresh ambiguity — this system reads GlobalTransform2D, which
       // the propagate pass writes.
-      'transform_propagate',
+      TransformPropagateSystem.systemName,
     ],
   );
 

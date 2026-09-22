@@ -2,7 +2,11 @@ import 'dart:ui' show Offset;
 
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart'
-    show GlobalTransform2D, PreviousTransform2D, Transform2D;
+    show
+        GlobalTransform2D,
+        PreviousTransform2D,
+        Transform2D,
+        TransformPropagateSystem;
 
 import 'camera2d.dart';
 import 'pixel_perfect.dart';
@@ -105,9 +109,14 @@ class CameraFollow {
 /// pixels so pixel-art tiles don't develop seams from sub-pixel
 /// camera positions.
 class CameraFollowSystem implements System {
+  /// The `SystemMeta.name` of [CameraFollowSystem]. Games that order
+  /// their own systems relative to this one use it in `before:` /
+  /// `after:`.
+  static const String systemName = 'CameraFollowSystem';
+
   @override
   SystemMeta get meta => SystemMeta(
-    name: 'CameraFollowSystem',
+    name: systemName,
     writes: {
       ComponentId.of<Transform2D>(),
       ComponentId.of<GlobalTransform2D>(),
@@ -118,7 +127,7 @@ class CameraFollowSystem implements System {
       ComponentId.of<CameraFollowTarget>(),
       ComponentId.of<Parent>(),
     },
-    after: const ['transform_propagate'],
+    after: const [TransformPropagateSystem.systemName],
     before: const [
       'CameraShakeSystem',
       'ParallaxSystem',
