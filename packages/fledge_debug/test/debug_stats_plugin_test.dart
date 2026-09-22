@@ -45,8 +45,11 @@ void main() {
     await app.tick();
 
     final after = app.world.getResource<ScheduleOrderingReport>()!;
-    expect(after, isNot(same(before)),
-        reason: 'first tick installs a fresh report instance');
+    expect(
+      after,
+      isNot(same(before)),
+      reason: 'first tick installs a fresh report instance',
+    );
   });
 
   test('ScheduleOrderingReport refreshes on request event', () async {

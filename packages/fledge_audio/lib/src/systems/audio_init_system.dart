@@ -21,8 +21,7 @@ class AudioInitSystem implements System {
   static const String systemName = 'AudioInitSystem';
 
   @override
-  SystemMeta get meta =>
-      const SystemMeta(name: systemName, exclusive: true);
+  SystemMeta get meta => const SystemMeta(name: systemName, exclusive: true);
 
   @override
   RunCondition? get runCondition => null;
