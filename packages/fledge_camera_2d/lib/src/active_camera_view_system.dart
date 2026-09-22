@@ -35,6 +35,11 @@ class ActiveCameraViewSystem implements System {
       // doesn't actually race (parallax touches non-camera entities)
       // but the scheduler can't tell that.
       'ParallaxSystem',
+      // Also order against transform_propagate so games that re-run
+      // propagation in postUpdate (Batch 6 item 26) don't generate a
+      // fresh ambiguity — this system reads GlobalTransform2D, which
+      // the propagate pass writes.
+      'transform_propagate',
     ],
   );
 
