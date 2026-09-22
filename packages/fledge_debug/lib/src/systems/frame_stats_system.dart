@@ -23,7 +23,14 @@ class FrameStatsSystem implements System {
     // (`Schedules.first`). Declare the dependency explicitly so
     // ordering doesn't fall back to registration order — see
     // `App.checkScheduleOrdering()` for why that matters.
-    after: ['wallTimeUpdate'],
+    //
+    // Also order after the exclusive init systems that live in
+    // Schedules.first (WindowInitSystem / AudioInitSystem) and before
+    // fledge_tiled's tilemap_spawn, so this debug system doesn't
+    // introduce fresh registration-order ambiguities to any app
+    // that installs those plugins.
+    after: ['wallTimeUpdate', 'WindowInitSystem', 'AudioInitSystem'],
+    before: ['tilemap_spawn'],
   );
 
   @override

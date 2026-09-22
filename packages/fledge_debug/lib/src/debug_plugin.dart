@@ -1,11 +1,8 @@
 import 'package:fledge_ecs/fledge_ecs.dart';
 
+import 'debug_stats_plugin.dart';
 import 'resources/debug_config.dart';
-import 'resources/frame_stats.dart';
-import 'resources/system_stats.dart';
-import 'systems/frame_stats_system.dart';
 import 'systems/overlay_populate_system.dart';
-import 'systems/system_stats_system.dart';
 
 /// Wires runtime observability into an [App].
 ///
@@ -42,8 +39,22 @@ class DebugPlugin implements Plugin {
   /// The initial debug configuration.
   final DebugConfig config;
 
+  /// Whether the plugin registers `OverlayPopulateSystem` (which
+  /// spawns fledge_ui entities for the FPS / entity-count / ambiguity
+  /// readout).
+  ///
+  /// - `true` (the default) — the pre-Batch-7 behaviour: the plugin
+  ///   installs the overlay populate system and games that also add
+  ///   `UiPlugin` see the readout.
+  /// - `false` — skip the overlay populate system entirely. Games
+  ///   without `UiPlugin` (or those that draw their own perf HUD in
+  ///   Flutter, like Porios) install the plugin with `overlay: false`.
+  ///   The stats resources and gizmo config are still installed;
+  ///   `DebugGizmosLayer` and any custom UI can consume them.
+  final bool overlay;
+
   /// Creates a debug plugin with the given [config].
-  const DebugPlugin({this.config = const DebugConfig()});
+  const DebugPlugin({this.config = const DebugConfig(), this.overlay = true});
 
   @override
   void build(App app) {
@@ -56,16 +67,18 @@ class DebugPlugin implements Plugin {
     if (!app.world.hasResource<DebugConfig>()) {
       app.insertResource(config);
     }
-    app.insertResource(FrameStats());
-    app.insertResource(SystemStats());
 
-    app.addSystem(const FrameStatsSystem(), schedule: Schedules.first);
-    app.addSystem(
-      SystemStatsStartSystem(app.scheduler),
-      schedule: Schedules.first,
-    );
-    app.addSystem(const SystemStatsEndSystem(), schedule: Schedules.last);
-    app.addSystem(const OverlayPopulateSystem(), schedule: Schedules.preUpdate);
+    // Stats resources + systems come from the standalone plugin so
+    // both entry points wire the same schedule and the same public
+    // ScheduleOrderingReport resource.
+    app.addPlugin(const DebugStatsPlugin());
+
+    if (overlay) {
+      app.addSystem(
+        const OverlayPopulateSystem(),
+        schedule: Schedules.preUpdate,
+      );
+    }
 
     // Snapshot ambiguities at build time so the overlay has data on
     // its very first paint. Games that add plugins after the debug

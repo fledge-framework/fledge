@@ -24,10 +24,13 @@ library;
 
 export 'src/components/gizmo_marker.dart';
 export 'src/debug_plugin.dart';
+export 'src/debug_stats_plugin.dart';
 export 'src/resources/debug_config.dart';
 export 'src/resources/frame_stats.dart';
+export 'src/resources/schedule_ordering_report.dart';
 export 'src/resources/system_stats.dart';
 export 'src/systems/frame_stats_system.dart';
 export 'src/systems/overlay_populate_system.dart' show OverlayPopulateSystem;
+export 'src/systems/schedule_ordering_report_system.dart';
 export 'src/systems/system_stats_system.dart';
 export 'src/widgets/debug_gizmos_layer.dart';

@@ -32,6 +32,12 @@ class SystemStatsStartSystem implements System {
   SystemMeta get meta => const SystemMeta(
     name: 'debug_system_stats_start',
     resourceWrites: {SystemStats},
+    // Same rationale as FrameStatsSystem — sit after the exclusive
+    // init systems in Schedules.first and before tilemap_spawn so
+    // installing DebugStatsPlugin doesn't grow checkScheduleOrdering's
+    // baseline by three entries.
+    after: ['WindowInitSystem', 'AudioInitSystem', 'wallTimeUpdate'],
+    before: ['tilemap_spawn'],
   );
 
   @override

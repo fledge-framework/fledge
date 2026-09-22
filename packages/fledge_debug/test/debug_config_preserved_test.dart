@@ -8,7 +8,7 @@ void main() {
   test('DebugPlugin keeps a pre-existing DebugConfig', () {
     final app = App();
     // Game inserts its own — everything off.
-    final gameConfig = const DebugConfig(
+    const gameConfig = DebugConfig(
       showFps: false,
       showEntityCount: false,
       showOrderingAmbiguities: false,
