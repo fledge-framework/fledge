@@ -1,8 +1,9 @@
-import 'dart:ui' show BlendMode, Canvas, Color, Paint, Rect;
+import 'dart:ui' show BlendMode, Canvas, Color, Offset, Paint, Rect;
 
 import 'package:fledge_ecs/fledge_ecs.dart' show App;
 import 'package:fledge_render_2d/fledge_render_2d.dart'
     show
+        ActiveCameraView,
         CanvasSpriteDrawer,
         RenderWorld,
         SpriteDrawer,
@@ -114,9 +115,26 @@ class _LitFledgeRenderPainter extends CustomPainter {
     }
 
     // Additive light pass — runs in world space so light discs stay
-    // aligned with the sprites they light up.
+    // aligned with the sprites they light up. Compute the world-space
+    // viewport rect so directional lights fill the visible world and
+    // point / spot lights cull against it. Falls back to
+    // `Offset.zero & size` (world = screen) when no camera exists.
+    final cameraView = app.world.getResource<ActiveCameraView>();
+    final worldViewport = cameraView == null
+        ? Offset.zero & size
+        : Rect.fromLTWH(
+            cameraView.x - size.width / 2,
+            cameraView.y - size.height / 2,
+            size.width,
+            size.height,
+          );
     withActiveCameraCanvas(app.world, canvas, size, () {
-      renderLightsToCanvas(renderWorld, canvas, size);
+      renderLightsToCanvas(
+        renderWorld,
+        canvas,
+        size,
+        worldViewport: worldViewport,
+      );
     });
   }
 

@@ -22,11 +22,27 @@ import 'light2d.dart';
 /// - `LightType.directional`: a full-viewport additive rect in the
 ///   light's colour × intensity.
 ///
+/// ## Camera-aware rendering
+///
+/// [worldViewport] tells the culler and the directional-fill which
+/// world rect the canvas is currently showing. Under
+/// `LitFledgeRenderView`'s camera-aware wrap the canvas has already
+/// been translated so world (camera) sits at the centre — pass the
+/// same world rect the camera is showing. Without a camera the
+/// widget passes `Offset.zero & size`, which keeps the old
+/// world = screen behaviour and lets callers that don't run through
+/// the camera-aware wrap stay unchanged.
+///
 /// The Canvas backend does not implement per-pixel normal-map
 /// contributions — that's future GPU work. Every gradient here is a
 /// pure 2D screen-space effect.
-void renderLightsToCanvas(RenderWorld renderWorld, Canvas canvas, Size size) {
-  final viewportRect = Offset.zero & size;
+void renderLightsToCanvas(
+  RenderWorld renderWorld,
+  Canvas canvas,
+  Size size, {
+  Rect? worldViewport,
+}) {
+  final viewportRect = worldViewport ?? (Offset.zero & size);
   for (final (_, light) in renderWorld.query1<ExtractedLight>().iter()) {
     switch (light.type) {
       case LightType.directional:
