@@ -211,6 +211,80 @@ final entity = world.spawn()
 world.get<UiText>(entity.entity).text = 'Score: $score';
 ```
 
+## Placement mode
+
+Since v0.3.0 `fledge_ui` ships a generic placement mode — the state
+machine, event vocabulary, validator seam, ghost preview and record
+registry a Stardew-adjacent game (furniture, machines, crops) needs
+without any per-game rules.
+
+### Overview
+
+- **`PlacementState` resource** — the one placement in progress:
+  `mode`, `placeableKey`, `previewTile`, `isValid`, `refusalReason`.
+  Written only by `PlacementSystem`.
+- **Request events** — `PlacementEnterRequested(key)`,
+  `PlacementPreviewRequested(mapKey, x, y)`,
+  `PlacementConfirmRequested`, `PlacementCancelRequested`. Sent from
+  input systems, HUD widgets, or game systems.
+- **Notification events** — `PlacementEntered`, `PlacementPreviewMoved`,
+  `PlacementConfirmed`, `PlacementCancelled`.
+- **`PlacementValidator`** — game-supplied rule: `bool isValid(world,
+  key, tile)` + optional `refusalReason(...)`. Pure reads only;
+  declare what it reads via `PlacementAccess` on the plugin's
+  `validatorAccess:` parameter.
+- **`PlacedEntityRegistry<TRecord>`** — per-map placed records with a
+  deterministic `allocateId(prefix)`. Not `Saveable` (that would pull
+  `fledge_save` in); the game wraps it in its own saved resource.
+- **`PlacementGhost` / `PlacementGhostSystem`** — one world-space
+  sprite entity at the preview tile, tinted for validity.
+
+### Setup
+
+```dart
+app.addPlugin(PlacementCorePlugin(
+  validator: MyValidator(),
+  ghost: PlacementGhostConfig(
+    tileToWorld: (tile) => (tile.x * 16.0, tile.y * 16.0),
+    ghostSpriteFor: (world, key) => Sprite(texture: textureFor(key)),
+  ),
+));
+```
+
+### Placement flow
+
+```dart
+// Enter placement mode from a hotbar selection.
+world.eventWriter<PlacementEnterRequested>().send(
+  const PlacementEnterRequested('chair'),
+);
+
+// Update the preview tile from the player's facing direction.
+world.eventWriter<PlacementPreviewRequested>().send(
+  PlacementPreviewRequested(currentMap.id, tileX, tileY),
+);
+
+// Confirm.
+world.eventWriter<PlacementConfirmRequested>().send(
+  const PlacementConfirmRequested(),
+);
+```
+
+React to `PlacementConfirmed` in a game system: spawn the entity,
+decrement inventory, register a record.
+
+### Run condition
+
+Gate gameplay while placing:
+
+```dart
+app.addSystem(
+  npcSteeringSystem,
+  schedule: Schedules.update,
+  runCondition: RunConditions.not(placementActive),
+);
+```
+
 ## Roadmap
 
 - **Phase 7b**: focus + keyboard / gamepad navigation.

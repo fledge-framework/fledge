@@ -1,6 +1,6 @@
 # fledge_ui
 
-Retained-mode game HUD/UI for [Fledge](https://fledge-framework.dev) — anchor-based layout, containers, text, images, and solid panels painted on top of the sprite pipeline.
+Retained-mode game HUD/UI and generic placement mode for [Fledge](https://fledge-framework.dev) — anchor-based layout, containers, text, images, solid panels painted on top of the sprite pipeline, plus a `PlacementCorePlugin` that runs Stardew-adjacent "drop-a-hotbar-item-into-the-world" flows (mode state, validator seam, world-space ghost preview).
 
 [![pub package](https://img.shields.io/pub/v/fledge_ui.svg)](https://pub.dev/packages/fledge_ui)
 
