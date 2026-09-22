@@ -102,9 +102,14 @@ class TilemapSpawnedEvent {
 /// - Child entities for each layer ([TileLayer] or [ObjectLayer])
 /// - Optional child entities for objects
 class TilemapSpawnSystem implements System {
+  /// The `SystemMeta.name` of [TilemapSpawnSystem]. Games that order
+  /// their own systems relative to this one use it in `before:` /
+  /// `after:`.
+  static const String systemName = 'tilemap_spawn';
+
   @override
   SystemMeta get meta => const SystemMeta(
-    name: 'tilemap_spawn',
+    name: systemName,
     eventReads: {SpawnTilemapEvent},
     eventWrites: {TilemapSpawnedEvent},
     exclusive: true,
