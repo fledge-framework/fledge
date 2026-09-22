@@ -1,0 +1,43 @@
+title: hold_line
+tags: test
+---
+Host: Before.
+<<wait_for tape>>
+Host: After.
+===
+
+title: hold_choice
+tags: test
+---
+Host: Pick.
+-> A #a_1
+    <<wait_for tape>>
+    Host: Chose A.
+-> B #timeout
+    Host: Chose B.
+Host: Done.
+===
+
+title: hold_end
+tags: test
+---
+Host: Last line.
+<<wait_for tape>>
+===
+
+title: hold_then_log
+tags: test
+---
+Host: One.
+<<wait_for tape>>
+<<log ran>>
+Host: Two.
+===
+
+title: no_hold
+tags: test
+---
+Host: One.
+<<wait_for>>
+Host: Two.
+===

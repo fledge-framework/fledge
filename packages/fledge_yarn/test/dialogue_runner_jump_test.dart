@@ -27,13 +27,13 @@ Character: This line is unreachable.
 
     expect(runner.startNode('start'), isTrue);
     // The first line is shown. Advance to hit the jump.
-    expect(runner.state, DialogueState.line);
+    expect(runner.state, DialogueRunnerState.line);
     expect(lastLine?.text, isNotNull);
     runner.advance();
 
     // Post-jump: the runner cleared the current line, ended the
     // dialogue, and fired onDialogueEnd exactly once.
-    expect(runner.state, DialogueState.ended);
+    expect(runner.state, DialogueRunnerState.ended);
     expect(runner.currentDialogueLine, isNull);
     expect(ended, isTrue);
   });

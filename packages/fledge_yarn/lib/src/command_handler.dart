@@ -10,14 +10,15 @@ typedef CommandCallback = bool Function(String command, List<String> arguments);
 ///
 /// Runs synchronously when `DialogueRunner._processNext` reaches a
 /// `<<command>>` line whose name was registered via
-/// [CommandHandler.registerPausing]. After the callback returns, the
-/// runner enters [DialogueState.paused] and stops processing until
+/// [CommandHandler.registerPausing]. Return `true` to pause the runner:
+/// it enters [DialogueRunnerState.paused] and stops processing until
 /// `DialogueRunner.resume()` is called — statements between this
 /// command and the next line / choice have NOT run yet, so any
 /// asynchronous game-side work triggered by the command (start a
 /// hold, wait for a modal to close) can finish before the dialogue
-/// moves on.
-typedef PausingCommandCallback = void Function(
+/// moves on. Return `false` to continue processing as if the command
+/// were a regular one (e.g. malformed arguments: log and carry on).
+typedef PausingCommandCallback = bool Function(
   String command,
   List<String> arguments,
 );
@@ -98,13 +99,14 @@ class CommandHandler {
     return false;
   }
 
-  /// Execute a pausing command with the given arguments. No-op if
-  /// no pausing handler is registered under [command].
-  void executePausing(String command, List<String> arguments) {
+  /// Execute a pausing command with the given arguments. Returns the
+  /// callback's own return value — true means the runner should pause
+  /// after the command, false means continue as normal. Returns false
+  /// if no pausing handler is registered under [command].
+  bool executePausing(String command, List<String> arguments) {
     final handler = _pausingHandlers[command.toLowerCase()];
-    if (handler != null) {
-      handler(command, arguments);
-    }
+    if (handler == null) return false;
+    return handler(command, arguments);
   }
 
   /// Clear all registered handlers (regular AND pausing).

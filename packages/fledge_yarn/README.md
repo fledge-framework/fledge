@@ -19,17 +19,24 @@ import 'package:fledge_yarn/fledge_yarn.dart';
 import 'package:flutter/services.dart';
 
 Future<void> main() async {
-  final app = App()..addPlugin(YarnPlugin());
+  final app = App()
+    ..addPlugin(YarnPlugin())
+    ..addPlugin(DialogueCorePlugin()); // event-driven dialogue layer
 
   final project = app.world.getResource<YarnProject>()!;
   project.parse(await rootBundle.loadString('assets/dialogue/npcs.yarn'));
 
-  final runner = app.world.createDialogueRunner();
-  runner?.startNode('sara_greeting');
+  app.world.eventWriter<DialogueStartRequested>().send(
+    const DialogueStartRequested('sara_greeting'),
+  );
 
   await app.run();
 }
 ```
+
+`DialogueCorePlugin` adds a `DialogueState` resource, a set of request /
+notification events, holding-command support (`registerHoldingCommand`),
+and the `DialogueBoxWidget` — see the plugin docs for the full API.
 
 ## Documentation
 

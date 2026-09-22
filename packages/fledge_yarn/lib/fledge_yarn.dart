@@ -59,3 +59,11 @@ export 'src/command_handler.dart';
 
 // Plugin
 export 'src/plugin.dart';
+
+// Event-driven dialogue layer (design §8.1: DialogueState resource,
+// request/notification events, systems, holds, dialogue box widget).
+export 'src/dialogue/declare_command.dart';
+export 'src/dialogue/dialogue_box_widget.dart';
+export 'src/dialogue/dialogue_core_plugin.dart';
+export 'src/dialogue/dialogue_events.dart';
+export 'src/dialogue/dialogue_state.dart';

@@ -1,0 +1,49 @@
+title: intro
+tags: test
+---
+Guide: Hello there! #greeting
+Guide: Pick one.
+-> Warm reply #warm #energy_2
+    <<log warm>>
+    Guide: Nice.
+-> Cold reply #cold
+    Guide: Oh.
+-> Say nothing #timeout
+    Guide: ...
+<<set $intro_done = true>>
+<<log end>>
+===
+
+title: narration
+tags: test
+---
+Just narration here.
+===
+
+title: declared
+tags: test
+---
+<<declare $seed_flag = true>>
+<<declare $seed_count = 5>>
+===
+
+title: skip_chain
+tags: test
+---
+Guide: One.
+<<log a>>
+Guide: Two.
+<<set $mid = 1>>
+Guide: Three.
+-> Go on
+    Guide: After.
+    <<log b>>
+<<set $chain_done = true>>
+===
+
+title: opens_with_choice
+tags: test
+---
+-> First
+-> Second
+===

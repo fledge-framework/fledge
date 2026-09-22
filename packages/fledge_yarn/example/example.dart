@@ -31,7 +31,7 @@ Sara: How can I help you today?
   // Step through the dialogue
   while (runner.canContinue) {
     switch (runner.state) {
-      case DialogueState.line:
+      case DialogueRunnerState.line:
         final line = runner.currentDialogueLine!;
         if (line.character != null) {
           print('${line.character}: ${line.text}');
@@ -41,7 +41,7 @@ Sara: How can I help you today?
         runner.advance();
         break;
 
-      case DialogueState.choices:
+      case DialogueRunnerState.choices:
         print('\nChoices:');
         for (var i = 0; i < runner.currentChoices.length; i++) {
           print('  $i: ${runner.currentChoices[i].text}');

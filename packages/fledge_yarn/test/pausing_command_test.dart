@@ -22,6 +22,7 @@ Character: Post-resume line.
       final commands = CommandHandler();
       commands.registerPausing('pauseHere', (command, args) {
         ran.add('pauseHere');
+        return true;
       });
       commands.register('record', (command, args) {
         ran.add('record ${args.join(" ")}');
@@ -38,14 +39,14 @@ Character: Post-resume line.
 
       expect(runner.startNode('start'), isTrue);
       // Pausing command ran; nothing after it should have.
-      expect(runner.state, DialogueState.paused);
+      expect(runner.state, DialogueRunnerState.paused);
       expect(ran, ['pauseHere']);
       expect(lastLine, isNull);
 
       // Resume: the record command and the post-resume line now run.
       runner.resume();
       expect(ran, ['pauseHere', 'record afterPause']);
-      expect(runner.state, DialogueState.line);
+      expect(runner.state, DialogueRunnerState.line);
       expect(lastLine?.text, contains('Post-resume line'));
     },
   );
@@ -63,9 +64,9 @@ Character: Only line.
       variableStorage: VariableStorage(),
     );
     runner.startNode('start');
-    expect(runner.state, DialogueState.line);
+    expect(runner.state, DialogueRunnerState.line);
     runner.resume();
-    expect(runner.state, DialogueState.line);
+    expect(runner.state, DialogueRunnerState.line);
   });
 
   test(
@@ -73,7 +74,7 @@ Character: Only line.
     () {
       final commands = CommandHandler();
       commands.register('regular', (_, _) => true);
-      commands.registerPausing('holding', (_, _) {});
+      commands.registerPausing('holding', (_, _) => true);
       expect(commands.hasPausingHandler('regular'), isFalse);
       expect(commands.hasPausingHandler('holding'), isTrue);
       // hasHandler still returns true for both, matching the pre-fix

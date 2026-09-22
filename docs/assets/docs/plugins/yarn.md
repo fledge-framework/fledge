@@ -246,13 +246,13 @@ runner?.startNode('greeting');
 ```dart
 while (runner.canContinue) {
   switch (runner.state) {
-    case DialogueState.line:
+    case DialogueRunnerState.line:
       final line = runner.currentDialogueLine!;
       print('${line.character}: ${line.text}');
       runner.advance();
       break;
 
-    case DialogueState.choices:
+    case DialogueRunnerState.choices:
       for (var i = 0; i < runner.currentChoices.length; i++) {
         print('$i: ${runner.currentChoices[i].text}');
       }
@@ -262,6 +262,11 @@ while (runner.canContinue) {
   }
 }
 ```
+
+> **Breaking change in v0.3.0.** The runner-state enum was renamed from
+> `DialogueState` to `DialogueRunnerState` to make room for the new
+> `DialogueState` resource (see below). Update `switch` cases and any
+> `runner.state == ...` checks in the same PR you bump `fledge_yarn`.
 
 ### Runner Callbacks
 
@@ -307,81 +312,117 @@ YarnPlugin(
 )
 ```
 
-## Game Integration Example
+## Event-driven dialogue layer
 
-Here's how to integrate yarn dialogue in a typical game:
+Since v0.3.0 `fledge_yarn` ships an event-driven layer on top of
+`DialogueRunner` — no per-game wrapper needed. `DialogueCorePlugin`
+adds a `DialogueState` resource (typewriter, current line, pending
+choices, hold state), a set of request events (start, advance, choose,
+skip, stop, hold-release), notification events (started, line shown,
+choices ready, choice made, ended), and two systems that drive the
+runner from those events.
 
-### Dialogue State Resource
-
-Create a game-specific wrapper around the runner:
+### Setup
 
 ```dart
-class GameDialogueState {
-  DialogueRunner? _runner;
-  NpcId? currentNpcId;
-  String displayText = '';
-  double typewriterProgress = 0.0;
+final app = App()
+  ..addPlugin(YarnPlugin())            // provides YarnProject etc.
+  ..addPlugin(DialogueCorePlugin());   // adds DialogueState + systems
+```
 
-  bool get isActive => _runner != null &&
-      _runner!.state != DialogueState.ended;
+Register your custom Yarn commands on `CommandHandler` as usual.
 
-  void startDialogue(NpcId npcId, DialogueRunner runner, String node) {
-    currentNpcId = npcId;
-    _runner = runner;
-    runner.startNode(node);
-    _updateFromRunner();
-  }
+### Starting and advancing dialogue
 
-  void advance() {
-    if (_runner == null) return;
-    _runner!.advance();
-    _updateFromRunner();
-  }
+Every mutation is an event, sent from any system:
 
-  void selectChoice(int index) {
-    if (_runner == null) return;
-    _runner!.selectChoice(index);
-    _updateFromRunner();
-  }
+```dart
+world.eventWriter<DialogueStartRequested>().send(
+  DialogueStartRequested('greeting', context: npcId),
+);
+```
 
-  void _updateFromRunner() {
-    if (_runner?.state == DialogueState.line) {
-      final line = _runner!.currentDialogueLine!;
-      displayText = line.text;
-      typewriterProgress = 0.0;
-    }
-  }
+Read the presentation-facing state from anywhere:
+
+```dart
+final state = world.getResource<DialogueState>()!;
+if (state.isActive) {
+  print(state.visibleText); // typewriter progress
 }
 ```
 
-### NPC Interaction System
+Advance and choose:
 
 ```dart
-@system
-void npcInteractionSystem(World world) {
-  final dialogue = world.getResource<GameDialogueState>();
-  final project = world.getResource<YarnProject>();
-  final storage = world.getResource<VariableStorage>();
-  final commands = world.getResource<CommandHandler>();
+world.eventWriter<DialogueAdvanceRequested>().send(
+  const DialogueAdvanceRequested(),
+);
 
-  if (dialogue == null || dialogue.isActive) return;
+world.eventWriter<DialogueChoiceSelected>().send(
+  const DialogueChoiceSelected(0),
+);
+```
 
-  for (final (entity, npc, _) in world.query2<Npc, InteractionEvent>().iter()) {
-    // Create runner with registered commands
-    final runner = DialogueRunner(
-      project: project!,
-      variableStorage: storage!,
-      commandHandler: commands,
-    );
+### Holding commands
 
-    // Start dialogue for this NPC
-    final startNode = '${npc.id.name}_greeting';
-    dialogue.startDialogue(npc.id, runner, startNode);
+A holding command pauses the dialogue until the game releases it — a
+minigame, a cutscene, a timed beat. Register a handler and hand back a
+token:
 
-    world.remove<InteractionEvent>(entity);
-    break;
-  }
-}
+```dart
+final commands = world.getResource<CommandHandler>()!;
+registerHoldingCommand(commands, world, 'rhythm_segment', (arguments) {
+  world.eventWriter<StartRhythmSegment>().send(
+    StartRhythmSegment(arguments),
+  );
+  return 'rhythm'; // token that identifies this hold
+});
+```
+
+Yarn:
+
+```yarn
+Host: Cue up the rhythm.
+<<rhythm_segment easy>>
+Host: Nice work.
+```
+
+When the minigame is done, release the hold:
+
+```dart
+world.eventWriter<DialogueHoldReleased>().send(
+  const DialogueHoldReleased('rhythm'),
+);
+```
+
+Holds use the pausing command callback, so commands between the holding
+command and the next line do **not** run until release.
+
+### Dialogue box widget
+
+`DialogueBoxWidget` reads a `DialogueState` and reports taps through
+callbacks — style it with `DialogueBoxTheme`:
+
+```dart
+DialogueBoxWidget(
+  state: world.getResource<DialogueState>()!,
+  onAdvance: () => world.eventWriter<DialogueAdvanceRequested>()
+      .send(const DialogueAdvanceRequested()),
+  onChoiceSelected: (i) => world.eventWriter<DialogueChoiceSelected>()
+      .send(DialogueChoiceSelected(i)),
+)
+```
+
+### Run conditions
+
+Gate gameplay systems while dialogue is up:
+
+```dart
+app.addSystem(
+  npcSteeringSystem,
+  schedule: Schedules.update,
+  runCondition: unlessDialogueActive,
+);
 ```
 
 ## Resources Reference

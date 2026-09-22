@@ -7,7 +7,7 @@ import 'yarn_node.dart';
 import 'yarn_project.dart';
 
 /// The current state of the dialogue runner.
-enum DialogueState {
+enum DialogueRunnerState {
   /// No dialogue is running.
   inactive,
 
@@ -43,14 +43,14 @@ enum DialogueState {
 ///
 /// runner.startNode('greeting');
 ///
-/// while (runner.state != DialogueState.ended) {
+/// while (runner.state != DialogueRunnerState.ended) {
 ///   switch (runner.state) {
-///     case DialogueState.line:
+///     case DialogueRunnerState.line:
 ///       final line = runner.currentDialogueLine!;
 ///       print('${line.character}: ${line.text}');
 ///       runner.advance();
 ///       break;
-///     case DialogueState.choices:
+///     case DialogueRunnerState.choices:
 ///       for (var i = 0; i < runner.currentChoices.length; i++) {
 ///         print('$i: ${runner.currentChoices[i].text}');
 ///       }
@@ -84,7 +84,7 @@ class DialogueRunner {
   /// Called when jumping to a new node.
   final void Function(String nodeTitle)? onNodeStart;
 
-  DialogueState _state = DialogueState.inactive;
+  DialogueRunnerState _state = DialogueRunnerState.inactive;
   YarnNode? _currentNode;
   List<YarnLine> _lineQueue = [];
   int _lineIndex = 0;
@@ -93,19 +93,19 @@ class DialogueRunner {
   final List<String> _nodeHistory = [];
 
   /// Current state of the dialogue runner.
-  DialogueState get state => _state;
+  DialogueRunnerState get state => _state;
 
   /// Whether dialogue can continue (not ended or inactive).
   bool get canContinue =>
-      _state == DialogueState.line || _state == DialogueState.choices;
+      _state == DialogueRunnerState.line || _state == DialogueRunnerState.choices;
 
   /// Whether the runner is waiting for a choice selection.
-  bool get isWaitingForChoice => _state == DialogueState.choices;
+  bool get isWaitingForChoice => _state == DialogueRunnerState.choices;
 
   /// The current dialogue line being displayed.
   DialogueLine? get currentDialogueLine => _currentLine;
 
-  /// The current choices available (if state is [DialogueState.choices]).
+  /// The current choices available (if state is [DialogueRunnerState.choices]).
   List<Choice> get currentChoices => _currentChoices ?? [];
 
   /// The title of the current node.
@@ -152,7 +152,7 @@ class DialogueRunner {
   ///
   /// Call this after displaying a line to the player.
   void advance() {
-    if (_state != DialogueState.line) return;
+    if (_state != DialogueRunnerState.line) return;
 
     _lineIndex++;
     _processNext();
@@ -162,7 +162,7 @@ class DialogueRunner {
   ///
   /// Call this when the player makes a choice.
   void selectChoice(int index) {
-    if (_state != DialogueState.choices) return;
+    if (_state != DialogueRunnerState.choices) return;
     if (_currentChoices == null ||
         index < 0 ||
         index >= _currentChoices!.length) {
@@ -191,16 +191,16 @@ class DialogueRunner {
   /// See [CommandHandler.registerPausing]. Call this once the game-
   /// side work triggered by a `<<pausingCommand>>` is done and the
   /// dialogue can move on. No-op unless the runner is currently in
-  /// [DialogueState.paused].
+  /// [DialogueRunnerState.paused].
   void resume() {
-    if (_state != DialogueState.paused) return;
-    _state = DialogueState.inactive;
+    if (_state != DialogueRunnerState.paused) return;
+    _state = DialogueRunnerState.inactive;
     _processNext();
   }
 
   /// Stop the current dialogue.
   void stop() {
-    _state = DialogueState.ended;
+    _state = DialogueRunnerState.ended;
     _currentNode = null;
     _lineQueue = [];
     _lineIndex = 0;
@@ -211,7 +211,7 @@ class DialogueRunner {
 
   /// Reset the runner to inactive state.
   void reset() {
-    _state = DialogueState.inactive;
+    _state = DialogueRunnerState.inactive;
     _currentNode = null;
     _lineQueue = [];
     _lineIndex = 0;
@@ -227,13 +227,13 @@ class DialogueRunner {
       switch (line) {
         case DialogueLine():
           _currentLine = line;
-          _state = DialogueState.line;
+          _state = DialogueRunnerState.line;
           onLine?.call(line);
           return;
 
         case ChoiceSet():
           _processChoices(line);
-          if (_state == DialogueState.choices) return;
+          if (_state == DialogueRunnerState.choices) return;
           break;
 
         case CommandLine():
@@ -242,7 +242,7 @@ class DialogueRunner {
           // A pausing command handler flipped _state = paused. Stop
           // processing here; DialogueRunner.resume() picks up at the
           // next statement.
-          if (_state == DialogueState.paused) return;
+          if (_state == DialogueRunnerState.paused) return;
           break;
 
         case ConditionalBlock():
@@ -265,7 +265,7 @@ class DialogueRunner {
             );
             _lineIndex = _lineQueue.length; // stop the outer loop
             _currentLine = null;
-            _state = DialogueState.ended;
+            _state = DialogueRunnerState.ended;
             onDialogueEnd?.call();
           }
           return;
@@ -273,7 +273,7 @@ class DialogueRunner {
     }
 
     // Reached end of node
-    _state = DialogueState.ended;
+    _state = DialogueRunnerState.ended;
     onDialogueEnd?.call();
   }
 
@@ -302,7 +302,7 @@ class DialogueRunner {
     }
 
     _currentChoices = availableChoices;
-    _state = DialogueState.choices;
+    _state = DialogueRunnerState.choices;
     onChoices?.call(availableChoices);
   }
 
@@ -329,16 +329,20 @@ class DialogueRunner {
         break;
 
       default:
-        // Pausing handler takes priority — it runs synchronously,
-        // then the runner stops until DialogueRunner.resume() is
+        // Pausing handler takes priority — it runs synchronously and
+        // decides via its return value whether to pause. When it
+        // pauses, the runner stops until DialogueRunner.resume() is
         // called. Statements between the pausing command and the
         // next line / choice haven't been processed yet, so the
         // pause is exact.
         if (commandHandler != null &&
             commandHandler!.hasPausingHandler(command)) {
-          commandHandler!.executePausing(command, args);
-          _state = DialogueState.paused;
-          return;
+          final shouldPause = commandHandler!.executePausing(command, args);
+          if (shouldPause) {
+            _state = DialogueRunnerState.paused;
+            return;
+          }
+          break;
         }
         // Fall back to the regular handler.
         commandHandler?.execute(command, args);
