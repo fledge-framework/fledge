@@ -64,9 +64,14 @@ class ActiveCameraViewSystem implements System {
     final view = world.getResource<ActiveCameraView>();
     if (view != null) {
       view.set(bestTransform.x, bestTransform.y);
+      view.pixelPerfect = best.pixelPerfect;
     } else {
       world.insertResource(
-        ActiveCameraView(x: bestTransform.x, y: bestTransform.y),
+        ActiveCameraView(
+          x: bestTransform.x,
+          y: bestTransform.y,
+          pixelPerfect: best.pixelPerfect,
+        ),
       );
     }
     return Future.value();

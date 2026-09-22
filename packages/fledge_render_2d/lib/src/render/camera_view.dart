@@ -31,10 +31,16 @@ class ActiveCameraView {
   /// World-space position of the camera's centre.
   double y;
 
-  /// Creates the resource at the world origin.
-  ActiveCameraView({this.x = 0, this.y = 0});
+  /// Whether the underlying camera is pixel-perfect. Publishers should
+  /// mirror `Camera2D.pixelPerfect` here so the widget path can round
+  /// the derived canvas offset to whole pixels, avoiding a half-pixel
+  /// canvas translation on odd-sized viewports.
+  bool pixelPerfect;
 
-  /// Set both coordinates at once.
+  /// Creates the resource at the world origin.
+  ActiveCameraView({this.x = 0, this.y = 0, this.pixelPerfect = false});
+
+  /// Set both coordinates at once (leaves [pixelPerfect] untouched).
   void set(double x, double y) {
     this.x = x;
     this.y = y;
@@ -60,10 +66,15 @@ class ActiveCameraView {
 Offset? activeCameraCanvasOffset(World world, Size viewportSize) {
   final view = world.getResource<ActiveCameraView>();
   if (view == null) return null;
-  return Offset(
-    viewportSize.width / 2 - view.x,
-    viewportSize.height / 2 - view.y,
-  );
+  final rawX = viewportSize.width / 2 - view.x;
+  final rawY = viewportSize.height / 2 - view.y;
+  if (view.pixelPerfect) {
+    // Round to whole pixels so pixel-art tiles don't fall on half
+    // pixels when the viewport width or height is odd (or the camera
+    // ends up at a non-integer world position).
+    return Offset(rawX.roundToDouble(), rawY.roundToDouble());
+  }
+  return Offset(rawX, rawY);
 }
 
 /// Convenience wrapper that pushes a camera-aware translation onto
