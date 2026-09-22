@@ -1,6 +1,6 @@
 name: fledge_assets
 description: Ref-counted asset management for Fledge — handles, per-type asset storage, and optional native hot reload.
-version: 0.2.2
+version: 0.3.0
 repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_assets
 homepage: https://fledge-framework.dev
 issue_tracker: https://github.com/fledge-framework/fledge/issues
@@ -11,7 +11,7 @@ environment:
 resolution: workspace
 
 dependencies:
-  fledge_ecs: ^0.2.2
+  fledge_ecs: ^0.3.0
   meta: ^1.17.0
   watcher: ^1.1.0
 

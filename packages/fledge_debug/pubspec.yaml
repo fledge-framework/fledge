@@ -1,6 +1,6 @@
 name: fledge_debug
 description: Runtime observability for Fledge — FPS/entity/schedule-ordering overlay plus AABB / collider / camera-frustum gizmos.
-version: 0.2.2
+version: 0.3.0
 repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_debug
 homepage: https://fledge-framework.dev
 issue_tracker: https://github.com/fledge-framework/fledge/issues
@@ -13,11 +13,11 @@ resolution: workspace
 dependencies:
   flutter:
     sdk: flutter
-  fledge_ecs: ^0.2.2
-  fledge_render_2d: ^0.2.2
-  fledge_camera_2d: ^0.2.2
-  fledge_physics: ^0.2.2
-  fledge_ui: ^0.2.2
+  fledge_ecs: ^0.3.0
+  fledge_render_2d: ^0.3.0
+  fledge_camera_2d: ^0.3.0
+  fledge_physics: ^0.3.0
+  fledge_ui: ^0.3.0
   vector_math: ^2.2.0
 
 dev_dependencies:
