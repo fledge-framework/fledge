@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'command_handler.dart';
 import 'variable_storage.dart';
 import 'yarn_line.dart';
@@ -226,8 +228,22 @@ class DialogueRunner {
 
         case JumpLine():
           if (!startNode(line.targetNode)) {
-            // Jump target not found, continue
-            _lineIndex++;
+            // Jump target not found. The pre-Batch-8 behaviour was
+            // to `_lineIndex++` and `return`, which left `_state` at
+            // whatever it was (typically `line`) and kept the
+            // previous line visible on the box. That produced a
+            // stale line that never advanced. Log the miss and end
+            // the dialogue — matches the "end the dialogue" choice
+            // documented in the Batch 8 handoff.
+            developer.log(
+              'Jump target "${line.targetNode}" not found; '
+              'ending dialogue.',
+              name: 'fledge_yarn.dialogue_runner',
+            );
+            _lineIndex = _lineQueue.length; // stop the outer loop
+            _currentLine = null;
+            _state = DialogueState.ended;
+            onDialogueEnd?.call();
           }
           return;
       }
