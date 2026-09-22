@@ -47,7 +47,15 @@ class DebugPlugin implements Plugin {
 
   @override
   void build(App app) {
-    app.insertResource(config);
+    // Keep an existing DebugConfig — a game may have inserted its own
+    // (e.g. everything off by default) before adding the debug plugin.
+    // Overwriting it silently would re-enable the overlay's defaults.
+    // Games that want the plugin's config to win should insert it
+    // themselves after building the plugin, or configure the resource
+    // in a system that reacts to a request event.
+    if (!app.world.hasResource<DebugConfig>()) {
+      app.insertResource(config);
+    }
     app.insertResource(FrameStats());
     app.insertResource(SystemStats());
 
