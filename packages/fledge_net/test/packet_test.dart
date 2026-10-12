@@ -45,6 +45,31 @@ void main() {
       expect(deserialized.timestamp, 1234567);
     });
 
+    test('timestamp is an unsigned 32-bit wrapping value', () {
+      final high = PacketHeader(
+        type: PacketType.ping,
+        sequence: 1,
+        timestamp: 0xFFFFFFF0,
+      );
+      expect(PacketHeader.deserialize(high.serialize())!.timestamp, 0xFFFFFFF0);
+
+      // Values beyond 32 bits are wrapped, never sign-extended.
+      final wrapped = PacketHeader(
+        type: PacketType.ping,
+        sequence: 1,
+        timestamp: 0x100000005,
+      );
+      expect(wrapped.timestamp, 5);
+      expect(PacketHeader.deserialize(wrapped.serialize())!.timestamp, 5);
+    });
+
+    test('default timestamp comes from the monotonic NetClock', () {
+      final before = NetClock.system.nowMs32;
+      final header = PacketHeader(type: PacketType.ping, sequence: 1);
+      final elapsed = NetClock.elapsed32(header.timestamp, before);
+      expect(elapsed, inInclusiveRange(0, 1000));
+    });
+
     test('returns null for data too short', () {
       expect(PacketHeader.deserialize(Uint8List(10)), isNull);
       expect(PacketHeader.deserialize(Uint8List(0)), isNull);
@@ -239,6 +264,44 @@ void main() {
       expect(reader.readString(), 'world');
     });
 
+    test('non-ASCII string roundtrips as UTF-8', () {
+      const name = 'Zoë 🦆';
+      final builder = PacketBuilder()
+        ..writeString(name)
+        ..writeInt32(99);
+      final bytes = builder.build();
+      final reader = PacketReader(bytes);
+      expect(reader.readString(), name);
+      expect(reader.readInt32(), 99, reason: 'string must not misalign');
+      expect(reader.hasMore, false);
+    });
+
+    test('string length prefix is the UTF-8 byte count', () {
+      final bytes = (PacketBuilder()..writeString('ë🦆')).build();
+      // 'ë' = 2 bytes, '🦆' = 4 bytes in UTF-8.
+      expect(bytes.length, 2 + 6);
+      expect(bytes[0] | (bytes[1] << 8), 6);
+      expect(bytes.sublist(2), [0xC3, 0xAB, 0xF0, 0x9F, 0xA6, 0x86]);
+    });
+
+    test('strings longer than 32767 bytes roundtrip', () {
+      final long = 'é' * 20000; // 40000 UTF-8 bytes
+      final reader = PacketReader((PacketBuilder()..writeString(long)).build());
+      expect(reader.readString(), long);
+    });
+
+    test('writeString throws on strings over 65535 UTF-8 bytes', () {
+      expect(
+        () => PacketBuilder().writeString('a' * 65536),
+        throwsArgumentError,
+      );
+    });
+
+    test('readString throws FormatException on invalid UTF-8', () {
+      final bad = Uint8List.fromList([2, 0, 0xC3, 0x28]);
+      expect(() => PacketReader(bad).readString(), throwsFormatException);
+    });
+
     test('bytes roundtrip', () {
       final data = Uint8List.fromList([10, 20, 30]);
       final builder = PacketBuilder()
@@ -314,6 +377,23 @@ void main() {
       expect(builder.size, 4);
       builder.writeString('hi');
       expect(builder.size, 4 + 2 + 2); // int32 + length prefix + 2 chars
+    });
+
+    test('uint16 and uint32 roundtrip', () {
+      final builder = PacketBuilder()
+        ..writeUint16(0xFFFF)
+        ..writeUint32(0xFFFFFFFF)
+        ..writeUint32(0x80000001);
+      final reader = PacketReader(builder.build());
+      expect(reader.readUint16(), 0xFFFF);
+      expect(reader.readUint32(), 0xFFFFFFFF);
+      expect(reader.readUint32(), 0x80000001);
+    });
+
+    test('truncated length-prefixed data throws RangeError', () {
+      final bad = Uint8List.fromList([10, 0, 1, 2]);
+      expect(() => PacketReader(bad).readBytes(), throwsRangeError);
+      expect(() => PacketReader(bad).readString(), throwsRangeError);
     });
 
     test('builder clear resets state', () {

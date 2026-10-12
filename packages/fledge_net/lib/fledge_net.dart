@@ -42,6 +42,12 @@
 /// }
 /// ```
 ///
+/// ## Testing multiplayer in one process
+///
+/// Use [LoopbackNetwork] instead of [UdpTransport] to run a host and any
+/// number of clients in-process, with optional simulated latency, jitter,
+/// loss and duplication (seedable via an injected `Random`).
+///
 /// ## State Synchronization
 ///
 /// Fledge is 2D, so the built-in transform sync ships (x, y, rotation) —
@@ -85,14 +91,17 @@ library;
 export 'src/transport/transport.dart';
 export 'src/transport/udp_transport.dart';
 export 'src/transport/encrypted_transport.dart';
+export 'src/transport/loopback_transport.dart';
 
 // Protocol
+export 'src/protocol/net_clock.dart';
 export 'src/protocol/packet.dart';
 
 // Connection
 export 'src/connection/client.dart';
 export 'src/connection/host.dart';
 export 'src/connection/peer.dart';
+export 'src/connection/protocol_mismatch.dart';
 
 // Sync
 export 'src/sync/input_sync.dart';

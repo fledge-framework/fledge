@@ -159,23 +159,47 @@ void main() {
 
     group('RTT', () {
       test('updateRtt sets initial rtt from sample', () {
-        final sentTime = DateTime.now().millisecondsSinceEpoch - 50;
-        peer.updateRtt(sentTime);
-        expect(peer.rtt, greaterThanOrEqualTo(40));
-        expect(peer.rtt, lessThan(200));
+        expect(peer.updateRtt(1000, nowTimestamp: 1050), isTrue);
+        expect(peer.rtt, 50);
+      });
+
+      test('updateRtt with the default system clock', () {
+        final sent = NetClock.system.nowMs32;
+        expect(peer.updateRtt(sent), isTrue);
+        expect(peer.rtt, inInclusiveRange(1, 50));
       });
 
       test('updateRtt uses exponential moving average after first', () {
-        // First sample
         peer.rtt = 100;
+        peer.updateRtt(1000, nowTimestamp: 1050);
+        // 0.9 * 100 + 0.1 * 50 = 95
+        expect(peer.rtt, closeTo(95, 1e-9));
+      });
 
-        // Simulate a new sample ~50ms
-        final sentTime = DateTime.now().millisecondsSinceEpoch - 50;
-        peer.updateRtt(sentTime);
+      test('updateRtt is wrap-safe across the 32-bit boundary', () {
+        expect(peer.updateRtt(0xFFFFFFF6, nowTimestamp: 30), isTrue);
+        expect(peer.rtt, 40);
+      });
 
-        // Should be ~0.9 * 100 + 0.1 * 50 = 95
-        expect(peer.rtt, greaterThan(80));
-        expect(peer.rtt, lessThan(110));
+      test('updateRtt ignores future and absurd samples', () {
+        peer.rtt = 80;
+        expect(peer.updateRtt(2000, nowTimestamp: 1000), isFalse);
+        expect(
+          peer.updateRtt(0, nowTimestamp: Peer.maxRttSampleMs + 1),
+          isFalse,
+        );
+        expect(peer.rtt, 80);
+      });
+
+      test('retransmitTimeout derives from rtt', () {
+        const fallback = Duration(milliseconds: 100);
+        expect(peer.retransmitTimeout(fallback), fallback);
+        peer.rtt = 120;
+        expect(peer.retransmitTimeout(fallback).inMilliseconds, 240);
+        peer.rtt = 10;
+        expect(peer.retransmitTimeout(fallback).inMilliseconds, 100);
+        peer.rtt = 9000;
+        expect(peer.retransmitTimeout(fallback).inMilliseconds, 5000);
       });
     });
   });

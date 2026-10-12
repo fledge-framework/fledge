@@ -126,6 +126,11 @@ class EncryptedTransport implements Transport {
     return inner.sendMultiple(addresses, payload);
   }
 
+  /// Drains and decrypts the inner transport's poll buffer.
+  ///
+  /// Delivery follows the inner transport's [Transport] contract: while
+  /// anyone listens to [onReceive] (which listens to the inner stream),
+  /// this returns an empty list.
   @override
   List<ReceivedPacket> receive() {
     final out = <ReceivedPacket>[];

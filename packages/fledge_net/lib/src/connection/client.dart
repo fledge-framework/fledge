@@ -1,9 +1,13 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:io';
 import 'dart:typed_data';
 
+import '../protocol/net_clock.dart';
 import '../protocol/packet.dart';
 import '../transport/transport.dart';
+import 'peer.dart';
+import 'protocol_mismatch.dart';
 
 /// Client connection state.
 enum ClientState {
@@ -37,7 +41,7 @@ class HostDataEvent {
 /// Network client for connecting to a game host.
 ///
 /// The client:
-/// - Connects to a host by address
+/// - Connects to a host by address or hostname
 /// - Sends inputs to the host
 /// - Receives state updates from the host
 /// - Predicts local state for responsiveness
@@ -46,10 +50,29 @@ class NetworkClient {
   final Transport transport;
 
   /// Connection timeout duration.
+  ///
+  /// Bounds the whole [connect] handshake and, once connected, the time
+  /// without any packet from the host before the client fails.
   final Duration connectionTimeout;
 
-  /// Ping interval.
+  /// Ping interval. The first ping is sent on the first [update] after
+  /// connecting.
   final Duration pingInterval;
+
+  /// How often the `connect` request is re-sent while waiting for the
+  /// host's answer, so a single lost datagram doesn't stall the handshake
+  /// until [connectionTimeout].
+  final Duration connectRetryInterval;
+
+  /// Monotonic clock used for ping timestamps, RTT, ping cadence, the
+  /// connected-state timeout and reliable retransmits.
+  final NetClock clock;
+
+  /// Resolves the `host` passed to [connect] to a numeric address.
+  ///
+  /// Defaults to: numeric addresses are used as-is; hostnames go through
+  /// [InternetAddress.lookup], preferring an IPv4 result.
+  final Future<String> Function(String host)? hostResolver;
 
   /// Current connection state.
   ClientState _state = ClientState.disconnected;
@@ -65,7 +88,9 @@ class NetworkClient {
   int _lastReceivedSequence = 0;
   final List<int> _recentReceivedSequences = [];
 
-  /// Round-trip time in milliseconds.
+  /// Smoothed round-trip time in milliseconds (0 until the first sample).
+  ///
+  /// Measured from ping/pong echoes of this client's own [clock].
   double rtt = 0;
 
   /// Pending reliable packets waiting for acknowledgment.
@@ -74,30 +99,47 @@ class NetworkClient {
   /// Maximum retransmit attempts before dropping.
   static const int _maxRetransmits = 10;
 
-  /// Time of last received packet.
-  DateTime _lastReceiveTime = DateTime.now();
+  /// Time of last received packet ([clock] milliseconds).
+  int _lastReceiveMs = 0;
 
-  /// Time of last sent ping.
-  DateTime _lastPingTime = DateTime.now();
+  /// Time of last sent ping ([clock] milliseconds), `null` before the
+  /// first ping of a connection.
+  int? _lastPingMs;
 
   /// Event controllers.
   final _stateController = StreamController<ConnectionStateEvent>.broadcast();
   final _dataController = StreamController<HostDataEvent>.broadcast();
+  final _mismatchController =
+      StreamController<ProtocolMismatchEvent>.broadcast();
 
   /// Completer for connect operation.
   Completer<bool>? _connectCompleter;
+
+  /// Serialized connect request, re-sent until answered.
+  Uint8List? _connectPacket;
+  Timer? _connectRetryTimer;
 
   NetworkClient({
     required this.transport,
     this.connectionTimeout = const Duration(seconds: 10),
     this.pingInterval = const Duration(seconds: 1),
-  });
+    this.connectRetryInterval = const Duration(milliseconds: 250),
+    NetClock? clock,
+    this.hostResolver,
+  }) : clock = clock ?? NetClock.system;
 
   /// Stream of connection state changes.
   Stream<ConnectionStateEvent> get onStateChange => _stateController.stream;
 
   /// Stream of data received from host.
   Stream<HostDataEvent> get onData => _dataController.stream;
+
+  /// The host answered with a different protocol version.
+  ///
+  /// The client also transitions to [ClientState.failed] with a reason of
+  /// the form `Protocol version mismatch: local vX, server vY`.
+  Stream<ProtocolMismatchEvent> get onProtocolMismatch =>
+      _mismatchController.stream;
 
   /// Current connection state.
   ClientState get state => _state;
@@ -108,55 +150,83 @@ class NetworkClient {
   /// Local peer ID assigned by host.
   int? get localPeerId => _localPeerId;
 
-  /// Host address.
+  /// Host address (numeric, after hostname resolution).
   NetAddress? get hostAddress => _hostAddress;
+
+  /// Retransmit timeout for reliable packets: `rtt * 2` clamped to
+  /// `100ms..5000ms`, or 100ms before the first RTT sample.
+  Duration get retransmitTimeout => rtt > 0
+      ? Duration(milliseconds: (rtt * 2.0).clamp(100, 5000).toInt())
+      : const Duration(milliseconds: 100);
 
   /// Credentials to send during connection handshake.
   Uint8List? _credentials;
 
   /// Connect to a host.
   ///
+  /// [host] may be a numeric address or a hostname such as `'localhost'`;
+  /// hostnames are resolved first (IPv4 preferred, see [hostResolver]).
+  /// The connect request is re-sent every [connectRetryInterval] until the
+  /// host accepts or rejects it, or [connectionTimeout] elapses.
+  ///
   /// Optionally provide [credentials] for authentication (e.g., password hash,
   /// token). The host's authenticator callback receives these credentials.
   Future<bool> connect(String host, int port, {Uint8List? credentials}) async {
-    _credentials = credentials;
     if (_state != ClientState.disconnected) {
       throw StateError('Client not disconnected');
     }
+    _credentials = credentials;
 
     _setState(ClientState.connecting);
-    _hostAddress = NetAddress(host, port);
+    final completer = _connectCompleter = Completer<bool>();
 
     try {
+      final String address;
+      try {
+        address = await _resolveHost(host);
+      } catch (e) {
+        _failConnect('Could not resolve host "$host": $e');
+        return false;
+      }
+      if (_state != ClientState.connecting) return false;
+      _hostAddress = NetAddress(address, port);
+
       // Bind to any available port
       await transport.bind(0);
 
       // Start listening for packets
       transport.onReceive.listen(_handlePacket);
+      _lastReceiveMs = clock.nowMs;
 
-      // Send connect request
-      _connectCompleter = Completer<bool>();
-      await _sendConnect();
+      // Send connect request, then keep retrying until answered.
+      _connectPacket = _buildConnectPacket();
+      await _sendConnectAttempt();
+      _connectRetryTimer = Timer.periodic(
+        connectRetryInterval,
+        (_) => _sendConnectAttempt(),
+      );
 
       // Wait for response or timeout
-      final result = await _connectCompleter!.future.timeout(
+      return await completer.future.timeout(
         connectionTimeout,
         onTimeout: () {
-          _setState(ClientState.failed, 'Connection timeout');
+          _failConnect('Connection timeout');
           return false;
         },
       );
-
-      return result;
     } catch (e) {
-      _setState(ClientState.failed, e.toString());
+      _failConnect(e.toString());
       return false;
+    } finally {
+      _stopConnectRetries();
     }
   }
 
   /// Disconnect from host.
   Future<void> disconnect() async {
     if (_state == ClientState.disconnected) return;
+    _stopConnectRetries();
+    _completeConnect(false);
 
     if (_state == ClientState.connected && _hostAddress != null) {
       // Send disconnect packet
@@ -171,34 +241,43 @@ class NetworkClient {
   }
 
   /// Send data to the host.
+  ///
+  /// Throws [StateError] when not connected and [ArgumentError] if [data]
+  /// exceeds [Packet.maxPayloadBytes].
   Future<void> send(PacketType type, Uint8List data) async {
     if (!isConnected || _hostAddress == null) {
       throw StateError('Not connected');
     }
+    Packet.checkPayloadSize(data);
 
     await _sendToHost(type, data);
   }
 
   /// Update client (call every frame).
+  ///
+  /// Checks the connection timeout, pings the host every [pingInterval]
+  /// and retransmits unacknowledged reliable packets. Connect retries do
+  /// not depend on this being called.
   void update() {
     if (_state != ClientState.connected) return;
 
-    final now = DateTime.now();
+    final now = clock.nowMs;
 
     // Check for timeout
-    if (now.difference(_lastReceiveTime) > connectionTimeout) {
+    if (now - _lastReceiveMs > connectionTimeout.inMilliseconds) {
       _setState(ClientState.failed, 'Connection timeout');
       return;
     }
 
     // Send periodic pings
-    if (now.difference(_lastPingTime) > pingInterval) {
+    final lastPing = _lastPingMs;
+    if (lastPing == null || now - lastPing >= pingInterval.inMilliseconds) {
+      _lastPingMs = now;
       _sendPing();
-      _lastPingTime = now;
     }
 
     // Retransmit reliable packets
-    _retransmitReliable();
+    _retransmitReliable(now);
   }
 
   void _setState(ClientState newState, [String? reason]) {
@@ -208,12 +287,53 @@ class NetworkClient {
     }
   }
 
+  void _completeConnect(bool result) {
+    final completer = _connectCompleter;
+    if (completer != null && !completer.isCompleted) {
+      completer.complete(result);
+    }
+  }
+
+  void _failConnect(String reason) {
+    _stopConnectRetries();
+    _setState(ClientState.failed, reason);
+    _completeConnect(false);
+  }
+
+  void _stopConnectRetries() {
+    _connectRetryTimer?.cancel();
+    _connectRetryTimer = null;
+  }
+
+  Future<String> _resolveHost(String host) async {
+    final resolver = hostResolver;
+    if (resolver != null) return resolver(host);
+    if (InternetAddress.tryParse(host) != null) return host;
+
+    final results = await InternetAddress.lookup(host);
+    if (results.isEmpty) {
+      throw SocketException('No addresses found', osError: null);
+    }
+    final ipv4 = results.where((a) => a.type == InternetAddressType.IPv4);
+    return (ipv4.isNotEmpty ? ipv4.first : results.first).address;
+  }
+
   void _handlePacket(ReceivedPacket received) {
     // Verify packet is from host
     if (_hostAddress != null && received.source != _hostAddress) {
       return;
     }
 
+    try {
+      _handleHostPacket(received);
+    } on RangeError {
+      // Truncated / malformed payload: drop it.
+    } on FormatException {
+      // Invalid UTF-8 or similar in a payload: drop it.
+    }
+  }
+
+  void _handleHostPacket(ReceivedPacket received) {
     final packet = Packet.fromBytes(received.data);
     if (packet == null) {
       // If the packet has our magic but a mismatched protocol version, the
@@ -221,17 +341,22 @@ class NetworkClient {
       // the caller instead of silently dropping-and-timing-out.
       final peerVersion = PacketHeader.peekVersion(received.data);
       if (peerVersion != null && peerVersion != PacketHeader.version) {
-        _setState(
-          ClientState.failed,
+        _mismatchController.add(
+          ProtocolMismatchEvent(
+            source: received.source,
+            localVersion: PacketHeader.version,
+            remoteVersion: peerVersion,
+          ),
+        );
+        _failConnect(
           'Protocol version mismatch: local v${PacketHeader.version}, '
           'server v$peerVersion',
         );
-        _connectCompleter?.complete(false);
       }
       return;
     }
 
-    _lastReceiveTime = DateTime.now();
+    _lastReceiveMs = clock.nowMs;
 
     // Update sequence tracking
     _processReceivedSequence(packet.header.sequence);
@@ -250,10 +375,20 @@ class NetworkClient {
         final reason = reader.readString();
         _setState(ClientState.disconnected, reason);
 
+      case PacketType.ping:
+        // Host is measuring its RTT to us: echo its timestamp back.
+        final echoed = packet.payload.length >= 4
+            ? PacketReader(packet.payload).readUint32()
+            : packet.header.timestamp;
+        _sendToHostSafely(
+          PacketType.pong,
+          (PacketBuilder()..writeUint32(echoed)).build(),
+        );
+
       case PacketType.pong:
-        final reader = PacketReader(packet.payload);
-        final pingTimestamp = reader.readInt32();
-        _updateRtt(pingTimestamp);
+        if (packet.payload.length >= 4) {
+          _updateRtt(PacketReader(packet.payload).readUint32());
+        }
 
       default:
         // Forward to game logic
@@ -262,17 +397,21 @@ class NetworkClient {
   }
 
   void _handleConnectAccepted(Uint8List payload) {
+    // Duplicates (retransmits, re-sent acceptances) are expected.
+    if (_state != ClientState.connecting) return;
     final reader = PacketReader(payload);
     _localPeerId = reader.readInt32();
+    _stopConnectRetries();
+    _lastPingMs = null; // ping on the first update()
     _setState(ClientState.connected);
-    _connectCompleter?.complete(true);
+    _completeConnect(true);
   }
 
   void _handleConnectRejected(Uint8List payload) {
+    if (_state != ClientState.connecting) return;
     final reader = PacketReader(payload);
     final reason = reader.readString();
-    _setState(ClientState.failed, reason);
-    _connectCompleter?.complete(false);
+    _failConnect(reason);
   }
 
   void _processReceivedSequence(int sequence) {
@@ -302,30 +441,41 @@ class NetworkClient {
     return _lastSentSequence;
   }
 
-  Future<void> _sendToHost(PacketType type, Uint8List payload) async {
-    if (_hostAddress == null) return;
-
+  Uint8List _buildPacket(PacketType type, Uint8List payload, int sequence) {
     final header = PacketHeader(
       type: type,
-      sequence: _nextSequence,
+      sequence: sequence,
       ack: _lastReceivedSequence,
       ackBits: _getAckBits(),
+      timestamp: clock.nowMs32,
     );
+    return Packet(header: header, payload: payload).toBytes();
+  }
 
-    final packet = Packet(header: header, payload: payload);
-    final data = packet.toBytes();
-    await transport.send(_hostAddress!, data);
+  Future<void> _sendToHost(PacketType type, Uint8List payload) async {
+    final host = _hostAddress;
+    if (host == null) return;
+
+    final sequence = _nextSequence;
+    final data = _buildPacket(type, payload, sequence);
+    await transport.send(host, data);
 
     // Queue reliable packets for retransmission
     if (type.isReliable) {
       _pendingReliable.add(
         _ClientPendingPacket(
-          sequence: header.sequence,
+          sequence: sequence,
           data: data,
-          sentTime: DateTime.now(),
+          sentMs: clock.nowMs,
         ),
       );
     }
+  }
+
+  /// Fire-and-forget send that swallows transport errors (e.g. the
+  /// transport was closed concurrently).
+  void _sendToHostSafely(PacketType type, Uint8List payload) {
+    unawaited(_sendToHost(type, payload).catchError((Object _) {}));
   }
 
   void _processAck(int ack, int ackBits) {
@@ -340,48 +490,60 @@ class NetworkClient {
     });
   }
 
-  void _retransmitReliable() {
-    final now = DateTime.now();
-    final timeout = rtt > 0
-        ? Duration(milliseconds: (rtt * 2.0).clamp(100, 5000).toInt())
-        : const Duration(milliseconds: 100);
+  void _retransmitReliable(int nowMs) {
+    final timeoutMs = retransmitTimeout.inMilliseconds;
 
     _pendingReliable.removeWhere((p) => p.retransmitCount >= _maxRetransmits);
 
+    final host = _hostAddress;
+    if (host == null) return;
     for (final pending in _pendingReliable) {
-      if (now.difference(pending.sentTime) > timeout) {
-        pending.sentTime = now;
+      if (nowMs - pending.sentMs > timeoutMs) {
+        pending.sentMs = nowMs;
         pending.retransmitCount++;
-        if (_hostAddress != null) {
-          transport.send(_hostAddress!, pending.data);
-        }
+        unawaited(transport.send(host, pending.data).catchError((Object _) {}));
       }
     }
   }
 
-  Future<void> _sendConnect() async {
+  Uint8List _buildConnectPacket() {
     final builder = PacketBuilder()
       ..writeString('FledgeClient'); // Client identifier
-    if (_credentials != null) {
-      builder.writeBytes(_credentials!);
+    final credentials = _credentials;
+    if (credentials != null) {
+      builder.writeBytes(credentials);
     } else {
-      builder.writeInt16(0); // No credentials
+      builder.writeUint16(0); // No credentials
     }
-    await _sendToHost(PacketType.connect, builder.build());
+    // Retries resend these exact bytes; the connect handshake has its own
+    // retry loop, so it is not queued with the other reliable packets.
+    return _buildPacket(PacketType.connect, builder.build(), _nextSequence);
   }
 
-  Future<void> _sendPing() async {
-    final builder = PacketBuilder()
-      ..writeInt32(DateTime.now().millisecondsSinceEpoch);
-    await _sendToHost(PacketType.ping, builder.build());
+  Future<void> _sendConnectAttempt() async {
+    final host = _hostAddress;
+    final packet = _connectPacket;
+    if (_state != ClientState.connecting || host == null || packet == null) {
+      return;
+    }
+    try {
+      await transport.send(host, packet);
+    } on StateError {
+      // Transport closed while connecting (e.g. disconnect()); ignore.
+    }
   }
 
-  void _updateRtt(int sentTimestamp) {
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final sample = (now - sentTimestamp).toDouble();
+  void _sendPing() {
+    final builder = PacketBuilder()..writeUint32(clock.nowMs32);
+    _sendToHostSafely(PacketType.ping, builder.build());
+  }
+
+  void _updateRtt(int echoedTimestamp) {
+    final sample = NetClock.elapsed32(clock.nowMs32, echoedTimestamp);
+    if (sample < 0 || sample > Peer.maxRttSampleMs) return;
 
     if (rtt == 0) {
-      rtt = sample;
+      rtt = sample < 1 ? 1 : sample.toDouble();
     } else {
       rtt = rtt * 0.9 + sample * 0.1;
     }
@@ -396,12 +558,12 @@ class NetworkClient {
 class _ClientPendingPacket {
   final int sequence;
   final Uint8List data;
-  DateTime sentTime;
+  int sentMs;
   int retransmitCount = 0;
 
   _ClientPendingPacket({
     required this.sequence,
     required this.data,
-    required this.sentTime,
+    required this.sentMs,
   });
 }

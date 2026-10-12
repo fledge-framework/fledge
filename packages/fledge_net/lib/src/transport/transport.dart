@@ -56,7 +56,25 @@ class ReceivedPacket {
 
 /// Abstract transport interface for network communication.
 ///
-/// Implementations provide specific protocols (UDP, WebSocket, etc.)
+/// Implementations provide specific protocols (UDP, WebSocket, in-memory
+/// loopback, etc.).
+///
+/// ## Delivery contract
+///
+/// Every received datagram is delivered **exactly once**, through one of
+/// two paths:
+///
+/// 1. **Push** (primary): if [onReceive] has at least one listener, the
+///    packet is emitted on [onReceive] and is *not* retained.
+///    `NetworkHost` and `NetworkClient` use this path.
+/// 2. **Poll** (fallback): if nobody is listening to [onReceive], the
+///    packet is held in a *bounded* buffer that [receive] drains. When the
+///    buffer is full the oldest packets are discarded, so an undrained
+///    transport never grows without limit.
+///
+/// Implementations must not deliver a packet on both paths, and must bound
+/// any buffering. Wrappers (e.g. `EncryptedTransport`) delegate to the
+/// inner transport and therefore inherit its behaviour.
 abstract class Transport {
   /// Current connection state.
   ConnectionState get state;
@@ -80,12 +98,14 @@ abstract class Transport {
     }
   }
 
-  /// Receive pending packets.
+  /// Drain packets buffered while nobody was listening to [onReceive].
   ///
-  /// Returns an empty list if no packets are available.
+  /// Returns an empty list if no packets are available — always the case
+  /// while an [onReceive] listener is attached (see the class-level
+  /// delivery contract).
   List<ReceivedPacket> receive();
 
-  /// Stream of received packets.
+  /// Stream of received packets (the primary delivery path).
   Stream<ReceivedPacket> get onReceive;
 
   /// Stream of state changes.

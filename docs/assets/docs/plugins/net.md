@@ -54,6 +54,8 @@ NetworkConfig(
 )
 ```
 
+> **Not yet wired:** `NetworkConfig.serverPassword`, `enableEncryption` and `interestRadius` are stored on the resource but nothing reads them yet — setting them has no effect today. Until the next release wires them up, pass an `authenticator` to `NetworkHost`, wrap your transport in `EncryptedTransport` yourself, and use `InterestManager` directly (all shown below).
+
 ## Host / Client Architecture
 
 Fledge uses a **host-authoritative** model. The host runs the game simulation and broadcasts state to clients. Clients send input and predict locally.
@@ -81,9 +83,11 @@ host.onData.listen((event) {
 });
 
 // Each frame
-host.update();  // Check timeouts, retransmit
+host.update();  // Check timeouts, ping peers (RTT), retransmit
 host.broadcast(PacketType.stateUpdate, stateBytes);
 ```
+
+`host.update()` pings every peer once per `pingInterval` (default 1 s, first ping on the first update after a peer connects) so `peer.rtt` is measured on the host side too.
 
 The host generates a random 6-character `roomCode` on creation for lobby/matchmaking use.
 
@@ -108,14 +112,17 @@ client.update();  // Ping, timeout check
 client.send(PacketType.input, inputBytes);
 ```
 
+`connect()` accepts a numeric address or a hostname such as `'localhost'`. Hostnames are resolved with `InternetAddress.lookup` before connecting, preferring an IPv4 result (the UDP transport is IPv4-only for now); `client.hostAddress` then holds the numeric address. Pass `hostResolver:` to `NetworkClient` to plug in your own resolution.
+
 Client states: `disconnected` → `connecting` → `connected` → `failed`.
 
 ### Connection Handshake
 
-1. Client sends a `connect` packet
+1. Client sends a `connect` packet, and re-sends it every `connectRetryInterval` (default 250 ms) until the host answers or `connectionTimeout` expires, so a single lost packet doesn't stall the handshake. The retries run on their own timer; you don't need to call `client.update()` during `connect()`.
 2. Host checks capacity — sends `connectRejected` if full
-3. If accepted, host creates a `Peer` and sends `connectAccepted` with the assigned peer ID
-4. Client transitions to `connected`
+3. If an `authenticator` is set, the host awaits it. Duplicate `connect` packets from the same address are ignored while authentication is in flight, so one client never becomes two peers.
+4. If accepted, host creates a `Peer` and sends `connectAccepted` with the assigned peer ID. If the client keeps retrying because that reply was lost, the host sends the acceptance again (same peer ID).
+5. Client transitions to `connected`
 
 ## NetworkIdentity
 
@@ -250,19 +257,26 @@ Packets use a 20-byte header with a "FLEG" magic number:
 | Field | Size | Description |
 |-------|------|-------------|
 | Magic | 4 bytes | `0x464C4547` ("FLEG") |
-| Version | 1 byte | Protocol version (currently `2`) |
+| Version | 1 byte | Protocol version (currently `3`) |
 | Type | 1 byte | PacketType enum |
 | Sequence | 2 bytes | Packet sequence number |
 | Ack | 2 bytes | Last received sequence from remote |
 | AckBits | 4 bytes | Bitmap of last 32 received sequences |
-| Timestamp | 4 bytes | Milliseconds for RTT calculation |
+| Timestamp | 4 bytes | Sender's local monotonic clock (ms, unsigned 32-bit, wraps) |
 | Reserved | 2 bytes | Reserved for future use |
+
+The timestamp is only meaningful to the machine that wrote it; clocks on different machines are never compared.
+
+### Packet size limit
+
+Datagrams are capped at `Packet.maxDatagramBytes` (1200 bytes), which keeps them under typical path MTUs so the IP layer never fragments them. After the 20-byte header and 28 bytes reserved for `EncryptedTransport` (reserved even when encryption is off), the largest payload is `Packet.maxPayloadBytes` = **1152 bytes**. `NetworkClient.send`, `NetworkHost.sendTo`, `broadcast` and `broadcastExcept` throw an `ArgumentError` for larger payloads, and a broadcast sends nothing in that case. Split large data across several packets yourself; there's no automatic fragmentation yet.
 
 ### Protocol version mismatch
 
-The protocol version was bumped to `2` when `Transform2DNetworkState` replaced the older 3D transform format. `PacketHeader.deserialize` returns `null` for any packet whose version doesn't match `PacketHeader.version`, so peers running incompatible versions cannot exchange traffic.
+Version history: `2` replaced the old 3D transform format with `Transform2DNetworkState`; `3` made the header timestamp an unsigned 32-bit monotonic value, made ping/pong echo the sender's timestamp, and switched strings to UTF-8. `PacketHeader.deserialize` returns `null` for any packet whose version doesn't match `PacketHeader.version`, so peers running incompatible versions cannot exchange traffic. Both sides report the mismatch instead of timing out:
 
-Clients surface the mismatch through `NetworkClient.onStateChange` — when the client receives bytes carrying the protocol magic but a different version byte, it transitions to `ClientState.failed` with a reason of the form `"Protocol version mismatch: local v2, server v1"`.
+- **Host**: emits a `ProtocolMismatchEvent` (`source`, `localVersion`, `remoteVersion`) on `NetworkHost.onProtocolMismatch`. If the packet was a `connect`, it also replies with `connectRejected` and a reason such as `"Protocol version mismatch: host v3, client v2"`. A v3 client shows that reason in `onStateChange`. A v2 client can't parse the v3 reply, but it still recognizes the version byte and reports its own mismatch error.
+- **Client**: when bytes from the host carry the protocol magic but a different version, the client emits a `ProtocolMismatchEvent` on `NetworkClient.onProtocolMismatch` and transitions to `ClientState.failed` with a reason such as `"Protocol version mismatch: local v3, server v4"`. `connect()` returns `false` right away.
 
 ### PacketType
 
@@ -291,6 +305,8 @@ final name = reader.readString();
 final alive = reader.readBool();
 ```
 
+`writeString` encodes UTF-8 with a 16-bit byte-length prefix, so any Unicode text (`'Zoë 🦆'`) round-trips. Strings and `writeBytes` data are limited to 65535 bytes, and `writeString` throws `ArgumentError` beyond that. `readString` throws `FormatException` on invalid UTF-8. `writeUint16` / `writeUint32` and the matching `read*` methods are available for unsigned fields.
+
 ## NetworkPlugin
 
 The plugin registers core resources into the ECS world:
@@ -317,7 +333,11 @@ You create your own systems to drive the host/client, poll for data, and sync st
 
 Critical packet types (`connect`, `disconnect`, `entitySpawn`, `entityDespawn`, `rpc`) are automatically retransmitted until acknowledged. State updates and input are sent unreliably (latest-wins).
 
-Retransmit timeout scales with RTT: `max(100ms, rtt * 2.0)`. Packets are dropped after 10 retransmit attempts.
+Retransmit timeout scales with RTT: `rtt * 2.0`, clamped to 100 ms–5 s (100 ms until the first RTT sample). Packets are dropped after 10 retransmit attempts.
+
+### Round-trip time
+
+RTT is measured with ping/pong. Each side puts its own monotonic-clock timestamp in a `ping`, and the other side echoes it back unchanged in the `pong`, so the sample is always `now − echoed` on the same clock and is correct across the 32-bit wrap. `client.update()` pings the host, and `host.update()` pings each peer, every `pingInterval`. Results feed `NetworkClient.rtt` and `Peer.rtt`, which are exponential moving averages, and those drive the retransmit timeouts (`client.retransmitTimeout`, `peer.retransmitTimeout(fallback)`). Samples that are negative or above 60 s are discarded.
 
 ```dart
 // Check if a packet type is reliable
@@ -346,15 +366,7 @@ final passwordBytes = Uint8List.fromList(utf8.encode('secret'));
 await client.connect('192.168.1.100', 7777, credentials: passwordBytes);
 ```
 
-Configure via `NetworkConfig`:
-
-```dart
-NetworkConfig(
-  mode: NetworkMode.host,
-  serverPassword: 'secret',
-  authenticator: myCustomAuthenticator,
-)
-```
+`NetworkConfig` also has `serverPassword` and `authenticator` fields, but they are **not yet wired** to `NetworkHost` (see the note under [NetworkConfig](#networkconfig)). Pass the authenticator to the `NetworkHost` constructor as shown above.
 
 ## Encryption
 
@@ -381,6 +393,8 @@ The 6-byte header is bound into the auth tag as AAD, so tampering with it is det
 
 `sharedKey` must be exactly 32 bytes (AES-256). The setter throws `ArgumentError` on other lengths. Setting it to `null` disables encryption and passes traffic through unchanged.
 
+`NetworkConfig.enableEncryption` is **not yet wired**. Setting it does not encrypt anything, so wrap the transport yourself as shown above.
+
 > **Key distribution:** the key is pre-shared — both host and client must be configured with the same 32 bytes before any encrypted traffic flows. A proper key-exchange handshake (ECDH during connect) is on the roadmap; until then, distribute the key via your own out-of-band mechanism (config, login response, etc.).
 
 ## Congestion Control
@@ -391,7 +405,7 @@ Each peer has a `CongestionController` using AIMD (Additive Increase, Multiplica
 - On packet loss: window halves (minimum 1200 bytes)
 - Maximum window: 256 KB
 
-Retransmit timeout is RTT-adaptive: `max(100ms, rtt * 2.0)`.
+Retransmit timeout is RTT-adaptive: `rtt * 2.0` clamped to 100 ms–5 s (see [Round-trip time](#round-trip-time)).
 
 ## Interest Management
 
@@ -410,11 +424,7 @@ final interest = InterestManager(
 final relevant = interest.getRelevantEntities(peerId, world, registry);
 ```
 
-Entities beyond `relevanceRadius` from a peer's owned entity are excluded. Configure via `NetworkConfig`:
-
-```dart
-NetworkConfig(interestRadius: 500)
-```
+Entities beyond `relevanceRadius` from a peer's owned entity are excluded. `NetworkConfig.interestRadius` exists but is **not yet wired** (nothing reads it yet), so construct and query an `InterestManager` yourself as shown above.
 
 ## Authority Model
 
@@ -436,6 +446,55 @@ identity.transferAuthority(newOwnerId, localAuthority: false);
 
 The host should validate that clients only send updates for entities they own (`ownerId == peer.id`).
 
+## Testing Multiplayer In One Process
+
+`LoopbackNetwork` is an in-memory datagram network, and it's the recommended way to test netcode. Create one network, give each endpoint its own `LoopbackTransport`, and use them exactly like `UdpTransport`. One host and any number of clients can share a network.
+
+```dart
+final net = LoopbackNetwork(
+  latency: const Duration(milliseconds: 40), // one-way
+  jitter: const Duration(milliseconds: 10),  // extra random delay (reorders)
+  packetLoss: 0.05,                          // 5% dropped
+  duplication: 0.01,                         // 1% delivered twice
+  random: Random(42),                        // same seed => same run
+);
+
+final host = NetworkHost(transport: net.createTransport());
+await host.start(7777);
+
+final client = NetworkClient(transport: net.createTransport());
+await client.connect('127.0.0.1', 7777);
+```
+
+- `net.filter` drops specific datagrams deterministically, e.g. "drop the first `connect`".
+- `createTransport(host: '10.0.0.2')` simulates distinct machines.
+- `transport.inject(source, bytes)` feeds hand-crafted packets.
+- `net.stats` counts sent / delivered / dropped / duplicated datagrams.
+
+**Manual mode** gives exact, repeatable timing. Pass a `ManualNetClock` to the network and to the host and client. Nothing is delivered until you call `await net.advance(duration)` (or `net.flush()`), and the clock moves to each delivery time:
+
+```dart
+final clock = ManualNetClock();
+final net = LoopbackNetwork(latency: const Duration(milliseconds: 50), clock: clock);
+final host = NetworkHost(transport: net.createTransport(), clock: clock);
+final client = NetworkClient(transport: net.createTransport(), clock: clock);
+await host.start(7777);
+final connecting = client.connect('127.0.0.1', 7777);
+await net.advance(const Duration(milliseconds: 100));
+await connecting; // true
+
+for (var i = 0; i < 100; i++) {
+  host.update();
+  client.update();
+  await net.advance(const Duration(milliseconds: 10));
+}
+// client.rtt == 100 exactly
+```
+
+### Transport delivery contract
+
+Each received datagram is delivered exactly once. If anything listens to `transport.onReceive` (as `NetworkHost` and `NetworkClient` do), packets go to the stream only. Otherwise they go to a bounded buffer (`maxBufferedPackets`, default 1024, oldest dropped first) that `transport.receive()` drains. `UdpTransport`, `LoopbackTransport` and `EncryptedTransport` all follow this contract. `UdpTransport` also queues sends that hit a full OS buffer (up to `maxQueuedSends`) instead of silently dropping them, and accepts a `bindAddress` (e.g. `InternetAddress.loopbackIPv4`).
+
 ## API Reference
 
 ### NetworkConfig
@@ -446,10 +505,10 @@ The host should validate that clients only send updates for entities they own (`
 | `tickRate` | `int` | Server simulation rate in Hz (default: 60) |
 | `syncRate` | `int` | State broadcast rate in Hz (default: 20) |
 | `interpolationDelay` | `double` | Client interpolation delay in ms (default: 100) |
-| `serverPassword` | `String?` | Password for client authentication |
-| `authenticator` | `Function?` | Custom authentication callback |
-| `enableEncryption` | `bool` | Enable packet encryption (default: false) |
-| `interestRadius` | `double?` | Spatial filtering radius (null = broadcast all) |
+| `serverPassword` | `String?` | Password for client authentication (**not yet wired**) |
+| `authenticator` | `Function?` | Custom authentication callback (**not yet wired**; pass it to `NetworkHost`) |
+| `enableEncryption` | `bool` | Enable packet encryption (default: false; **not yet wired**) |
+| `interestRadius` | `double?` | Spatial filtering radius (null = broadcast all; **not yet wired**) |
 
 ### NetworkHost
 
@@ -457,22 +516,29 @@ The host should validate that clients only send updates for entities they own (`
 |--------|-------------|
 | `start(port)` | Bind and start listening |
 | `stop()` | Disconnect all peers and close |
-| `update()` | Process timeouts and retransmissions |
-| `sendTo(peerId, type, data)` | Send to one peer |
+| `update()` | Process timeouts, ping peers, retransmit |
+| `sendTo(peerId, type, data)` | Send to one peer (payload ≤ `Packet.maxPayloadBytes`) |
 | `broadcast(type, data)` | Send to all connected peers |
 | `broadcastExcept(excludeId, type, data)` | Broadcast excluding one peer |
 | `disconnectPeer(id, reason)` | Force disconnect a peer |
+| `onProtocolMismatch` | Stream of `ProtocolMismatchEvent` |
+
+Constructor options: `maxPeers`, `connectionTimeout`, `retransmitTimeout` (fallback before RTT is known), `authenticator`, `pingInterval` (default 1 s), `clock`.
 
 ### NetworkClient
 
 | Method | Description |
 |--------|-------------|
-| `connect(host, port, {credentials})` | Connect to a host with optional auth |
+| `connect(host, port, {credentials})` | Connect to a host (IP or hostname) with optional auth |
 | `disconnect()` | Disconnect from host |
-| `update()` | Process pings and timeouts |
-| `send(type, data)` | Send data to host |
+| `update()` | Process pings, timeouts and retransmits |
+| `send(type, data)` | Send data to host (payload ≤ `Packet.maxPayloadBytes`) |
 | `state` | Current `ClientState` |
-| `rtt` | Round-trip time in ms |
+| `rtt` | Smoothed round-trip time in ms |
+| `retransmitTimeout` | Current reliable-retransmit timeout |
+| `onProtocolMismatch` | Stream of `ProtocolMismatchEvent` |
+
+Constructor options: `connectionTimeout`, `pingInterval`, `connectRetryInterval` (default 250 ms), `clock`, `hostResolver`.
 
 ### NetworkIdentity
 

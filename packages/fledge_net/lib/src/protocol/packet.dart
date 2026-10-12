@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'dart:typed_data';
+
+import 'net_clock.dart';
 
 /// Packet type identifiers.
 enum PacketType {
@@ -78,13 +81,22 @@ class PacketHeader {
 
   /// Protocol version.
   ///
-  /// Bumped to 2 in Phase 8 for the 2D transform state wire-format change
-  /// (see `Transform2DNetworkState`). Peers running an older version can no
-  /// longer parse each other's packets; [deserialize] returns `null` on a
-  /// version mismatch. [peekVersion] lets the receiver still recognise a
-  /// protocol-shaped packet (magic match, version mismatch) so it can
-  /// surface a clear "protocol version mismatch" error to the caller.
-  static const int version = 2;
+  /// History:
+  /// - **2**: 2D transform state wire format (see `Transform2DNetworkState`).
+  /// - **3**: header [timestamp] became an unsigned 32-bit wrapping
+  ///   monotonic clock value (was a truncated signed epoch-ms value);
+  ///   ping/pong payloads carry a uint32 [NetClock] timestamp that the pong
+  ///   echoes back; strings are UTF-8 with a uint16 byte-length prefix
+  ///   (were UTF-16 code units truncated to bytes).
+  ///
+  /// Peers running another version cannot parse each other's packets;
+  /// [deserialize] returns `null` on a version mismatch. [peekVersion] lets
+  /// the receiver still recognise a protocol-shaped packet (magic match,
+  /// version mismatch) so it can surface a clear "protocol version
+  /// mismatch" error. `NetworkHost` answers a mismatched `connect` with a
+  /// `connectRejected` and `NetworkClient` fails its connect with the same
+  /// reason; both also emit a `ProtocolMismatchEvent`.
+  static const int version = 3;
 
   /// Packet type.
   final PacketType type;
@@ -98,7 +110,10 @@ class PacketHeader {
   /// Bit field of recently acked sequences.
   final int ackBits;
 
-  /// Timestamp for latency calculation.
+  /// Sender-local send time: a 32-bit wrapping [NetClock] value in ms.
+  ///
+  /// Only meaningful to the sender's own clock — never compare it against
+  /// the receiver's clock. RTT is measured with ping/pong echoes instead.
   final int timestamp;
 
   PacketHeader({
@@ -107,7 +122,7 @@ class PacketHeader {
     this.ack = 0,
     this.ackBits = 0,
     int? timestamp,
-  }) : timestamp = timestamp ?? DateTime.now().millisecondsSinceEpoch;
+  }) : timestamp = NetClock.wrap32(timestamp ?? NetClock.system.nowMs32);
 
   /// Header size in bytes.
   static const int size = 20;
@@ -121,7 +136,7 @@ class PacketHeader {
     buffer.setUint16(6, sequence, Endian.little);
     buffer.setUint16(8, ack, Endian.little);
     buffer.setUint32(10, ackBits, Endian.little);
-    buffer.setInt32(14, timestamp, Endian.little);
+    buffer.setUint32(14, timestamp, Endian.little);
     // 2 bytes reserved at offset 18
     return buffer.buffer.asUint8List();
   }
@@ -161,7 +176,7 @@ class PacketHeader {
       sequence: buffer.getUint16(6, Endian.little),
       ack: buffer.getUint16(8, Endian.little),
       ackBits: buffer.getUint32(10, Endian.little),
-      timestamp: buffer.getInt32(14, Endian.little),
+      timestamp: buffer.getUint32(14, Endian.little),
     );
   }
 }
@@ -196,6 +211,43 @@ class Packet {
 
   /// Total size in bytes.
   int get size => PacketHeader.size + payload.length;
+
+  /// Largest datagram fledge_net will put on the wire, in bytes.
+  ///
+  /// 1200 bytes stays under the minimum IPv6 MTU (1280) and common
+  /// tunnel/VPN MTUs once IP/UDP headers are added, so packets are never
+  /// fragmented by the IP layer (a fragmented datagram is lost if any
+  /// fragment is lost).
+  static const int maxDatagramBytes = 1200;
+
+  /// Bytes reserved for `EncryptedTransport` (12-byte nonce + 16-byte tag).
+  ///
+  /// Reserved whether or not encryption is enabled, so a payload that fits
+  /// unencrypted also fits encrypted.
+  static const int encryptionOverheadBytes = 28;
+
+  /// Largest application payload accepted by `NetworkHost` /
+  /// `NetworkClient` send methods: [maxDatagramBytes] minus the
+  /// [PacketHeader.size] header and [encryptionOverheadBytes]
+  /// (currently 1152 bytes). Larger sends throw [ArgumentError]; split
+  /// the data yourself until fragmentation support lands.
+  static const int maxPayloadBytes =
+      maxDatagramBytes - PacketHeader.size - encryptionOverheadBytes;
+
+  /// Throws [ArgumentError] if [payload] exceeds [maxPayloadBytes].
+  static void checkPayloadSize(Uint8List payload) {
+    if (payload.length > maxPayloadBytes) {
+      throw ArgumentError.value(
+        payload.length,
+        'payload.length',
+        'Payload is ${payload.length} bytes; the maximum is $maxPayloadBytes '
+            'bytes ($maxDatagramBytes-byte datagram minus '
+            '${PacketHeader.size}-byte header and $encryptionOverheadBytes '
+            'bytes of encryption overhead). Split the data across several '
+            'packets',
+      );
+    }
+  }
 }
 
 /// Packet builder for constructing payloads.
@@ -221,9 +273,21 @@ class PacketBuilder {
     _builder.add(buffer.buffer.asUint8List());
   }
 
+  /// Write an unsigned 16-bit integer (`0..65535`).
+  void writeUint16(int value) {
+    final buffer = ByteData(2)..setUint16(0, value, Endian.little);
+    _builder.add(buffer.buffer.asUint8List());
+  }
+
   /// Write a 32-bit integer.
   void writeInt32(int value) {
     final buffer = ByteData(4)..setInt32(0, value, Endian.little);
+    _builder.add(buffer.buffer.asUint8List());
+  }
+
+  /// Write an unsigned 32-bit integer (`0..0xFFFFFFFF`).
+  void writeUint32(int value) {
+    final buffer = ByteData(4)..setUint32(0, value, Endian.little);
     _builder.add(buffer.buffer.asUint8List());
   }
 
@@ -245,17 +309,35 @@ class PacketBuilder {
     _builder.add(buffer.buffer.asUint8List());
   }
 
-  /// Write a length-prefixed string.
+  /// Maximum encoded length of [writeString] / [writeBytes] data in bytes.
+  static const int maxLengthPrefixed = 0xFFFF;
+
+  /// Write a string as UTF-8, prefixed with its byte length (uint16).
+  ///
+  /// Throws [ArgumentError] if the UTF-8 encoding exceeds
+  /// [maxLengthPrefixed] bytes.
   void writeString(String value) {
-    final bytes = value.codeUnits;
-    writeInt16(bytes.length);
-    _builder.add(bytes);
+    final bytes = utf8.encode(value);
+    _writeLengthPrefixed(bytes, 'value');
   }
 
-  /// Write raw bytes.
+  /// Write raw bytes, prefixed with their length (uint16).
+  ///
+  /// Throws [ArgumentError] if [value] exceeds [maxLengthPrefixed] bytes.
   void writeBytes(Uint8List value) {
-    writeInt16(value.length);
-    _builder.add(value);
+    _writeLengthPrefixed(value, 'value');
+  }
+
+  void _writeLengthPrefixed(List<int> bytes, String name) {
+    if (bytes.length > maxLengthPrefixed) {
+      throw ArgumentError.value(
+        bytes.length,
+        name,
+        'encoded length exceeds $maxLengthPrefixed bytes',
+      );
+    }
+    writeUint16(bytes.length);
+    _builder.add(bytes);
   }
 
   /// Write a 3D vector (3 floats).
@@ -316,9 +398,23 @@ class PacketReader {
     return value;
   }
 
+  /// Read an unsigned 16-bit integer.
+  int readUint16() {
+    final value = _data.getUint16(_offset, Endian.little);
+    _offset += 2;
+    return value;
+  }
+
   /// Read a 32-bit integer.
   int readInt32() {
     final value = _data.getInt32(_offset, Endian.little);
+    _offset += 4;
+    return value;
+  }
+
+  /// Read an unsigned 32-bit integer.
+  int readUint32() {
+    final value = _data.getUint32(_offset, Endian.little);
     _offset += 4;
     return value;
   }
@@ -344,24 +440,26 @@ class PacketReader {
     return value;
   }
 
-  /// Read a length-prefixed string.
-  String readString() {
-    final length = readInt16();
-    final bytes = Uint8List(length);
-    for (var i = 0; i < length; i++) {
-      bytes[i] = _data.getUint8(_offset + i);
-    }
-    _offset += length;
-    return String.fromCharCodes(bytes);
-  }
+  /// Read a UTF-8 string written by [PacketBuilder.writeString].
+  ///
+  /// Throws [FormatException] on malformed UTF-8 and [RangeError] if the
+  /// declared length runs past the end of the data.
+  String readString() => utf8.decode(_readLengthPrefixed());
 
-  /// Read raw bytes.
-  Uint8List readBytes() {
-    final length = readInt16();
-    final bytes = Uint8List(length);
-    for (var i = 0; i < length; i++) {
-      bytes[i] = _data.getUint8(_offset + i);
+  /// Read raw bytes written by [PacketBuilder.writeBytes].
+  ///
+  /// Throws [RangeError] if the declared length runs past the end of the
+  /// data.
+  Uint8List readBytes() => Uint8List.fromList(_readLengthPrefixed());
+
+  Uint8List _readLengthPrefixed() {
+    final length = readUint16();
+    if (length > remaining) {
+      throw RangeError(
+        'Length prefix $length exceeds remaining $remaining bytes',
+      );
     }
+    final bytes = Uint8List.sublistView(_data, _offset, _offset + length);
     _offset += length;
     return bytes;
   }
