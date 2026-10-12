@@ -69,3 +69,12 @@ export 'src/events/audio_events.dart';
 
 // Commands (World extensions)
 export 'src/commands/audio_commands.dart';
+
+// Systems (exported so games can order against their `systemName`)
+export 'src/systems/audio_cleanup_system.dart';
+export 'src/systems/audio_event_system.dart';
+export 'src/systems/audio_focus_system.dart';
+export 'src/systems/audio_init_system.dart';
+export 'src/systems/channel_fade_system.dart';
+export 'src/systems/music_crossfade_system.dart';
+export 'src/systems/spatial_audio_system.dart';

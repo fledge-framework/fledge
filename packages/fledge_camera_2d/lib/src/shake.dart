@@ -1,7 +1,8 @@
 import 'dart:math' as math;
 
 import 'package:fledge_ecs/fledge_ecs.dart';
-import 'package:fledge_render_2d/fledge_render_2d.dart' show Transform2D;
+import 'package:fledge_render_2d/fledge_render_2d.dart'
+    show Transform2D, TransformPropagateSystem;
 
 import 'camera2d.dart';
 import 'follow.dart';
@@ -101,7 +102,15 @@ class CameraShakeSystem implements System {
     writes: {ComponentId.of<Transform2D>()},
     reads: {ComponentId.of<CameraShake>(), ComponentId.of<Camera2D>()},
     resourceReads: {WallTime},
-    after: const [CameraFollowSystem.systemName],
+    // Propagation (when a game re-runs it in postUpdate) reads the
+    // Transform2D this system writes. CameraFollowSystem already runs
+    // after it; declaring it here too keeps registration order from
+    // adding a contradictory edge (and a cycle) when propagation is
+    // registered after CameraPlugin.
+    after: const [
+      TransformPropagateSystem.systemName,
+      CameraFollowSystem.systemName,
+    ],
     before: const [
       ParallaxSystem.systemName,
       CameraTransitionSystem.systemName,

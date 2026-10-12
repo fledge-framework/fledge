@@ -11,7 +11,7 @@ Fledge provides five per-frame schedules that run in order, plus a `startup` sch
 Schedules.first;      // Initialization, time
 Schedules.preUpdate;  // Input, events
 Schedules.update;     // Game logic
-Schedules.postUpdate; // Physics, collision
+Schedules.postUpdate; // Reactions to update (camera follow, UI layout)
 Schedules.last;       // Rendering, cleanup
 
 // Reserved for the fixed-timestep and render pipeline (v0.2):
@@ -29,11 +29,53 @@ app
   .addSystem(TimeSystemWrapper(), schedule: Schedules.first)
   .addSystem(InputSystemWrapper(), schedule: Schedules.preUpdate)
   .addSystem(AISystemWrapper())  // Default: Schedules.update
-  .addSystem(PhysicsSystemWrapper(), schedule: Schedules.postUpdate)
+  .addSystem(PhysicsSystemWrapper(), schedule: Schedules.fixedUpdate)
   .addSystem(RenderSystemWrapper(), schedule: Schedules.last);
 ```
 
 The runtime container that dispatches schedules is the `Scheduler` (previously called `Schedule`). Games rarely construct one directly — `App` owns one and wires it up.
+
+## Standard Phases of `first`
+
+`Schedules.first` is shared by many plugins, so the default `Scheduler()` (the one `App` creates) splits it into four ordered phases, defined as set names in `FirstSets`:
+
+| Phase | Runs | Built-in members |
+|-------|------|------------------|
+| `FirstSets.frameStart` | 1st | `WallTimeUpdateSystem`, `FrameStartSystem` (frame limiter), `CalendarSystem`, `fledge_debug` stats / ordering-report systems |
+| `FirstSets.platform` | 2nd | `WindowInitSystem`, `DisplaySyncSystem`, `WindowEventSystem`, `AudioInitSystem`, `AudioEventSystem`, `AudioFocusSystem` |
+| `FirstSets.input` | 3rd | `InputPollingSystem`, `ContextUpdateSystem<S>`, `ActionResolutionSystem` |
+| `FirstSets.content` | 4th | `HotReloadPollSystem`, `TilemapSpawnSystem` |
+
+Every system in an earlier phase runs before every system in a later one, regardless of plugin registration order. Within a phase, systems are ordered by their own `before:` / `after:` and run in parallel when they don't conflict.
+
+A game system joins a phase by declaring membership, or orders itself against a whole phase without joining it — set names work anywhere a system name does:
+
+```dart
+// Join the input phase.
+app.addSystem(
+  FunctionSystem(
+    'gamepadRumble',
+    sets: [FirstSets.input],
+    after: [ActionResolutionSystem.systemName],
+    resourceWrites: {Rumble},
+    run: rumble,
+  ),
+  schedule: Schedules.first,
+);
+
+// Run after every content system (e.g. after tilemaps spawn).
+class LevelIntroSystem implements System {
+  @override
+  SystemMeta get meta => const SystemMeta(
+    name: 'levelIntro',
+    after: [FirstSets.content],
+    eventReads: {TilemapSpawnedEvent},
+  );
+  // ...
+}
+```
+
+Systems in `first` that join no phase are unordered relative to the phases, so `App.checkScheduleOrdering()` still reports them when they conflict with a phased system. `Scheduler.empty()` configures no phases. See [System Sets](/docs/api/system-sets) for how set ordering resolves.
 
 ## Parallel Execution
 
@@ -100,7 +142,7 @@ class SystemC implements System {
 
 class SystemD implements System {
   @override
-  SystemMeta get meta => SystemMeta(name: 'systemD', reads: {ComponentId.of<Position>()});
+  SystemMeta get meta => SystemMeta(name: 'systemD', writes: {ComponentId.of<Position>()});
 
   @override
   Future<void> run(World world) async {
@@ -113,3 +155,4 @@ class SystemD implements System {
 
 - [Schedule API](/docs/api/schedule) - Schedule reference
 - [System API](/docs/api/system) - System metadata
+- [System Ordering](/docs/guides/system-ordering) - `before:` / `after:` and sets

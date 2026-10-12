@@ -20,10 +20,12 @@ enum TweenSchedule {
 /// Plugin that installs the [TweenSystem] on either the wall-time or
 /// fixed-timestep update schedule.
 ///
-/// The plugin registers no resources of its own — [TweenSystem] reads
-/// the [WallTime] resource that `WallTimePlugin` populates, so games
-/// should still add `WallTimePlugin` (or otherwise maintain a
-/// [WallTime] resource) for tweens to advance.
+/// The plugin registers no resources of its own. With
+/// [TweenSchedule.wall], [TweenSystem] reads the [WallTime] resource that
+/// `WallTimePlugin` populates, so games should add `WallTimePlugin` (or
+/// otherwise maintain a [WallTime] resource) for tweens to advance. With
+/// [TweenSchedule.fixed] it reads `FixedTimestep.stepDuration` instead;
+/// `App` inserts a default `FixedTimestep`.
 ///
 /// ```dart
 /// App()

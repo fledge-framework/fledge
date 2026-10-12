@@ -4,6 +4,7 @@ import '../app.dart';
 import '../plugin.dart';
 import '../system/run_condition.dart';
 import '../system/schedule_label.dart';
+import '../system/standard_sets.dart';
 import '../system/system.dart';
 import '../world.dart';
 
@@ -57,8 +58,11 @@ class FrameTime {
 /// System that records frame start time.
 class FrameStartSystem implements System {
   @override
-  SystemMeta get meta =>
-      const SystemMeta(name: 'frameStart', resourceWrites: {FrameTime});
+  SystemMeta get meta => const SystemMeta(
+    name: 'frameStart',
+    resourceWrites: {FrameTime},
+    sets: [FirstSets.frameStart],
+  );
 
   @override
   RunCondition? get runCondition => null;

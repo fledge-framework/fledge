@@ -339,6 +339,293 @@ void main() {
       }
     });
   });
+
+  group('Set-based ordering', () {
+    FunctionSystem logSys(
+      String name,
+      List<String> order, {
+      Set<Type> resourceWrites = const {},
+      List<String> before = const [],
+      List<String> after = const [],
+      List<String> sets = const [],
+    }) => FunctionSystem(
+      name,
+      resourceWrites: resourceWrites,
+      before: before,
+      after: after,
+      sets: sets,
+      run: (_) => order.add(name),
+    );
+
+    test('original repro: set after set runs in declared order', () async {
+      final order = <String>[];
+      final app = App();
+      app.configureSet('late', (s) => s.after('early'));
+      app.addSystemToSet(logSys('b', order, resourceWrites: {_Res}), 'late');
+      app.addSystemToSet(logSys('a', order, resourceWrites: {_Res}), 'early');
+
+      await app.tick();
+
+      expect(order, equals(['a', 'b']));
+      expect(app.checkScheduleOrdering(), isEmpty);
+    });
+
+    for (final membersFirst in [true, false]) {
+      final when = membersFirst ? 'members first' : 'members last';
+
+      test('system after: naming a set runs after members ($when)', () async {
+        final order = <String>[];
+        final app = App();
+        void addMembers() {
+          app.addSystemToSet(
+            logSys('m1', order, resourceWrites: {_Res}),
+            'physics',
+          );
+          app.addSystemToSet(logSys('m2', order), 'physics');
+        }
+
+        void addFollower() {
+          app.addSystem(
+            logSys(
+              'follower',
+              order,
+              resourceWrites: {_Res},
+              after: ['physics'],
+            ),
+          );
+        }
+
+        if (membersFirst) {
+          addMembers();
+          addFollower();
+        } else {
+          addFollower();
+          addMembers();
+        }
+
+        await app.tick();
+
+        expect(order.last, 'follower');
+        expect(app.checkScheduleOrdering(), isEmpty);
+      });
+
+      test('system before: naming a set runs before members ($when)', () async {
+        final order = <String>[];
+        final app = App();
+        void addMembers() {
+          app.addSystemToSet(
+            logSys('m1', order, resourceWrites: {_Res}),
+            'physics',
+          );
+          app.addSystemToSet(logSys('m2', order), 'physics');
+        }
+
+        void addLeader() {
+          app.addSystem(
+            logSys(
+              'leader',
+              order,
+              resourceWrites: {_Res},
+              before: ['physics'],
+            ),
+          );
+        }
+
+        if (membersFirst) {
+          addMembers();
+          addLeader();
+        } else {
+          addLeader();
+          addMembers();
+        }
+
+        await app.tick();
+
+        expect(order.first, 'leader');
+        expect(app.checkScheduleOrdering(), isEmpty);
+      });
+    }
+
+    test('set -> set edges hold and silence member conflicts', () async {
+      final order = <String>[];
+      final app = App();
+      app.configureSet('render', (s) => s.after('physics'));
+      app.configureSet('physics', (s) => s.after('input'));
+      // Register against the desired order.
+      app.addSystemToSet(
+        logSys('draw', order, resourceWrites: {_Res}),
+        'render',
+      );
+      app.addSystemToSet(
+        logSys('collide', order, resourceWrites: {_Res}),
+        'physics',
+      );
+      app.addSystemToSet(
+        logSys('keys', order, resourceWrites: {_Res}),
+        'input',
+      );
+
+      await app.tick();
+
+      expect(order, equals(['keys', 'collide', 'draw']));
+      expect(app.checkScheduleOrdering(), isEmpty);
+    });
+
+    test('empty middle set bridges a chain', () async {
+      final order = <String>[];
+      final app = App();
+      app.configureSet('A', (s) => s.before('B'));
+      app.configureSet('B', (s) => s.before('C'));
+      app.addSystemToSet(logSys('c', order, resourceWrites: {_Res}), 'C');
+      app.addSystemToSet(logSys('a', order, resourceWrites: {_Res}), 'A');
+
+      await app.tick();
+
+      expect(order, equals(['a', 'c']));
+      expect(app.checkScheduleOrdering(), isEmpty);
+    });
+
+    test('configureSet after addSystemToSet is honoured', () async {
+      final order = <String>[];
+      final app = App();
+      app.addSystemToSet(logSys('b', order, resourceWrites: {_Res}), 'late');
+      app.addSystemToSet(logSys('a', order, resourceWrites: {_Res}), 'early');
+      expect(app.checkScheduleOrdering(), hasLength(1));
+
+      app.configureSet('late', (s) => s.after('early'));
+
+      await app.tick();
+
+      expect(order, equals(['a', 'b']));
+      expect(app.checkScheduleOrdering(), isEmpty);
+    });
+
+    test('FunctionSystem(sets:) joins a set without a wrapper', () async {
+      final order = <String>[];
+      final app = App();
+      app.configureSet('late', (s) => s.after('early'));
+      app.addSystem(logSys('b', order, resourceWrites: {_Res}, sets: ['late']));
+      app.addSystem(
+        logSys('a', order, resourceWrites: {_Res}, sets: ['early']),
+      );
+
+      await app.tick();
+
+      expect(order, equals(['a', 'b']));
+      expect(app.checkScheduleOrdering(), isEmpty);
+    });
+
+    test('FunctionSystem and AsyncFunctionSystem pass sets to meta', () {
+      expect(
+        FunctionSystem('x', sets: ['s'], run: (_) {}).meta.sets,
+        equals(['s']),
+      );
+      expect(
+        AsyncFunctionSystem('x', sets: ['s'], run: (_) async {}).meta.sets,
+        equals(['s']),
+      );
+      expect(const SystemMeta(name: 'x').sets, isEmpty);
+    });
+
+    test('SetConfiguredSystem records set membership', () {
+      final wrapped = SetConfiguredSystem(
+        FunctionSystem('g', sets: ['inner'], run: (_) {}),
+        SystemSet('physics'),
+      );
+      expect(wrapped.meta.sets, equals(['physics', 'inner']));
+    });
+
+    test('cycle through sets errors with system and set names', () async {
+      final app = App();
+      app.configureSet('A', (s) => s.before('B'));
+      app.addSystemToSet(FunctionSystem('a1', run: (_) {}), 'A');
+      app.addSystemToSet(FunctionSystem('b1', run: (_) {}), 'B');
+
+      expect(
+        () => app.configureSet('B', (s) => s.before('A')),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            allOf(
+              contains('Cycle detected'),
+              contains('a1'),
+              contains('b1'),
+              contains('[A]'),
+              contains('[B]'),
+            ),
+          ),
+        ),
+      );
+      // Rejected configuration is rolled back.
+      expect(app.scheduler.sets.get('B')?.beforeList ?? const [], isEmpty);
+      await app.tick();
+    });
+
+    test('cycle through sets at addSystem time fails fast', () {
+      final app = App();
+      app.configureSet('A', (s) => s.before('B'));
+      app.addSystemToSet(FunctionSystem('a1', run: (_) {}), 'A');
+      expect(
+        () => app.addSystemToSet(
+          FunctionSystem('b1', before: ['a1'], run: (_) {}),
+          'B',
+        ),
+        throwsA(isA<StateError>()),
+      );
+      // The offending system was rolled back.
+      expect(app.scheduler.getStage(Schedules.update.name)!.length, 1);
+    });
+
+    test('set configuration survives resetToSessionCheckpoint', () async {
+      final order = <String>[];
+      final app = App();
+      app.configureSet('late', (s) => s.after('early'));
+      app.markSessionCheckpoint();
+      void gamePlugin(App a) {
+        a.addSystemToSet(logSys('b', order, resourceWrites: {_Res}), 'late');
+        a.addSystemToSet(logSys('a', order, resourceWrites: {_Res}), 'early');
+      }
+
+      app.addPlugin(_FnPlugin(gamePlugin));
+      app.resetToSessionCheckpoint();
+      expect(app.scheduler.systemCount, 0);
+      expect(app.scheduler.sets.get('late')!.afterList, equals(['early']));
+
+      app.addPlugin(_FnPlugin(gamePlugin));
+      await app.tick();
+      expect(order, equals(['a', 'b']));
+    });
+
+    test('Scheduler.clear keeps set configuration', () {
+      final scheduler = Scheduler();
+      scheduler.configureSet('late', (s) => s.after('early'));
+      scheduler.addSystem(FunctionSystem('x', sets: ['late'], run: (_) {}));
+      scheduler.clear();
+      expect(scheduler.systemCount, 0);
+      expect(scheduler.sets.contains('late'), isTrue);
+    });
+
+    test('SystemSet before/after do not store duplicates', () {
+      final set = SystemSet('s')
+        ..after('a')
+        ..after('a')
+        ..before('b')
+        ..before('b');
+      expect(set.afterList, equals(['a']));
+      expect(set.beforeList, equals(['b']));
+    });
+  });
+}
+
+class _Res {}
+
+class _FnPlugin extends Plugin {
+  final void Function(App) _build;
+  _FnPlugin(this._build);
+
+  @override
+  void build(App app) => _build(app);
 }
 
 // Test components

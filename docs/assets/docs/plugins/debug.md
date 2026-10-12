@@ -40,14 +40,17 @@ Wrap the render view with `FledgeUiOverlay` **first**, then `DebugGizmosLayer` o
 
 ## DebugPlugin
 
-`DebugPlugin` inserts three resources — `DebugConfig`, `FrameStats`, `SystemStats` — and four systems:
+`DebugPlugin` inserts three resources — `DebugConfig`, `FrameStats`, `SystemStats` — and these systems (all but `OverlayPopulateSystem` come from the composed `DebugStatsPlugin`):
 
 | System | Schedule | Purpose |
 |--------|----------|---------|
-| `FrameStatsSystem` | `first` | Updates FPS and frame-time history from `WallTime`. |
-| `SystemStatsStartSystem` | `first` | Snapshots start-of-frame monotonic time; refreshes per-schedule counts. |
+| `FrameStatsSystem` | `first` (`FirstSets.frameStart`) | Updates FPS and frame-time history from `WallTime`. |
+| `SystemStatsStartSystem` | `first` (`FirstSets.frameStart`) | Snapshots start-of-frame monotonic time; refreshes per-schedule counts. |
+| `ScheduleOrderingReportSystem` | `first` (`FirstSets.frameStart`) | Refreshes the `ScheduleOrderingReport` resource on the first tick and on `RefreshScheduleOrderingReportRequested`. |
 | `SystemStatsEndSystem` | `last` | Snapshots end-of-frame monotonic time. |
-| `OverlayPopulateSystem` | `preUpdate` | Mutates the retained UI entities that back the overlay. |
+| `OverlayPopulateSystem` | `preUpdate` | Mutates the retained UI entities that back the overlay. Only added when `overlay: true`. |
+
+The `first`-schedule systems sit in the `frameStart` phase, after `WallTimeUpdateSystem`, so they never add ordering ambiguities against window, audio, input, or tilemap systems.
 
 The plugin also captures `App.checkScheduleOrdering()` output at build time and stores it as an internal resource, so the overlay's ambiguity block reflects the current schedule graph on the first paint. Games that add plugins after `DebugPlugin` can call `refreshAmbiguityReport(app)` to update it.
 

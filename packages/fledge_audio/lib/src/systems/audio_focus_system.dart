@@ -25,6 +25,7 @@ class AudioFocusSystem implements System {
   @override
   SystemMeta get meta => const SystemMeta(
     name: systemName,
+    sets: [FirstSets.platform],
     // Focus pause/resume applies on top of this frame's explicit requests.
     after: [AudioInitSystem.systemName, AudioEventSystem.systemName],
     eventWrites: {AudioPaused, AudioResumed},

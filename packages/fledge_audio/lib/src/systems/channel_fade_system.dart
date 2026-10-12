@@ -5,9 +5,9 @@ import 'spatial_audio_system.dart';
 
 /// Ticks any in-progress linear fades on `VolumeChannels` once per frame.
 ///
-/// Runs in `Schedules.update` before systems that read effective channel
-/// volumes (e.g. [SpatialAudioSystem]) so they observe the ramped value on
-/// the same frame the fade advances.
+/// Runs in `Schedules.update`. [SpatialAudioSystem] runs later in the
+/// frame (`Schedules.last`), so it naturally observes the ramped value on
+/// the same frame the fade advances; no explicit edge is needed.
 class ChannelFadeSystem implements System {
   /// The `SystemMeta.name` of [ChannelFadeSystem]. Games that read
   /// `VolumeChannels` in `Schedules.update` should order `after:` it.
@@ -16,7 +16,6 @@ class ChannelFadeSystem implements System {
   @override
   SystemMeta get meta => const SystemMeta(
     name: systemName,
-    before: [SpatialAudioSystem.systemName],
     resourceReads: {WallTime},
     resourceWrites: {VolumeChannels},
   );

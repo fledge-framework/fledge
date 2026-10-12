@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository layout
 
-Fledge is a Bevy-inspired ECS game framework for Dart/Flutter, organized as a Melos-managed workspace (`pubspec.yaml` declares the workspace members). Packages live under `packages/`, sample apps under `examples/`, and the marketing/docs Flutter web app under `docs/`.
+Fledge is a Bevy-inspired ECS game framework for Dart/Flutter, organized as a Melos-managed workspace (`pubspec.yaml` declares the workspace members). Packages live under `packages/`, sample apps under `examples/`, the marketing/docs Flutter web app under `docs/`, and `integration/all_plugins` is a test-only member that composes every plugin and asserts `checkScheduleOrdering()` is empty — add any new plugin to it.
 
 Package tiers (see `CONTRIBUTING.md` for exact dependency order):
 - **Core**: `fledge_ecs`, `fledge_ecs_annotations`, `fledge_ecs_generator`, `fledge_assets`
@@ -71,6 +71,8 @@ Deprecated: `stage: CoreStage.foo` on `App.addSystem` still works for one releas
 **Important footgun**: when two systems in the same schedule conflict but neither declares `before:`/`after:`, ordering falls back to **registration order** — which changes silently based on when plugins are added. Always declare `before:`/`after:` explicitly for cross-conflict systems, and run `App.checkScheduleOrdering()` (e.g. in a test) to surface ambiguities. `fledge_debug` refreshes a `ScheduleOrderingReport` on the first tick.
 
 Class-based public systems expose `static const String systemName` and use it in `SystemMeta(name: systemName)`. Always reference the constant in `before:`/`after:` (e.g. `after: {TransformPropagateSystem.systemName}`), never a string literal — the values are inconsistent (`'CameraFollowSystem'` vs `'transform_propagate'`). New public systems should follow this pattern.
+
+Packages that don't depend on each other can't reference each other's constants. In `Schedules.first`, order them through the standard `FirstSets` phases (`frameStart` → `platform` → `input` → `content`, chained by every default `Scheduler()`): a system joins with `SystemMeta(sets: [FirstSets.input])`, and `before:`/`after:` may name a set. Never order across packages with string literals.
 
 ### Codegen: Query vs QueryMut
 `@system`-annotated functions signal component intent through the parameter type: `Query1..4<T>` = reads, `QueryMut1..4<T>` = writes. The generator emits the correct `reads:`/`writes:` sets in `SystemMeta`. Mixed reads/writes on a single query → hand-write a class-based `System` subclass. The `@reflectable` annotation is not implemented (reserved for `fledge_debug`).

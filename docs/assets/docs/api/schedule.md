@@ -15,7 +15,7 @@ import 'package:fledge_ecs_annotations/fledge_ecs_annotations.dart';
 Scheduler()
 ```
 
-Creates a new empty scheduler. Games rarely construct one directly — `App` owns one and exposes it as `app.scheduler`.
+Creates a scheduler with every standard schedule registered and the [standard phases of `first`](/docs/guides/scheduling#standard-phases-of-first) (`FirstSets`) chained in order. `Scheduler.empty()` registers no schedules and configures no sets. Games rarely construct one directly — `App` owns one and exposes it as `app.scheduler`.
 
 > The runtime container was renamed from `Schedule` to `Scheduler` in v0.2 so the `Schedule` name could be reused for the label value type. The old getter (`app.schedule`) is kept as a deprecated alias for one release.
 
@@ -38,6 +38,14 @@ scheduler.addSystem(RenderSystemWrapper(), schedule: Schedules.last);
 ```
 
 > `stage: CoreStage.foo` is aliased to `schedule: Schedules.foo` for one release. New code should use the `schedule:` parameter.
+
+### configureSet(name, configure)
+
+```dart
+void configureSet(String name, void Function(SystemSet set) configure)
+```
+
+Configures a [system set](/docs/api/system-sets) (creating it if needed) and rebuilds every schedule's dependency graph so the change applies to already-registered systems. Throws `StateError` and leaves everything unchanged if the new constraints would create a cycle. `App.configureSet` delegates here. The set configuration lives in `scheduler.sets` and survives `clear()`.
 
 ### run(world)
 
@@ -64,7 +72,7 @@ class Schedules {
   static const first         = Schedule('first');       // Initialization, time
   static const preUpdate     = Schedule('preUpdate');   // Input, events
   static const update        = Schedule('update');      // Game logic (default)
-  static const postUpdate    = Schedule('postUpdate');  // Physics, collision
+  static const postUpdate    = Schedule('postUpdate');  // Reactions to update (camera follow, UI layout)
   static const last          = Schedule('last');        // Rendering, cleanup
 
   // Reserved fixed-timestep chain (v0.2):
@@ -90,7 +98,7 @@ class Schedules {
 ├───────────────────────┤
 │  Schedules.update     │  ← Game logic (default)
 ├───────────────────────┤
-│  Schedules.postUpdate │  ← Physics, collision
+│  Schedules.postUpdate │  ← Reactions to update (camera, UI layout)
 ├───────────────────────┤
 │  Schedules.last       │  ← Rendering, cleanup
 └───────────────────────┘
@@ -179,8 +187,9 @@ class SystemMeta {
   final Set<ComponentId> writes;     // Components written
   final Set<Type> resourceReads;     // Resources read
   final Set<Type> resourceWrites;    // Resources written
-  final List<String> before;         // Explicit ordering
-  final List<String> after;          // Explicit ordering
+  final List<String> before;         // Systems or sets to run before
+  final List<String> after;          // Systems or sets to run after
+  final List<String> sets;           // Sets this system belongs to
 }
 ```
 
@@ -196,7 +205,7 @@ scheduler.addSystem(SecondSystemWrapper());
 scheduler.addSystem(ThirdSystemWrapper());
 ```
 
-Use `App.checkScheduleOrdering()` to catch implicit ordering.
+Use `App.checkScheduleOrdering()` to catch implicit ordering. Ordering is transitive: if A runs before B and B before C, a conflict between A and C counts as ordered.
 
 ## Game Loop Integration
 

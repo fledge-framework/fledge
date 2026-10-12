@@ -5,12 +5,24 @@ import 'package:screen_retriever/screen_retriever.dart' hide Display;
 
 import '../events/window_events.dart';
 import '../resources/display_info.dart';
+import 'window_event_system.dart';
+import 'window_init_system.dart';
 
 /// System that periodically syncs display information.
 ///
 /// This handles monitor connect/disconnect events by polling
 /// the display list every few seconds.
+///
+/// Runs in the [FirstSets.platform] phase of `Schedules.first`, after
+/// [WindowInitSystem] (which populates [DisplayInfo] on the first frame)
+/// and before [WindowEventSystem] (which reads [DisplayInfo] when
+/// applying mode/size requests).
 class DisplaySyncSystem implements System {
+  /// The `SystemMeta.name` of [DisplaySyncSystem]. Games that order
+  /// their own systems relative to this one use it in `before:` /
+  /// `after:`.
+  static const String systemName = 'DisplaySyncSystem';
+
   DateTime _lastSync = DateTime.now();
 
   /// How often to sync display information.
@@ -18,7 +30,9 @@ class DisplaySyncSystem implements System {
 
   @override
   SystemMeta get meta => const SystemMeta(
-    name: 'DisplaySyncSystem',
+    name: systemName,
+    sets: [FirstSets.platform],
+    after: [WindowInitSystem.systemName],
     resourceWrites: {DisplayInfo},
     eventWrites: {WindowOperationFailed},
   );

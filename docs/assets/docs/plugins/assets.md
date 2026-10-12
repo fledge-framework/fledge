@@ -160,7 +160,7 @@ final level = assets.load('assets/levels/1.json', LevelScriptLoader());
 
 | System | Schedule | Description |
 |--------|----------|-------------|
-| `HotReloadPollSystem` | `Schedules.first` | Drains pending reload events and calls `Assets<T>.reload` for each dirty id. Only added when `enableHotReload: true`. |
+| `HotReloadPollSystem` | `Schedules.first` (`FirstSets.content`) | Drains pending reload events and calls `Assets<T>.reload` for each dirty id. Only added when `enableHotReload: true`. |
 
 ## See also
 

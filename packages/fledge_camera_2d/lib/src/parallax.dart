@@ -1,6 +1,6 @@
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart'
-    show GlobalTransform2D, Transform2D;
+    show GlobalTransform2D, Transform2D, TransformPropagateSystem;
 
 import 'camera2d.dart';
 import 'follow.dart';
@@ -56,7 +56,17 @@ class ParallaxSystem implements System {
       ComponentId.of<Transform2D>(),
       ComponentId.of<Camera2D>(),
     },
-    after: const [CameraFollowSystem.systemName, CameraShakeSystem.systemName],
+    // Propagation (when a game re-runs it in postUpdate) writes the
+    // GlobalTransform2D this system overrides on parallax entities, so
+    // parallax must win. CameraFollowSystem already runs after it;
+    // declaring it here too keeps registration order from adding a
+    // contradictory edge (and a cycle) when propagation is registered
+    // after CameraPlugin.
+    after: const [
+      TransformPropagateSystem.systemName,
+      CameraFollowSystem.systemName,
+      CameraShakeSystem.systemName,
+    ],
     before: const [CameraTransitionSystem.systemName],
   );
 

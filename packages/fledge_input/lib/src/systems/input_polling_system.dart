@@ -6,6 +6,8 @@ import '../raw/gamepad_state.dart';
 
 /// System that updates raw input state at the start of each frame.
 ///
+/// Runs in the [FirstSets.input] phase of `Schedules.first`.
+///
 /// Must run before ActionResolutionSystem. Updates the "previous frame"
 /// state for justPressed/justReleased detection.
 class InputPollingSystem implements System {
@@ -17,6 +19,7 @@ class InputPollingSystem implements System {
   @override
   SystemMeta get meta => const SystemMeta(
     name: systemName,
+    sets: [FirstSets.input],
     resourceWrites: {KeyboardState, MouseState, GamepadState},
   );
 

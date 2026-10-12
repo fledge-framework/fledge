@@ -8,7 +8,11 @@ import '../resources/audio_state.dart';
 
 /// System that initializes the SoLoud audio engine.
 ///
-/// Runs once on startup to initialize the audio backend.
+/// Runs once on startup to initialize the audio backend, in the
+/// [FirstSets.platform] phase of `Schedules.first`. It is not exclusive:
+/// it declares writes to every resource it inserts (`Assets<AudioClip>`,
+/// `AudioAssets`, [AudioState]), so it serialises only against systems
+/// that touch those.
 class AudioInitSystem implements System {
   final AudioConfig config;
   bool _initialized = false;
@@ -21,7 +25,16 @@ class AudioInitSystem implements System {
   static const String systemName = 'AudioInitSystem';
 
   @override
-  SystemMeta get meta => const SystemMeta(name: systemName, exclusive: true);
+  SystemMeta get meta => const SystemMeta(
+    name: systemName,
+    sets: [FirstSets.platform],
+    resourceWrites: {
+      Assets<AudioClip>,
+      // ignore: deprecated_member_use_from_same_package
+      AudioAssets,
+      AudioState,
+    },
+  );
 
   @override
   RunCondition? get runCondition => null;

@@ -27,4 +27,17 @@ void main() {
     final issues = app.checkScheduleOrdering();
     expect(issues, isEmpty, reason: issues.map((i) => ' - $i').join('\n'));
   });
+
+  test('first-schedule input systems join FirstSets.input', () {
+    final metas = [
+      InputPollingSystem().meta,
+      ContextUpdateSystem<_Mode>().meta,
+      ActionResolutionSystem().meta,
+    ];
+    for (final meta in metas) {
+      expect(meta.sets, [FirstSets.input], reason: meta.name);
+    }
+    // The frame-end system lives in Schedules.last and joins no phase.
+    expect(InputFrameEndSystem().meta.sets, isEmpty);
+  });
 }

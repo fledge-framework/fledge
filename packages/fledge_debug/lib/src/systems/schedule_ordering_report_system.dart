@@ -25,17 +25,10 @@ class ScheduleOrderingReportSystem implements System {
   @override
   SystemMeta get meta => const SystemMeta(
     name: 'debug_schedule_ordering_report',
-    // Order after every known exclusive init system in Schedules.first
-    // so this system doesn't add a fresh registration-order ambiguity
-    // to games that install the window / audio / tilemap plugins.
-    // Names refer to systems that may not exist in every app — the
-    // scheduler ignores unresolved after-names.
-    after: [
-      'WindowInitSystem',
-      'AudioInitSystem',
-      WallTimeUpdateSystem.systemName,
-    ],
-    before: ['tilemap_spawn'],
+    // Frame bookkeeping: the FirstSets phase chain orders this before
+    // every platform / input / content system in Schedules.first.
+    sets: [FirstSets.frameStart],
+    after: [WallTimeUpdateSystem.systemName],
     resourceWrites: {ScheduleOrderingReport},
     eventReads: {RefreshScheduleOrderingReportRequested},
   );

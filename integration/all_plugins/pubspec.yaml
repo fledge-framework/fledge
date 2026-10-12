@@ -1,0 +1,38 @@
+name: all_plugins_integration
+description: >
+  Test-only workspace member. Composes every Fledge plugin in one App and
+  asserts the combined schedule has no registration-order-only ambiguities.
+  Not published, not an example.
+publish_to: none
+
+environment:
+  sdk: ^3.11.0
+  flutter: ">=3.41.0"
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+  fledge_assets: ^0.3.1
+  fledge_audio: ^0.3.1
+  fledge_calendar: ^0.3.1
+  fledge_camera_2d: ^0.3.1
+  fledge_debug: ^0.3.1
+  fledge_ecs: ^0.3.1
+  fledge_input: ^0.3.1
+  fledge_lighting_2d: ^0.3.1
+  fledge_net: ^0.3.1
+  fledge_particles: ^0.3.1
+  fledge_physics: ^0.3.1
+  fledge_render_2d: ^0.3.1
+  fledge_save: ^0.3.1
+  fledge_tiled: ^0.3.1
+  fledge_tween: ^0.3.1
+  fledge_ui: ^0.3.1
+  fledge_window: ^0.3.1
+  fledge_yarn: ^0.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0

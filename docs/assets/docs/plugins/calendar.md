@@ -321,7 +321,7 @@ App()
   .addSystem(CalendarSystem());
 ```
 
-The system (registered in `Schedules.first` by the plugin), each frame:
+The system (registered in `Schedules.first` by the plugin, in the `FirstSets.frameStart` phase so it runs before platform, input, and content systems), each frame:
 1. Takes pending changes made outside the system since its last run (`takePendingChanges()` — from `setTime`, `skipToHour`, `skipToNextMorning`)
 2. Resets change flags (`beginFrame()`; pending changes are not cleared by this)
 3. Advances time based on `WallTime.delta` and the time scale, setting change flags when boundaries are crossed
@@ -342,7 +342,7 @@ CalendarPlugin(
 
 **Provides:**
 - `Calendar` resource
-- `CalendarSystem` in `Schedules.update`
+- `CalendarSystem` in `Schedules.first` (`FirstSets.frameStart`)
 - Time event registration
 
 ## Common Patterns

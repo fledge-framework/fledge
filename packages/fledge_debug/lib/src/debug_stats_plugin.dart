@@ -33,10 +33,10 @@ import 'systems/system_stats_system.dart';
 /// - [SystemStatsEndSystem]     → `Schedules.last`.
 /// - [ScheduleOrderingReportSystem] → `Schedules.first`.
 ///
-/// The `first`-schedule systems declare `after: [WindowInitSystem,
-/// AudioInitSystem, wallTimeUpdate]` and `before: [tilemap_spawn]`
-/// so they don't add new registration-order ambiguities to any
-/// checkScheduleOrdering baseline.
+/// The `first`-schedule systems join the `FirstSets.frameStart` phase
+/// and declare `after: [WallTimeUpdateSystem.systemName]`, so they are
+/// ordered against every other plugin's `first` systems without adding
+/// registration-order ambiguities.
 ///
 /// **Standalone / composable.** Games using [DebugPlugin] get the
 /// same stats plumbing (that plugin composes this one). Games that

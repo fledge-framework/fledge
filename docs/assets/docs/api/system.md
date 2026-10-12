@@ -72,8 +72,16 @@ class SystemMeta {
   final Set<ComponentId> writes;
   final Set<Type> resourceReads;
   final Set<Type> resourceWrites;
+  final Set<Type> eventReads;
+  final Set<Type> eventWrites;
+  final bool exclusive;        // Never runs in parallel with anything
+  final List<String> before;   // Systems or sets this runs before
+  final List<String> after;    // Systems or sets this runs after
+  final List<String> sets;     // System sets this belongs to
 }
 ```
+
+See [System Ordering](/docs/guides/system-ordering) and [System Sets](/docs/api/system-sets).
 
 ## System Parameters
 

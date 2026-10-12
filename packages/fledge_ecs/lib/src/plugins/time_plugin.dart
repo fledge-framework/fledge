@@ -2,6 +2,7 @@ import '../app.dart';
 import '../plugin.dart';
 import '../system/run_condition.dart';
 import '../system/schedule_label.dart';
+import '../system/standard_sets.dart';
 import '../system/system.dart';
 import '../world.dart';
 
@@ -83,8 +84,11 @@ class WallTimeUpdateSystem implements System {
   const WallTimeUpdateSystem();
 
   @override
-  SystemMeta get meta =>
-      const SystemMeta(name: systemName, resourceWrites: {WallTime});
+  SystemMeta get meta => const SystemMeta(
+    name: systemName,
+    resourceWrites: {WallTime},
+    sets: [FirstSets.frameStart],
+  );
 
   @override
   RunCondition? get runCondition => null;

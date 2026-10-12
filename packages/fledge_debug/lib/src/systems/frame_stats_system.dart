@@ -19,22 +19,13 @@ class FrameStatsSystem implements System {
     name: 'debug_frame_stats',
     resourceReads: {WallTime},
     resourceWrites: {FrameStats},
-    // WallTime is written by `wallTimeUpdate` in the same schedule
-    // (`Schedules.first`). Declare the dependency explicitly so
-    // ordering doesn't fall back to registration order — see
-    // `App.checkScheduleOrdering()` for why that matters.
-    //
-    // Also order after the exclusive init systems that live in
-    // Schedules.first (WindowInitSystem / AudioInitSystem) and before
-    // fledge_tiled's tilemap_spawn, so this debug system doesn't
-    // introduce fresh registration-order ambiguities to any app
-    // that installs those plugins.
-    after: [
-      WallTimeUpdateSystem.systemName,
-      'WindowInitSystem',
-      'AudioInitSystem',
-    ],
-    before: ['tilemap_spawn'],
+    // Frame bookkeeping: the FirstSets phase chain orders this before
+    // every platform / input / content system in Schedules.first.
+    sets: [FirstSets.frameStart],
+    // WallTime is written by `wallTimeUpdate` in the same phase.
+    // Declare the dependency explicitly so ordering doesn't fall back
+    // to registration order — see `App.checkScheduleOrdering()`.
+    after: [WallTimeUpdateSystem.systemName],
   );
 
   @override

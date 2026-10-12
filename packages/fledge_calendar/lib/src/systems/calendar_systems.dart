@@ -31,6 +31,7 @@ class CalendarSystem implements System {
   @override
   SystemMeta get meta => const SystemMeta(
     name: systemName,
+    sets: [FirstSets.frameStart],
     after: [WallTimeUpdateSystem.systemName],
     resourceReads: {WallTime, Calendar},
     resourceWrites: {Calendar},

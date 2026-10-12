@@ -138,16 +138,22 @@ class HotReloadWatcher {
   }
 }
 
-/// Runs each frame (in [Schedules.first] by convention) to drain
-/// queued reload callbacks from [HotReloadWatcher]. Registered
+/// Runs each frame in [Schedules.first] (phase [FirstSets.content]) to
+/// drain queued reload callbacks from [HotReloadWatcher]. Registered
 /// automatically by [AssetPlugin] when `enableHotReload: true`.
 class HotReloadPollSystem implements System {
   final HotReloadWatcher watcher;
 
   HotReloadPollSystem(this.watcher);
 
+  /// The `SystemMeta.name` of [HotReloadPollSystem]. Games that order
+  /// their own systems relative to this one use it in `before:` /
+  /// `after:`.
+  static const String systemName = 'hotReloadPoll';
+
   @override
-  SystemMeta get meta => const SystemMeta(name: 'hotReloadPoll');
+  SystemMeta get meta =>
+      const SystemMeta(name: systemName, sets: [FirstSets.content]);
 
   @override
   RunCondition? get runCondition => null;

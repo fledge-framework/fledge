@@ -10,7 +10,8 @@ import 'audio_init_system.dart';
 
 /// System that processes audio playback requests.
 ///
-/// Runs after [AudioInitSystem] so requests issued on the first frame see
+/// Runs in the [FirstSets.platform] phase of `Schedules.first`, after
+/// [AudioInitSystem] so requests issued on the first frame see
 /// an initialized backend.
 class AudioEventSystem implements System {
   /// The `SystemMeta.name` of [AudioEventSystem]. Games that order
@@ -21,6 +22,7 @@ class AudioEventSystem implements System {
   @override
   SystemMeta get meta => const SystemMeta(
     name: systemName,
+    sets: [FirstSets.platform],
     after: [AudioInitSystem.systemName],
     eventReads: {
       PlaySfxRequest,

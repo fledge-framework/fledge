@@ -9,7 +9,7 @@ import '../config/audio_config.dart';
 import '../resources/audio_channels.dart';
 import '../resources/audio_state.dart';
 import '../assets/audio_assets.dart';
-import 'music_crossfade_system.dart';
+import 'audio_cleanup_system.dart';
 
 /// System that updates spatial audio based on entity positions.
 ///
@@ -17,8 +17,15 @@ import 'music_crossfade_system.dart';
 /// `AudioSource` + `Transform2D` for every audio emitter. Distance →
 /// attenuated volume; lateral offset → stereo pan.
 ///
-/// Entities without a `Transform2D` are treated as positioned at the
-/// listener (no falloff, centred pan), which matches the non-spatial path.
+/// Listeners and sources without a `Transform2D` are skipped by this
+/// system; sources without one keep whatever volume/pan they were played
+/// with.
+///
+/// Registered in `Schedules.last` so it reads final per-frame positions:
+/// every per-frame `Transform2D` writer (physics, camera follow / shake /
+/// parallax, game movement in `update`) has run by then. Within `last` it
+/// runs before [AudioCleanupSystem]; both write [AudioState] and
+/// `AudioSource`.
 class SpatialAudioSystem implements System {
   /// The `SystemMeta.name` of [SpatialAudioSystem]. Games that order
   /// their own systems relative to this one use it in `before:` /
@@ -36,9 +43,9 @@ class SpatialAudioSystem implements System {
     writes: {ComponentId.of<AudioSource>()},
     resourceReads: {SpatialAudioConfig, VolumeChannels, AudioAssets},
     resourceWrites: {AudioState},
-    // Both touch AudioState's live handles; crossfade adjusts music
-    // volume after spatial attenuation has been applied.
-    before: const [MusicCrossfadeSystem.systemName],
+    // Both touch AudioState's live handles and AudioSource in
+    // Schedules.last; attenuate before finished handles are reaped.
+    before: const [AudioCleanupSystem.systemName],
   );
 
   @override

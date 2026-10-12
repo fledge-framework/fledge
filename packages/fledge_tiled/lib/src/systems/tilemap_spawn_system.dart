@@ -1,6 +1,7 @@
 import 'dart:ui';
 
-import 'package:fledge_assets/fledge_assets.dart' show Assets, Handle;
+import 'package:fledge_assets/fledge_assets.dart'
+    show Assets, Handle, HotReloadPollSystem;
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_physics/fledge_physics.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart'
@@ -113,6 +114,13 @@ class TilemapSpawnSystem implements System {
     eventReads: {SpawnTilemapEvent},
     eventWrites: {TilemapSpawnedEvent},
     exclusive: true,
+    // Exclusive, so it conflicts with every other system in
+    // Schedules.first. The FirstSets phase chain orders it after every
+    // frameStart / platform / input system; within the content phase,
+    // spawn after queued hot reloads land so a map spawned this frame
+    // sees the reloaded asset.
+    sets: [FirstSets.content],
+    after: [HotReloadPollSystem.systemName],
   );
 
   @override

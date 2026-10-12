@@ -53,9 +53,6 @@ class App {
   /// Registry for tracking all state machines.
   final StateRegistry _states = StateRegistry();
 
-  /// Registry for system sets.
-  final SystemSetRegistry _systemSets = SystemSetRegistry();
-
   /// Whether the app is currently running.
   bool _running = false;
 
@@ -283,6 +280,11 @@ class App {
   /// configuration. The [configure] callback receives the set for
   /// fluent configuration.
   ///
+  /// `before` / `after` targets may name systems or other sets, and the
+  /// configuration applies to members added before *or* after this call.
+  /// Delegates to [Scheduler.configureSet]; throws a [StateError] if the
+  /// new constraints would form an ordering cycle.
+  ///
   /// ```dart
   /// app.configureSet('physics', (s) => s
   ///   .after('input')
@@ -290,13 +292,14 @@ class App {
   ///   .runIf((world) => !world.isPaused));
   /// ```
   App configureSet(String name, void Function(SystemSet) configure) {
-    _systemSets.configure(name, configure);
+    scheduler.configureSet(name, configure);
     return this;
   }
 
   /// Adds a system to a named set.
   ///
-  /// The system will inherit the set's ordering constraints and
+  /// The system becomes a member of the set (its [SystemMeta.sets]
+  /// includes [setName]) and inherits the set's ordering constraints and
   /// run conditions.
   ///
   /// The system's target schedule can be specified either with the
@@ -317,7 +320,7 @@ class App {
     CoreStage? stage,
     Schedule? schedule,
   }) {
-    final set = _systemSets.getOrCreate(setName);
+    final set = scheduler.sets.getOrCreate(setName);
     final wrappedSystem = SetConfiguredSystem(system, set);
     _addSystemToTarget(wrappedSystem, stage: stage, schedule: schedule);
     return this;

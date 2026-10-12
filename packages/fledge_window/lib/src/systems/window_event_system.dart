@@ -7,6 +7,8 @@ import '../events/window_events.dart';
 import '../resources/display_info.dart';
 import '../resources/window_state.dart';
 import '../window_mode.dart';
+import 'display_sync_system.dart';
+import 'window_init_system.dart';
 
 /// System that processes window change requests.
 ///
@@ -17,10 +19,21 @@ import '../window_mode.dart';
 /// or the call throws, a [WindowOperationFailed] event is emitted and the
 /// [WindowState] is left unchanged. Success events fire only after the
 /// native call returns cleanly.
+///
+/// Runs in the [FirstSets.platform] phase of `Schedules.first`, after
+/// [WindowInitSystem] and [DisplaySyncSystem], so requests are applied
+/// against an initialized window and up-to-date [DisplayInfo].
 class WindowEventSystem implements System {
+  /// The `SystemMeta.name` of [WindowEventSystem]. Games that order
+  /// their own systems relative to this one use it in `before:` /
+  /// `after:`.
+  static const String systemName = 'WindowEventSystem';
+
   @override
   SystemMeta get meta => const SystemMeta(
-    name: 'WindowEventSystem',
+    name: systemName,
+    sets: [FirstSets.platform],
+    after: [WindowInitSystem.systemName, DisplaySyncSystem.systemName],
     eventReads: {
       SetWindowModeRequest,
       SetWindowSizeRequest,

@@ -148,7 +148,10 @@ App()..addPlugin(const TweenPlugin(schedule: TweenSchedule.fixed));
 
 Wall-time is the right default for menu fades, camera moves, and UI transitions. Fixed-timestep is the right choice when a tween drives networked-replicated values, physics, or anything that needs to reproduce identically across runs.
 
-Both cases require `WallTimePlugin` (or an equivalent `WallTime` resource) — that's the delta source `TweenSystem` reads.
+The two modes read different delta sources:
+
+- **Wall** (`Schedules.update`) reads `WallTime.delta`, so it requires `WallTimePlugin` (or an equivalent `WallTime` resource).
+- **Fixed** (`Schedules.fixedUpdate`) advances by `FixedTimestep.stepDuration` each step. `App` inserts a default `FixedTimestep` (60 Hz), so no extra plugin is needed; override it with `insertResource(FixedTimestep(...))`.
 
 ## Common patterns
 

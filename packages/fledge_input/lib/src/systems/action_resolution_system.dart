@@ -11,7 +11,8 @@ import 'input_polling_system.dart';
 
 /// System that resolves actions from raw input based on the active input map.
 ///
-/// Runs after InputPollingSystem. Reads raw input states and the active
+/// Runs in the [FirstSets.input] phase of `Schedules.first`, after
+/// InputPollingSystem. Reads raw input states and the active
 /// InputContext to produce ActionState values.
 class ActionResolutionSystem implements System {
   /// The `SystemMeta.name` of [ActionResolutionSystem]. Systems that read
@@ -21,6 +22,7 @@ class ActionResolutionSystem implements System {
   @override
   SystemMeta get meta => const SystemMeta(
     name: systemName,
+    sets: [FirstSets.input],
     resourceReads: {
       KeyboardState,
       MouseState,

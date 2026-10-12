@@ -303,6 +303,8 @@ world.spawn()
 
 The system computes linear distance attenuation (full volume inside `referenceDistance`, silent at `maxDistance`, linear falloff between) and stereo pan from the lateral offset (`(dx / maxDistance).clamp(-maxPan, maxPan)`). Listeners or sources without a `Transform2D` are ignored — spatial audio requires a position.
 
+`SpatialAudioSystem` runs in `Schedules.last`, so it reads each entity's *final* position for the frame — after physics, game movement in `update`, and camera follow / shake / parallax have all written `Transform2D`. Move listeners and sources in any earlier schedule; no explicit ordering against the audio system is needed.
+
 ## Configuration
 
 ### Default Configuration
@@ -500,6 +502,20 @@ class AudioControlSystem implements System {
   }
 }
 ```
+
+## Systems Reference
+
+| System | Schedule | Description |
+|--------|----------|-------------|
+| `AudioInitSystem` | `first` (`FirstSets.platform`) | Initializes the audio engine once. Not exclusive — declares writes to `Assets<AudioClip>`, `AudioAssets`, and `AudioState` |
+| `AudioEventSystem` | `first` (`FirstSets.platform`) | Processes play / stop / load request events, after `AudioInitSystem` |
+| `AudioFocusSystem` | `first` (`FirstSets.platform`) | Pauses / resumes on window focus changes. Only added when `pauseOnFocusLoss` is true |
+| `ChannelFadeSystem` | `update` | Advances in-flight volume-channel fades |
+| `MusicCrossfadeSystem` | `update` | Advances music crossfades |
+| `SpatialAudioSystem` | `last` | Applies distance attenuation and pan. Only added when spatial audio is enabled |
+| `AudioCleanupSystem` | `last` | Reaps finished playback handles, after `SpatialAudioSystem` |
+
+See [Standard Phases of `first`](/docs/guides/scheduling#standard-phases-of-first) for how `FirstSets.platform` is ordered against input and content systems.
 
 ## Resources Reference
 

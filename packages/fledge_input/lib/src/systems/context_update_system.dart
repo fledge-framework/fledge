@@ -16,6 +16,7 @@ class ContextUpdateSystem<S extends Enum> implements System {
   @override
   SystemMeta get meta => SystemMeta(
     name: 'contextUpdate<$S>',
+    sets: const [FirstSets.input],
     resourceReads: {State<S>},
     resourceWrites: {InputContextRegistry},
     before: const [ActionResolutionSystem.systemName],

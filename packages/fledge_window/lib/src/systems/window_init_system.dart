@@ -24,6 +24,11 @@ import '../window_mode.dart';
 /// continues; if the critical setup steps (`ensureInitialized`, display
 /// enumeration, or initial mode) fail, init aborts without mutating
 /// `WindowState`.
+///
+/// Runs in the [FirstSets.platform] phase of `Schedules.first`. It is
+/// not exclusive: it declares writes to [DisplayInfo], [WindowState] and
+/// the [WindowOperationFailed] event, so it serialises only against
+/// systems that touch those.
 class WindowInitSystem implements System {
   final WindowConfig config;
   bool _initialized = false;
@@ -36,7 +41,16 @@ class WindowInitSystem implements System {
   static const String systemName = 'WindowInitSystem';
 
   @override
-  SystemMeta get meta => const SystemMeta(name: systemName, exclusive: true);
+  SystemMeta get meta => const SystemMeta(
+    name: systemName,
+    // Platform phase of `Schedules.first`: runs after frame bookkeeping
+    // (wall time) and before input polling / content spawning.
+    sets: [FirstSets.platform],
+    // Declares exactly what run() touches instead of `exclusive: true`,
+    // so it only serialises against systems that share this data.
+    resourceWrites: {DisplayInfo, WindowState},
+    eventWrites: {WindowOperationFailed},
+  );
 
   @override
   RunCondition? get runCondition => null;

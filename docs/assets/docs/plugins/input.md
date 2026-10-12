@@ -425,10 +425,12 @@ if (primary != null) {
 
 | System | Stage | Description |
 |--------|-------|-------------|
-| `InputPollingSystem` | first | Updates raw input frame state |
-| `ContextUpdateSystem<S>` | first | Updates active context from game state |
-| `ActionResolutionSystem` | first | Resolves actions from raw input |
+| `InputPollingSystem` | first (`FirstSets.input`) | Updates raw input frame state |
+| `ContextUpdateSystem<S>` | first (`FirstSets.input`) | Updates active context from game state |
+| `ActionResolutionSystem` | first (`FirstSets.input`) | Resolves actions from raw input |
 | `InputFrameEndSystem` | last | Clears input transition flags |
+
+The `FirstSets.input` phase runs after window / audio platform systems and before content spawning (tilemaps, hot reload) — see [Standard Phases of `first`](/docs/guides/scheduling#standard-phases-of-first). To read resolved actions in `first`, add `after: [ActionResolutionSystem.systemName]` (or `after: [FirstSets.input]`); systems in `preUpdate` or later need no ordering.
 
 ## UI Input Architecture
 

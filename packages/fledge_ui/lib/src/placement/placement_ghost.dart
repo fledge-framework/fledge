@@ -1,5 +1,11 @@
 import 'dart:ui' show Color;
 
+import 'package:fledge_camera_2d/fledge_camera_2d.dart'
+    show
+        ActiveCameraViewSystem,
+        CameraFollowSystem,
+        CameraShakeSystem,
+        ParallaxSystem;
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart';
 
@@ -65,7 +71,24 @@ class PlacementGhostConfig {
 ///
 /// Meta note: spawning / despawning the ghost is a structural change, which
 /// `SystemMeta` can't express.
+///
+/// Ordering: always runs after [defaultAfter] (transform propagation and
+/// the `CameraPlugin` systems, which also write `Transform2D` /
+/// `GlobalTransform2D` in `Schedules.postUpdate`), plus any extra
+/// `after:` names supplied; names not registered in the ghost's schedule
+/// are ignored.
 class PlacementGhostSystem implements System {
+  /// Systems the ghost always runs after when they share its schedule:
+  /// it writes `Transform2D` / `GlobalTransform2D` like they do, and the
+  /// ghost is a final, per-frame overlay on a settled world.
+  static const List<String> defaultAfter = [
+    TransformPropagateSystem.systemName,
+    CameraFollowSystem.systemName,
+    CameraShakeSystem.systemName,
+    ParallaxSystem.systemName,
+    ActiveCameraViewSystem.systemName,
+  ];
+
   final Set<Type> spriteResourceReads;
   final List<String> before;
   final List<String> after;
@@ -93,7 +116,7 @@ class PlacementGhostSystem implements System {
       ...spriteResourceReads,
     },
     before: before,
-    after: after,
+    after: [...defaultAfter, ...after],
   );
 
   @override

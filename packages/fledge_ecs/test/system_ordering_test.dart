@@ -440,6 +440,76 @@ void main() {
     });
   });
 
+  group('Transitive explicit ordering', () {
+    test(
+      'explicit chain against registration order is not a false cycle',
+      () async {
+        // Registration: C, A, B. Declared: A before B, B before C.
+        // A and C conflict but never name each other — the conflict
+        // fallback must not add C -> A (registration order), which would
+        // close a cycle with the explicit A -> B -> C path.
+        final order = <String>[];
+        final schedule = Scheduler();
+        schedule.addSystem(
+          FunctionSystem(
+            'C',
+            writes: {ComponentId.of<_Position>()},
+            run: (_) => order.add('C'),
+          ),
+        );
+        schedule.addSystem(
+          FunctionSystem(
+            'A',
+            writes: {ComponentId.of<_Position>()},
+            before: ['B'],
+            run: (_) => order.add('A'),
+          ),
+        );
+        schedule.addSystem(
+          FunctionSystem('B', before: ['C'], run: (_) => order.add('B')),
+        );
+
+        await schedule.run(World());
+
+        expect(order, equals(['A', 'B', 'C']));
+        expect(schedule.checkOrderingAmbiguities(), isEmpty);
+      },
+    );
+
+    test('transitive explicit chain silences the ambiguity', () {
+      final schedule = Scheduler();
+      schedule.addSystem(
+        FunctionSystem(
+          'A',
+          writes: {ComponentId.of<_Position>()},
+          before: ['B'],
+          run: (_) {},
+        ),
+      );
+      schedule.addSystem(FunctionSystem('B', run: (_) {}));
+      schedule.addSystem(
+        FunctionSystem(
+          'C',
+          writes: {ComponentId.of<_Position>()},
+          after: ['B'],
+          run: (_) {},
+        ),
+      );
+      expect(schedule.checkOrderingAmbiguities(), isEmpty);
+    });
+
+    test('conflict fallback edges still serialise unrelated writers', () {
+      // Fallback edges must not make an ambiguity disappear.
+      final schedule = Scheduler();
+      for (final n in ['x', 'y', 'z']) {
+        schedule.addSystem(
+          FunctionSystem(n, writes: {ComponentId.of<_Position>()}, run: (_) {}),
+        );
+      }
+      expect(schedule.checkOrderingAmbiguities(), hasLength(3));
+    });
+  });
+
   group('App with system ordering', () {
     test('systems respect ordering in App', () async {
       final order = <String>[];

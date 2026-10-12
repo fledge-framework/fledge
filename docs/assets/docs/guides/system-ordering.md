@@ -40,16 +40,18 @@ app
 
 ### Multiple Constraints
 
-Systems can have multiple ordering constraints:
+Systems can have multiple ordering constraints. Prefer a system's `systemName` constant over a string literal when it has one, so a rename can't silently break the edge:
 
 ```dart
 app.addSystem(FunctionSystem(
   'collision',
-  after: ['movement', 'physics'],
+  after: ['movement', VelocityIntegrationSystem.systemName],
   before: ['render', 'cleanup'],
   run: collisionSystem,
 ));
 ```
+
+A name in `before:` / `after:` may refer to a system **or** a [system set](#system-sets); a set name resolves to every member. Constraints chain transitively — if A runs before B and B before C, A is ordered before C.
 
 ## Conflict-Based Ordering
 
@@ -111,7 +113,7 @@ class MyMovementSystem implements System {
   SystemMeta get meta => SystemMeta(
     name: 'my_movement',
     writes: {ComponentId.of<Velocity>()},
-    before: const ['collision_resolution'],
+    before: const [CollisionResolutionSystem.systemName],
   );
   // ...
 }
@@ -119,7 +121,7 @@ class MyMovementSystem implements System {
 
 ### Catching this automatically
 
-Call `App.checkScheduleOrdering()` in a test or a debug-only boot path. It walks every stage for pairs of systems that conflict but have no explicit `before:`/`after:` between them, and returns a list describing each one with a ready-to-paste fix:
+Call `App.checkScheduleOrdering()` in a test or a debug-only boot path. It walks every stage for pairs of systems that conflict but that no chain of explicit ordering — `before:`/`after:` on systems or sets, direct or transitive — orders either way, and returns a list describing each one with a ready-to-paste fix:
 
 ```dart
 void main() {
@@ -155,7 +157,15 @@ app
   .addSystemToSet(velocitySystem, 'physics');
 ```
 
-All systems in the set inherit the ordering constraints.
+All systems in the set inherit the ordering constraints. `'input'` and `'render'` here can be system names *or* other set names — set names resolve to every member, and set-to-set chains close transitively (an empty set in the middle still bridges the chain). Constraints configured after a system was added still apply to it.
+
+A system can also join a set by declaring it in its meta — `SystemMeta(name: ..., sets: ['physics'])` or `FunctionSystem(..., sets: ['physics'])`. See [System Sets](/docs/api/system-sets).
+
+> Before 0.4.0, set `before` / `after` only matched *system* names, so ordering one set after another silently did nothing. It now orders the members.
+
+### Standard phases of `first`
+
+`Schedules.first` comes pre-split into `FirstSets.frameStart → platform → input → content`, which the built-in plugins join. Join a phase with `sets: [FirstSets.input]`, or order against one with `after: [FirstSets.content]`. See [Standard Phases of `first`](/docs/guides/scheduling#standard-phases-of-first).
 
 ## Common Patterns
 
@@ -246,7 +256,7 @@ class ParticleSystem implements System {
 
 ## Debugging Order
 
-Use `App.checkScheduleOrdering()` to find pairs of same-stage systems whose order is determined only by registration order (i.e. neither side declares `before:` / `after:` on the other). See the "Registration order breaks ties — and it's a trap" section above for the full pattern.
+Use `App.checkScheduleOrdering()` to find pairs of same-stage systems whose order is determined only by registration order (i.e. no direct or transitive `before:` / `after:` chain — through systems or sets — orders them). See the "Registration order breaks ties — and it's a trap" section above for the full pattern.
 
 ```dart
 for (final issue in app.checkScheduleOrdering()) {
@@ -261,6 +271,14 @@ for (final issue in app.checkScheduleOrdering()) {
 ```
 
 Run it in a test (`expect(app.checkScheduleOrdering(), isEmpty)`) or guard it behind `assert` in a debug boot path. The diagnostic is the same one `examples/drifter/test/schedule_ordering_test.dart` uses to pin down its own schedule.
+
+### Ordering cycles
+
+If an `addSystem` or `configureSet` call would create a cycle, it throws a `StateError` and leaves the schedule unchanged. The message lists the systems on the cycle in execution order with the sets each belongs to, so a cycle introduced by set ordering is easy to spot:
+
+```
+Cycle detected in stage "update" among systems: move [physics] -> read_input [input] -> move [physics]. ...
+```
 
 ## See Also
 

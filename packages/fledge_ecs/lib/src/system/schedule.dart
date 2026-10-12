@@ -1,11 +1,14 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:fledge_ecs_annotations/fledge_ecs_annotations.dart';
 
 import '../fixed_timestep.dart';
 import '../world.dart';
 import 'schedule_label.dart';
+import 'standard_sets.dart';
 import 'system.dart';
+import 'system_set.dart';
 
 /// A node in the system dependency graph.
 class SystemNode {
@@ -24,127 +27,249 @@ class SystemNode {
 /// A stage containing systems that run together.
 ///
 /// Within a stage, systems may run in parallel if they don't conflict.
+///
+/// ## Ordering
+///
+/// The dependency graph is rebuilt from scratch whenever a system is
+/// added or a system set is (re)configured via [Scheduler.configureSet],
+/// from two edge sources:
+///
+/// 1. **Explicit edges.** A `before:` / `after:` reference — on a
+///    system's [SystemMeta] or on a [SystemSet] in the set registry —
+///    resolves to every system whose [SystemMeta.name] matches *and*
+///    every system whose [SystemMeta.sets] contains the name. Duplicate
+///    system names therefore fan out to every match. Set-level
+///    constraints are closed transitively over the set configuration, so
+///    an empty set still bridges a chain (`A before B`, `B before C`
+///    orders A's members before C's). A cycle among explicit edges
+///    throws a [StateError] immediately.
+/// 2. **Conflict fallback edges.** For every pair of conflicting systems
+///    (see [SystemMeta.conflictsWith]) that is *not* already ordered —
+///    directly or transitively — the earlier-registered system runs
+///    first. These edges never contradict the explicit ones.
 class SystemStage {
   final String name;
   final List<SystemNode> _systems = [];
 
-  /// Maps system names to every registered system's index under that
-  /// name. `before:` / `after:` lookups fan out to every match so a
-  /// schedule can carry two (or more) systems that share a name — for
-  /// example a second `transform_propagate` inserted after a movement
-  /// pass — without any of them dropping their explicit ordering.
-  final Map<String, List<int>> _nameToIndex = {};
+  /// The set registry consulted for set-level `before` / `after`
+  /// constraints. Shared with the owning [Scheduler].
+  final SystemSetRegistry _sets;
 
-  /// Maps system names to indices of systems that must run before them.
-  /// This handles `before` constraints for systems not yet added.
-  final Map<String, Set<int>> _pendingBefore = {};
+  /// Transitive closure of the *explicit* edges only: bit `j` of
+  /// `_explicitReach[i]` is set when system `i` is required to run before
+  /// system `j` by declared ordering (system- or set-level). Used by
+  /// [_findOrderingAmbiguities].
+  List<Uint32List> _explicitReach = const [];
 
-  /// Maps system names to indices of systems that must run after them.
-  /// This handles `after` constraints for systems not yet added.
-  final Map<String, Set<int>> _pendingAfter = {};
-
-  SystemStage(this.name);
+  SystemStage(this.name, {SystemSetRegistry? sets})
+    : _sets = sets ?? SystemSetRegistry();
 
   /// Adds a system to this stage.
+  ///
+  /// Throws a [StateError] — and leaves the stage unchanged — if the
+  /// system's declared ordering forms a cycle with the systems and sets
+  /// already present.
   void addSystem(System system) {
-    final node = SystemNode(system);
-    final newIndex = _systems.length;
-    final systemName = system.meta.name;
-
-    // Build dependencies based on conflicts.
-    //
-    // Skip the conflict-driven edge when either system names the other in
-    // `before:`/`after:` — the explicit declaration wins over
-    // registration order. Without this, declaring `before: A` on a system
-    // that gets registered after A produces a cycle: the conflict rule
-    // adds `new depends on A` while the explicit `before` adds
-    // `A depends on new`.
-    for (int i = 0; i < _systems.length; i++) {
-      final otherMeta = _systems[i].system.meta;
-      if (!system.meta.conflictsWith(otherMeta)) continue;
-      if (system.meta.before.contains(otherMeta.name) ||
-          system.meta.after.contains(otherMeta.name) ||
-          otherMeta.before.contains(systemName) ||
-          otherMeta.after.contains(systemName)) {
-        continue;
-      }
-      node.dependencies.add(i);
+    _systems.add(SystemNode(system));
+    final _StageGraph graph;
+    try {
+      graph = _computeGraph(_sets);
+    } catch (_) {
+      // The committed graph never referenced the new index, so dropping
+      // the node restores a consistent state.
+      _systems.removeLast();
+      rethrow;
     }
-
-    // Handle explicit `after` constraints. Every already-registered
-    // system with a matching name is added as a dependency so a
-    // schedule holding duplicates keeps all of them upstream.
-    for (final afterName in system.meta.after) {
-      final indices = _nameToIndex[afterName];
-      if (indices != null && indices.isNotEmpty) {
-        node.dependencies.addAll(indices);
-      }
-      // Also record the pending edge — a future system registered
-      // under the same name will pick this up (see the pendingAfter
-      // handler below).
-      if (indices == null || indices.isEmpty) {
-        _pendingAfter.putIfAbsent(afterName, () => {}).add(newIndex);
-      }
-    }
-
-    // Handle pending `before` constraints (from systems added earlier)
-    final pendingBefore = _pendingBefore[systemName];
-    if (pendingBefore != null) {
-      node.dependencies.addAll(pendingBefore);
-      _pendingBefore.remove(systemName);
-    }
-
-    // Handle pending `after` constraints (from systems added earlier that want to run after this)
-    final pendingAfter = _pendingAfter[systemName];
-    if (pendingAfter != null) {
-      for (final waitingIndex in pendingAfter) {
-        _systems[waitingIndex].dependencies.add(newIndex);
-      }
-      _pendingAfter.remove(systemName);
-    }
-
-    // Handle explicit `before` constraints. Fan out to every already-
-    // registered system sharing the name.
-    for (final beforeName in system.meta.before) {
-      final indices = _nameToIndex[beforeName];
-      if (indices != null && indices.isNotEmpty) {
-        for (final idx in indices) {
-          _systems[idx].dependencies.add(newIndex);
-        }
-      }
-      if (indices == null || indices.isEmpty) {
-        // System doesn't exist yet, record for later
-        _pendingBefore.putIfAbsent(beforeName, () => {}).add(newIndex);
-      }
-    }
-
-    // Register this system's name — append to the list of indices
-    // under the name so duplicates coexist.
-    _nameToIndex.putIfAbsent(systemName, () => <int>[]).add(newIndex);
-
-    _systems.add(node);
-
-    // Fail fast if the declared ordering forms a cycle. Without this the
-    // scheduler would only report a generic "Deadlock detected" at runtime.
-    _assertAcyclic();
+    _commit(graph);
   }
 
-  /// Walk the dependency graph looking for a cycle. Throws with a path
-  /// that names every system involved.
-  void _assertAcyclic() {
+  void _commit(_StageGraph graph) {
+    for (var i = 0; i < _systems.length; i++) {
+      _systems[i].dependencies
+        ..clear()
+        ..addAll(graph.dependencies[i]);
+    }
+    _explicitReach = graph.explicitReach;
+  }
+
+  /// Builds the full dependency graph for the current systems, using
+  /// [registry] for set-level constraints. Throws [StateError] on an
+  /// explicit cycle. Does not mutate the stage.
+  _StageGraph _computeGraph(SystemSetRegistry registry) {
+    final n = _systems.length;
+    final metas = [for (final node in _systems) node.system.meta];
+
+    // name / set -> indices, in registration order.
+    final byName = <String, List<int>>{};
+    final bySet = <String, List<int>>{};
+    for (var i = 0; i < n; i++) {
+      byName.putIfAbsent(metas[i].name, () => <int>[]).add(i);
+      for (final set in metas[i].sets.toSet()) {
+        bySet.putIfAbsent(set, () => <int>[]).add(i);
+      }
+    }
+    Set<int> resolve(String ref) => {...?byName[ref], ...?bySet[ref]};
+
+    // deps[j] contains i  <=>  i must complete before j starts.
+    final deps = List<Set<int>>.generate(n, (_) => <int>{});
+    void edge(int from, int to) {
+      if (from != to) deps[to].add(from);
+    }
+
+    // 1a. Explicit edges declared on systems.
+    for (var j = 0; j < n; j++) {
+      for (final ref in metas[j].before) {
+        for (final k in resolve(ref)) {
+          edge(j, k);
+        }
+      }
+      for (final ref in metas[j].after) {
+        for (final k in resolve(ref)) {
+          edge(k, j);
+        }
+      }
+    }
+
+    // 1b. Explicit edges declared on sets, closed transitively over the
+    // set configuration so intermediate sets without members in this
+    // stage still bridge the chain.
+    final nameSucc = <String, Set<String>>{};
+    for (final set in registry.all) {
+      for (final ref in set.beforeList) {
+        nameSucc.putIfAbsent(set.name, () => <String>{}).add(ref);
+      }
+      for (final ref in set.afterList) {
+        nameSucc.putIfAbsent(ref, () => <String>{}).add(set.name);
+      }
+    }
+    for (final start in nameSucc.keys) {
+      final from = resolve(start);
+      if (from.isEmpty) continue;
+      final seen = <String>{};
+      final stack = [...nameSucc[start]!];
+      while (stack.isNotEmpty) {
+        final next = stack.removeLast();
+        if (!seen.add(next)) continue;
+        stack.addAll(nameSucc[next] ?? const <String>{});
+      }
+      for (final target in seen) {
+        if (target == start) continue;
+        for (final j in resolve(target)) {
+          for (final i in from) {
+            edge(i, j);
+          }
+        }
+      }
+    }
+
+    // Fail fast on explicit cycles; otherwise get a topological order.
+    final topo = _topologicalOrder(deps) ?? _throwCycle(deps, metas);
+
+    // Transitive closure of the explicit edges.
+    final words = (n + 31) >> 5;
+    final succ = _successors(deps);
+    final explicitReach = List<Uint32List>.generate(
+      n,
+      (_) => Uint32List(words),
+    );
+    for (final i in topo.reversed) {
+      final row = explicitReach[i];
+      for (final s in succ[i]) {
+        _setBit(row, s);
+        final other = explicitReach[s];
+        for (var w = 0; w < words; w++) {
+          row[w] |= other[w];
+        }
+      }
+    }
+
+    // 2. Conflict fallback edges in registration order, skipped when the
+    // pair is already ordered (either way) by explicit edges or by the
+    // fallback edges added so far — so they can never close a cycle.
+    //
+    // `reach[a]` = nodes a must precede; `back[b]` = nodes that must
+    // precede b. Visiting each later system's earlier partners nearest-
+    // first means a run of mutually conflicting systems becomes a chain
+    // (n - 1 edges) rather than a complete DAG — same ordering, far less
+    // closure maintenance.
+    final reach = [for (final row in explicitReach) Uint32List.fromList(row)];
+    final back = List<Uint32List>.generate(n, (_) => Uint32List(words));
+    for (var a = 0; a < n; a++) {
+      for (final b in _bits(reach[a], n)) {
+        _setBit(back[b], a);
+      }
+    }
+    for (var j = 1; j < n; j++) {
+      for (var i = j - 1; i >= 0; i--) {
+        if (_hasBit(reach[i], j) || _hasBit(reach[j], i)) continue;
+        if (!metas[i].conflictsWith(metas[j])) continue;
+        deps[j].add(i);
+        // Everything that reaches i (and i itself) now reaches j and
+        // everything j reaches.
+        final sources = Uint32List.fromList(back[i]);
+        _setBit(sources, i);
+        final targets = Uint32List.fromList(reach[j]);
+        _setBit(targets, j);
+        for (final a in _bits(sources, n)) {
+          final row = reach[a];
+          for (var w = 0; w < words; w++) {
+            row[w] |= targets[w];
+          }
+        }
+        for (final b in _bits(targets, n)) {
+          final row = back[b];
+          for (var w = 0; w < words; w++) {
+            row[w] |= sources[w];
+          }
+        }
+      }
+    }
+
+    return _StageGraph(deps, explicitReach);
+  }
+
+  static List<List<int>> _successors(List<Set<int>> deps) {
+    final succ = List<List<int>>.generate(deps.length, (_) => <int>[]);
+    for (var j = 0; j < deps.length; j++) {
+      for (final i in deps[j]) {
+        succ[i].add(j);
+      }
+    }
+    return succ;
+  }
+
+  /// Kahn's algorithm. Returns null when [deps] contains a cycle.
+  static List<int>? _topologicalOrder(List<Set<int>> deps) {
+    final n = deps.length;
+    final remaining = [for (final d in deps) d.length];
+    final succ = _successors(deps);
+    final order = <int>[
+      for (var i = 0; i < n; i++)
+        if (remaining[i] == 0) i,
+    ];
+    for (var head = 0; head < order.length; head++) {
+      for (final j in succ[order[head]]) {
+        if (--remaining[j] == 0) order.add(j);
+      }
+    }
+    return order.length == n ? order : null;
+  }
+
+  /// Finds a cycle in [deps] and throws a [StateError] naming every
+  /// system on it, along with the sets each belongs to.
+  Never _throwCycle(List<Set<int>> deps, List<SystemMeta> metas) {
     const unvisited = 0;
     const onStack = 1;
     const done = 2;
-    final state = List<int>.filled(_systems.length, unvisited);
+    final state = List<int>.filled(deps.length, unvisited);
     final path = <int>[];
 
     List<int>? visit(int index) {
       state[index] = onStack;
       path.add(index);
-      for (final dep in _systems[index].dependencies) {
+      for (final dep in deps[index]) {
         if (state[dep] == onStack) {
-          final start = path.indexOf(dep);
-          return path.sublist(start);
+          return path.sublist(path.indexOf(dep));
         }
         if (state[dep] == unvisited) {
           final found = visit(dep);
@@ -156,20 +281,24 @@ class SystemStage {
       return null;
     }
 
-    for (var i = 0; i < _systems.length; i++) {
-      if (state[i] != unvisited) continue;
-      final cycle = visit(i);
-      if (cycle != null) {
-        final names = cycle
-            .map((idx) => _systems[idx].system.meta.name)
-            .toList();
-        throw StateError(
-          'Cycle detected in stage "$name" among systems: '
-          '${names.join(" -> ")} -> ${names.first}. '
-          'Check the before:/after: declarations on these systems.',
-        );
-      }
+    List<int>? cycle;
+    for (var i = 0; i < deps.length && cycle == null; i++) {
+      if (state[i] == unvisited) cycle = visit(i);
     }
+    // The walk follows "depends on" links; reverse so the message reads
+    // in would-be execution order.
+    final labels = cycle!.reversed.map((idx) {
+      final meta = metas[idx];
+      return meta.sets.isEmpty
+          ? meta.name
+          : '${meta.name} [${meta.sets.toSet().join(', ')}]';
+    }).toList();
+    throw StateError(
+      'Cycle detected in stage "$name" among systems: '
+      '${labels.join(" -> ")} -> ${labels.first}. '
+      'Check the before:/after: declarations on these systems and the '
+      'configureSet ordering of the [sets] they belong to.',
+    );
   }
 
   /// Runs all systems in this stage, parallelizing where possible.
@@ -236,13 +365,13 @@ class SystemStage {
   /// Clears all systems from this stage.
   void clear() {
     _systems.clear();
-    _nameToIndex.clear();
-    _pendingBefore.clear();
-    _pendingAfter.clear();
+    _explicitReach = const [];
   }
 
   /// Scan pairs in this stage for ordering determined only by registration
-  /// order. Called by [Scheduler.checkOrderingAmbiguities].
+  /// order: conflicting pairs that no explicit edge path (system- or
+  /// set-level, direct or transitive) orders either way. Called by
+  /// [Scheduler.checkOrderingAmbiguities].
   List<OrderingAmbiguity> _findOrderingAmbiguities() {
     final out = <OrderingAmbiguity>[];
     for (var i = 0; i < _systems.length; i++) {
@@ -250,10 +379,7 @@ class SystemStage {
       for (var j = i + 1; j < _systems.length; j++) {
         final b = _systems[j].system.meta;
         if (!a.conflictsWith(b)) continue;
-        if (a.before.contains(b.name) ||
-            a.after.contains(b.name) ||
-            b.before.contains(a.name) ||
-            b.after.contains(a.name)) {
+        if (_hasBit(_explicitReach[i], j) || _hasBit(_explicitReach[j], i)) {
           continue;
         }
         out.add(
@@ -267,6 +393,38 @@ class SystemStage {
       }
     }
     return out;
+  }
+}
+
+/// Result of [SystemStage._computeGraph], committed atomically.
+class _StageGraph {
+  /// Per-system dependency sets (explicit + conflict fallback).
+  final List<Set<int>> dependencies;
+
+  /// Transitive closure of the explicit edges only.
+  final List<Uint32List> explicitReach;
+
+  _StageGraph(this.dependencies, this.explicitReach);
+}
+
+bool _hasBit(Uint32List row, int bit) =>
+    (row[bit >> 5] & (1 << (bit & 31))) != 0;
+
+void _setBit(Uint32List row, int bit) {
+  row[bit >> 5] |= 1 << (bit & 31);
+}
+
+/// Indices of the set bits in [row] below [limit], ascending.
+Iterable<int> _bits(Uint32List row, int limit) sync* {
+  for (var w = 0; w < row.length; w++) {
+    final word = row[w];
+    if (word == 0) continue;
+    for (var b = 0; b < 32; b++) {
+      if (word & (1 << b) != 0) {
+        final index = (w << 5) + b;
+        if (index < limit) yield index;
+      }
+    }
   }
 }
 
@@ -355,6 +513,16 @@ class Scheduler {
   /// Maps stage labels to their index.
   final Map<String, int> _stageIndex = {};
 
+  /// System set configuration shared by every schedule.
+  ///
+  /// Set-level `before` / `after` constraints apply within each schedule
+  /// to whichever members that schedule contains. Change configuration
+  /// through [configureSet] so every schedule's graph is rebuilt; mutating
+  /// the registry directly only takes effect on the next [addSystem].
+  ///
+  /// Survives [clear].
+  final SystemSetRegistry sets = SystemSetRegistry();
+
   /// Non-fixed per-frame schedules in the order [run] iterates them.
   ///
   /// The full per-frame sequence [App.tick] uses interleaves
@@ -381,14 +549,22 @@ class Scheduler {
     Schedules.fixedLast,
   ];
 
-  /// Creates a scheduler with every schedule in [Schedules.all] registered.
+  /// Creates a scheduler with every schedule in [Schedules.all] registered
+  /// and the standard [FirstSets] phases of [Schedules.first] chained in
+  /// order (`frameStart` → `platform` → `input` → `content`).
   Scheduler() {
     for (final schedule in Schedules.all) {
       addStage(schedule.name);
     }
+    const chain = FirstSets.chain;
+    for (var i = 0; i + 1 < chain.length; i++) {
+      sets.configure(chain[i], (s) => s.before(chain[i + 1]));
+    }
+    sets.getOrCreate(chain.last);
   }
 
-  /// Creates an empty scheduler with no schedules registered.
+  /// Creates an empty scheduler with no schedules registered and no
+  /// system sets configured (not even the standard [FirstSets] phases).
   Scheduler.empty();
 
   /// Adds a new stage to the scheduler.
@@ -401,7 +577,57 @@ class Scheduler {
       throw ArgumentError('Stage $name already exists');
     }
     _stageIndex[name] = _stages.length;
-    _stages.add(SystemStage(name));
+    _stages.add(SystemStage(name, sets: sets));
+  }
+
+  /// Configures the system set [name] (creating it if needed) and
+  /// rebuilds every schedule's dependency graph so the change applies to
+  /// systems that are already registered.
+  ///
+  /// If the new configuration would create an ordering cycle in any
+  /// schedule, throws a [StateError] and leaves both the set and the
+  /// schedules unchanged.
+  ///
+  /// ```dart
+  /// scheduler.configureSet('physics', (s) => s.after('input'));
+  /// ```
+  void configureSet(String name, void Function(SystemSet set) configure) {
+    // Apply the change to a scratch copy first so a cycle can be
+    // rejected without corrupting the live configuration.
+    final probe = SystemSet(name);
+    final existing = sets.get(name);
+    if (existing != null) _copySetInto(existing, probe);
+    configure(probe);
+
+    final candidate = SystemSetRegistry();
+    for (final set in sets.all) {
+      if (set.name == name) continue;
+      candidate.configure(set.name, (c) => _copySetInto(set, c));
+    }
+    candidate.configure(name, (c) => _copySetInto(probe, c));
+
+    final graphs = [
+      for (final stage in _stages) stage._computeGraph(candidate),
+    ];
+
+    // SystemSet only grows (lists de-duplicate, runIf replaces), so
+    // copying the probe onto the live set reproduces it exactly while
+    // keeping object identity for SetConfiguredSystem wrappers.
+    sets.configure(name, (live) => _copySetInto(probe, live));
+    for (var i = 0; i < _stages.length; i++) {
+      _stages[i]._commit(graphs[i]);
+    }
+  }
+
+  static void _copySetInto(SystemSet from, SystemSet to) {
+    for (final ref in from.beforeList) {
+      to.before(ref);
+    }
+    for (final ref in from.afterList) {
+      to.after(ref);
+    }
+    final condition = from.runCondition;
+    if (condition != null) to.runIf(condition);
   }
 
   /// Registers a user-defined [Schedule] with this scheduler.
@@ -551,6 +777,10 @@ class Scheduler {
   /// The stages themselves are preserved, only the systems within them
   /// are removed. Use this when resetting the app to rebuild systems
   /// from plugins.
+  ///
+  /// System set configuration in [sets] is kept, so sets configured
+  /// outside of a plugin's `build` (or by session-level plugins) still
+  /// apply to systems re-registered afterwards.
   void clear() {
     for (final stage in _stages) {
       stage.clear();
@@ -566,8 +796,9 @@ class Scheduler {
   /// 2. Their metas [SystemMeta.conflictsWith] each other (shared
   ///    component write, write-vs-read, shared resource, etc.) — so one
   ///    must run before the other.
-  /// 3. Neither declares an explicit [SystemMeta.before] or
-  ///    [SystemMeta.after] constraint referencing the other.
+  /// 3. No chain of explicit ordering — [SystemMeta.before] /
+  ///    [SystemMeta.after] on systems, or set constraints from
+  ///    [configureSet], directly or transitively — orders them.
   ///
   /// The scheduler still produces a valid ordering (insertion order
   /// breaks the tie), but games that rely on that order are brittle —

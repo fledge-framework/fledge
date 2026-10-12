@@ -48,17 +48,24 @@ class SystemMeta {
   /// Exclusive systems cannot run in parallel with any other system.
   final bool exclusive;
 
-  /// Names of systems that this system must run before.
+  /// Names of systems (or system sets) that this system must run before.
   ///
   /// This is an explicit ordering constraint. The listed systems will
   /// wait for this system to complete before starting.
   final List<String> before;
 
-  /// Names of systems that this system must run after.
+  /// Names of systems (or system sets) that this system must run after.
   ///
   /// This is an explicit ordering constraint. This system will wait
   /// for the listed systems to complete before starting.
   final List<String> after;
+
+  /// Names of the system sets this system belongs to.
+  ///
+  /// The scheduler resolves a `before:` / `after:` reference (on a system
+  /// or on a set configured via `Scheduler.configureSet`) to every system
+  /// whose [name] matches *or* whose [sets] contains the referenced name.
+  final List<String> sets;
 
   const SystemMeta({
     required this.name,
@@ -71,6 +78,7 @@ class SystemMeta {
     this.exclusive = false,
     this.before = const [],
     this.after = const [],
+    this.sets = const [],
   });
 
   /// Returns true if this system conflicts with [other].
@@ -226,6 +234,7 @@ class FunctionSystem implements System {
     bool exclusive = false,
     List<String> before = const [],
     List<String> after = const [],
+    List<String> sets = const [],
     RunCondition? runIf,
     required void Function(World world) run,
   }) : meta = SystemMeta(
@@ -239,6 +248,7 @@ class FunctionSystem implements System {
          exclusive: exclusive,
          before: before,
          after: after,
+         sets: sets,
        ),
        runCondition = runIf,
        _run = run;
@@ -284,6 +294,7 @@ class AsyncFunctionSystem implements System {
     bool exclusive = false,
     List<String> before = const [],
     List<String> after = const [],
+    List<String> sets = const [],
     RunCondition? runIf,
     required Future<void> Function(World world) run,
   }) : meta = SystemMeta(
@@ -297,6 +308,7 @@ class AsyncFunctionSystem implements System {
          exclusive: exclusive,
          before: before,
          after: after,
+         sets: sets,
        ),
        runCondition = runIf,
        _run = run;

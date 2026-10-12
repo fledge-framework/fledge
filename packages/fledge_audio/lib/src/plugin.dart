@@ -110,8 +110,10 @@ class AudioPlugin implements Plugin {
     // effective volume.
     app.addSystem(ChannelFadeSystem(), schedule: Schedules.update);
 
+    // Spatial audio runs in `last` so it reads final Transform2D values,
+    // after every per-frame transform writer (physics, camera, movement).
     if (config.spatialConfig.enabled) {
-      app.addSystem(SpatialAudioSystem(), schedule: Schedules.update);
+      app.addSystem(SpatialAudioSystem(), schedule: Schedules.last);
     }
 
     app.addSystem(MusicCrossfadeSystem(), schedule: Schedules.update);
