@@ -13,24 +13,24 @@ resolution: workspace
 dependencies:
   flutter:
     sdk: flutter
-  fledge_assets: ^0.3.1
-  fledge_audio: ^0.3.1
-  fledge_calendar: ^0.3.1
-  fledge_camera_2d: ^0.3.1
-  fledge_debug: ^0.3.1
-  fledge_ecs: ^0.3.1
-  fledge_input: ^0.3.1
-  fledge_lighting_2d: ^0.3.1
-  fledge_net: ^0.3.1
-  fledge_particles: ^0.3.1
-  fledge_physics: ^0.3.1
-  fledge_render_2d: ^0.3.1
-  fledge_save: ^0.3.1
-  fledge_tiled: ^0.3.1
-  fledge_tween: ^0.3.1
-  fledge_ui: ^0.3.1
-  fledge_window: ^0.3.1
-  fledge_yarn: ^0.3.1
+  fledge_assets: ^0.4.0
+  fledge_audio: ^0.4.0
+  fledge_calendar: ^0.4.0
+  fledge_camera_2d: ^0.4.0
+  fledge_debug: ^0.4.0
+  fledge_ecs: ^0.4.0
+  fledge_input: ^0.4.0
+  fledge_lighting_2d: ^0.4.0
+  fledge_net: ^0.4.0
+  fledge_particles: ^0.4.0
+  fledge_physics: ^0.4.0
+  fledge_render_2d: ^0.4.0
+  fledge_save: ^0.4.0
+  fledge_tiled: ^0.4.0
+  fledge_tween: ^0.4.0
+  fledge_ui: ^0.4.0
+  fledge_window: ^0.4.0
+  fledge_yarn: ^0.4.0
 
 dev_dependencies:
   flutter_test:
