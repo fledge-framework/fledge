@@ -7,15 +7,20 @@ import '../context/context_registry.dart';
 import '../raw/keyboard_state.dart';
 import '../raw/mouse_state.dart';
 import '../raw/gamepad_state.dart';
+import 'input_polling_system.dart';
 
 /// System that resolves actions from raw input based on the active input map.
 ///
 /// Runs after InputPollingSystem. Reads raw input states and the active
 /// InputContext to produce ActionState values.
 class ActionResolutionSystem implements System {
+  /// The `SystemMeta.name` of [ActionResolutionSystem]. Systems that read
+  /// `ActionState` in `Schedules.first` should order `after:` it.
+  static const String systemName = 'actionResolution';
+
   @override
   SystemMeta get meta => const SystemMeta(
-    name: 'actionResolution',
+    name: systemName,
     resourceReads: {
       KeyboardState,
       MouseState,
@@ -26,7 +31,7 @@ class ActionResolutionSystem implements System {
     // Explicit: we need the previous-frame transition flags cleared
     // and the begin-frame bookkeeping done before we resolve
     // actions from raw state.
-    after: ['inputPolling'],
+    after: [InputPollingSystem.systemName],
   );
 
   @override

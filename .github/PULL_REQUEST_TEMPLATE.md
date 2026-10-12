@@ -26,13 +26,23 @@
 - [ ] fledge_ecs
 - [ ] fledge_ecs_annotations
 - [ ] fledge_ecs_generator
-- [ ] fledge_render
+- [ ] fledge_assets
 - [ ] fledge_render_2d
-- [ ] fledge_render_flutter
+- [ ] fledge_camera_2d
+- [ ] fledge_lighting_2d
+- [ ] fledge_ui
+- [ ] fledge_debug
 - [ ] fledge_audio
 - [ ] fledge_input
 - [ ] fledge_window
 - [ ] fledge_tiled
+- [ ] fledge_physics
+- [ ] fledge_yarn
+- [ ] fledge_save
+- [ ] fledge_calendar
+- [ ] fledge_tween
+- [ ] fledge_particles
+- [ ] fledge_net
 - [ ] docs
 - [ ] examples
 
@@ -42,10 +52,10 @@
 
 - [ ] I have read the [CONTRIBUTING](../CONTRIBUTING.md) guidelines
 - [ ] My code follows the project's code style
-- [ ] I have run `melos format` and `melos analyze`
+- [ ] I have run `melos run format` and `melos run analyze`
 - [ ] I have added tests that prove my fix/feature works
 - [ ] I have updated documentation as needed
-- [ ] All new and existing tests pass (`melos test`)
+- [ ] All new and existing tests pass (`melos run test`)
 
 ## Test Plan
 

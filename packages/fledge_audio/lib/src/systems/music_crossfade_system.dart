@@ -5,9 +5,14 @@ import '../resources/audio_state.dart';
 
 /// System that handles smooth crossfading between music tracks.
 class MusicCrossfadeSystem implements System {
+  /// The `SystemMeta.name` of [MusicCrossfadeSystem]. Games that order
+  /// their own systems relative to this one use it in `before:` /
+  /// `after:`.
+  static const String systemName = 'MusicCrossfadeSystem';
+
   @override
   SystemMeta get meta => const SystemMeta(
-    name: 'MusicCrossfadeSystem',
+    name: systemName,
     resourceReads: {WallTime},
     resourceWrites: {AudioState},
     eventWrites: {MusicChanged},

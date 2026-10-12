@@ -14,9 +14,9 @@ You are the expert on `packages/fledge_ecs_generator`.
 
 ## Non-obvious behavior
 
-- CI runs `melos run build_runner` BEFORE `melos run analyze`. If generator output shape changes and consuming packages aren't regenerated, analyze fails with confusing errors that look like missing symbols. Always regenerate locally after touching this package.
+- CI runs `melos run build_runner` BEFORE `melos run analyze` and `melos run test` (`*.g.dart` is gitignored). If generator output shape changes and consuming packages aren't regenerated, analyze fails with confusing errors that look like missing symbols. Always regenerate locally after touching this package.
 - `examples/basic_ecs` uses generated code and needs `dart run build_runner build --delete-conflicting-outputs` locally before it compiles — reference this in any change that alters generator output.
-- Generator changes must stay compatible with the annotation shape in `fledge_ecs_annotations` — coordinate with that expert. Bumping the annotation shape without a matching generator bump breaks every downstream package.
+- Generator changes must stay compatible with the annotation shape in `fledge_ecs_annotations` — coordinate with that expert. The generated `SystemMeta` carries name + reads/writes (from `Query*` vs `QueryMut*` params) but no schedule; `@system(stage:)` is ignored and the schedule is chosen at `addSystem(..., schedule:)`. Bumping the annotation shape without a matching generator bump breaks every downstream package.
 - Do not depend on `fledge_ecs` itself here — the generator only needs annotations. Adding a cyclic dependency will break `melos bootstrap`.
 
 ## Verifying a change

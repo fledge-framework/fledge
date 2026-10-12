@@ -84,7 +84,6 @@ melos:
         # Note: `fledge_assets` is pure Dart (Phase 5) and stays out of
         # this ignore list — its tests run under `dart test`.
         ignore:
-          - fledge_render
           - fledge_render_2d
           - fledge_camera_2d
           - fledge_lighting_2d

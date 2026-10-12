@@ -9,9 +9,14 @@ import '../raw/gamepad_state.dart';
 /// Must run before ActionResolutionSystem. Updates the "previous frame"
 /// state for justPressed/justReleased detection.
 class InputPollingSystem implements System {
+  /// The `SystemMeta.name` of [InputPollingSystem]. Games that order
+  /// their own systems relative to this one use it in `before:` /
+  /// `after:`.
+  static const String systemName = 'inputPolling';
+
   @override
   SystemMeta get meta => const SystemMeta(
-    name: 'inputPolling',
+    name: systemName,
     resourceWrites: {KeyboardState, MouseState, GamepadState},
   );
 

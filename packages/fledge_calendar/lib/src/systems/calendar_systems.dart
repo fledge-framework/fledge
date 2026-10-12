@@ -20,13 +20,18 @@ import '../resources/calendar.dart';
 /// exactly one [DayChangedEvent] and one [HourChangedEvent] on the next
 /// run, and none on the run after.
 class CalendarSystem implements System {
+  /// The `SystemMeta.name` of [CalendarSystem]. Games that order
+  /// their own systems relative to this one use it in `before:` /
+  /// `after:`.
+  static const String systemName = 'CalendarSystem';
+
   /// Creates a calendar-advance system.
   const CalendarSystem();
 
   @override
   SystemMeta get meta => const SystemMeta(
-    name: 'CalendarSystem',
-    after: ['wallTimeUpdate'],
+    name: systemName,
+    after: [WallTimeUpdateSystem.systemName],
     resourceReads: {WallTime, Calendar},
     resourceWrites: {Calendar},
     eventWrites: {

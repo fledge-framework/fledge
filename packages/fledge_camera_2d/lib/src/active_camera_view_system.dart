@@ -4,6 +4,9 @@ import 'package:fledge_render_2d/fledge_render_2d.dart'
 
 import 'camera2d.dart';
 import 'follow.dart';
+import 'parallax.dart';
+import 'shake.dart';
+import 'transitions.dart';
 
 /// Publishes the active camera's world position into
 /// [ActiveCameraView] each frame so `fledge_render_2d`'s widget
@@ -34,13 +37,13 @@ class ActiveCameraViewSystem implements System {
     resourceWrites: {ActiveCameraView},
     after: const [
       CameraFollowSystem.systemName,
-      'CameraShakeSystem',
-      'CameraTransitionSystem',
+      CameraShakeSystem.systemName,
+      CameraTransitionSystem.systemName,
       // ParallaxSystem writes GlobalTransform2D on parallax entities.
       // Order after it so the ambiguity check stays clean; the pair
       // doesn't actually race (parallax touches non-camera entities)
       // but the scheduler can't tell that.
-      'ParallaxSystem',
+      ParallaxSystem.systemName,
       // Also order against transform_propagate so games that re-run
       // propagation in postUpdate (Batch 6 item 26) don't generate a
       // fresh ambiguity — this system reads GlobalTransform2D, which

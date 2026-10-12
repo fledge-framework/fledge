@@ -172,4 +172,44 @@ void main() {
       expect(samples[2], closeTo(0.4, 1e-9));
     });
   });
+
+  group('TweenSystem — fixed schedule', () {
+    test('advances by the fixed step, not the wall-clock delta', () async {
+      final samples = <double>[];
+      // A large WallTime delta that a fixed-schedule tween must ignore.
+      final world = World()
+        ..insertResource(WallTime()..delta = 0.5)
+        ..insertResource(
+          FixedTimestep(stepDuration: const Duration(milliseconds: 100)),
+        );
+      world.spawn().insert(
+        Tweener(
+          tween: Tween<double>(
+            from: 0,
+            to: 100,
+            duration: const Duration(seconds: 1),
+            lerp: lerpDouble,
+          ),
+          onSample: (v) => samples.add(v as double),
+        ),
+      );
+
+      final system = TweenSystem(schedule: TweenSchedule.fixed);
+      // Three fixed steps in one frame → 300ms elapsed.
+      for (var i = 0; i < 3; i++) {
+        await system.run(world);
+      }
+      expect(samples, [
+        closeTo(10, 1e-9),
+        closeTo(20, 1e-9),
+        closeTo(30, 1e-9),
+      ]);
+    });
+
+    test('reads FixedTimestep, not WallTime, in its meta', () {
+      final meta = TweenSystem(schedule: TweenSchedule.fixed).meta;
+      expect(meta.resourceReads, {FixedTimestep});
+      expect(TweenSystem().meta.resourceReads, {WallTime});
+    });
+  });
 }

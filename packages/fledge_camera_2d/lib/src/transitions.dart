@@ -1,6 +1,9 @@
 import 'dart:ui' show Color;
 
 import 'package:fledge_ecs/fledge_ecs.dart';
+import 'follow.dart';
+import 'parallax.dart';
+import 'shake.dart';
 
 /// Direction of a [CameraWipeTransition].
 enum WipeDirection {
@@ -112,13 +115,22 @@ class CameraWipeTransition extends CameraTransition {
 /// them explicitly — this makes it easy to chain transitions or gate
 /// game state changes on completion.
 class CameraTransitionSystem implements System {
+  /// The `SystemMeta.name` of [CameraTransitionSystem]. Games that order
+  /// their own systems relative to this one use it in `before:` /
+  /// `after:`.
+  static const String systemName = 'CameraTransitionSystem';
+
   @override
   SystemMeta get meta => const SystemMeta(
-    name: 'CameraTransitionSystem',
+    name: systemName,
     writes: {},
     reads: {},
     resourceReads: {WallTime},
-    after: ['CameraFollowSystem', 'CameraShakeSystem', 'ParallaxSystem'],
+    after: [
+      CameraFollowSystem.systemName,
+      CameraShakeSystem.systemName,
+      ParallaxSystem.systemName,
+    ],
   );
 
   @override

@@ -1,6 +1,7 @@
 import 'package:fledge_ecs/fledge_ecs.dart';
 
 import 'tween.dart';
+import 'tween_plugin.dart';
 
 /// How a [Tweener] behaves once its elapsed time reaches
 /// [Tween.duration].
@@ -86,14 +87,18 @@ class Tweener {
 }
 
 /// System that advances every [Tweener] in the world by the current
-/// frame's delta and invokes each tweener's sample callback.
+/// step's delta and invokes each tweener's sample callback.
 ///
-/// The system reads the [WallTime] resource (from `fledge_ecs`'s
-/// `WallTimePlugin`) to compute the frame delta. If no [WallTime]
-/// resource is present the system falls back to a zero delta — every
-/// tweener still gets sampled at its current elapsed time so `onSample`
-/// fires at least once for `sample(0)`. Games that don't add
-/// `WallTimePlugin` should advance elapsed manually.
+/// The delta source follows [schedule]:
+///
+/// - [TweenSchedule.wall] reads `WallTime.delta` (from `fledge_ecs`'s
+///   `WallTimePlugin`). Schedule in `Schedules.update`.
+/// - [TweenSchedule.fixed] reads `FixedTimestep.stepDuration`. Schedule
+///   in `Schedules.fixedUpdate`, which may run several times per frame.
+///
+/// If the time resource is missing the system falls back to a zero
+/// delta — every tweener still gets sampled at its current elapsed time
+/// so `onSample` fires at least once for `sample(0)`.
 ///
 /// Completion, by loop mode:
 ///
@@ -103,22 +108,27 @@ class Tweener {
 /// - [TweenLoopMode.pingPong]: swaps [Tween.from] / [Tween.to] and
 ///   resets elapsed to zero.
 class TweenSystem implements System {
-  /// Creates the tween system.
-  TweenSystem();
+  /// Which clock this system reads. Must match the schedule it is
+  /// registered in.
+  final TweenSchedule schedule;
 
-  static final SystemMeta _meta = SystemMeta(
-    name: 'tweenSystem',
+  /// Creates the tween system.
+  TweenSystem({this.schedule = TweenSchedule.wall});
+
+  /// The `SystemMeta.name` of [TweenSystem]. Games that order their own
+  /// systems relative to this one use it in `before:` / `after:`.
+  static const String systemName = 'tweenSystem';
+
+  @override
+  SystemMeta get meta => SystemMeta(
+    name: systemName,
     // Advertise Tweener as written — the system mutates elapsed in
     // place and adds/removes the component around loop boundaries.
     writes: {ComponentId.of<Tweener>()},
-    // Reads WallTime for the frame delta. Advertising it as a resource
-    // read keeps the scheduler honest if a game adds a system that
-    // writes WallTime.
-    resourceReads: const {WallTime},
+    // Advertising the time resource as a read keeps the scheduler
+    // honest if a game adds a system that writes it.
+    resourceReads: {schedule == TweenSchedule.fixed ? FixedTimestep : WallTime},
   );
-
-  @override
-  SystemMeta get meta => _meta;
 
   @override
   RunCondition? get runCondition => null;
@@ -185,6 +195,9 @@ class TweenSystem implements System {
   }
 
   Duration _frameDelta(World world) {
+    if (schedule == TweenSchedule.fixed) {
+      return world.getResource<FixedTimestep>()?.stepDuration ?? Duration.zero;
+    }
     final time = world.getResource<WallTime>();
     if (time == null) return Duration.zero;
     // WallTime.delta is in seconds. Convert via microseconds to preserve

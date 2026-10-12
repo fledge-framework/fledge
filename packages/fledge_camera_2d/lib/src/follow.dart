@@ -10,6 +10,9 @@ import 'package:fledge_render_2d/fledge_render_2d.dart'
 
 import 'camera2d.dart';
 import 'pixel_perfect.dart';
+import 'parallax.dart';
+import 'shake.dart';
+import 'transitions.dart';
 
 /// Marker component that identifies the current camera-follow target.
 ///
@@ -101,7 +104,7 @@ class CameraFollow {
 /// pass. Hierarchical cameras still need propagation to run after
 /// this system.
 ///
-/// Also declares `before: ['CameraShakeSystem']` so shake applies
+/// Also declares `before: [CameraShakeSystem.systemName]` so shake applies
 /// on top of a stable follow-updated camera.
 ///
 /// When `Camera2D.pixelPerfect` is set on the followed camera, the
@@ -129,9 +132,9 @@ class CameraFollowSystem implements System {
     },
     after: const [TransformPropagateSystem.systemName],
     before: const [
-      'CameraShakeSystem',
-      'ParallaxSystem',
-      'CameraTransitionSystem',
+      CameraShakeSystem.systemName,
+      ParallaxSystem.systemName,
+      CameraTransitionSystem.systemName,
     ],
   );
 

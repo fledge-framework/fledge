@@ -143,6 +143,7 @@ jobs:
           - fledge_particles
           - fledge_window
           - fledge_yarn
+          - fledge_net
     steps:
       - uses: actions/checkout@v4
 

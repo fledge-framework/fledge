@@ -6,12 +6,22 @@ import '../config/audio_config.dart';
 import '../events/audio_events.dart';
 import '../resources/audio_channels.dart';
 import '../resources/audio_state.dart';
+import 'audio_init_system.dart';
 
 /// System that processes audio playback requests.
+///
+/// Runs after [AudioInitSystem] so requests issued on the first frame see
+/// an initialized backend.
 class AudioEventSystem implements System {
+  /// The `SystemMeta.name` of [AudioEventSystem]. Games that order
+  /// their own systems relative to this one use it in `before:` /
+  /// `after:`.
+  static const String systemName = 'AudioEventSystem';
+
   @override
   SystemMeta get meta => const SystemMeta(
-    name: 'AudioEventSystem',
+    name: systemName,
+    after: [AudioInitSystem.systemName],
     eventReads: {
       PlaySfxRequest,
       PlayMusicRequest,

@@ -9,9 +9,14 @@ import '../raw/gamepad_state.dart';
 /// Must run AFTER ActionResolutionSystem and any other systems that need
 /// to read justPressed/justReleased state.
 class InputFrameEndSystem implements System {
+  /// The `SystemMeta.name` of [InputFrameEndSystem]. Games that order
+  /// their own systems relative to this one use it in `before:` /
+  /// `after:`.
+  static const String systemName = 'inputFrameEnd';
+
   @override
   SystemMeta get meta => const SystemMeta(
-    name: 'inputFrameEnd',
+    name: systemName,
     resourceWrites: {KeyboardState, MouseState, GamepadState},
   );
 

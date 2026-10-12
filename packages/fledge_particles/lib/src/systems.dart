@@ -25,13 +25,21 @@ final math.Random _defaultRng = math.Random();
 /// newly-spawned particles get their first integration step this
 /// frame.
 class ParticleEmitSystem implements System {
+  /// The `SystemMeta.name` of [ParticleEmitSystem]. Games that order
+  /// their own systems relative to this one use it in `before:` /
+  /// `after:`.
+  static const String systemName = 'ParticleEmitSystem';
+
   @override
   SystemMeta get meta => SystemMeta(
-    name: 'ParticleEmitSystem',
+    name: systemName,
     writes: {ComponentId.of<ParticleEmitter>()},
     reads: {ComponentId.of<GlobalTransform2D>()},
     resourceReads: const {WallTime},
-    before: const ['ParticleUpdateSystem', 'ParticleReapSystem'],
+    before: const [
+      ParticleUpdateSystem.systemName,
+      ParticleReapSystem.systemName,
+    ],
   );
 
   @override
@@ -88,13 +96,18 @@ class ParticleEmitSystem implements System {
 /// and rotation. Dead particles are left in place for
 /// [ParticleReapSystem] to reclaim in `Schedules.postUpdate`.
 class ParticleUpdateSystem implements System {
+  /// The `SystemMeta.name` of [ParticleUpdateSystem]. Games that order
+  /// their own systems relative to this one use it in `before:` /
+  /// `after:`.
+  static const String systemName = 'ParticleUpdateSystem';
+
   @override
   SystemMeta get meta => SystemMeta(
-    name: 'ParticleUpdateSystem',
+    name: systemName,
     writes: {ComponentId.of<ParticleEmitter>()},
     resourceReads: const {WallTime},
-    after: const ['ParticleEmitSystem'],
-    before: const ['ParticleReapSystem'],
+    after: const [ParticleEmitSystem.systemName],
+    before: const [ParticleReapSystem.systemName],
   );
 
   @override
@@ -143,11 +156,19 @@ class ParticleUpdateSystem implements System {
 /// window between update and reap, which the extractor filters
 /// anyway).
 class ParticleReapSystem implements System {
+  /// The `SystemMeta.name` of [ParticleReapSystem]. Games that order
+  /// their own systems relative to this one use it in `before:` /
+  /// `after:`.
+  static const String systemName = 'ParticleReapSystem';
+
   @override
   SystemMeta get meta => SystemMeta(
-    name: 'ParticleReapSystem',
+    name: systemName,
     writes: {ComponentId.of<ParticleEmitter>()},
-    after: const ['ParticleEmitSystem', 'ParticleUpdateSystem'],
+    after: const [
+      ParticleEmitSystem.systemName,
+      ParticleUpdateSystem.systemName,
+    ],
   );
 
   @override

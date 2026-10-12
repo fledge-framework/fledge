@@ -29,7 +29,11 @@ class FrameStatsSystem implements System {
     // fledge_tiled's tilemap_spawn, so this debug system doesn't
     // introduce fresh registration-order ambiguities to any app
     // that installs those plugins.
-    after: ['wallTimeUpdate', 'WindowInitSystem', 'AudioInitSystem'],
+    after: [
+      WallTimeUpdateSystem.systemName,
+      'WindowInitSystem',
+      'AudioInitSystem',
+    ],
     before: ['tilemap_spawn'],
   );
 

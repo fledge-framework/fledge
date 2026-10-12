@@ -7,9 +7,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Fledge is a Bevy-inspired ECS game framework for Dart/Flutter, organized as a Melos-managed workspace (`pubspec.yaml` declares the workspace members). Packages live under `packages/`, sample apps under `examples/`, and the marketing/docs Flutter web app under `docs/`.
 
 Package tiers (see `CONTRIBUTING.md` for exact dependency order):
-- **Core**: `fledge_ecs`, `fledge_ecs_annotations`, `fledge_ecs_generator`
-- **Render**: `fledge_render_2d` (2D infra + components)
-- **Plugins**: `fledge_audio`, `fledge_input`, `fledge_window`, `fledge_tiled`, `fledge_physics`, `fledge_yarn`, `fledge_save`, `fledge_calendar`, `fledge_net`
+- **Core**: `fledge_ecs`, `fledge_ecs_annotations`, `fledge_ecs_generator`, `fledge_assets`
+- **Render**: `fledge_render_2d` (2D infra + components), `fledge_camera_2d`, `fledge_lighting_2d`, `fledge_ui`, `fledge_debug`
+- **Plugins**: `fledge_audio`, `fledge_input`, `fledge_window`, `fledge_tiled`, `fledge_physics`, `fledge_yarn`, `fledge_save`, `fledge_calendar`, `fledge_tween`, `fledge_particles`, `fledge_net`
+
+`projects/` (gitignored) holds games built on Fledge. Each one is its own git repo with its own `CLAUDE.md`, e.g. `projects/rafting`. Framework packages must never depend on or reference anything under `projects/`. Framework changes made while working on a game are committed in *this* repo.
+
+`fledge_render` was merged into `fledge_render_2d` and `fledge_time` became `fledge_calendar`, so neither package exists any more.
 
 ## Commands
 
@@ -27,6 +31,8 @@ melos run format                    # dart format .
 melos run build_runner              # regenerate code (packages that dependsOn build_runner)
 ```
 
+CI fails on unformatted code (`dart format --set-exit-if-changed`) — run `melos run format` before committing. Avoid `melos run clean`: it runs `dart pub cache clean`, which wipes the **global** pub cache.
+
 Running a single test — Melos doesn't have a per-file wrapper, cd into the package:
 
 ```bash
@@ -38,7 +44,7 @@ The workspace pubspec categorises which packages need `dart test` vs `flutter te
 
 ## Code generation
 
-`fledge_ecs_annotations` provides `@component` / `@system` etc., and `fledge_ecs_generator` produces the wrapper classes. CI runs `melos run build_runner` before analyze — do the same locally after touching any annotated class, or `dart analyze` will fail against stale generated code. The `basic_ecs` example also needs `dart run build_runner build --delete-conflicting-outputs` before it will compile.
+`fledge_ecs_annotations` provides `@component` / `@system` etc., and `fledge_ecs_generator` produces the wrapper classes. Generated `.g.dart` files are gitignored, so run `melos run build_runner` before both analyze and test (CI does — generator golden tests need it), and again after touching any annotated class. The `basic_ecs` example also needs `dart run build_runner build --delete-conflicting-outputs` before it will compile.
 
 ## Architecture
 
@@ -62,7 +68,9 @@ Within a schedule, the scheduler parallelizes non-conflicting systems and serial
 
 Deprecated: `stage: CoreStage.foo` on `App.addSystem` still works for one release; new code passes `schedule: Schedules.foo`. The runtime container was renamed from `Schedule` to `Scheduler`; a deprecated `App.schedule` getter aliases `App.scheduler`.
 
-**Important footgun**: when two systems in the same schedule conflict but neither declares `before:`/`after:`, ordering falls back to **registration order** — which changes silently based on when plugins are added. Always declare `before:`/`after:` explicitly for cross-conflict systems, and run `App.checkScheduleOrdering()` (e.g. in a test) to surface ambiguities.
+**Important footgun**: when two systems in the same schedule conflict but neither declares `before:`/`after:`, ordering falls back to **registration order** — which changes silently based on when plugins are added. Always declare `before:`/`after:` explicitly for cross-conflict systems, and run `App.checkScheduleOrdering()` (e.g. in a test) to surface ambiguities. `fledge_debug` refreshes a `ScheduleOrderingReport` on the first tick.
+
+Class-based public systems expose `static const String systemName` and use it in `SystemMeta(name: systemName)`. Always reference the constant in `before:`/`after:` (e.g. `after: {TransformPropagateSystem.systemName}`), never a string literal — the values are inconsistent (`'CameraFollowSystem'` vs `'transform_propagate'`). New public systems should follow this pattern.
 
 ### Codegen: Query vs QueryMut
 `@system`-annotated functions signal component intent through the parameter type: `Query1..4<T>` = reads, `QueryMut1..4<T>` = writes. The generator emits the correct `reads:`/`writes:` sets in `SystemMeta`. Mixed reads/writes on a single query → hand-write a class-based `System` subclass. The `@reflectable` annotation is not implemented (reserved for `fledge_debug`).
@@ -76,7 +84,11 @@ User-facing docs live in `docs/assets/docs/{section}/{page}.md` and are wired in
 ## Conventions
 
 - **Commits**: Conventional Commits with the package name as scope, e.g. `feat(fledge_ecs): ...`, `fix(fledge_input): ...`, `chore(*): ...` for multi-package. Breaking changes use `!`, e.g. `feat(fledge_ecs)!: rename Query.iter`. Package changelogs are generated from these — a wrong scope means the change lands in the wrong CHANGELOG.
-- **SDK floor**: Dart 3.11, Flutter 3.41. Bumped from Dart 3.6 in v0.2 because `flutter_soloud 4.x+` (used by `fledge_audio`) requires it, and the future `tiled 0.12` migration also depends on it. All workspace packages use `sdk: ^3.11.0` uniformly.
+- **SDK floor**: Dart 3.11, Flutter 3.41. Bumped from Dart 3.6 in v0.2 because `flutter_soloud 4.x+` (used by `fledge_audio`) requires it, as does `tiled 0.12` (used by `fledge_tiled`). All workspace packages use `sdk: ^3.11.0` uniformly.
 - **Dependency overrides**: The root pubspec overrides only `meta` (`^1.18.0`) — required for `analyzer 12.x` compatibility with `flutter_test`. Do NOT re-add a `test_api` override: the resolver picks a coherent `test` + `test_api` pair automatically once `flutter_test`'s exact pin (`test_api: 0.7.11`) is left alone. See the comment above `dependency_overrides` in `pubspec.yaml`.
 - **Examples that CI builds**: `examples/basic_ecs` (compiled to exe, needs build_runner first), `examples/advanced_ecs` (compiled to exe), `examples/drifter` (native `flutter build linux|macos|windows` per matrix runner). Breaking any of them breaks CI.
-- **CI platform matrix**: `analyze`, `test`, and `build-examples` jobs run on `ubuntu-latest`, `windows-latest`, and `macos-latest`. `pana` and `build-docs` stay Linux-only. When adding a plugin, verify it works on all three desktop OSes — that's the platform stance (desktop-primary, web/mobile best-effort).
+- **CI platform matrix**: `analyze`, `test`, and `build-examples` jobs run on `ubuntu-latest`, `windows-latest`, and `macos-latest`. `format`, `pana`, and `build-docs` stay Linux-only; `pana` runs only on `v*` tags or manual dispatch and is `continue-on-error`. When adding a plugin, verify it works on all three desktop OSes — that's the platform stance (desktop-primary, web/mobile best-effort).
+
+## Releases
+
+`VERSION=X.Y.Z melos run release` bumps every `packages/fledge_*` to the same version (lockstep), writes per-package + root changelogs, and creates the `chore(release): vX.Y.Z` commit without pushing. Pushing that to main triggers CI's `tag-release` job, which tags and dispatches `publish-packages.yml`. Never hand-write a commit subject starting with `chore(release): v`. A new package must be added to the `PACKAGES` list in `publish-packages.yml` and the pana matrix in `ci.yml`, and its first publish done manually via `scripts/publish-all.sh` (OIDC can't create new packages).

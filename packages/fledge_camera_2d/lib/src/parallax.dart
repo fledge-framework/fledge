@@ -3,6 +3,9 @@ import 'package:fledge_render_2d/fledge_render_2d.dart'
     show GlobalTransform2D, Transform2D;
 
 import 'camera2d.dart';
+import 'follow.dart';
+import 'shake.dart';
+import 'transitions.dart';
 
 /// Parallax multiplier for a background/foreground entity.
 ///
@@ -39,17 +42,22 @@ class Parallax {
 /// Runs in `Schedules.postUpdate` **after** [CameraShakeSystem] so
 /// parallax reads the final camera position (follow + shake baked in).
 class ParallaxSystem implements System {
+  /// The `SystemMeta.name` of [ParallaxSystem]. Games that order
+  /// their own systems relative to this one use it in `before:` /
+  /// `after:`.
+  static const String systemName = 'ParallaxSystem';
+
   @override
   SystemMeta get meta => SystemMeta(
-    name: 'ParallaxSystem',
+    name: systemName,
     writes: {ComponentId.of<GlobalTransform2D>()},
     reads: {
       ComponentId.of<Parallax>(),
       ComponentId.of<Transform2D>(),
       ComponentId.of<Camera2D>(),
     },
-    after: const ['CameraFollowSystem', 'CameraShakeSystem'],
-    before: const ['CameraTransitionSystem'],
+    after: const [CameraFollowSystem.systemName, CameraShakeSystem.systemName],
+    before: const [CameraTransitionSystem.systemName],
   );
 
   @override

@@ -9,6 +9,7 @@ import '../config/audio_config.dart';
 import '../resources/audio_channels.dart';
 import '../resources/audio_state.dart';
 import '../assets/audio_assets.dart';
+import 'music_crossfade_system.dart';
 
 /// System that updates spatial audio based on entity positions.
 ///
@@ -35,6 +36,9 @@ class SpatialAudioSystem implements System {
     writes: {ComponentId.of<AudioSource>()},
     resourceReads: {SpatialAudioConfig, VolumeChannels, AudioAssets},
     resourceWrites: {AudioState},
+    // Both touch AudioState's live handles; crossfade adjusts music
+    // volume after spatial attenuation has been applied.
+    before: const [MusicCrossfadeSystem.systemName],
   );
 
   @override

@@ -5,9 +5,14 @@ import '../resources/audio_state.dart';
 
 /// System that cleans up finished audio handles.
 class AudioCleanupSystem implements System {
+  /// The `SystemMeta.name` of [AudioCleanupSystem]. Games that order
+  /// their own systems relative to this one use it in `before:` /
+  /// `after:`.
+  static const String systemName = 'AudioCleanupSystem';
+
   @override
   SystemMeta get meta => SystemMeta(
-    name: 'AudioCleanupSystem',
+    name: systemName,
     resourceWrites: {AudioState},
     writes: {ComponentId.of<AudioSource>()},
   );

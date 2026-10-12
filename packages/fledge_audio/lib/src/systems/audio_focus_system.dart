@@ -3,6 +3,8 @@ import 'package:fledge_ecs/fledge_ecs.dart';
 import '../config/audio_config.dart';
 import '../events/audio_events.dart';
 import '../resources/audio_state.dart';
+import 'audio_event_system.dart';
+import 'audio_init_system.dart';
 
 /// System that pauses audio when the window loses focus.
 ///
@@ -15,9 +17,16 @@ import '../resources/audio_state.dart';
 /// world.eventWriter<WindowFocusChanged>().send(WindowFocusChanged(false));
 /// ```
 class AudioFocusSystem implements System {
+  /// The `SystemMeta.name` of [AudioFocusSystem]. Games that order
+  /// their own systems relative to this one use it in `before:` /
+  /// `after:`.
+  static const String systemName = 'AudioFocusSystem';
+
   @override
   SystemMeta get meta => const SystemMeta(
-    name: 'AudioFocusSystem',
+    name: systemName,
+    // Focus pause/resume applies on top of this frame's explicit requests.
+    after: [AudioInitSystem.systemName, AudioEventSystem.systemName],
     eventWrites: {AudioPaused, AudioResumed},
     resourceReads: {AudioConfig},
     resourceWrites: {AudioState},

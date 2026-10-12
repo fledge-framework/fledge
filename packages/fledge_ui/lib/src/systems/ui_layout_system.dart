@@ -37,9 +37,14 @@ const double _kApproximateLineHeightFactor = 1.2;
 ///    appropriate mode ([LayoutMode.stack], [LayoutMode.row], or
 ///    [LayoutMode.column]).
 class LayoutSystem implements System {
+  /// The `SystemMeta.name` of [LayoutSystem]. Games that order
+  /// their own systems relative to this one use it in `before:` /
+  /// `after:`.
+  static const String systemName = 'ui_layout';
+
   @override
   SystemMeta get meta => SystemMeta(
-    name: 'ui_layout',
+    name: systemName,
     reads: {
       ComponentId.of<UiNode>(),
       ComponentId.of<UiSize>(),

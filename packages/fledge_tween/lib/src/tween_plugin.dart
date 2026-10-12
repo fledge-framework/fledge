@@ -45,7 +45,7 @@ class TweenPlugin implements Plugin {
   @override
   void build(App app) {
     app.addSystem(
-      TweenSystem(),
+      TweenSystem(schedule: schedule),
       schedule: schedule == TweenSchedule.wall
           ? Schedules.update
           : Schedules.fixedUpdate,

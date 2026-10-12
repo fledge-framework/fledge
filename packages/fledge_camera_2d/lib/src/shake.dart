@@ -4,6 +4,9 @@ import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart' show Transform2D;
 
 import 'camera2d.dart';
+import 'follow.dart';
+import 'parallax.dart';
+import 'transitions.dart';
 
 /// Trauma-based screen shake component.
 ///
@@ -80,6 +83,11 @@ class CameraShake {
 /// "true" camera position and other systems (follow, save/load) can
 /// read/write it without accounting for shake drift.
 class CameraShakeSystem implements System {
+  /// The `SystemMeta.name` of [CameraShakeSystem]. Games that order
+  /// their own systems relative to this one use it in `before:` /
+  /// `after:`.
+  static const String systemName = 'CameraShakeSystem';
+
   final double _fixedDelta;
 
   /// Optional fixed delta (in seconds). If null the system reads
@@ -89,12 +97,15 @@ class CameraShakeSystem implements System {
 
   @override
   SystemMeta get meta => SystemMeta(
-    name: 'CameraShakeSystem',
+    name: systemName,
     writes: {ComponentId.of<Transform2D>()},
     reads: {ComponentId.of<CameraShake>(), ComponentId.of<Camera2D>()},
     resourceReads: {WallTime},
-    after: const ['CameraFollowSystem'],
-    before: const ['ParallaxSystem', 'CameraTransitionSystem'],
+    after: const [CameraFollowSystem.systemName],
+    before: const [
+      ParallaxSystem.systemName,
+      CameraTransitionSystem.systemName,
+    ],
   );
 
   @override

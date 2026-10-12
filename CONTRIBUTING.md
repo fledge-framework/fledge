@@ -10,8 +10,8 @@ Please be respectful and constructive in all interactions. We want Fledge to be 
 
 ### Prerequisites
 
-- [Dart SDK](https://dart.dev/get-dart) (3.6.0 or higher)
-- [Flutter SDK](https://flutter.dev/docs/get-started/install) (3.38.0 or higher)
+- [Dart SDK](https://dart.dev/get-dart) (3.11.0 or higher)
+- [Flutter SDK](https://flutter.dev/docs/get-started/install) (3.41.0 or higher)
 - [Melos](https://melos.invertase.dev/) for monorepo management
 
 ### Setting Up the Development Environment
@@ -34,8 +34,8 @@ Please be respectful and constructive in all interactions. We want Fledge to be 
 
 4. Verify everything works:
    ```bash
-   melos analyze
-   melos test
+   melos run analyze
+   melos run test
    ```
 
 ## Development Workflow
@@ -60,9 +60,9 @@ Use descriptive branch names with prefixes:
 
 3. Run the checks locally before committing:
    ```bash
-   melos format      # Format code
-   melos analyze     # Check for issues
-   melos test        # Run tests
+   melos run format    # Format code
+   melos run analyze   # Check for issues
+   melos run test      # Run tests
    ```
 
 4. Write meaningful commit messages following [Conventional Commits](https://www.conventionalcommits.org/) (see [Commit Message Guidelines](#commit-message-guidelines))
@@ -84,14 +84,14 @@ Use descriptive branch names with prefixes:
 
 All code must be formatted with `dart format`. Run before committing:
 ```bash
-melos format
+melos run format
 ```
 
 ### Analysis
 
 Code must pass `dart analyze` with no errors or warnings:
 ```bash
-melos analyze
+melos run analyze
 ```
 
 ### Documentation
@@ -221,16 +221,17 @@ When making changes that affect multiple packages, be aware of the dependency or
 6. `fledge_lighting_2d` (depends on `fledge_render_2d` for `Extractors` / `RenderWorld` / `renderSpritesToDrawer` and on `fledge_assets` for `Handle<Texture>`)
 7. `fledge_ui` (depends on `fledge_render_2d` for `Extractors` / `RenderWorld` / `TextureHandle` / `DrawLayer` and on `fledge_camera_2d` for `ViewportSize`)
 8. `fledge_input`, `fledge_audio`, `fledge_window` (parallel; `fledge_audio` depends on `fledge_assets` for `Assets<AudioClip>`)
-9. `fledge_tiled`, `fledge_physics`, `fledge_yarn`, `fledge_save`, `fledge_calendar`, `fledge_tween`, `fledge_particles`, `fledge_net` (parallel; `fledge_tiled` depends on `fledge_assets` for `Assets<TilemapAsset>` / `Assets<TilesetAsset>` **and** `fledge_camera_2d` for `Camera2D` / `ViewportSize`; `fledge_particles` depends on `fledge_render_2d` for `ExtractedSprite` / `DrawLayer`)
-10. `fledge_debug` (depends on `fledge_ui` for `UiText` / `UiAnchor`, `fledge_camera_2d` for `Camera2D`, and `fledge_physics` for `Collider` / `CollisionShape`)
-11. `fledge_ecs_generator`
+9. `fledge_physics`, `fledge_yarn`, `fledge_save`, `fledge_calendar`, `fledge_tween`, `fledge_particles`, `fledge_net` (parallel; `fledge_particles` depends on `fledge_render_2d` for `ExtractedSprite` / `DrawLayer`)
+10. `fledge_tiled` (depends on `fledge_physics` (and re-exports it), `fledge_assets` for `Assets<TilemapAsset>` / `Assets<TilesetAsset>`, and `fledge_camera_2d` for `Camera2D` / `ViewportSize`)
+11. `fledge_debug` (depends on `fledge_ui` for `UiText` / `UiAnchor`, `fledge_camera_2d` for `Camera2D`, and `fledge_physics` for `Collider` / `CollisionShape`)
+12. `fledge_ecs_generator`
 
 ## Adding New Features
 
 ### Components
 
 1. Define the component class with `@component` annotation
-2. Run `melos build_runner` to generate code
+2. Run `melos run build_runner` to generate code
 3. Add tests
 4. Document the component
 
@@ -244,7 +245,7 @@ Use one of these patterns:
 ### Plugins
 
 1. Create a class implementing the plugin pattern
-2. Register systems in the appropriate stages
+2. Register systems in the appropriate schedule (`schedule: Schedules.update`, etc.), declaring `before:`/`after:` against other systems' `systemName` constants
 3. Add resources the plugin provides
 4. Document usage in the package README
 
@@ -265,7 +266,7 @@ Add documentation to the docs app, not CLAUDE.md:
 
 ## Releasing
 
-Releases are handled automatically via GitHub Actions when a version tag is pushed. Only maintainers can create releases.
+Only maintainers can create releases. A release is cut with `VERSION=X.Y.Z melos run release`, which bumps every package to the same version, writes the changelogs, and creates a `chore(release): vX.Y.Z` commit. Pushing that commit to `main` lets CI tag the release and publish the packages to pub.dev.
 
 ## Getting Help
 

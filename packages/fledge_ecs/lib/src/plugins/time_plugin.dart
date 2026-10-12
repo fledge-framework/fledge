@@ -74,12 +74,17 @@ typedef Time = WallTime;
 
 /// System that updates the [WallTime] resource each frame.
 class WallTimeUpdateSystem implements System {
+  /// The `SystemMeta.name` of [WallTimeUpdateSystem]. Games that order
+  /// their own systems relative to this one use it in `before:` /
+  /// `after:`.
+  static const String systemName = 'wallTimeUpdate';
+
   /// Creates a new WallTime update system.
   const WallTimeUpdateSystem();
 
   @override
   SystemMeta get meta =>
-      const SystemMeta(name: 'wallTimeUpdate', resourceWrites: {WallTime});
+      const SystemMeta(name: systemName, resourceWrites: {WallTime});
 
   @override
   RunCondition? get runCondition => null;

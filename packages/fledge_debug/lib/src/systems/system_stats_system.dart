@@ -36,7 +36,11 @@ class SystemStatsStartSystem implements System {
     // init systems in Schedules.first and before tilemap_spawn so
     // installing DebugStatsPlugin doesn't grow checkScheduleOrdering's
     // baseline by three entries.
-    after: ['WindowInitSystem', 'AudioInitSystem', 'wallTimeUpdate'],
+    after: [
+      'WindowInitSystem',
+      'AudioInitSystem',
+      WallTimeUpdateSystem.systemName,
+    ],
     before: ['tilemap_spawn'],
   );
 
