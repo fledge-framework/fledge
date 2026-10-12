@@ -68,6 +68,26 @@ class NetworkClient {
   /// connected-state timeout and reliable retransmits.
   final NetClock clock;
 
+  /// Default for [disconnectRedundancy].
+  static const int defaultDisconnectRedundancy = 3;
+
+  /// Default for [disconnectRedundancyInterval].
+  static const Duration defaultDisconnectRedundancyInterval = Duration(
+    milliseconds: 5,
+  );
+
+  /// How many copies of the `disconnect` notice [disconnect] sends before
+  /// closing the transport, so a single lost datagram does not leave the
+  /// host waiting for its connection timeout. The host ignores the
+  /// duplicates. Must be at least 1.
+  final int disconnectRedundancy;
+
+  /// Delay between the copies counted by [disconnectRedundancy] (spreads
+  /// them past short loss bursts and lets a busy socket drain).
+  /// [disconnect] waits at most
+  /// `(disconnectRedundancy - 1) * disconnectRedundancyInterval`.
+  final Duration disconnectRedundancyInterval;
+
   /// Resolves the `host` passed to [connect] to a numeric address.
   ///
   /// Defaults to: numeric addresses are used as-is; hostnames go through
@@ -119,6 +139,9 @@ class NetworkClient {
   Uint8List? _connectPacket;
   Timer? _connectRetryTimer;
 
+  /// In-flight [disconnect], shared by concurrent callers.
+  Future<void>? _disconnecting;
+
   NetworkClient({
     required this.transport,
     this.connectionTimeout = const Duration(seconds: 10),
@@ -126,7 +149,17 @@ class NetworkClient {
     this.connectRetryInterval = const Duration(milliseconds: 250),
     NetClock? clock,
     this.hostResolver,
-  }) : clock = clock ?? NetClock.system;
+    this.disconnectRedundancy = defaultDisconnectRedundancy,
+    this.disconnectRedundancyInterval = defaultDisconnectRedundancyInterval,
+  }) : clock = clock ?? NetClock.system {
+    if (disconnectRedundancy < 1) {
+      throw ArgumentError.value(
+        disconnectRedundancy,
+        'disconnectRedundancy',
+        'must be at least 1',
+      );
+    }
+  }
 
   /// Stream of connection state changes.
   Stream<ConnectionStateEvent> get onStateChange => _stateController.stream;
@@ -229,15 +262,41 @@ class NetworkClient {
   }
 
   /// Disconnect from host.
-  Future<void> disconnect() async {
-    if (_state == ClientState.disconnected) return;
+  ///
+  /// When connected, sends [disconnectRedundancy] identical `disconnect`
+  /// notices (spaced by [disconnectRedundancyInterval]) and then closes
+  /// the transport. Concurrent calls share one disconnect.
+  Future<void> disconnect() {
+    if (_state == ClientState.disconnected) return Future<void>.value();
+    return _disconnecting ??= _disconnect().whenComplete(
+      () => _disconnecting = null,
+    );
+  }
+
+  Future<void> _disconnect() async {
     _stopConnectRetries();
     _completeConnect(false);
 
-    if (_state == ClientState.connected && _hostAddress != null) {
-      // Send disconnect packet
+    final host = _hostAddress;
+    if (_state == ClientState.connected && host != null) {
       final builder = PacketBuilder()..writeString('Client disconnecting');
-      await _sendToHost(PacketType.disconnect, builder.build());
+      final data = _buildPacket(
+        PacketType.disconnect,
+        builder.build(),
+        _nextSequence,
+      );
+      await transport.send(host, data);
+      // Further copies are best effort.
+      for (var copy = 1; copy < disconnectRedundancy; copy++) {
+        if (disconnectRedundancyInterval > Duration.zero) {
+          await Future<void>.delayed(disconnectRedundancyInterval);
+        }
+        try {
+          await transport.send(host, data);
+        } catch (_) {
+          break; // Transport closed or failing.
+        }
+      }
     }
 
     await transport.close();

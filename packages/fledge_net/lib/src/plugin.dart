@@ -43,11 +43,44 @@ class NetworkConfig {
   /// ticks.
   int syncRate;
 
+  double? _interpolationDelay;
+
   /// How far behind the newest snapshot (in ms, converted to ticks)
-  /// clients render interpolated entities. Larger values hide more
-  /// jitter/loss at the cost of latency; keep it above
-  /// `2 * 1000 / syncRate`.
-  double interpolationDelay;
+  /// clients render interpolated entities, measured from the *mean*
+  /// snapshot arrival time.
+  ///
+  /// Unless set explicitly it is [defaultInterpolationDelay]: two snapshot
+  /// intervals plus [interpolationJitterMargin] ms, which rides out one
+  /// lost snapshot under up to ~100 ms of arrival jitter. Smaller values
+  /// cut latency but starve the buffer on loss/jitter (the client then
+  /// extrapolates for up to [maxExtrapolation] ms, or holds); keep an
+  /// explicit value above `2 * syncInterval * 1000 / tickRate` plus half
+  /// the expected jitter. Assign `null` to go back to the derived default.
+  double get interpolationDelay =>
+      _interpolationDelay ?? defaultInterpolationDelay;
+
+  set interpolationDelay(double? ms) => _interpolationDelay = ms;
+
+  /// Jitter allowance (ms) on top of two snapshot intervals in
+  /// [defaultInterpolationDelay].
+  static const double interpolationJitterMargin = 50;
+
+  /// Derived [interpolationDelay]:
+  /// `2 * syncInterval * 1000 / tickRate + interpolationJitterMargin`
+  /// (170 ms at 50 Hz / 20 Hz, 150 ms at 60 Hz / 20 Hz).
+  double get defaultInterpolationDelay =>
+      2 * syncInterval * 1000 / tickRate + interpolationJitterMargin;
+
+  /// Longest time (ms) a client keeps extrapolating an interpolated entity
+  /// past its newest snapshot when snapshots are late or lost (several
+  /// in a row), before holding it. When the next snapshot arrives the
+  /// entity blends from the extrapolated path back onto the interpolated
+  /// one over one snapshot interval. `0` disables extrapolation (hold).
+  ///
+  /// Extrapolation calls the component's `interpolate` function with
+  /// `t > 1`; registrations whose type cannot extrapolate should clamp
+  /// `t` (or set this to `0`).
+  double maxExtrapolation;
 
   /// Optional server password. The host rejects clients whose
   /// credentials are not its UTF-8 bytes (compared in constant time);
@@ -107,7 +140,8 @@ class NetworkConfig {
     this.mode = NetworkMode.offline,
     this.tickRate = 60,
     this.syncRate = 20,
-    this.interpolationDelay = 100,
+    double? interpolationDelay,
+    this.maxExtrapolation = 100,
     this.serverPassword,
     this.authenticator,
     this.enableEncryption = false,
@@ -119,7 +153,7 @@ class NetworkConfig {
     this.inputLeadBufferTicks = 2,
     this.maxInputRepeatTicks = 8,
     this.inputRedundancy = 8,
-  });
+  }) : _interpolationDelay = interpolationDelay;
 
   /// Ticks between snapshots (`tickRate / syncRate`, at least 1).
   int get syncInterval {

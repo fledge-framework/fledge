@@ -36,20 +36,25 @@ void main() {
     });
 
     test('getPacketsToRetransmit drops packets after max retransmits', () {
-      peer.addPendingReliable(1, Uint8List.fromList([1, 2, 3]));
+      // Retransmit timing runs on the peer's NetClock (whole ms): drive it
+      // with a manual clock instead of busy-waiting on wall time.
+      final clock = ManualNetClock(1000);
+      final peer = Peer(
+        id: 1,
+        address: const NetAddress('10.0.0.1', 8080),
+        clock: clock,
+      )..addPendingReliable(1, Uint8List.fromList([1, 2, 3]));
 
-      // Use a 1ms timeout and add a tiny delay between calls to ensure
-      // the elapsed time exceeds the timeout threshold.
+      var retransmitted = 0;
       for (var i = 0; i < Peer.maxRetransmits + 2; i++) {
-        // Busy-wait to ensure time advances at least 1ms
-        final start = DateTime.now();
-        while (DateTime.now().difference(start).inMicroseconds < 1100) {
-          // spin
-        }
-        peer.getPacketsToRetransmit(const Duration(milliseconds: 1));
+        clock.advance(const Duration(milliseconds: 2));
+        retransmitted += peer
+            .getPacketsToRetransmit(const Duration(milliseconds: 1))
+            .length;
       }
 
-      expect(peer.droppedReliableCount, greaterThanOrEqualTo(1));
+      expect(retransmitted, Peer.maxRetransmits);
+      expect(peer.droppedReliableCount, 1);
     });
 
     test('processAck removes acknowledged packets', () {

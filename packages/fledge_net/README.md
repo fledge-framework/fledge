@@ -62,7 +62,7 @@ app.world.spawn()
   ..insert(const Position(0, 0));
 ```
 
-Clients submit input for entities they own through `NetLocalInputs<Move>` (in a `Schedules.fixedPreUpdate` system that joins `NetSets.localInput`); the owning client predicts immediately and the host applies the same step. Test whole sessions in one process with `LoopbackNetwork` and a `ManualNetClock`.
+Clients submit input for entities they own through `NetLocalInputs<Move>` (in a `Schedules.fixedPreUpdate` system that joins `NetSets.localInput`); the owning client predicts immediately and the host applies the same step. Test whole sessions in one process with `LoopbackNetwork` and a `ManualNetClock`. For authority tests, the test-only `package:fledge_net/testing.dart` lets a client session send forged inputs and RPCs (`sendRawInput`, `sendRawRpc`).
 
 ## Documentation
 

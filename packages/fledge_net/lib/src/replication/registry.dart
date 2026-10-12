@@ -66,6 +66,15 @@ class ReplicationRegistry {
   /// With [interpolate], clients render entities they do not own between
   /// two snapshots (keyed by server tick, `interpolationDelay` behind)
   /// instead of snapping to each snapshot. It must return a new value.
+  /// When snapshots are lost or late it is also called with `t > 1` to
+  /// extrapolate (bounded by `NetworkConfig.maxExtrapolation`); clamp `t`
+  /// if the type cannot extrapolate.
+  ///
+  /// **Inside an extension on `ReplicationRegistry`**, call this as
+  /// `this.component<T>(...)`: a bare `component<T>(...)` resolves to the
+  /// top-level `component` annotation constant exported by `fledge_ecs`
+  /// (lexical scope wins over the extension's `this`) and fails to
+  /// compile. Cascades (`registry..component<T>(...)`) are unaffected.
   void component<T>(
     String key,
     NetCodec<T> codec, {

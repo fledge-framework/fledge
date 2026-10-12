@@ -382,6 +382,18 @@ class NetworkSession {
     c.queueRpc(rep.index, bytes, target);
   }
 
+  /// Client: queue RPC [value] naming [targetNetId] as its target
+  /// verbatim, skipping the local entity lookup [sendRpc] does. Lets
+  /// tests impersonate a modified client; see
+  /// `package:fledge_net/testing.dart`.
+  @internal
+  void queueRpcForNetId<T>(T value, int targetNetId) {
+    final c = _client;
+    if (c == null) throw StateError('queueRpcForNetId is client-only');
+    final rep = _rpcRep<T>();
+    c.queueRpcForNetId(rep.index, rep.encode(value), targetNetId);
+  }
+
   /// Host: send RPC [value] to one peer.
   void sendRpcTo<T>(int peerId, T value, {Entity? target}) {
     final h = _host;

@@ -63,14 +63,38 @@ class NetworkHost {
   /// connects.
   final Duration pingInterval;
 
-  /// Monotonic clock used for ping timestamps and RTT.
+  /// Monotonic clock used for ping timestamps, RTT, peer timeouts and
+  /// reliable retransmits.
   final NetClock clock;
+
+  /// Default for [disconnectRedundancy].
+  static const int defaultDisconnectRedundancy = 3;
+
+  /// Default for [disconnectRedundancyInterval].
+  static const Duration defaultDisconnectRedundancyInterval = Duration(
+    milliseconds: 5,
+  );
+
+  /// How many copies of a `disconnect` notice [disconnectPeer] and [stop]
+  /// send to each peer, so a single lost datagram does not leave the
+  /// client waiting for its connection timeout. Clients ignore the
+  /// duplicates. Must be at least 1.
+  final int disconnectRedundancy;
+
+  /// Delay between the copies counted by [disconnectRedundancy] (spreads
+  /// them past short loss bursts). [disconnectPeer] and [stop] wait at most
+  /// `(disconnectRedundancy - 1) * disconnectRedundancyInterval`.
+  final Duration disconnectRedundancyInterval;
 
   /// Room code for joining (generated on creation).
   late final String roomCode;
 
   /// Whether the host is running.
   bool _running = false;
+
+  /// Set while [stop] sends its final disconnect notices; inbound traffic
+  /// is ignored meanwhile.
+  bool _stopping = false;
 
   /// Connected peers by ID.
   final Map<int, Peer> _peers = {};
@@ -103,7 +127,16 @@ class NetworkHost {
     this.authenticator,
     this.pingInterval = const Duration(seconds: 1),
     NetClock? clock,
+    this.disconnectRedundancy = defaultDisconnectRedundancy,
+    this.disconnectRedundancyInterval = defaultDisconnectRedundancyInterval,
   }) : clock = clock ?? NetClock.system {
+    if (disconnectRedundancy < 1) {
+      throw ArgumentError.value(
+        disconnectRedundancy,
+        'disconnectRedundancy',
+        'must be at least 1',
+      );
+    }
     // Generate random room code
     final random = Random.secure();
     roomCode = String.fromCharCodes(
@@ -152,32 +185,68 @@ class NetworkHost {
   }
 
   /// Stop hosting.
+  ///
+  /// Every peer is sent [disconnectRedundancy] copies of a disconnect
+  /// notice (reason `Host shutting down`) before the transport closes.
   Future<void> stop() async {
-    if (!_running) return;
-
-    // Disconnect all peers
-    for (final peer in _peers.values.toList()) {
-      await disconnectPeer(peer.id, 'Host shutting down');
+    if (!_running || _stopping) return;
+    _stopping = true;
+    try {
+      await _disconnectPeers(_peers.values.toList(), 'Host shutting down');
+    } finally {
+      _stopping = false;
+      _running = false;
+      _pendingConnects.clear();
+      _lastPingMs.clear();
+      await transport.close();
     }
-
-    await transport.close();
-    _running = false;
-    _pendingConnects.clear();
-    _lastPingMs.clear();
   }
 
   /// Disconnect a specific peer.
+  ///
+  /// The peer is removed (and [onPeerDisconnected] fires) right after the
+  /// first of [disconnectRedundancy] notice copies is sent.
   Future<void> disconnectPeer(int peerId, String reason) async {
     final peer = _peers[peerId];
     if (peer == null) return;
+    await _disconnectPeers([peer], reason);
+  }
 
-    peer.state = PeerState.disconnecting;
+  /// Send each of [peers] [disconnectRedundancy] identical `disconnect`
+  /// datagrams carrying [reason], removing them after the first round.
+  Future<void> _disconnectPeers(List<Peer> peers, String reason) async {
+    if (peers.isEmpty) return;
+    final payload = (PacketBuilder()..writeString(reason)).build();
+    final notices = <(NetAddress, Uint8List)>[];
+    for (final peer in peers) {
+      peer.state = PeerState.disconnecting;
+      notices.add((
+        peer.address,
+        _buildPacket(peer, PacketType.disconnect, payload),
+      ));
+    }
 
-    // Send disconnect packet
-    final builder = PacketBuilder()..writeString(reason);
-    await _sendToPeer(peer, PacketType.disconnect, builder.build());
+    for (final (address, data) in notices) {
+      await transport.send(address, data);
+    }
+    for (final peer in peers) {
+      peer.markSent();
+      if (identical(_peers[peer.id], peer)) _removePeer(peer, reason);
+    }
 
-    _removePeer(peer, reason);
+    // Further copies are best effort: the peers are already gone.
+    for (var copy = 1; copy < disconnectRedundancy; copy++) {
+      if (disconnectRedundancyInterval > Duration.zero) {
+        await Future<void>.delayed(disconnectRedundancyInterval);
+      }
+      for (final (address, data) in notices) {
+        try {
+          await transport.send(address, data);
+        } catch (_) {
+          // Transport closed or failing: nothing more to do.
+        }
+      }
+    }
   }
 
   /// Send data to a specific peer.
@@ -226,7 +295,7 @@ class NetworkHost {
   /// Times out silent peers, pings peers every [pingInterval] (for
   /// [Peer.rtt]) and retransmits unacknowledged reliable packets.
   void update() {
-    if (!_running) return;
+    if (!_running || _stopping) return;
 
     final nowMs = clock.nowMs;
 
@@ -263,6 +332,7 @@ class NetworkHost {
   }
 
   void _handlePacketUnchecked(ReceivedPacket received) {
+    if (_stopping) return;
     final packet = Packet.fromBytes(received.data);
     if (packet == null) {
       _handleUnparseable(received);
@@ -272,6 +342,9 @@ class NetworkHost {
     // Find or create peer
     final peer = _peersByAddress[received.source];
 
+    // A duplicate `disconnect` (clients send several copies) from an
+    // address that has already left lands in the `peer == null` branch
+    // below and is ignored.
     if (packet.header.type == PacketType.connect) {
       _handleConnect(received.source, packet, peer);
       return;
@@ -395,6 +468,7 @@ class NetworkHost {
       id: _nextPeerId++,
       address: address,
       state: PeerState.connected,
+      clock: clock,
     );
     // Acknowledge the connect packet in our first reply.
     peer.processReceivedSequence(connectSequence);
@@ -419,6 +493,20 @@ class NetworkHost {
     PacketType type,
     Uint8List payload,
   ) async {
+    final data = _buildPacket(peer, type, payload);
+    final sequence = peer.lastSentSequence;
+
+    await transport.send(peer.address, data);
+    peer.markSent();
+
+    // Queue reliable packets for retransmission
+    if (type.isReliable) {
+      peer.addPendingReliable(sequence, data);
+    }
+  }
+
+  /// Serialize a packet to [peer], consuming its next sequence number.
+  Uint8List _buildPacket(Peer peer, PacketType type, Uint8List payload) {
     Packet.checkPayloadSize(payload);
     final header = PacketHeader(
       type: type,
@@ -427,17 +515,7 @@ class NetworkHost {
       ackBits: peer.getAckBits(),
       timestamp: clock.nowMs32,
     );
-
-    final packet = Packet(header: header, payload: payload);
-    final data = packet.toBytes();
-
-    await transport.send(peer.address, data);
-    peer.lastSendTime = DateTime.now();
-
-    // Queue reliable packets for retransmission
-    if (type.isReliable) {
-      peer.addPendingReliable(header.sequence, data);
-    }
+    return Packet(header: header, payload: payload).toBytes();
   }
 
   Future<void> _sendReject(NetAddress address, String reason) async {

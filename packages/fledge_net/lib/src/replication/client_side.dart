@@ -14,6 +14,24 @@ class _ClientEntity {
 class _InterpBuffer {
   final SplayTreeMap<int, Object?> samples = SplayTreeMap();
 
+  // Segment of the last extrapolation (values at ticks _exLo/_exHi, kept
+  // by value so eviction cannot lose them), extrapolated up to _exEnd.
+  Object? _exA;
+  Object? _exB;
+  int _exLo = 0;
+  int _exHi = 1;
+  double _exEnd = 0;
+  bool _extrapolating = false;
+
+  // During a blend the extrapolated path is followed uncapped, shifted
+  // back by the time it was held at the cap (so it resumes from where the
+  // entity is shown, at the extrapolated velocity).
+  double _exShift = 0;
+
+  /// Render tick at which the blend from the extrapolated path back onto
+  /// the interpolated one started (null: no blend in progress).
+  double? _blendStart;
+
   void add(int tick, Object? value) {
     samples[tick] = value;
     while (samples.length > 64) {
@@ -21,12 +39,46 @@ class _InterpBuffer {
     }
   }
 
-  /// Value at fractional server tick [at] (clamped to the buffered range).
-  Object? sample(double at, ComponentReplicator<Object?> c) {
+  /// A late (reordered) sample: fill a gap if it can still be rendered.
+  void addLate(int tick, Object? value) {
+    if (samples.isEmpty || samples.containsKey(tick)) return;
+    if (tick <= samples.firstKey()!) return; // already rendered past it
+    add(tick, value);
+  }
+
+  /// Value at fractional server tick [at].
+  ///
+  /// Inside the buffered range: interpolated between the samples around
+  /// [at]. Past the newest sample (starvation: late or lost snapshots):
+  /// extrapolated along the newest segment for at most [maxExtrapTicks],
+  /// then held. Once samples cover [at] again the result blends from the
+  /// extrapolated path to the interpolated one over [blendTicks], so a
+  /// wrong extrapolation is corrected without a jump.
+  Object? sample(
+    double at,
+    ComponentReplicator<Object?> c, {
+    double maxExtrapTicks = 0,
+    double blendTicks = 1,
+  }) {
     final first = samples.firstKey()!;
     final last = samples.lastKey()!;
     if (at <= first) return samples[first];
-    if (at >= last) return samples[last];
+    if (at >= last) {
+      final lo = samples.lastKeyBefore(last);
+      if (lo == null || maxExtrapTicks <= 0) {
+        _extrapolating = false;
+        _blendStart = null;
+        return samples[last];
+      }
+      _exA = samples[lo];
+      _exB = samples[last];
+      _exLo = lo;
+      _exHi = last;
+      _exEnd = last + maxExtrapTicks;
+      _extrapolating = true;
+      _blendStart = null;
+      return _extrapolated(at < _exEnd ? at : _exEnd, c);
+    }
     final floor = at.floor();
     final lo = samples.containsKey(floor)
         ? floor
@@ -36,9 +88,29 @@ class _InterpBuffer {
     while (samples.firstKey()! < lo) {
       samples.remove(samples.firstKey());
     }
-    final t = (at - lo) / (hi - lo);
-    return c.lerp(samples[lo], samples[hi], t);
+    final value = c.lerp(samples[lo], samples[hi], (at - lo) / (hi - lo));
+    if (_extrapolating) {
+      _extrapolating = false;
+      _blendStart = at;
+      // Blend source: the extrapolated path, continued past the cap but
+      // shifted by however long it was held there, so it starts exactly
+      // where the entity is shown and keeps moving (bounded: the blend
+      // lasts blendTicks).
+      _exShift = at > _exEnd ? at - _exEnd : 0;
+    }
+    final start = _blendStart;
+    if (start == null) return value;
+    final b = (at - start) / blendTicks;
+    if (b >= 1 || b < 0) {
+      _blendStart = null;
+      return value;
+    }
+    return c.lerp(_extrapolated(at - _exShift, c), value, b);
   }
+
+  /// Extrapolated segment evaluated at server tick [x].
+  Object? _extrapolated(double x, ComponentReplicator<Object?> c) =>
+      c.lerp(_exA, _exB, (x - _exLo) / (_exHi - _exLo));
 }
 
 /// Prediction bookkeeping for one locally owned entity.
@@ -76,6 +148,9 @@ class _ClientSide {
   int _syncStartMs = 0;
   int _lastResets = 0;
 
+  /// Smooth render timeline for interpolated entities.
+  final InterpolationClock renderClock = InterpolationClock();
+
   final SplayTreeMap<int, _ClientEntity> entities = SplayTreeMap();
   final Map<int, Set<int>> _orphans = {};
   final Map<int, Map<int, _InterpBuffer>> _interp = {};
@@ -85,7 +160,9 @@ class _ClientSide {
   int ackedInputTick = 0;
   int lastSnapshotTick = 0;
   List<RawInputEntry> _tickInputs = const [];
-  final List<(int, Uint8List, Entity?)> _rpcs = [];
+
+  /// Queued RPCs: (index, bytes, target entity, explicit target netId).
+  final List<(int, Uint8List, Entity?, int?)> _rpcs = [];
 
   _ClientSide(this.session, this.client)
     : sync = ClientTickSync(
@@ -133,7 +210,13 @@ class _ClientSide {
 
   void queueRpc(int index, Uint8List bytes, Entity? target) {
     _checkRpcSize(bytes);
-    _rpcs.add((index, bytes, target));
+    _rpcs.add((index, bytes, target, null));
+  }
+
+  /// Queue an RPC naming [targetNetId] verbatim (testing hook).
+  void queueRpcForNetId(int index, Uint8List bytes, int targetNetId) {
+    _checkRpcSize(bytes);
+    _rpcs.add((index, bytes, null, targetNetId));
   }
 
   // Pump ----------------------------------------------------------------------
@@ -492,6 +575,13 @@ class _ClientSide {
         session.stats.tickResets += sync.resets - _lastResets;
         _lastResets = sync.resets;
         _syncNetworkTick(world);
+        renderClock.resetOffset();
+      }
+      if (sync.synced) {
+        renderClock.observe(
+          serverTick: header.serverTick,
+          timeline: _timeline(world),
+        );
       }
     }
     for (final (netId, state) in states) {
@@ -502,7 +592,18 @@ class _ClientSide {
   void _applyState(World world, int netId, int tick, EntityStateData state) {
     final info = entities[netId];
     if (info == null || !world.isAlive(info.entity)) return;
-    if (tick < info.lastStateTick) return; // older than what we have
+    if (tick < info.lastStateTick) {
+      // Older than what we have (reordered): only fill interpolation gaps.
+      final buffers = _interp[netId];
+      if (buffers == null) return;
+      for (final MapEntry(key: index, value: buffer) in buffers.entries) {
+        final bytes = state.components[index];
+        if (bytes != null) {
+          buffer.addLate(tick, _registry.components[index].decode(bytes));
+        }
+      }
+      return;
+    }
     info.lastStateTick = tick;
     final e = info.entity;
     final owned = info.owner == peerId;
@@ -541,13 +642,30 @@ class _ClientSide {
 
   // Interpolation (Schedules.first) -------------------------------------------
 
+  /// Correction-free local timeline in ticks (see
+  /// `ClientTickSync.timeline`).
+  double _timeline(World world) {
+    final ts = world.getResource<FixedTimestep>();
+    final steps = ts == null || ts.stepSeconds <= 0
+        ? 0.0
+        : ts.accumulatorSeconds / ts.stepSeconds;
+    return sync.timeline(steps);
+  }
+
   void interpolate(World world) {
-    if (_interp.isEmpty) return;
-    final alpha = world.getResource<FixedTimestep>()?.alpha ?? 0;
-    final delayTicks = _config.interpolationDelay / session._stepMs;
-    final at = sync.synced
-        ? sync.renderTick(alpha: alpha, delayTicks: delayTicks)
+    final stepMs = session._stepMs;
+    final delayTicks = _config.interpolationDelay / stepMs;
+    // Advance every frame (even with nothing to interpolate) so the
+    // render clock never sees a long gap.
+    final at = sync.synced && renderClock.hasOffset
+        ? renderClock.advance(
+            timeline: _timeline(world),
+            delayTicks: delayTicks,
+          )
         : double.infinity;
+    if (_interp.isEmpty) return;
+    final maxExtrapTicks = math.max(0.0, _config.maxExtrapolation / stepMs);
+    final blendTicks = _config.syncInterval.toDouble();
     final components = _registry.components;
     for (final MapEntry(key: netId, value: buffers) in _interp.entries) {
       final info = entities[netId];
@@ -555,7 +673,16 @@ class _ClientSide {
       for (final MapEntry(key: index, value: buffer) in buffers.entries) {
         if (buffer.samples.isEmpty) continue;
         final c = components[index];
-        c.insert(world, info.entity, buffer.sample(at, c));
+        c.insert(
+          world,
+          info.entity,
+          buffer.sample(
+            at,
+            c,
+            maxExtrapTicks: maxExtrapTicks,
+            blendTicks: blendTicks,
+          ),
+        );
       }
     }
   }
@@ -719,10 +846,10 @@ class _ClientSide {
 
     if (_rpcs.isNotEmpty) {
       final registry = world.getResource<NetworkEntityRegistry>();
-      for (final (index, bytes, target) in _rpcs) {
-        final targetNetId = target == null
-            ? 0
-            : registry?.getNetId(target) ?? 0;
+      for (final (index, bytes, target, explicitNetId) in _rpcs) {
+        final targetNetId =
+            explicitNetId ??
+            (target == null ? 0 : registry?.getNetId(target) ?? 0);
         channel.enqueue(_rpcMessage(index, targetNetId, bytes));
       }
       _rpcs.clear();

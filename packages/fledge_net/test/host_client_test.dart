@@ -172,8 +172,12 @@ void main() {
       expect(host.peerCount, 0);
       expect(disconnectEvents.length, 1);
       expect(disconnectEvents[0].reason, 'Kicked');
-      final notice = client.ofType(PacketType.disconnect).single;
-      expect(PacketReader(notice.payload).readString(), 'Kicked');
+      // The notice is sent redundantly (identical copies).
+      final notices = client.ofType(PacketType.disconnect).toList();
+      expect(notices, hasLength(host.disconnectRedundancy));
+      for (final notice in notices) {
+        expect(PacketReader(notice.payload).readString(), 'Kicked');
+      }
     });
 
     test('handles disconnect packet from peer', () async {

@@ -13,7 +13,24 @@ void main() {
       expect(config.mode, NetworkMode.offline);
       expect(config.tickRate, 60);
       expect(config.syncRate, 20);
-      expect(config.interpolationDelay, 100);
+      // 2 snapshot intervals (3 ticks at 60 Hz) + 50 ms jitter margin.
+      expect(config.interpolationDelay, closeTo(150, 1e-9));
+      expect(config.maxExtrapolation, 100);
+    });
+
+    test('derived interpolationDelay follows tick and sync rate', () {
+      final config = NetworkConfig(tickRate: 50);
+      expect(config.syncInterval, 3);
+      expect(config.interpolationDelay, closeTo(170, 1e-9));
+      config.syncRate = 10;
+      expect(config.interpolationDelay, closeTo(250, 1e-9));
+      config.interpolationDelay = 120;
+      expect(config.interpolationDelay, 120);
+      config.syncRate = 20;
+      expect(config.interpolationDelay, 120);
+      config.interpolationDelay = null; // back to derived
+      expect(config.interpolationDelay, closeTo(170, 1e-9));
+      expect(config.defaultInterpolationDelay, closeTo(170, 1e-9));
     });
 
     test('custom values', () {

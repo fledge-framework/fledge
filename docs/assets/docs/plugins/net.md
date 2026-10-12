@@ -73,6 +73,8 @@ ReplicationRegistry buildReplication() => ReplicationRegistry()
 
 Register the **local** `Transform2D` (relative to the parent). Never replicate `GlobalTransform2D`: clients rebuild it from the replicated hierarchy with `TransformPropagateSystem`.
 
+> **Registering from an extension:** inside an `extension ... on ReplicationRegistry`, write `this.component<T>(...)`. A bare `component<T>(...)` resolves to the top-level `component` annotation constant exported by `fledge_ecs` and fails to compile. Cascades (`registry..component<T>(...)`) are unaffected.
+
 ### 2. Add the plugin
 
 ```dart
@@ -209,7 +211,11 @@ Future<void> frame(List<App> apps) async {
 }
 ```
 
-Keep ticking frames while `join` is pending, because the connect handshake travels over the simulated network too. The package tests (`packages/fledge_net/test/support/replication_harness.dart`) contain a complete harness: one host plus three clients with latency, jitter and loss, inputs, prediction, interest and late join.
+Keep ticking frames while `join` is pending, because the connect handshake travels over the simulated network too.
+
+To test the host's authority checks, import the test-only library `package:fledge_net/testing.dart` (not exported from `fledge_net.dart`). Its `NetworkSessionTesting` extension lets a client session act like a modified client: `sendRawInput(netId:, firstTick:, inputs:)` sends inputs for any entity (encode values with `encodeWithCodec(codec, value)`; `encodeRawInputPacket` builds a whole packet) and `sendRawRpc(value, targetNetId:)` names any target. The host should drop them and report `NetRejected`.
+
+The package tests (`packages/fledge_net/test/support/replication_harness.dart`) contain a complete harness: one host plus three clients with latency, jitter and loss, inputs, prediction, interest and late join.
 
 ## How Replication Works
 
@@ -258,6 +264,8 @@ A client that owns no positioned entity receives everything. The relevant set is
 
 Clients send their inputs every tick, redundantly: each packet repeats every input the host has not acknowledged yet (up to `inputRedundancy`). The host buffers them per client and entity, and every tick hands exactly one input per controlled entity to `NetInputs<I>`. If an input is missing it repeats the previous one for up to `maxInputRepeatTicks` ticks. The host **rejects** inputs and targeted RPCs for entities the sender does not own (`NetworkIdentity.ownerId != peerId`): the data is dropped, `NetworkSession.stats` counts it, and a `NetRejected` event names the peer, kind and network id (never payload data). Clients cannot spawn, despawn, re-parent or change ownership; only the host can. Change ownership on the host by setting `NetworkIdentity.ownerId`.
 
+Ownership is tracked on the host, and a client submits inputs only for the entities the session's own owner map (filled from the host's spawn and owner messages) says it owns, so editing a client's local `NetworkIdentity` cannot spoof control.
+
 ### Prediction and reconciliation
 
 For entities it owns, a client applies `step(state, input, dt)` (with `dt = FixedTimestep.stepSeconds`) as soon as the input is submitted, and records the predicted state per tick. When a snapshot arrives, the server state for tick `T` is compared with the recorded prediction for `T` using your `error` function. Within `tolerance` nothing happens. Otherwise the client resets to the server state and replays the unacknowledged inputs `T+1 .. now` with `step`, then emits `NetPredictionCorrected`. A deterministic `step` never triggers a correction. Things the client cannot predict (the host teleports the avatar, a host-only system pushes it) are corrected within one round trip.
@@ -266,7 +274,15 @@ For entities it owns, a client applies `step(state, input, dt)` (with `dt = Fixe
 
 ### Interpolation
 
-Components registered with `interpolate` on entities the client does not predict are buffered by **server tick** (not arrival time) and rendered `interpolationDelay` ms behind the newest snapshot, between the two samples around the render tick. When samples run out the last value is held (no extrapolation). Keep `interpolationDelay` above two snapshot intervals (`2 * 1000 / syncRate` ms) so jitter and an occasional lost snapshot stay hidden.
+Components registered with `interpolate` on entities the client does not predict are buffered by **server tick** (not arrival time) and rendered `interpolationDelay` ms behind the newest snapshot (measured from its mean arrival time), between the two samples around the render tick.
+
+The render tick runs on its own clock: it advances with frame time, independent of the client's simulation-clock corrections (time dilation, input-lead changes when RTT or late inputs change, tick resets) and of how many fixed steps a frame runs. It tracks the snapshot stream by speeding up or slowing down by at most 10 %, so interpolated entities never step or move backwards; only a large discontinuity (such as the host's clock jumping) snaps it.
+
+By default `interpolationDelay` is derived: two snapshot intervals plus a 50 ms jitter margin (`2 * syncInterval * 1000 / tickRate + 50`, so 150 ms at 60 Hz / 20 Hz). That covers one lost snapshot under up to ~100 ms of arrival jitter. If you set it yourself, stay above two snapshot intervals plus half the expected jitter. Lower values trade smoothness for latency.
+
+When snapshots run out (several lost in a row), the entity is extrapolated along its last segment for up to `maxExtrapolation` ms (default 100) and then held. When data arrives again it blends back onto the interpolated path over one snapshot interval, so there's no jump. Extrapolation calls your `interpolate` function with `t > 1`. If a type can't extrapolate, clamp `t` in that function or set `maxExtrapolation` to 0 (hold).
+
+Interpolation runs in `Schedules.first`, so each frame shows the time consumed by the previous frame's fixed pass. That is a constant one-frame phase, not jitter.
 
 ### Disconnects
 
@@ -277,6 +293,8 @@ When a client leaves (disconnect, timeout, or the host disconnects it), the host
 
 When a client's session ends, it despawns every replicated entity and sends `NetDisconnected`.
 
+Disconnect notices are sent redundantly (3 identical copies a few ms apart by default; `disconnectRedundancy` / `disconnectRedundancyInterval` on `NetworkClient` and `NetworkHost`), so a single lost datagram doesn't leave a departed player's entities around until `connectionTimeout`. Duplicates are ignored.
+
 ## NetworkConfig
 
 Every field is used by the replication layer.
@@ -286,7 +304,8 @@ Every field is used by the replication layer.
 | `mode` | `offline` | Maintained by `NetworkSession` (`host` / `client` / `offline`) |
 | `tickRate` | 60 | Simulation rate in Hz; must match `FixedTimestep` and the host |
 | `syncRate` | 20 | Snapshot rate in Hz (`syncInterval = tickRate / syncRate` ticks) |
-| `interpolationDelay` | 100 | How far behind the newest snapshot (ms) remote entities are rendered |
+| `interpolationDelay` | derived | How far behind the newest snapshot (ms) remote entities are rendered. Unset (or set to `null`): `defaultInterpolationDelay` = 2 snapshot intervals + 50 ms (150 ms at 60 Hz / 20 Hz) |
+| `maxExtrapolation` | 100 | How long (ms) remote entities are extrapolated past the newest snapshot when snapshots are lost or late; 0 holds instead |
 | `serverPassword` | null | Host requires these UTF-8 bytes as credentials (constant-time compare); clients send it by default. Sent in the clear unless encryption is on |
 | `authenticator` | null | Custom host check `(clientId, credentials) async => bool`; if a password is also set, both must accept |
 | `enableEncryption` | false | Wrap the transport in `EncryptedTransport` (AES-256-GCM) |
@@ -741,6 +760,8 @@ for (var i = 0; i < 100; i++) {
 // client.rtt == 100 exactly
 ```
 
+Host peer timeouts and reliable retransmits also follow the injected clock, so advancing a `ManualNetClock` past `connectionTimeout` times out a silent peer without real waiting. `connect()`'s overall timeout and its retries still run on real timers.
+
 ### Transport delivery contract
 
 Each received datagram is delivered exactly once. If anything listens to `transport.onReceive` (as `NetworkHost` and `NetworkClient` do), packets go to the stream only. Otherwise they go to a bounded buffer (`maxBufferedPackets`, default 1024, oldest dropped first) that `transport.receive()` drains. `UdpTransport`, `LoopbackTransport` and `EncryptedTransport` all follow this contract. `UdpTransport` also queues sends that hit a full OS buffer (up to `maxQueuedSends`) instead of silently dropping them, and accepts a `bindAddress` (e.g. `InternetAddress.loopbackIPv4`).
@@ -754,7 +775,7 @@ See [NetworkConfig](#networkconfig) and [NetworkSession](#networksession) above.
 | Method | Description |
 |--------|-------------|
 | `start(port)` | Bind and start listening |
-| `stop()` | Disconnect all peers and close |
+| `stop()` | Disconnect all peers (redundant notices) and close |
 | `update()` | Process timeouts, ping peers, retransmit |
 | `sendTo(peerId, type, data)` | Send to one peer (payload ≤ `Packet.maxPayloadBytes`) |
 | `broadcast(type, data)` | Send to all connected peers |
@@ -763,14 +784,14 @@ See [NetworkConfig](#networkconfig) and [NetworkSession](#networksession) above.
 | `getPeer(id)` | The connected `Peer` (e.g. for `rtt`), or null |
 | `onProtocolMismatch` | Stream of `ProtocolMismatchEvent` |
 
-Constructor options: `maxPeers`, `connectionTimeout`, `retransmitTimeout` (fallback before RTT is known), `authenticator`, `pingInterval` (default 1 s), `clock`.
+Constructor options: `maxPeers`, `connectionTimeout`, `retransmitTimeout` (fallback before RTT is known), `authenticator`, `pingInterval` (default 1 s), `clock` (pings, RTT, peer timeouts and retransmits), `disconnectRedundancy` (default 3), `disconnectRedundancyInterval` (default 5 ms).
 
 ### NetworkClient
 
 | Method | Description |
 |--------|-------------|
 | `connect(host, port, {credentials})` | Connect to a host (IP or hostname) with optional auth |
-| `disconnect()` | Disconnect from host |
+| `disconnect()` | Send `disconnectRedundancy` disconnect notices, then close |
 | `update()` | Process pings, timeouts and retransmits |
 | `send(type, data)` | Send data to host (payload ≤ `Packet.maxPayloadBytes`) |
 | `state` | Current `ClientState` |
@@ -779,7 +800,7 @@ Constructor options: `maxPeers`, `connectionTimeout`, `retransmitTimeout` (fallb
 | `retransmitTimeout` | Current reliable-retransmit timeout |
 | `onProtocolMismatch` | Stream of `ProtocolMismatchEvent` |
 
-Constructor options: `connectionTimeout`, `pingInterval`, `connectRetryInterval` (default 250 ms), `clock`, `hostResolver`.
+Constructor options: `connectionTimeout`, `pingInterval`, `connectRetryInterval` (default 250 ms), `clock`, `hostResolver`, `disconnectRedundancy` (default 3), `disconnectRedundancyInterval` (default 5 ms).
 
 ### NetworkIdentity
 
