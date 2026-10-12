@@ -35,6 +35,18 @@ enum PacketType {
   /// Entity despawn notification.
   entityDespawn(0x13),
 
+  /// Ordered reliable replication channel (both directions).
+  ///
+  /// Carries the replication layer's ordered reliable messages (welcome,
+  /// spawn, despawn, re-parent, ownership, RPC). Reliability, ordering
+  /// and de-duplication are implemented by `ReliableChannel` with
+  /// cumulative acks, so this type is *unreliable* at the `Peer` level
+  /// (see [isReliable]).
+  replication(0x14),
+
+  /// Tick synchronisation handshake (unreliable request/response).
+  tickSync(0x15),
+
   /// RPC (remote procedure call).
   rpc(0x20),
 
@@ -87,7 +99,12 @@ class PacketHeader {
   ///   monotonic clock value (was a truncated signed epoch-ms value);
   ///   ping/pong payloads carry a uint32 [NetClock] timestamp that the pong
   ///   echoes back; strings are UTF-8 with a uint16 byte-length prefix
-  ///   (were UTF-16 code units truncated to bytes).
+  ///   (were UTF-16 code units truncated to bytes). The replication layer
+  ///   (unreleased alongside the above, so it shares version 3) adds
+  ///   [PacketType.replication] (0x14) and [PacketType.tickSync] (0x15)
+  ///   and defines payload formats for [PacketType.stateUpdate] (snapshot
+  ///   chunks) and [PacketType.input] (redundant per-tick inputs); see
+  ///   `lib/src/replication/wire.dart`.
   ///
   /// Peers running another version cannot parse each other's packets;
   /// [deserialize] returns `null` on a version mismatch. [peekVersion] lets
@@ -340,6 +357,34 @@ class PacketBuilder {
     _builder.add(bytes);
   }
 
+  /// Write a non-negative integer as an unsigned LEB128 varint
+  /// (1 byte for values below 128, 2 below 16384, ...).
+  ///
+  /// Throws [ArgumentError] for negative values.
+  void writeVarUint(int value) {
+    if (value < 0) {
+      throw ArgumentError.value(value, 'value', 'must not be negative');
+    }
+    var v = value;
+    while (v >= 0x80) {
+      _builder.addByte((v & 0x7F) | 0x80);
+      v >>= 7;
+    }
+    _builder.addByte(v);
+  }
+
+  /// Write raw bytes with no length prefix.
+  void writeRawBytes(List<int> bytes) {
+    _builder.add(bytes);
+  }
+
+  /// Write bytes prefixed with their length as a varint (see
+  /// [writeVarUint]). Unlike [writeBytes] there is no 64 KiB limit.
+  void writeVarBytes(List<int> bytes) {
+    writeVarUint(bytes.length);
+    _builder.add(bytes);
+  }
+
   /// Write a 3D vector (3 floats).
   void writeVector3(double x, double y, double z) {
     writeFloat32(x);
@@ -463,6 +508,40 @@ class PacketReader {
     _offset += length;
     return bytes;
   }
+
+  /// Read an unsigned LEB128 varint written by
+  /// [PacketBuilder.writeVarUint].
+  ///
+  /// Throws [FormatException] if the varint is longer than 9 bytes and
+  /// [RangeError] if it runs past the end of the data.
+  int readVarUint() {
+    var result = 0;
+    var shift = 0;
+    while (true) {
+      if (shift > 56) throw const FormatException('varint too long');
+      final byte = readByte();
+      result |= (byte & 0x7F) << shift;
+      if (byte & 0x80 == 0) return result;
+      shift += 7;
+    }
+  }
+
+  /// Read [length] raw bytes (a view; copy it if you keep it).
+  ///
+  /// Throws [RangeError] if fewer than [length] bytes remain.
+  Uint8List readRawBytes(int length) {
+    if (length < 0 || length > remaining) {
+      throw RangeError(
+        'Requested $length bytes but only $remaining bytes remain',
+      );
+    }
+    final bytes = Uint8List.sublistView(_data, _offset, _offset + length);
+    _offset += length;
+    return bytes;
+  }
+
+  /// Read bytes written by [PacketBuilder.writeVarBytes] (a copy).
+  Uint8List readVarBytes() => Uint8List.fromList(readRawBytes(readVarUint()));
 
   /// Read a 3D vector (3 floats).
   (double, double, double) readVector3() {

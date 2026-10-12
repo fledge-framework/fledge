@@ -33,10 +33,57 @@ import 'package:fledge_window/fledge_window.dart';
 import 'package:fledge_yarn/fledge_yarn.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+/// Input type for the replication registry below.
+class _Move {
+  final double dx;
+  final double dy;
+  const _Move(this.dx, this.dy);
+}
+
+/// A realistic co-op registry: the local Transform2D is replicated,
+/// interpolated for remote entities and predicted for the owner;
+/// interest uses GlobalTransform2D.
+ReplicationRegistry _replication() => ReplicationRegistry()
+  ..component<Transform2D>(
+    'transform',
+    NetCodec<Transform2D>.of(
+      encode: (t, out) => out
+        ..writeFloat32(t.translation.x)
+        ..writeFloat32(t.translation.y)
+        ..writeFloat32(t.rotation),
+      decode: (r) =>
+          Transform2D.from(r.readFloat32(), r.readFloat32())
+            ..rotation = r.readFloat32(),
+    ),
+    interpolate: (a, b, t) => Transform2D.from(
+      a.translation.x + (b.translation.x - a.translation.x) * t,
+      a.translation.y + (b.translation.y - a.translation.y) * t,
+    )..rotation = a.rotation + (b.rotation - a.rotation) * t,
+  )
+  ..input<_Move>(
+    NetCodec<_Move>.of(
+      encode: (m, out) => out
+        ..writeFloat32(m.dx)
+        ..writeFloat32(m.dy),
+      decode: (r) => _Move(r.readFloat32(), r.readFloat32()),
+    ),
+  )
+  ..predict<Transform2D, _Move>(
+    step: (s, m, dt) => Transform2D.from(
+      s.translation.x + m.dx * dt,
+      s.translation.y + m.dy * dt,
+    )..rotation = s.rotation,
+    error: (a, b) => (a.translation - b.translation).length,
+  )
+  ..positionOf = (world, e) {
+    final g = world.get<GlobalTransform2D>(e);
+    return g == null ? null : (g.x, g.y);
+  };
+
 /// Plugin groups; each inner list is added in order and kept adjacent
 /// when the outer list is reversed (YarnPlugin must precede
 /// DialogueCorePlugin).
-List<List<Plugin>> rest(PhysicsMode mode) => [
+List<List<Plugin>> rest(PhysicsMode mode, NetworkMode netMode) => [
   [const WindowPlugin()],
   [
     InputPlugin.simple(
@@ -60,32 +107,44 @@ List<List<Plugin>> rest(PhysicsMode mode) => [
   [const CalendarPlugin()],
   [SavePlugin()],
   [YarnPlugin(), DialogueCorePlugin()],
-  [NetworkPlugin()],
+  [
+    NetworkPlugin(
+      config: NetworkConfig(mode: netMode, interestRadius: 500),
+      replication: _replication(),
+    ),
+  ],
   [const DebugPlugin()],
 ];
 
 void main() {
   for (final mode in PhysicsMode.values) {
-    for (final reversed in [false, true]) {
-      test('all plugins, $mode, ${reversed ? 'reversed' : 'forward'}', () {
-        final app = App()
-          ..addPlugin(const WallTimePlugin())
-          ..addPlugin(AssetPlugin())
-          ..addPlugin(RenderPlugin())
-          ..addPlugin(const CameraPlugin())
-          ..addSystem(
-            TransformPropagateSystem(),
-            schedule: Schedules.preUpdate,
-          );
-        final plugins = rest(mode);
-        for (final group in reversed ? plugins.reversed : plugins) {
-          for (final p in group) {
-            app.addPlugin(p);
+    for (final netMode in NetworkMode.values) {
+      for (final reversed in [false, true]) {
+        test('all plugins, $mode, net ${netMode.name}, '
+            '${reversed ? 'reversed' : 'forward'}', () {
+          final app = App()
+            ..addPlugin(const WallTimePlugin())
+            ..addPlugin(AssetPlugin())
+            ..addPlugin(RenderPlugin())
+            ..addPlugin(const CameraPlugin())
+            ..addSystem(
+              TransformPropagateSystem(),
+              schedule: Schedules.preUpdate,
+            );
+          final plugins = rest(mode, netMode);
+          for (final group in reversed ? plugins.reversed : plugins) {
+            for (final p in group) {
+              app.addPlugin(p);
+            }
           }
-        }
-        final issues = app.checkScheduleOrdering();
-        expect(issues, isEmpty, reason: issues.map((i) => ' - $i').join('\n'));
-      });
+          final issues = app.checkScheduleOrdering();
+          expect(
+            issues,
+            isEmpty,
+            reason: issues.map((i) => ' - $i').join('\n'),
+          );
+        });
+      }
     }
   }
 }

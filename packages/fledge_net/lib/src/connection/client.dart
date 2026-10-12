@@ -150,6 +150,12 @@ class NetworkClient {
   /// Local peer ID assigned by host.
   int? get localPeerId => _localPeerId;
 
+  /// Reason given with the most recent state change that carried one
+  /// (e.g. `Authentication failed`, `Connection timeout`, the host
+  /// disconnect reason). Never contains credentials.
+  String? get lastStateReason => _lastReason;
+  String? _lastReason;
+
   /// Host address (numeric, after hostname resolution).
   NetAddress? get hostAddress => _hostAddress;
 
@@ -283,6 +289,7 @@ class NetworkClient {
   void _setState(ClientState newState, [String? reason]) {
     if (_state != newState) {
       _state = newState;
+      if (reason != null) _lastReason = reason;
       _stateController.add(ConnectionStateEvent(newState, reason));
     }
   }

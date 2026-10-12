@@ -139,7 +139,28 @@ class InputBuffer {
 }
 
 /// Manages client-side prediction and server reconciliation.
+///
+/// Low-level, map-based helper. Most games should use the replication
+/// layer (`ReplicationRegistry.predict`), which drives prediction and
+/// reconciliation for registered components automatically.
 class ClientPrediction {
+  /// Compares a recorded predicted state with the server state for the
+  /// same tick. Defaults to [defaultStatesMatch] with [tolerance].
+  final bool Function(
+    Map<String, dynamic> predicted,
+    Map<String, dynamic> server,
+  )?
+  statesMatch;
+
+  /// Numeric tolerance used by the default comparison.
+  final double tolerance;
+
+  /// Whether the last [reconcile] found a misprediction (or had no
+  /// prediction recorded for the server tick).
+  bool lastReconcileMispredicted = false;
+
+  ClientPrediction({this.statesMatch, this.tolerance = 1e-4});
+
   /// Local input buffer.
   final InputBuffer inputBuffer = InputBuffer();
 
@@ -164,9 +185,24 @@ class ClientPrediction {
     }
   }
 
-  /// Process server state update and return inputs to replay.
+  /// Process an authoritative [serverState] for [serverTick].
+  ///
+  /// Compares it with the state recorded by [recordInput] for that tick.
+  /// If they match (see [statesMatch]) the prediction was right and an
+  /// empty list is returned. Otherwise (or when nothing was recorded for
+  /// [serverTick]) [lastReconcileMispredicted] is set and the inputs after
+  /// [serverTick] are returned: reset to [serverState] and replay them.
+  /// Either way, history up to [serverTick] is discarded.
   List<InputFrame> reconcile(int serverTick, Map<String, dynamic> serverState) {
     lastAckedTick = serverTick;
+
+    Map<String, dynamic>? predicted;
+    for (final s in _stateHistory) {
+      if (s.tick == serverTick) predicted = s.state;
+    }
+    final match = statesMatch ?? _defaultMatch;
+    lastReconcileMispredicted =
+        predicted == null || !match(predicted, serverState);
 
     // Remove old states and inputs
     inputBuffer.removeUpTo(serverTick);
@@ -174,8 +210,32 @@ class ClientPrediction {
       _stateHistory.removeFirst();
     }
 
+    if (!lastReconcileMispredicted) return const [];
     // Get inputs that need to be replayed
     return inputBuffer.getFramesAfter(serverTick);
+  }
+
+  bool _defaultMatch(Map<String, dynamic> a, Map<String, dynamic> b) =>
+      defaultStatesMatch(a, b, tolerance);
+
+  /// Same keys, numbers equal within [tolerance], other values `==`.
+  static bool defaultStatesMatch(
+    Map<String, dynamic> a,
+    Map<String, dynamic> b,
+    double tolerance,
+  ) {
+    if (a.length != b.length) return false;
+    for (final entry in a.entries) {
+      if (!b.containsKey(entry.key)) return false;
+      final x = entry.value;
+      final y = b[entry.key];
+      if (x is num && y is num) {
+        if ((x - y).abs() > tolerance) return false;
+      } else if (x != y) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /// Get unacknowledged inputs to send to server.

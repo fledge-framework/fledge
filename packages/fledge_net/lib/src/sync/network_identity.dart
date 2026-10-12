@@ -37,6 +37,14 @@ class NetworkIdentity {
 }
 
 /// Tracks which components should be synchronized.
+///
+/// Nothing reads this type: register replicated components (and their
+/// interpolation) on a `ReplicationRegistry` instead; the sync rate is
+/// `NetworkConfig.syncRate`.
+@Deprecated(
+  'Unused. Register components on ReplicationRegistry and set '
+  'NetworkConfig.syncRate instead.',
+)
 class NetworkSyncConfig {
   /// Components that are synchronized from owner to others.
   final Set<ComponentId> syncedComponents;
@@ -106,6 +114,10 @@ class NetworkEntityRegistry {
 }
 
 /// Pending network spawn request.
+///
+/// Nothing reads this type: the replication layer spawns entities marked
+/// `Replicated` on the host.
+@Deprecated('Unused. Mark host entities with Replicated instead.')
 class PendingSpawn {
   final int netId;
   final String spawnType;
@@ -123,6 +135,10 @@ class PendingSpawn {
 }
 
 /// Pending network despawn request.
+///
+/// Nothing reads this type: despawning a `Replicated` host entity (or
+/// removing the marker) despawns it on clients.
+@Deprecated('Unused. Despawn the Replicated host entity instead.')
 class PendingDespawn {
   final int netId;
   final DateTime requestTime;

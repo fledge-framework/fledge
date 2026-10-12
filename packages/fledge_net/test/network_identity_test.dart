@@ -1,3 +1,6 @@
+// Exercises the deprecated NetworkSyncConfig / PendingSpawn / PendingDespawn
+// types until they are removed.
+// ignore_for_file: deprecated_member_use_from_same_package
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_net/fledge_net.dart';
 import 'package:test/test.dart';

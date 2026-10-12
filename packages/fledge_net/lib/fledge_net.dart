@@ -1,90 +1,51 @@
-/// Networking components for Fledge.
+/// Networking for Fledge: host-authoritative multiplayer with an ECS
+/// replication layer.
 ///
-/// This library provides peer-to-peer networking for multiplayer games:
+/// - **Session**: `NetworkSession` (a resource inserted by
+///   [NetworkPlugin]) hosts or joins; connection changes arrive as ECS
+///   events (`NetPeerConnected`, `NetConnected`, ...).
+/// - **Replication**: describe components, the input type, prediction and
+///   RPCs on a [ReplicationRegistry]; mark host entities [Replicated].
+///   Spawns, despawns, hierarchy and ownership travel reliably and in
+///   order; state travels in chunked snapshots filtered by interest.
+/// - **Inputs**: clients submit `NetLocalInputs<I>`; the host validates
+///   ownership and exposes per-tick `NetInputs<I>`.
+/// - **Prediction / interpolation**: the owning client predicts with
+///   your pure `step` and reconciles; other entities are interpolated by
+///   server tick.
+/// - **Low level**: `NetworkHost` / `NetworkClient`, `UdpTransport`,
+///   `EncryptedTransport` (AES-256-GCM), `LoopbackNetwork` for tests.
 ///
-/// - **Transport**: UDP socket communication
-/// - **Host/Client**: Connection management
-/// - **State Sync**: Component replication
-/// - **Input Sync**: Prediction and reconciliation
-///
-/// ## Hosting a Game
-///
-/// ```dart
-/// final transport = UdpTransport();
-/// final host = NetworkHost(transport: transport);
-///
-/// await host.start(7777);
-/// print('Room code: ${host.roomCode}');
-///
-/// host.onPeerConnected.listen((event) {
-///   print('Player joined: ${event.peer.id}');
-/// });
-///
-/// // Broadcast state updates
-/// host.broadcast(PacketType.stateUpdate, stateData);
-/// ```
-///
-/// ## Joining a Game
+/// ## Hosting and joining
 ///
 /// ```dart
-/// final transport = UdpTransport();
-/// final client = NetworkClient(transport: transport);
+/// final config = NetworkConfig(tickRate: 60, syncRate: 20);
+/// final app = App()
+///   ..insertResource(config.fixedTimestep())
+///   ..addPlugin(NetworkPlugin(config: config, replication: replication));
 ///
-/// if (await client.connect('192.168.1.100', 7777)) {
-///   print('Connected! ID: ${client.localPeerId}');
+/// final session = app.world.getResource<NetworkSession>()!;
+/// await session.host(port: 7777);
+/// // or: await session.join('192.168.1.20', 7777);
 ///
-///   client.onData.listen((event) {
-///     // Handle state updates
-///   });
-///
-///   // Send inputs
-///   client.send(PacketType.input, inputData);
-/// }
+/// // Host: replicate an entity controlled by peer 1.
+/// app.world.spawn()
+///   ..insert(Replicated(owner: 1))
+///   ..insert(Position(0, 0));
 /// ```
+///
+/// Simulation (input application, prediction, game logic that affects
+/// replicated state) belongs in the fixed-timestep chain: the network tick
+/// advances once per `FixedTimestep` step, and `NetworkConfig.tickRate`
+/// must match it.
 ///
 /// ## Testing multiplayer in one process
 ///
-/// Use [LoopbackNetwork] instead of [UdpTransport] to run a host and any
-/// number of clients in-process, with optional simulated latency, jitter,
-/// loss and duplication (seedable via an injected `Random`).
-///
-/// ## State Synchronization
-///
-/// Fledge is 2D, so the built-in transform sync ships (x, y, rotation) —
-/// three float32s per snapshot. Mark entities for network sync:
-///
-/// ```dart
-/// world.spawn()
-///   ..insert(NetworkIdentity(netId: registry.generateNetId()))
-///   ..insert(Transform2D()) // from fledge_render_2d
-///   ..insert(Player());
-///
-/// // Serialize the transform onto the wire.
-/// final state = Transform2DNetworkState()
-///   ..x = transform.translation.x
-///   ..y = transform.translation.y
-///   ..rotation = transform.rotation;
-/// ```
-///
-/// ## Input Prediction
-///
-/// Prediction and reconciliation are fixed-timestep systems — register
-/// them on [Schedules.fixedUpdate] so client and server tick at the same
-/// rate (via [FixedTimestep]). Running prediction on the variable-rate
-/// [Schedules.update] causes desync.
-///
-/// ```dart
-/// final prediction = ClientPrediction();
-///
-/// // Record local input
-/// final input = InputFrame(tick: prediction.nextTick());
-/// input.moveX = controller.moveX;
-/// input.moveY = controller.moveY;
-/// prediction.recordInput(input, currentState);
-///
-/// // When server state arrives, reconcile
-/// final inputsToReplay = prediction.reconcile(serverTick, serverState);
-/// ```
+/// Use [LoopbackNetwork] (optionally with a [ManualNetClock]) instead of
+/// [UdpTransport] to run a host and any number of clients in-process, with
+/// simulated latency, jitter, loss and duplication (seedable via an
+/// injected `Random`). Pass `clock:` and `transportFactory:` to
+/// [NetworkPlugin].
 library;
 
 // Transport
@@ -108,6 +69,17 @@ export 'src/sync/input_sync.dart';
 export 'src/sync/interest_manager.dart';
 export 'src/sync/network_identity.dart';
 export 'src/sync/state_sync.dart';
+
+// Replication
+export 'src/replication/codec.dart';
+export 'src/replication/components.dart';
+export 'src/replication/events.dart';
+export 'src/replication/inputs.dart';
+export 'src/replication/registry.dart' show ReplicationRegistry, PositionGetter;
+export 'src/replication/reliable_channel.dart';
+export 'src/replication/session.dart';
+export 'src/replication/systems.dart';
+export 'src/replication/tick_sync.dart';
 
 // Plugin
 export 'src/plugin.dart';

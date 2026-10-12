@@ -53,6 +53,39 @@ void main() {
     });
   });
 
+  group('FixedTimestep.nudge', () {
+    FixedTimestep step100() =>
+        FixedTimestep(stepDuration: const Duration(milliseconds: 100));
+
+    test('positive nudge brings the next fixed step forward', () async {
+      final ts = step100();
+      final scheduler = Scheduler();
+      final world = World();
+
+      expect(ts.nudge(0.020), closeTo(0.020, 1e-9));
+      // 80ms of real time + 20ms nudge = one full step.
+      expect(await scheduler.runFixedIfDue(ts, 0.080, world), equals(1));
+    });
+
+    test('negative nudge delays the next fixed step', () async {
+      final ts = step100();
+      final scheduler = Scheduler();
+      final world = World();
+
+      ts.nudge(-0.020);
+      expect(await scheduler.runFixedIfDue(ts, 0.100, world), equals(0));
+      expect(await scheduler.runFixedIfDue(ts, 0.020, world), equals(1));
+    });
+
+    test('each call is clamped to one step', () {
+      final ts = step100();
+      expect(ts.nudge(5.0), closeTo(0.100, 1e-9));
+      expect(ts.accumulatorSeconds, closeTo(0.100, 1e-9));
+      expect(ts.nudge(-5.0), closeTo(-0.100, 1e-9));
+      expect(ts.accumulatorSeconds, closeTo(0.0, 1e-9));
+    });
+  });
+
   group('Scheduler.runFixedIfDue', () {
     test('50ms delta with 100ms step yields 0 fixed steps', () async {
       final ts = FixedTimestep(stepDuration: const Duration(milliseconds: 100));

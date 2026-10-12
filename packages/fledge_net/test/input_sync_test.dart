@@ -250,18 +250,49 @@ void main() {
       expect(unacked[1].tick, 5);
     });
 
-    test('reconcile updates lastAckedTick and returns replay inputs', () {
+    test('reconcile on mismatch returns replay inputs', () {
       for (var i = 1; i <= 5; i++) {
         prediction.recordInput(InputFrame(tick: i), {'x': i * 10.0});
       }
 
-      final replay = prediction.reconcile(3, {'x': 30.0});
+      // Predicted x=30 at tick 3; the server says 35.
+      final replay = prediction.reconcile(3, {'x': 35.0});
 
       expect(prediction.lastAckedTick, 3);
+      expect(prediction.lastReconcileMispredicted, isTrue);
       // Inputs after tick 3 should be returned for replay
       expect(replay.length, 2);
       expect(replay[0].tick, 4);
       expect(replay[1].tick, 5);
+    });
+
+    test('reconcile with a matching server state replays nothing', () {
+      for (var i = 1; i <= 5; i++) {
+        prediction.recordInput(InputFrame(tick: i), {'x': i * 10.0});
+      }
+
+      final replay = prediction.reconcile(3, {'x': 30.00001});
+
+      expect(prediction.lastAckedTick, 3);
+      expect(prediction.lastReconcileMispredicted, isFalse);
+      expect(replay, isEmpty);
+      // History is still trimmed.
+      expect(prediction.inputBuffer.getFrame(3), isNull);
+      expect(prediction.inputBuffer.getFrame(4), isNotNull);
+    });
+
+    test('reconcile honours a custom statesMatch', () {
+      final strict = ClientPrediction(statesMatch: (a, b) => false);
+      strict.recordInput(InputFrame(tick: 1), {'x': 1.0});
+      strict.recordInput(InputFrame(tick: 2), {'x': 2.0});
+      expect(strict.reconcile(1, {'x': 1.0}).map((f) => f.tick), [2]);
+    });
+
+    test('reconcile with no recorded state for the tick replays', () {
+      prediction.recordInput(InputFrame(tick: 5), {'x': 5.0});
+      final replay = prediction.reconcile(4, {'x': 4.0});
+      expect(prediction.lastReconcileMispredicted, isTrue);
+      expect(replay.map((f) => f.tick), [5]);
     });
 
     test('reconcile removes old inputs and states', () {

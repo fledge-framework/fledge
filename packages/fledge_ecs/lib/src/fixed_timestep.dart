@@ -55,6 +55,24 @@ class FixedTimestep {
 
   /// Current accumulator value, in seconds. Read-only diagnostic.
   double get accumulatorSeconds => _accumulatorSeconds;
+
+  /// Shifts the fixed-step cadence by [seconds] without changing
+  /// [stepDuration]: positive values bring the next fixed step forward,
+  /// negative values delay it.
+  ///
+  /// Intended for synchronising the simulation to an external clock —
+  /// e.g. a network client keeping its tick a steady lead ahead of the
+  /// host ("time dilation"). Games that don't sync to another clock
+  /// never need this.
+  ///
+  /// Each call is clamped to ±[stepSeconds], so one call adds or skips
+  /// at most one step. Returns the shift actually applied.
+  double nudge(double seconds) {
+    final s = stepSeconds;
+    final applied = seconds.clamp(-s, s).toDouble();
+    _accumulatorSeconds += applied;
+    return applied;
+  }
 }
 
 /// Package-internal handles onto [FixedTimestep] state that the

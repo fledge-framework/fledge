@@ -134,6 +134,9 @@ class NetworkHost {
   /// Number of connected peers.
   int get peerCount => _peers.length;
 
+  /// The connected peer with [id], or `null`.
+  Peer? getPeer(int id) => _peers[id];
+
   /// Whether the host is running.
   bool get isRunning => _running;
 

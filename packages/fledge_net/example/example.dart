@@ -1,48 +1,89 @@
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_net/fledge_net.dart';
 
-/// Minimal fledge_net example.
-///
-/// Wires [NetworkPlugin] in host mode — that installs the
-/// [NetworkConfig], [NetworkTick] and [NetworkEntityRegistry]
-/// resources without opening a real UDP socket. Also shows the
-/// [Transform2DNetworkState] serialize / deserialize round-trip that
-/// backs the built-in transform sync (three float32s on the wire).
-///
-/// For a real host / client setup see `NetworkHost` and
-/// `NetworkClient`; those need a runtime and a peer, which is out of
-/// scope for a compile-only example.
-void main() async {
-  final app = App()
-    ..addPlugin(
-      NetworkPlugin(
-        config: NetworkConfig(
-          mode: NetworkMode.host,
-          tickRate: 60,
-          syncRate: 20,
+/// Replicated position.
+class Position {
+  final double x, y;
+  const Position(this.x, this.y);
+}
+
+/// Movement input.
+class Move {
+  final double dx, dy;
+  const Move(this.dx, this.dy);
+}
+
+/// Host and client must build identical registries.
+ReplicationRegistry buildReplication() => ReplicationRegistry()
+  ..component<Position>(
+    'position',
+    NetCodec<Position>.of(
+      encode: (p, out) => out
+        ..writeFloat32(p.x)
+        ..writeFloat32(p.y),
+      decode: (r) => Position(r.readFloat32(), r.readFloat32()),
+    ),
+    interpolate: (a, b, t) =>
+        Position(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t),
+  )
+  ..input<Move>(
+    NetCodec<Move>.of(
+      encode: (m, out) => out
+        ..writeFloat32(m.dx)
+        ..writeFloat32(m.dy),
+      decode: (r) => Move(r.readFloat32(), r.readFloat32()),
+    ),
+  )
+  ..predict<Position, Move>(
+    step: (s, m, dt) => Position(s.x + m.dx * 100 * dt, s.y + m.dy * 100 * dt),
+    error: (a, b) => (a.x - b.x).abs() + (a.y - b.y).abs(),
+  );
+
+/// A host and a client in one process over an in-memory network. Swap
+/// `transportFactory` for the default (`UdpTransport`) to play over UDP.
+Future<void> main() async {
+  final net = LoopbackNetwork();
+
+  App makeApp() {
+    final config = NetworkConfig(tickRate: 60, syncRate: 20);
+    return App()
+      ..insertResource(config.fixedTimestep())
+      ..addPlugin(
+        NetworkPlugin(
+          config: config,
+          replication: buildReplication(),
+          transportFactory: net.createTransport,
         ),
-      ),
-    );
+      );
+  }
 
-  // Advance the network clock a tick — game systems read
-  // `NetworkTick.serverTick` to stamp outgoing packets.
-  final tick = app.world.getResource<NetworkTick>()!;
-  tick.advance(60);
+  final host = makeApp();
+  final client = makeApp();
+  final hostSession = host.world.getResource<NetworkSession>()!;
+  final clientSession = client.world.getResource<NetworkSession>()!;
 
-  // Serialize a transform onto the wire, then read it back.
-  final snapshot = Transform2DNetworkState()
-    ..x = 12.5
-    ..y = -8.0
-    ..rotation = 1.57;
+  await hostSession.host(port: 7777);
+  final crate = host.world.spawn()
+    ..insert(Replicated())
+    ..insert(const Position(10, 20));
 
-  final builder = PacketBuilder();
-  snapshot.serialize(builder);
-  final wire = builder.build();
+  final joining = clientSession.join('127.0.0.1', 7777);
+  for (var frame = 0; frame < 60; frame++) {
+    await host.tick();
+    await client.tick();
+    await Future<void>.delayed(const Duration(milliseconds: 16));
+  }
+  print('joined: ${await joining}, ready: ${clientSession.isReady}');
 
-  final decoded = Transform2DNetworkState()..deserialize(PacketReader(wire));
-  assert(decoded.x == snapshot.x);
-  assert(decoded.y == snapshot.y);
-  assert(decoded.rotation == snapshot.rotation);
+  final netId = host.world.getResource<NetworkEntityRegistry>()!.getNetId(
+    crate.entity,
+  )!;
+  final mirror = client.world.getResource<NetworkEntityRegistry>()!.getEntity(
+    netId,
+  );
+  final p = mirror == null ? null : client.world.get<Position>(mirror);
+  print('client sees crate $netId at (${p?.x}, ${p?.y})');
 
-  await app.tick();
+  await clientSession.close();
+  await hostSession.close();
 }
