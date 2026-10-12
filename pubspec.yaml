@@ -139,31 +139,15 @@ melos:
 
     release:
       description: |
-        Cut a coordinated fledge release. Usage:
-          VERSION=0.2.3 melos run release
-        Bumps every publishable package's version + cross-package
-        constraints to VERSION, writes per-package and workspace
-        CHANGELOG entries, and creates the `chore(release): vX.Y.Z`
-        commit that ci.yml's `tag-release` job matches. Does not
-        push — review the diff, then `git push origin main` to hand
-        off to CI.
-
-        Melos has no "set the whole workspace to X.Y.Z" flag, so this
-        builds up one `-V <pkg>:<ver>` per publishable package and
-        invokes `melos version` once with all of them. `--message`
-        interpolates only `{new_package_versions}` (a multi-line list),
-        so we run `melos version` with `--no-git-commit-version` and
-        craft the commit ourselves with the version in the subject.
-      run: |
-        set -eu
-        : "${VERSION:?VERSION must be set, e.g. VERSION=0.2.3 melos run release}"
-        args=""
-        for pubspec in packages/fledge_*/pubspec.yaml; do
-          name=$(sed -nE 's/^name:[[:space:]]*(.*)/\1/p' "$pubspec" | head -n1)
-          args="$args -V $name:$VERSION"
-        done
-        # $args is intentionally unquoted here for word-splitting.
-        # shellcheck disable=SC2086
-        melos version $args --yes --no-git-commit-version
-        git add -A
-        git commit -m "chore(release): v$VERSION"
+        Cut a coordinated fledge release. Reads the version from the
+        VERSION environment variable:
+          bash:       VERSION=0.4.0 melos run release
+          PowerShell: $env:VERSION='0.4.0'; melos run release
+        Or, on any OS: dart run scripts/release.dart 0.4.0 [--dry-run]
+        Bumps every packages/fledge_* package + in-workspace constraints,
+        writes CHANGELOG entries, and creates the `chore(release): vX.Y.Z`
+        commit that ci.yml's `tag-release` job matches. Refuses to run on
+        a dirty working tree. Does not push. Logic lives in
+        scripts/release.dart (Dart, not shell, because melos runs scripts
+        through cmd.exe on Windows).
+      run: dart run scripts/release.dart

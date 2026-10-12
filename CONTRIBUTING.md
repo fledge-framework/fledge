@@ -266,7 +266,7 @@ Add documentation to the docs app, not CLAUDE.md:
 
 ## Releasing
 
-Only maintainers can create releases. A release is cut with `VERSION=X.Y.Z melos run release`, which bumps every package to the same version, writes the changelogs, and creates a `chore(release): vX.Y.Z` commit. Pushing that commit to `main` lets CI tag the release and publish the packages to pub.dev.
+Only maintainers can create releases. A release is cut with `dart run scripts/release.dart X.Y.Z` (any OS; add `--dry-run` to preview; `melos run release` with a `VERSION` env var also works), which bumps every package to the same version, writes the changelogs, and creates a `chore(release): vX.Y.Z` commit. Pushing that commit to `main` lets CI tag the release and publish the packages to pub.dev.
 
 ## Getting Help
 
