@@ -17,6 +17,43 @@ class TileFlipFlags {
   static const int diagonal = 4;
 }
 
+/// Packed sub-order stride per tile row: `row * tileRowStride +
+/// layerIndex`. Tile layer indices 0..99 sort correctly within a row.
+const int tileRowStride = 100;
+
+/// Integer draw-order key for a tile at grid [row] on Tiled layer
+/// [layerIndex], in [drawLayer] (`DrawLayer.ground`, or
+/// `DrawLayer.foreground` for `class="above"` layers).
+///
+/// The sub-order is `row * tileRowStride + layerIndex` (row first, then
+/// layer index), **clamped** into `0..DrawLayerExtension.layerMultiplier
+/// - 1` so it can never spill into the next [DrawLayer]'s range. Rows
+/// 0..999 get distinct keys exactly as before; from row 1,000 on the
+/// keys saturate at the top of the layer range and the draw order comes
+/// from [tilePreciseSubOrder], carried as
+/// `ExtractedSprite.preciseSubOrder` / `ExtractedTile.preciseSubOrder`.
+int tileSortKey({
+  required DrawLayer drawLayer,
+  required int row,
+  required int layerIndex,
+}) => drawLayer.sortKey(
+  subOrder: (row * tileRowStride + layerIndex).clamp(
+    0,
+    DrawLayerExtension.layerMultiplier - 1,
+  ),
+);
+
+/// Unclamped tie-breaking sub-order for a tile at grid [row] on Tiled
+/// layer [layerIndex]: `row * tileRowStride + layerIndex`, in the same
+/// units as the sub-order packed into [tileSortKey].
+///
+/// `ExtractedSprite.compareDrawOrder` only consults it when the integer
+/// sort keys tie (i.e. for rows >= 1,000 where [tileSortKey] clamps),
+/// so tiles of any map size sort by row, then layer index, and never
+/// leave their [DrawLayer].
+double tilePreciseSubOrder({required int row, required int layerIndex}) =>
+    row * tileRowStride.toDouble() + layerIndex;
+
 /// Convert a single tile's data into an [ExtractedSprite] suitable for
 /// the shared render-widget pipeline (`FledgeRenderView` /
 /// `LitFledgeRenderView`).
@@ -27,6 +64,11 @@ class TileFlipFlags {
 ///   one of the four cardinal orientations (0°, 90° cw, 180°, 90° ccw).
 ///   Pure mirrors (H alone, V alone, D alone, H+V+D) cannot be
 ///   expressed by `RSTransform` and are drawn unflipped.
+///
+/// [preciseSubOrder] becomes `ExtractedSprite.preciseSubOrder`: the
+/// unclamped tie-breaker for equal [sortKey]s (see
+/// [tilePreciseSubOrder]). `null` (the default) falls back to the
+/// sub-order packed into [sortKey].
 ///
 /// Kept as a top-level helper so both `TilemapExtractor` and
 /// `CulledTilemapExtractor` share the same conversion.
@@ -39,6 +81,7 @@ ExtractedSprite tileToSprite({
   required Color color,
   required int sortKey,
   required int flipFlags,
+  double? preciseSubOrder,
 }) {
   final centerX = tileTopLeft.dx + tileWidth / 2;
   final centerY = tileTopLeft.dy + tileHeight / 2;
@@ -64,6 +107,7 @@ ExtractedSprite tileToSprite({
     sortKey: sortKey,
     layer: layer,
     layerSubOrder: sortKey % DrawLayerExtension.layerMultiplier,
+    preciseSubOrder: preciseSubOrder,
     anchor: Vector2(0.5, 0.5),
     size: Vector2(tileWidth, tileHeight),
   );

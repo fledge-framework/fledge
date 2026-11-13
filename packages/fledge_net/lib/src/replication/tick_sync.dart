@@ -18,6 +18,10 @@
 /// than [hardResetTicks] snap the local tick directly ([consumeJump]
 /// reports it so prediction history can be discarded).
 ///
+/// Late inputs reported by the host widen the lead
+/// ([reportLateInputs]); after [bufferDecaySeconds] without any, it
+/// narrows again one tick at a time.
+///
 /// The simulation clock is deliberately *not* used directly as the render
 /// clock for interpolated entities: dilation, lead changes and resets
 /// would show up as visible steps. [timeline] removes exactly those
@@ -44,6 +48,10 @@ class ClientTickSync {
   /// Fraction of a step added/removed per fixed step while correcting.
   final double dilation;
 
+  /// Seconds without late inputs after which [extraBufferTicks] drops by
+  /// one (a transient bad patch doesn't cost latency forever).
+  final double bufferDecaySeconds;
+
   /// Whether [initialSync] happened.
   bool synced = false;
 
@@ -61,6 +69,7 @@ class ClientTickSync {
   int _lastObservedTick = -1;
   bool _jumped = false;
   int _lastLateCount = 0;
+  int _ticksSinceLate = 0;
 
   ClientTickSync({
     required this.stepMs,
@@ -69,6 +78,7 @@ class ClientTickSync {
     this.hardResetTicks = 10,
     this.deadbandTicks = 0.5,
     this.dilation = 0.1,
+    this.bufferDecaySeconds = 10,
   });
 
   /// RTT in ticks.
@@ -139,6 +149,7 @@ class ClientTickSync {
   void reportLateInputs(int lateCount) {
     if (lateCount > _lastLateCount) {
       _lastLateCount = lateCount;
+      _ticksSinceLate = 0;
       if (extraBufferTicks < maxExtraBufferTicks) extraBufferTicks++;
     }
   }
@@ -150,6 +161,11 @@ class ClientTickSync {
   /// accumulator (`nudge`); [timeline] assumes it did.
   double step() {
     localTick++;
+    if (extraBufferTicks > 0 &&
+        ++_ticksSinceLate * stepMs >= bufferDecaySeconds * 1000) {
+      extraBufferTicks--;
+      _ticksSinceLate = 0;
+    }
     if (_error > deadbandTicks) {
       _error -= dilation;
       _corrections += dilation;

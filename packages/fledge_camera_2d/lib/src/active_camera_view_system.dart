@@ -75,19 +75,24 @@ class ActiveCameraViewSystem implements System {
     }
     if (best == null || bestTransform == null) return Future.value();
 
-    final view = world.getResource<ActiveCameraView>();
-    if (view != null) {
-      view.set(bestTransform.x, bestTransform.y);
-      view.pixelPerfect = best.pixelPerfect;
-    } else {
-      world.insertResource(
-        ActiveCameraView(
-          x: bestTransform.x,
-          y: bestTransform.y,
-          pixelPerfect: best.pixelPerfect,
-        ),
-      );
+    final camera = best;
+    var view = world.getResource<ActiveCameraView>();
+    if (view == null) {
+      view = ActiveCameraView();
+      world.insertResource(view);
     }
+    final active = view;
+    active
+      ..set(bestTransform.x, bestTransform.y)
+      ..pixelPerfect = camera.pixelPerfect
+      ..subpixelScroll = camera.subpixelScroll
+      // At the display scaling of whatever widget paints the view.
+      ..zoomFor = camera.scaleWidgetView
+          ? (size) => camera.widgetZoom(
+              size,
+              devicePixelRatio: active.devicePixelRatio,
+            )
+          : null;
     return Future.value();
   }
 }

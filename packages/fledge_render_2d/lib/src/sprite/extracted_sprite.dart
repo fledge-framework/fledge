@@ -1,8 +1,10 @@
-import 'dart:ui' show Color, Rect;
+import 'dart:math' as math;
+import 'dart:ui' show Color, Offset, Rect;
 
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:vector_math/vector_math.dart';
 
+import '../render/camera_view.dart' show ActiveCameraView;
 import '../render/extract/draw_layer.dart';
 import '../render/extract/extract.dart';
 import '../render/extract/extracted_data.dart';
@@ -23,6 +25,10 @@ import 'sprite.dart';
 /// default, or [layerSubOrder] when non-zero) via
 /// [DrawLayerExtension.sortKey]. The sub-order is clamped into the layer's
 /// range so a Y-based sub-order cannot bleed into the next layer.
+///
+/// Because that clamp only leaves room for y = 0..9,999.9, draw order is
+/// the composite `(sortKey, preciseSubOrder)`: see [compareDrawOrder]
+/// and [sortByDrawOrder], which every framework sprite path uses.
 class ExtractedSprite with ExtractedData, SortableExtractedData {
   /// The original entity (for debugging/identification).
   final Entity entity;
@@ -52,6 +58,18 @@ class ExtractedSprite with ExtractedData, SortableExtractedData {
   /// Explicit sub-order within [layer], or 0 to use Y-based sub-order.
   final int layerSubOrder;
 
+  /// Unclamped, full-precision sub-order used to break ties between
+  /// sprites with an equal [sortKey], or `null` to fall back to the
+  /// sub-order packed into [sortKey] (`sortKey % layerMultiplier`).
+  ///
+  /// Uses the same units as the packed sub-order. Y-sorted extractors
+  /// set it to `y * DrawLayerExtension.ySortScale` (no clamp, no
+  /// truncation), so sprites outside the integer key's 0..9,999.9 Y
+  /// window, or closer than 0.1 px apart, still order by position.
+  /// Never consulted when the [sortKey]s differ, so it cannot move a
+  /// sprite across layers.
+  final double? preciseSubOrder;
+
   /// Flip flags packed as bits.
   final int flipFlags;
 
@@ -60,6 +78,10 @@ class ExtractedSprite with ExtractedData, SortableExtractedData {
 
   /// Sprite size.
   final Vector2 size;
+
+  /// Whether it's drawn after the view passes, at full brightness
+  /// (`Sprite.emissive`).
+  final bool emissive;
 
   /// Creates extracted sprite data.
   const ExtractedSprite({
@@ -71,9 +93,11 @@ class ExtractedSprite with ExtractedData, SortableExtractedData {
     required this.sortKey,
     this.layer = DrawLayer.characters,
     this.layerSubOrder = 0,
+    this.preciseSubOrder,
     this.flipFlags = 0,
     required this.anchor,
     required this.size,
+    this.emissive = false,
   });
 
   /// Whether the sprite is flipped horizontally.
@@ -86,6 +110,45 @@ class ExtractedSprite with ExtractedData, SortableExtractedData {
   static int computeFlipFlags(bool flipX, bool flipY) {
     return (flipX ? 1 : 0) | (flipY ? 2 : 0);
   }
+
+  /// The tie-breaking sub-order: [preciseSubOrder], or the sub-order
+  /// packed into [sortKey] when that is `null`.
+  double get effectiveSubOrder =>
+      preciseSubOrder ??
+      (sortKey % DrawLayerExtension.layerMultiplier).toDouble();
+
+  /// Draw-order comparator: [sortKey] first, then [effectiveSubOrder].
+  ///
+  /// A strict refinement of comparing [sortKey] alone: any two sprites
+  /// whose keys differ order exactly as before, so layers always
+  /// dominate. Only sprites whose integer keys tie (e.g. two Y-sorted
+  /// sprites both clamped at y > 9,999.9 or y < 0) are separated by
+  /// their precise sub-order. Returns 0 for a full tie; use
+  /// [sortByDrawOrder] for a stable sort.
+  static int compareDrawOrder(ExtractedSprite a, ExtractedSprite b) {
+    final byKey = a.sortKey.compareTo(b.sortKey);
+    if (byKey != 0) return byKey;
+    return a.effectiveSubOrder.compareTo(b.effectiveSubOrder);
+  }
+
+  /// Sort [sprites] in place into draw order ([compareDrawOrder]).
+  ///
+  /// Stable: sprites with an identical composite key keep their
+  /// relative order (render-world extraction order), so equal-key
+  /// sprites don't swap from frame to frame.
+  static void sortByDrawOrder(List<ExtractedSprite> sprites) {
+    final n = sprites.length;
+    if (n < 2) return;
+    final copy = List<ExtractedSprite>.of(sprites);
+    final order = List<int>.generate(n, (i) => i);
+    order.sort((i, j) {
+      final c = compareDrawOrder(copy[i], copy[j]);
+      return c != 0 ? c : i.compareTo(j);
+    });
+    for (var i = 0; i < n; i++) {
+      sprites[i] = copy[order[i]];
+    }
+  }
 }
 
 /// Extractor for sprite components.
@@ -97,9 +160,27 @@ class ExtractedSprite with ExtractedData, SortableExtractedData {
 /// `FixedTimestep.alpha` so 60 Hz simulation stays smooth on higher-
 /// refresh displays.
 class SpriteExtractor extends Extractor {
+  /// World units beyond the camera's last view that are still extracted.
+  static const double cullMargin = 64;
+
+  /// Whether a sprite drawn with [m] at [size] could reach into [visible].
+  static bool _onScreen(Rect visible, Matrix3 m, Vector2 size) {
+    final s = m.storage;
+    final reach =
+        size.x * math.sqrt(s[0] * s[0] + s[1] * s[1]) +
+        size.y * math.sqrt(s[3] * s[3] + s[4] * s[4]);
+    return visible.inflate(reach).contains(Offset(s[6], s[7]));
+  }
+
   @override
   void extract(World mainWorld, RenderWorld renderWorld) {
     final alpha = _interpolationAlpha(mainWorld);
+    // Skip what's far off screen. The margin covers camera movement since
+    // the last paint and sprites whose art reaches past their anchor.
+    final visible = mainWorld
+        .getResource<ActiveCameraView>()
+        ?.visibleWorldRect
+        ?.inflate(cullMargin);
 
     for (final (entity, sprite, globalTransform)
         in mainWorld.query2<Sprite, GlobalTransform2D>().iter()) {
@@ -118,11 +199,14 @@ class SpriteExtractor extends Extractor {
         globalTransform,
         alpha,
       );
-      final sub = sprite.layerSubOrder != 0
-          ? sprite.layerSubOrder
-          : (renderMatrix.storage[7] * DrawLayerExtension.ySortScale)
-                .toInt()
-                .clamp(0, DrawLayerExtension.layerMultiplier - 1);
+      if (visible != null && !_onScreen(visible, renderMatrix, sprite.size)) {
+        continue;
+      }
+      final ySorted = sprite.layerSubOrder == 0;
+      final y = renderMatrix.storage[7];
+      final sub = ySorted
+          ? DrawLayerExtension.ySortSubOrder(y)
+          : sprite.layerSubOrder;
       final sortKey = layer.sortKey(subOrder: sub);
 
       renderWorld.spawn().insert(
@@ -135,12 +219,14 @@ class SpriteExtractor extends Extractor {
           sortKey: sortKey,
           layer: layer,
           layerSubOrder: sprite.layerSubOrder,
+          preciseSubOrder: ySorted ? y * DrawLayerExtension.ySortScale : null,
           flipFlags: ExtractedSprite.computeFlipFlags(
             sprite.flipX,
             sprite.flipY,
           ),
           anchor: sprite.anchor.clone(),
           size: sprite.size,
+          emissive: sprite.emissive,
         ),
       );
     }

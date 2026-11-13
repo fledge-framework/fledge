@@ -35,6 +35,15 @@ class ExtractedLight {
   /// Inner (full-intensity) radius in world units.
   final double innerRadius;
 
+  /// Falloff steps (`Light2D.bands`); 0 is smooth.
+  final int bands;
+
+  /// Height over width of the pool (`Light2D.aspect`).
+  final double aspect;
+
+  /// Additive halo strength (`Light2D.glow`).
+  final double glow;
+
   /// Cone half-angle in radians (spot lights only).
   final double angle;
 
@@ -53,6 +62,9 @@ class ExtractedLight {
     required this.intensity,
     required this.radius,
     required this.innerRadius,
+    this.bands = 0,
+    this.aspect = 1.0,
+    this.glow = 0.0,
     required this.angle,
     required this.direction,
     this.castsShadow = false,

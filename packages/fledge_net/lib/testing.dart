@@ -126,4 +126,18 @@ extension NetworkSessionTesting on NetworkSession {
   void sendRawRpc<T>(T value, {required int targetNetId}) {
     queueRpcForNetId<T>(value, targetNetId);
   }
+
+  /// Client: send action [value] (type [T] registered with
+  /// `ReplicationRegistry.action`) with a chosen sequence number, tick and
+  /// target, as a modified client could (e.g. replaying an old [seq]).
+  /// The client does not track it: no `NetActionResolved` follows.
+  /// Delivered reliably with the next fixed tick.
+  void sendRawAction<T>(
+    T value, {
+    required int seq,
+    int tick = 0,
+    int targetNetId = 0,
+  }) {
+    queueRawAction<T>(value, seq: seq, tick: tick, targetNetId: targetNetId);
+  }
 }

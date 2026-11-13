@@ -3,11 +3,13 @@ import 'dart:typed_data';
 import 'package:fledge_ecs/fledge_ecs.dart';
 
 import 'protocol/net_clock.dart';
+import 'replication/identity.dart';
+import 'replication/resources.dart';
 import 'replication/events.dart';
 import 'replication/registry.dart';
 import 'replication/session.dart';
 import 'replication/systems.dart';
-import 'sync/network_identity.dart';
+import 'replication/network_identity.dart';
 import 'transport/transport.dart';
 
 /// Network mode.
@@ -96,6 +98,17 @@ class NetworkConfig {
   /// [serverPassword] is also set, both must accept.
   Future<bool> Function(String clientId, Uint8List credentials)? authenticator;
 
+  /// Says who this player is when joining (and, on a host, who the host's
+  /// own player is: `NetworkSession.localIdentity`). Without one a client
+  /// joins anonymously. See `ClientIdentity` for the id conventions
+  /// (`dev:`, `steam:`, `hub:`).
+  IdentityProvider? identityProvider;
+
+  /// Host: checks joining clients' identities. Without one, any well-formed
+  /// identity is accepted as claimed (fine for LAN and development; use a
+  /// real verifier, such as Steam's or a hub's, on the internet).
+  IdentityVerifier? identityVerifier;
+
   /// Encrypt all traffic with AES-256-GCM (`EncryptedTransport`) using
   /// [encryptionKey]. Starting a session with this set and no key throws;
   /// there is no unencrypted fallback.
@@ -108,7 +121,8 @@ class NetworkConfig {
   /// Interest radius for spatial filtering.
   ///
   /// If null, all replicated entities are sent to all clients (default).
-  /// If set (and `ReplicationRegistry.positionOf` is provided), a client
+  /// If set (and an interest position is registered with
+  /// `ReplicationRegistry.positionFrom` / `position`), a client
   /// only receives entities within this radius of the first replicated
   /// entity it owns, plus always-relevant / unpositioned / owned entities
   /// and their ancestors. Entities entering the radius are spawned on
@@ -117,6 +131,20 @@ class NetworkConfig {
 
   /// Maximum number of connected clients (host).
   int maxPeers;
+
+  /// Host: bytes a second each client may be sent. Control messages go
+  /// first, then snapshots, then resource chunks; what doesn't fit waits
+  /// for the next tick (unsent snapshot changes are sent later, being
+  /// still unacknowledged). Big joins stream in at this rate. The default,
+  /// 64 KiB/s, keeps a host with three clients under about 1.5 Mbps of
+  /// upload; steady play needs far less.
+  int sendBudgetBytesPerSecond;
+
+  /// Host: decides, beyond `interestRadius`, `Replicated.alwaysRelevant`
+  /// and `Replicated.ownerOnly`, whether [entity] is sent to client
+  /// [peerId]. Return false to hide it. Called for every replicated entity
+  /// and client once a fixed tick, so keep it cheap.
+  bool Function(World world, Entity entity, int peerId)? relevance;
 
   /// Silence after which a connection is considered lost.
   Duration connectionTimeout;
@@ -144,10 +172,14 @@ class NetworkConfig {
     this.maxExtrapolation = 100,
     this.serverPassword,
     this.authenticator,
+    this.identityProvider,
+    this.identityVerifier,
     this.enableEncryption = false,
     this.encryptionKey,
     this.interestRadius,
     this.maxPeers = 8,
+    this.sendBudgetBytesPerSecond = 64 * 1024,
+    this.relevance,
     this.connectionTimeout = const Duration(seconds: 10),
     this.disconnectPolicy = OwnedEntityPolicy.despawn,
     this.inputLeadBufferTicks = 2,
@@ -228,7 +260,7 @@ class NetworkTick {
 /// |---|---|---|
 /// | `NetPumpSystem` | `first` | `FirstSets.platform` |
 /// | `NetReceiveSystem` | `first` | after pump and every `FirstSets` phase |
-/// | `NetInterpolationSystem` | `first` | after receive |
+/// | `NetInterpolationSystem` | `update` | `UpdateSets.receive` |
 /// | `NetTickSystem` | `fixedFirst` | |
 /// | `NetInputSystem` | `fixedPreUpdate` | after `NetSets.localInput` |
 /// | `NetPredictSystem` | `fixedPreUpdate` | after input |
@@ -285,10 +317,14 @@ class NetworkPlugin implements Plugin {
       ..addEvent<NetRejected>()
       ..addEvent<NetEntitySpawned>()
       ..addEvent<NetEntityDespawned>()
-      ..addEvent<NetPredictionCorrected>();
+      ..addEvent<NetPredictionCorrected>()
+      ..addEvent<NetResourceUpdated>();
     replication.inputReplicator?.install(app);
     for (final rpc in replication.rpcs) {
       rpc.registerEvent(app);
+    }
+    for (final action in replication.actions) {
+      action.register(app);
     }
 
     app.configureSet(
@@ -299,7 +335,7 @@ class NetworkPlugin implements Plugin {
     app
       ..addSystem(systems.pump, schedule: Schedules.first)
       ..addSystem(systems.receive, schedule: Schedules.first)
-      ..addSystem(systems.interpolation, schedule: Schedules.first)
+      ..addSystem(systems.interpolation, schedule: Schedules.update)
       ..addSystem(systems.tick, schedule: Schedules.fixedFirst)
       ..addSystem(systems.input, schedule: Schedules.fixedPreUpdate)
       ..addSystem(systems.predict, schedule: Schedules.fixedPreUpdate)

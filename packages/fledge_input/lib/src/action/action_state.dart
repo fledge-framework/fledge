@@ -1,10 +1,24 @@
+import '../systems/input_fixed_latch_system.dart' show InputFixedLatchSystem;
 import 'action.dart';
 
 /// Resource containing the resolved action values for the current frame.
 ///
 /// This is the primary resource that game systems read to check input.
+///
+/// ## Reading buttons from the fixed step
+///
+/// [justPressed] and [justReleased] describe the current *frame*. A frame can
+/// run the fixed-timestep chain zero times (the press would be missed) or
+/// several times (it would be seen twice). Systems in the fixed schedules use
+/// [fixedJustPressed] and [fixedJustReleased] instead: a press is held until
+/// a fixed step has run, then cleared by [InputFixedLatchSystem] in
+/// `Schedules.fixedLast`, so exactly one fixed step sees it.
 class ActionState {
   final Map<ActionId, ActionValue> _values = {};
+
+  /// Presses and releases waiting for the next fixed step.
+  final Set<ActionId> _fixedPressed = {};
+  final Set<ActionId> _fixedReleased = {};
 
   /// Get the value of an action.
   ActionValue? get(ActionId action) => _values[action];
@@ -42,6 +56,21 @@ class ActionState {
     return getButton(action)?.justReleased ?? false;
   }
 
+  /// Whether [action] was pressed since the last fixed step: true for exactly
+  /// one fixed step per press, whatever the frame rate.
+  bool fixedJustPressed(ActionId action) => _fixedPressed.contains(action);
+
+  /// Whether [action] was released since the last fixed step: true for
+  /// exactly one fixed step per release.
+  bool fixedJustReleased(ActionId action) => _fixedReleased.contains(action);
+
+  /// Forgets the presses and releases the last fixed step has seen (called
+  /// by [InputFixedLatchSystem] at the end of each fixed step).
+  void clearFixedLatch() {
+    _fixedPressed.clear();
+    _fixedReleased.clear();
+  }
+
   /// Check if a button action is being held.
   bool isHeld(ActionId action) {
     return getButton(action)?.isHeld ?? false;
@@ -61,9 +90,14 @@ class ActionState {
   /// Set an action value (called by ActionResolutionSystem).
   void set(ActionId action, ActionValue value) {
     _values[action] = value;
+    if (value is ButtonValue) {
+      if (value.justPressed) _fixedPressed.add(action);
+      if (value.justReleased) _fixedReleased.add(action);
+    }
   }
 
-  /// Clear all values (called at start of resolution).
+  /// Clear all values (called at start of resolution). Presses waiting for
+  /// the fixed step are kept.
   void clear() {
     _values.clear();
   }

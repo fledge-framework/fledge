@@ -29,5 +29,13 @@ class Replicated {
   /// Send this entity to every client regardless of `interestRadius`.
   bool alwaysRelevant;
 
-  Replicated({this.owner = 0, this.alwaysRelevant = false});
+  /// Send this entity only to its owner (and keep it on the host): private
+  /// state such as a player's inventory. Wins over [alwaysRelevant].
+  bool ownerOnly;
+
+  Replicated({
+    this.owner = 0,
+    this.alwaysRelevant = false,
+    this.ownerOnly = false,
+  });
 }

@@ -2,6 +2,8 @@ import 'dart:ui' show Color;
 
 import 'package:vector_math/vector_math.dart';
 
+import 'ambient_light.dart' show AmbientBlend;
+
 /// The kind of light source represented by a [Light2D] component.
 ///
 /// - [LightType.point] — omnidirectional; falls off with distance.
@@ -35,11 +37,11 @@ enum LightType { point, directional, spot }
 ///
 /// ## Falloff
 ///
-/// Distance-based falloff is linear between [innerRadius] and [radius]
-/// (see `linearAttenuation`). Pixels inside `innerRadius` are at full
-/// intensity; pixels at or past `radius` are dark. Setting
-/// `innerRadius == 0` gives a hard-centered gradient; setting it near
-/// `radius` gives a nearly-hard-edged disc.
+/// Pixels inside [innerRadius] are at full intensity. Past it the light
+/// fades as light does, quickly near the source and then in a long soft
+/// tail, to nothing at [radius] with no visible edge (see `falloffStops`);
+/// [bands] steps it into flat rings. Setting [innerRadius] near [radius]
+/// gives a nearly-hard-edged disc.
 ///
 /// ## Shadows
 ///
@@ -50,21 +52,38 @@ class Light2D {
   final LightType type;
 
   /// Base light color; alpha is honoured (a translucent color dims the
-  /// light).
-  final Color color;
+  /// light). Mutable, so a light can change colour (a flame, an alarm).
+  Color color;
 
   /// Multiplier on [color] intensity. Clamped by the drawer to `[0..1]`
   /// where it matters; larger values are allowed and stack when lights
-  /// overlap.
-  final double intensity;
+  /// overlap. Mutable: fade lights in and out (street lamps at dusk) by
+  /// changing it.
+  double intensity;
 
   /// Outer radius in world units. Ignored for [LightType.directional].
-  final double radius;
+  double radius;
 
   /// Inner radius in world units — the region of full intensity before
   /// falloff begins. `0` produces a smooth centered falloff; values
   /// approaching [radius] produce a nearly-hard-edged disc.
-  final double innerRadius;
+  double innerRadius;
+
+  /// Steps in the falloff between [innerRadius] and [radius]: `0` (the
+  /// default) fades smoothly, like light, to nothing at [radius]; `n`
+  /// steps the same curve into `n` rings of flat light, for pixel art.
+  int bands;
+
+  /// Height over width of the light's pool: `1` (the default) is a
+  /// circle; below 1 squashes it into an ellipse, as light on the ground
+  /// looks from a low top-down camera.
+  double aspect;
+
+  /// Strength of an additive halo drawn over the lit scene around the
+  /// light (half its [radius]), so a bright source reads as bright even
+  /// where the scene is already lit. `0` (the default) draws none. Only
+  /// [AmbientBlend.lightMap] draws it.
+  double glow;
 
   /// Cone half-angle in radians. Only meaningful for
   /// [LightType.spot]; the emitted wedge spans `direction ± angle`.
@@ -81,12 +100,15 @@ class Light2D {
   /// Creates a light with all fields explicit. Prefer the [Light2D.point],
   /// [Light2D.directional], and [Light2D.spot] factory constructors
   /// unless you have a reason to bypass their defaulting.
-  const Light2D({
+  Light2D({
     required this.type,
     required this.color,
     this.intensity = 1.0,
     this.radius = 100.0,
     this.innerRadius = 0.0,
+    this.bands = 0,
+    this.aspect = 1.0,
+    this.glow = 0.0,
     this.angle = 0.5,
     required this.direction,
     this.castsShadow = false,
@@ -99,12 +121,18 @@ class Light2D {
     double intensity = 1.0,
     double radius = 100.0,
     double innerRadius = 0.0,
+    int bands = 0,
+    double aspect = 1.0,
+    double glow = 0.0,
   }) => Light2D(
     type: LightType.point,
     color: color,
     intensity: intensity,
     radius: radius,
     innerRadius: innerRadius,
+    bands: bands,
+    aspect: aspect,
+    glow: glow,
     direction: Vector2(0, -1),
   );
 
@@ -131,12 +159,16 @@ class Light2D {
     double intensity = 1.0,
     double radius = 100.0,
     double innerRadius = 0.0,
+    int bands = 0,
+    double glow = 0.0,
   }) => Light2D(
     type: LightType.spot,
     color: color,
     intensity: intensity,
     radius: radius,
     innerRadius: innerRadius,
+    bands: bands,
+    glow: glow,
     angle: angle,
     direction: direction.normalized(),
   );

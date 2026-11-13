@@ -1,12 +1,14 @@
 # Lighting (2D)
 
-The `fledge_lighting_2d` package adds dynamic 2D lighting to Fledge — point, directional, and spot lights, plus scene-wide ambient illumination. The backend is a pragmatic Canvas pass: ambient fills the viewport, then sprites draw, then each extracted light adds an additive radial gradient (or a full-screen tint for directional lights).
+The `fledge_lighting_2d` package adds dynamic 2D lighting to Fledge: point, directional and spot lights, plus scene-wide ambient light. `LightingPlugin` draws it as a view pass inside every `FledgeRenderView` of the app, through the same camera path as the sprites, so no special widget is needed.
+
+The recommended model is the **light map** (`AmbientBlend.lightMap`), the usual one in 2D games: the ambient colour and every light are added into one layer, and the sprites are multiplied by it. A pixel ends up as its sprite colour × (ambient + the lights reaching it), so a lamp at night shows the ground in its true colours around it, and nothing gets brighter than it's drawn. Sprites marked `emissive` draw after the light map at full brightness (lit windows, screens, signs).
 
 ## Installation
 
 ```yaml
 dependencies:
-  fledge_lighting_2d: ^0.1.0
+  fledge_lighting_2d: ^0.5.0
 ```
 
 ## Quick Start
@@ -16,36 +18,34 @@ import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_lighting_2d/fledge_lighting_2d.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart';
 import 'package:flutter/material.dart';
-import 'package:vector_math/vector_math.dart';
 
 void main() {
   final app = App()
-    ..addPlugin(WallTimePlugin())
-    ..addPlugin(RenderPlugin())
-    ..addPlugin(const LightingPlugin(ambient: AmbientLight.dark));
+    ..addPlugin(RenderPlugin()) // first: it holds the view passes
+    ..addPlugin(
+      const LightingPlugin(
+        // A blue night: sprites at about a third of their brightness,
+        // except where a light reaches.
+        ambient: AmbientLight(
+          color: Color(0xFF101C4C),
+          intensity: 0.8,
+          blend: AmbientBlend.lightMap,
+        ),
+      ),
+    );
 
-  // A torch on the player.
+  // A street lamp: a pool of warm light on the ground.
   app.world.spawn()
     ..insert(Transform2D.from(200, 200))
     ..insert(GlobalTransform2D.identity())
     ..insert(Light2D.point(
-      color: const Color(0xFFFFDD88),
-      radius: 180,
-      innerRadius: 40,
+      color: const Color(0xFFFFD49A),
+      radius: 120,
+      innerRadius: 18,
+      aspect: 0.74,  // an ellipse, as the ground looks top-down
     ));
 
-  // A spotlight from a lamppost.
-  app.world.spawn()
-    ..insert(Transform2D.from(600, 100))
-    ..insert(GlobalTransform2D.identity())
-    ..insert(Light2D.spot(
-      color: const Color(0xFFFFFFFF),
-      direction: Vector2(0, 1),
-      angle: 0.4,   // cone half-angle in radians
-      radius: 240,
-    ));
-
-  runApp(LitFledgeRenderView(app: app));
+  runApp(FledgeRenderView(app: app));
 }
 ```
 
@@ -53,83 +53,78 @@ void main() {
 
 ### AmbientLight
 
-Scene-wide base illumination — inserted as an ECS resource by `LightingPlugin` and consumed by `LitFledgeRenderView` as the fill layer under the sprite pass.
+Scene-wide base light, a resource inserted by `LightingPlugin`. Replace it at runtime to change the time of day.
 
-```dart
-const AmbientLight.white           // white × 0.5, neutral half-lit
-const AmbientLight.dark            // black × 0.2, torches-only feel
-AmbientLight(color: Color(0xFF204060), intensity: 0.35)  // custom
-```
+| `blend` | What it does |
+|---|---|
+| `AmbientBlend.lightMap` | **Recommended.** Ambient and lights add into a light map that multiplies the sprites. `intensity` blends the map's base from white (`0`, full daylight) to `color` (`1`). Lights' `glow` halos are added on top. |
+| `AmbientBlend.overSprites` | Multiplies the sprites by the ambient, then *adds* the lights over the result: lights paint a glow rather than reveal what's under them. |
+| `AmbientBlend.underSprites` | The default, for compatibility: an ambient fill under the sprites, lights added on top. Sprites always draw at full brightness. |
 
-`intensity` multiplies the color's alpha before the ambient rect is filled. `0` disables ambient entirely (fully dark scene, lights only); `1` uses the color at its literal alpha.
+`bounds` limits the ambient to a world-space rect (useful when the camera can see past a map's edge).
 
 ### Light2D
 
-A dynamic 2D light source. Attach to any entity with `Transform2D` + `GlobalTransform2D`, and `LightExtractor` will emit an `ExtractedLight` into the render world each frame.
-
-Three light types:
+A dynamic 2D light source. Attach it to any entity with `Transform2D` + `GlobalTransform2D`, and `LightExtractor` emits an `ExtractedLight` into the render world each frame. `color`, `intensity`, `radius`, `innerRadius`, `bands`, `aspect` and `glow` are mutable: fade a lamp in at dusk by changing its `intensity`.
 
 | Type | Behaviour |
 |------|-----------|
-| `LightType.point` | Omnidirectional — falls off with distance from the entity. |
-| `LightType.directional` | Parallel rays — treated as an infinite tint across the whole viewport in the Canvas backend. |
-| `LightType.spot` | Cone-shaped — falls off with distance and is clipped to a wedge around `direction`. |
-
-Prefer the factory constructors:
+| `LightType.point` | Omnidirectional; falls off with distance from the entity. |
+| `LightType.directional` | Parallel rays; an even tint across the whole viewport in the Canvas backend. |
+| `LightType.spot` | Cone-shaped; falls off with distance and is clipped to a wedge around `direction`. |
 
 ```dart
 Light2D.point(
   color: const Color(0xFFFFDD88),
   radius: 180,
-  innerRadius: 40,       // full intensity inside this radius
+  innerRadius: 40, // full intensity inside this radius
+  bands: 0,        // 0 = smooth falloff; n = n flat rings
+  aspect: 0.75,    // height / width of the pool
+  glow: 0.5,       // additive halo over the lit scene (lightMap only)
 )
 
 Light2D.directional(
   color: const Color(0xFF88AAFF),
   intensity: 0.4,
-  direction: Vector2(0.3, 1.0),  // normalised by factory
+  direction: Vector2(0.3, 1.0), // normalised by the factory
 )
 
 Light2D.spot(
   color: const Color(0xFFFFFFFF),
   direction: Vector2(0, 1),
-  angle: 0.4,            // cone half-angle in radians
+  angle: 0.4, // cone half-angle in radians
   radius: 240,
 )
 ```
 
 ### Falloff
 
-Distance-based falloff is linear between `innerRadius` and `radius`. Pixels inside `innerRadius` are at full intensity; pixels at or past `radius` are dark. Setting `innerRadius == 0` produces a smooth center falloff; approaching `radius` produces a nearly-hard-edged disc.
+Inside `innerRadius` a light is at full strength. Past it, light fades as light does: quickly near the source, then a long soft tail that reaches nothing at `radius`, with no visible edge (the curve is `(1 - u²)²` of the distance `u` between the two radii). With `bands > 0` the same curve is stepped into that many flat rings, for a pixel-art look. `falloffStops` builds the gradient. Every light is drawn as its circle (or ellipse), so nothing past its edge is ever touched. `linearAttenuation` is a plain linear curve for custom code and tests.
 
-The `linearAttenuation` function is exported so custom lighting code (or tests) can share the same falloff curve as the extractor.
+### Emissive sprites
 
-## LitFledgeRenderView
+`Sprite(emissive: true)` draws after the lighting at full brightness, whatever the ambient: lit windows at night, screens, meteors. See [View passes](/docs/plugins/render#view-passes).
 
-`LitFledgeRenderView` is a drop-in replacement for `FledgeRenderView`. It paints, in a single `CustomPaint`:
+## How it draws
 
-1. **Ambient** — full-screen rect in `AmbientLight.color × intensity`.
-2. **Sprites** — the same `renderSpritesToDrawer` path used by `FledgeRenderView`.
-3. **Lights** — one additive radial gradient per extracted point/spot light, plus a full-screen additive tint per directional light.
+`LightingPlugin` adds a `LightingViewPass` to the app's `ViewPasses` (inserted by `RenderPlugin`, so add `RenderPlugin` first). Every `FledgeRenderView` then draws, in world space through the active camera:
 
-Steps 1 and 3 use `BlendMode.plus`, so light stacks the way you expect: two overlapping torches feel twice as bright.
+1. the ordinary sprites;
+2. the lighting, in the ambient's `blend` mode (`renderLightMap` and `renderLightGlows` for the light map; `renderLightsToCanvas` for the additive modes);
+3. the emissive sprites.
 
-## Design notes
-
-### Why a widget, not a render node
-
-The Phase 3 `FledgeRenderView` draws sprites directly (it does not walk `RenderGraph`). Threading a `LightingRenderNode` into a graph that nothing else uses would add plumbing without buying anything. `LitFledgeRenderView` inherits the sprite path verbatim and adds two extra passes around it. When the render graph becomes the default entry point in a later phase, a `LightingRenderNode` slots in cleanly next to `SpriteRenderNode` without churn on the widget API.
+`LitFledgeRenderView` is deprecated: it's a plain `FledgeRenderView` now.
 
 ### Material.normalMap
 
-`SpriteMaterial` grew a `Handle<Texture>? normalMap` slot in this phase. **The Canvas backend ignores it.** Per-pixel normal-mapped lighting needs a `FragmentProgram`, which is future work. The field ships now so game code can set up its data pipelines without a breaking material API change later.
+`SpriteMaterial` has a `Handle<Texture>? normalMap` slot. **The Canvas backend ignores it.** Per-pixel normal-mapped lighting needs a `FragmentProgram`, which is future work.
 
 ### Future work
 
-- **SDF shadow tracing** — occluder rasterization + a fragment shader that samples the SDF from a light's origin. Requires a shadow-caster component and a real GPU pass. `Light2D.castsShadow` is reserved for this and has no effect today.
-- **Cookies** — per-light mask textures (window-shape lights, projected patterns).
-- **Per-pixel normal maps** — read `SpriteMaterial.normalMap` in a fragment shader.
-- **Culling** — pre-cull lights against the active camera viewport before extraction. Today all lights are extracted every frame.
+- **SDF shadow tracing**: occluder rasterization plus a fragment shader sampling the SDF from a light's origin. `Light2D.castsShadow` is reserved for this and has no effect today.
+- **Cookies**: per-light mask textures (window-shaped lights, projected patterns).
+- **Per-pixel normal maps**: read `SpriteMaterial.normalMap` in a fragment shader.
+- **Culling**: lights are culled against the visible world when drawn, but all are extracted every frame.
 
 ## Components reference
 
@@ -141,14 +136,14 @@ The Phase 3 `FledgeRenderView` draws sprites directly (it does not walk `RenderG
 
 | Resource | Description |
 |----------|-------------|
-| `AmbientLight` | Scene-wide fill. Set at plugin construction; adjustable at runtime. |
+| `AmbientLight` | Scene-wide base light and blend mode. Set at plugin construction; replace it at runtime. |
 
 ## Systems reference
 
-`LightingPlugin` runs no per-tick main-world systems. `LightExtractor` walks `Light2D + GlobalTransform2D` at extraction time (`Schedules.last`, alongside every other extractor) and emits `ExtractedLight` on the render world. The actual light draw happens inside `LitFledgeRenderView` on the paint thread.
+`LightingPlugin` runs no per-tick main-world systems. `LightExtractor` walks `Light2D + GlobalTransform2D` at extraction time and emits `ExtractedLight` on the render world; `LightingViewPass` draws them on the paint thread.
 
 ## See also
 
-- [2D Rendering](/docs/plugins/render) — `FledgeRenderView`, `SpriteMaterial`.
-- [Particles](/docs/plugins/particles) — pair with ambient-dark scenes for glowing effects.
+- [2D Rendering](/docs/plugins/render): `FledgeRenderView`, view passes, `SpriteMaterial`.
+- [Particles](/docs/plugins/particles): pair with dark scenes for glowing effects.
 - [Plugins Overview](/docs/plugins/overview)

@@ -36,15 +36,17 @@ class ParticleExtractor extends Extractor {
         final size = p.currentSize;
         final sourceRect = texture.fullRect;
 
-        // Y-based sub-order gives particles the same top-down sort
-        // behavior as sprites within DrawLayer.particles when the
-        // emitter didn't specify a sub-order.
-        final sub = explicitSub != 0
-            ? explicitSub
-            : (p.position.y * 1000).toInt().clamp(
-                0,
-                DrawLayerExtension.layerMultiplier - 1,
-              );
+        // Y-based sub-order, using exactly the sprite convention
+        // (`SpriteExtractor` / `AtlasSpriteExtractor`) when the emitter
+        // didn't specify a sub-order: the packed integer is
+        // `DrawLayerExtension.ySortSubOrder(y)` and the unclamped
+        // tie-breaker is `y * ySortScale`. A particle and a sprite in
+        // the same layer therefore interleave by y, and the precise
+        // sub-order still orders particles closer than 0.1 px apart or
+        // outside the packed 0..9,999.9 window.
+        final ySorted = explicitSub == 0;
+        final y = p.position.y;
+        final sub = ySorted ? DrawLayerExtension.ySortSubOrder(y) : explicitSub;
         final sortKey = layer.sortKey(subOrder: sub);
 
         renderWorld.spawn().insert(
@@ -57,6 +59,7 @@ class ParticleExtractor extends Extractor {
             sortKey: sortKey,
             layer: layer,
             layerSubOrder: explicitSub,
+            preciseSubOrder: ySorted ? y * DrawLayerExtension.ySortScale : null,
             anchor: _centerAnchor.clone(),
             size: Vector2(size, size),
           ),

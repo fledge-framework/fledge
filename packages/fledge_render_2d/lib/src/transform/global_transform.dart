@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:vector_math/vector_math.dart';
 
 /// Computed global transform (world space).
@@ -32,6 +34,11 @@ class GlobalTransform2D {
 
   /// The y position in world space.
   double get y => matrix[7];
+
+  /// The world-space rotation in radians, in `(-π, π]`, read from the
+  /// matrix's x axis. Matches the sum of `Transform2D.rotation` down the
+  /// hierarchy (for non-mirrored scales).
+  double get rotation => math.atan2(matrix[1], matrix[0]);
 
   /// Transform a local point to world space.
   Vector2 transformPoint(Vector2 local) {

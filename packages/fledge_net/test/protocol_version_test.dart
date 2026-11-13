@@ -86,7 +86,7 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       // A v2 peer runs PacketHeader.peekVersion on this reply: magic
       // matches, version byte differs, so it reports a version mismatch.
-      expect(PacketHeader.peekVersion(replies.single.data), 3);
+      expect(PacketHeader.peekVersion(replies.single.data), 4);
     });
 
     test('ignores non-protocol garbage without replying', () async {
@@ -166,7 +166,7 @@ void main() {
     });
   });
 
-  test('protocol version is 3', () {
-    expect(PacketHeader.version, 3);
+  test('protocol version is 4', () {
+    expect(PacketHeader.version, 4);
   });
 }

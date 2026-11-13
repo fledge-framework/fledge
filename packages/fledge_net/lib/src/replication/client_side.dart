@@ -114,12 +114,25 @@ class _InterpBuffer {
 }
 
 /// Prediction bookkeeping for one locally owned entity.
+class _TickChunks {
+  _TickChunks(this.count);
+
+  final int count;
+  final Set<int> chunks = {};
+  final Set<int> listed = {};
+}
+
 class _Predicted {
   /// tick -> component index -> encoded state after that tick.
   final SplayTreeMap<int, Map<int, Uint8List>> history = SplayTreeMap();
 
   /// component index -> (server tick, encoded server state).
   final Map<int, (int, Uint8List)> pendingServer = {};
+
+  /// component index -> correction being smoothed for drawing: the old
+  /// prediction carried forward with the same inputs, and how much of the
+  /// gap to it is left (1 to 0).
+  final Map<int, (Object?, double)> ghosts = {};
 }
 
 class _ClientSide {
@@ -127,6 +140,9 @@ class _ClientSide {
   final NetworkClient client;
   final ClientTickSync sync;
   final ReliableChannel channel = ReliableChannel();
+
+  /// Resource chunks from the host (receive only).
+  final ReliableChannel bulk = ReliableChannel();
   final List<StreamSubscription<Object?>> _subs = [];
   final List<HostDataEvent> _inbox = [];
   final List<ProtocolMismatchEvent> _mismatches = [];
@@ -163,6 +179,19 @@ class _ClientSide {
 
   /// Queued RPCs: (index, bytes, target entity, explicit target netId).
   final List<(int, Uint8List, Entity?, int?)> _rpcs = [];
+
+  /// Actions sent and not finished with, by sequence number.
+  final SplayTreeMap<int, OutstandingAction> _outstanding = SplayTreeMap();
+
+  /// Actions the host has not acknowledged (resent in every input
+  /// packet), by sequence number; the target is resolved on first send.
+  final SplayTreeMap<int, (OutstandingAction, Uint8List, int?)> _unacked =
+      SplayTreeMap();
+  int _actionSeq = 0;
+  int _actionAck = 0;
+
+  /// Raw actions queued by test hooks (sent once, untracked).
+  final List<ActionEntry> _rawActions = [];
 
   _ClientSide(this.session, this.client)
     : sync = ClientTickSync(
@@ -205,7 +234,7 @@ class _ClientSide {
   }
 
   void _send(PacketType type, Uint8List payload) {
-    NetworkSession._sendSafely(() => client.send(type, payload));
+    NetworkSession._sendSafely(payload, () => client.send(type, payload));
   }
 
   void queueRpc(int index, Uint8List bytes, Entity? target) {
@@ -217,6 +246,28 @@ class _ClientSide {
   void queueRpcForNetId(int index, Uint8List bytes, int targetNetId) {
     _checkRpcSize(bytes);
     _rpcs.add((index, bytes, null, targetNetId));
+  }
+
+  NetActionTicket queueAction(int index, Object? value, Entity? target) {
+    final seq = ++_actionSeq;
+    final tick = ready ? sync.localTick : 0;
+    final action = OutstandingAction(index, seq, tick, value, target);
+    _outstanding[seq] = action;
+    _unacked[seq] = (action, _registry.actions[index].encode(value), null);
+    return NetActionTicket(seq, tick);
+  }
+
+  /// Actions of type [index] whose effect the host's state does not show
+  /// yet: unresolved, or accepted at a tick no snapshot has reached.
+  Iterable<OutstandingAction> outstanding(int index) {
+    _pruneActions();
+    return _outstanding.values.where((a) => a.index == index);
+  }
+
+  void _pruneActions() {
+    _outstanding.removeWhere(
+      (_, a) => a.acceptedAt != null && lastSnapshotTick >= a.acceptedAt!,
+    );
   }
 
   // Pump ----------------------------------------------------------------------
@@ -323,7 +374,7 @@ class _ClientSide {
       ack: channel.receivedAck,
     );
     for (final p in packets) {
-      _send(PacketType.replication, p);
+      _send(PacketType.replication, _onChannelId(ChannelId.control, p));
     }
   }
 
@@ -354,11 +405,74 @@ class _ClientSide {
   }
 
   void _onChannel(World world, Uint8List data) {
+    if (data.isEmpty) return;
+    final id = data[0];
+    data = Uint8List.sublistView(data, 1);
+    if (id == ChannelId.bulk) {
+      bulk.receivePacket(data);
+      for (final message in bulk.drain()) {
+        switch (message.isEmpty ? -1 : message[0]) {
+          case WireKind.resource:
+            _applyResource(world, message);
+          case WireKind.resolved:
+            _applyResolved(world, message);
+          default:
+            break; // Unknown kind from a newer host: ignore.
+        }
+      }
+      return;
+    }
+    if (id != ChannelId.control) return;
     channel.onAck(channel.receivePacket(data));
     for (final message in channel.drain()) {
       _applyMessage(world, message);
       if (_ended) return;
     }
+  }
+
+  /// The host decided one of our actions.
+  void _applyResolved(World world, Uint8List message) {
+    final r = PacketReader(message)..readByte();
+    final seq = r.readVarUint();
+    final resolvedTick = r.readUint32();
+    final flags = r.readByte();
+    final reason = flags & 2 != 0 ? r.readString() : null;
+    final action = _outstanding[seq];
+    if (action == null || action.acceptedAt != null) return;
+    final accepted = flags & 1 != 0;
+    if (accepted) {
+      action.acceptedAt = resolvedTick;
+    } else {
+      _outstanding.remove(seq);
+    }
+    final reps = _registry.actions;
+    if (action.index >= reps.length) return;
+    reps[action.index].emitResolved(
+      world,
+      seq,
+      action.tick,
+      action.value,
+      accepted: accepted,
+      resolvedTick: resolvedTick,
+      reason: reason,
+    );
+  }
+
+  /// Applies a resource chunk from the bulk channel.
+  void _applyResource(World world, Uint8List message) {
+    final r = PacketReader(message);
+    if (r.readByte() != WireKind.resource) return;
+    final index = r.readVarUint();
+    final count = r.readVarUint();
+    final chunk = r.readVarUint();
+    final reps = _registry.resources;
+    if (index >= reps.length) return;
+    final rep = reps[index];
+    final resource = rep.obtain(world);
+    if (resource == null) return;
+    rep.apply(resource, count, chunk, r);
+    session.stats.resourceChunksReceived++;
+    NetworkSession._emit(world, NetResourceUpdated(rep.key, chunk));
   }
 
   void _applyMessage(World world, Uint8List message) {
@@ -433,11 +547,7 @@ class _ClientSide {
     final entity = world.spawn().entity;
     world.insert(
       entity,
-      NetworkIdentity(
-        netId: netId,
-        ownerId: owner,
-        hasAuthority: owner == peerId,
-      ),
+      NetworkIdentity(netId: netId, ownerId: owner, localPeerId: peerId ?? -1),
     );
     for (final MapEntry(key: index, value: bytes) in state.components.entries) {
       if (index >= components.length) continue;
@@ -493,8 +603,7 @@ class _ClientSide {
   void _applyOwner(World world, _ClientEntity info, int owner) {
     final wasOwned = info.owner == peerId;
     info.owner = owner;
-    final identity = world.get<NetworkIdentity>(info.entity);
-    identity?.transferAuthority(owner, localAuthority: owner == peerId);
+    world.get<NetworkIdentity>(info.entity)?.ownerId = owner;
     if (wasOwned && owner != peerId) {
       _predicted.remove(info.netId);
       _inputHistory.remove(info.netId);
@@ -545,13 +654,45 @@ class _ClientSide {
     return owner != peerId || _registry.predictionFor(index) == null;
   }
 
+  /// Newest snapshot chunkSeq received, and which of the 32 before it
+  /// were (bit i: newest-1-i), acknowledged in every input packet.
+  int _chunkAck = 0;
+  int _chunkAckBits = 0;
+
+  void _ackChunk(int seq) {
+    if (seq == 0) return;
+    if (seq > _chunkAck) {
+      final shift = seq - _chunkAck;
+      _chunkAckBits = shift >= 33
+          ? 0
+          : ((_chunkAckBits << shift) |
+                    (_chunkAck == 0 ? 0 : 1 << (shift - 1))) &
+                0xFFFFFFFF;
+      _chunkAck = seq;
+    } else if (seq < _chunkAck && _chunkAck - seq <= 32) {
+      _chunkAckBits |= 1 << (_chunkAck - seq - 1);
+    }
+  }
+
+  /// Per server tick: how many chunks it had, which arrived, and which
+  /// entities they listed. Once every chunk of a tick is in, the entities
+  /// not listed are known unchanged at that tick.
+  final SplayTreeMap<int, _TickChunks> _ticks = SplayTreeMap();
+
   void _onSnapshot(World world, Uint8List data) {
     final r = PacketReader(data);
     final header = SnapshotHeader.read(r);
     final count = r.readVarUint();
-    final states = <(int, EntityStateData)>[];
+    final states = <(int, EntityDeltaData)>[];
     for (var i = 0; i < count; i++) {
-      states.add((r.readVarUint(), readEntityState(r)));
+      states.add((r.readVarUint(), readEntityDelta(r)));
+    }
+    _ackChunk(header.chunkSeq);
+    if (header.actionAck > _actionAck) {
+      _actionAck = header.actionAck;
+      while (_unacked.isNotEmpty && _unacked.firstKey()! <= _actionAck) {
+        _unacked.remove(_unacked.firstKey());
+      }
     }
 
     session.stats.snapshotChunksReceived++;
@@ -587,9 +728,36 @@ class _ClientSide {
     for (final (netId, state) in states) {
       _applyState(world, netId, header.serverTick, state);
     }
+    _trackTick(header, states);
   }
 
-  void _applyState(World world, int netId, int tick, EntityStateData state) {
+  void _trackTick(SnapshotHeader header, List<(int, EntityDeltaData)> states) {
+    final tick = header.serverTick;
+    final progress = _ticks.putIfAbsent(
+      tick,
+      () => _TickChunks(header.chunkCount),
+    );
+    if (!progress.chunks.add(header.chunkIndex)) return;
+    progress.listed.addAll([for (final (netId, _) in states) netId]);
+    if (progress.chunks.length < progress.count) return;
+    // Every chunk of this tick arrived: an interpolated component nobody
+    // mentioned held still, so record it there (else interpolation would
+    // run on past where it stopped).
+    for (final MapEntry(key: netId, value: buffers) in _interp.entries) {
+      if (progress.listed.contains(netId)) continue;
+      for (final buffer in buffers.values) {
+        if (buffer.samples.isEmpty) continue;
+        final last = buffer.samples.lastKey()!;
+        if (last < tick) buffer.add(tick, buffer.samples[last]);
+      }
+    }
+    _ticks.remove(tick);
+    while (_ticks.length > 16) {
+      _ticks.remove(_ticks.firstKey());
+    }
+  }
+
+  void _applyState(World world, int netId, int tick, EntityDeltaData state) {
     final info = entities[netId];
     if (info == null || !world.isAlive(info.entity)) return;
     if (tick < info.lastStateTick) {
@@ -597,7 +765,7 @@ class _ClientSide {
       final buffers = _interp[netId];
       if (buffers == null) return;
       for (final MapEntry(key: index, value: buffer) in buffers.entries) {
-        final bytes = state.components[index];
+        final bytes = state.changed[index];
         if (bytes != null) {
           buffer.addLate(tick, _registry.components[index].decode(bytes));
         }
@@ -608,13 +776,18 @@ class _ClientSide {
     final e = info.entity;
     final owned = info.owner == peerId;
     for (final c in _registry.components) {
-      final bytes = state.components[c.index];
-      final prediction = owned ? _registry.predictionFor(c.index) : null;
-      if (bytes == null) {
+      final present = state.presentMask & (1 << c.index) != 0;
+      if (!present) {
         if (c.has(world, e)) c.remove(world, e);
         _interp[netId]?.remove(c.index);
         continue;
       }
+      final bytes = state.changed[c.index];
+      if (bytes == null) {
+        // Unchanged since the last copy.
+        continue;
+      }
+      final prediction = owned ? _registry.predictionFor(c.index) : null;
       if (prediction != null) {
         final predicted = _predicted[netId];
         if (predicted == null || predicted.history.isEmpty) {
@@ -730,9 +903,19 @@ class _ClientSide {
   void predict(World world) {
     final predictions = _registry.predictions;
     if (sync.consumeJump()) {
-      // The local tick moved discontinuously: history is meaningless.
-      _predicted.clear();
+      // The local tick moved discontinuously, so recorded ticks no longer
+      // line up with the host's. Start the history afresh, but keep the
+      // predicted state (it already holds every local input) and ignore
+      // server states from before the jump instead of snapping back to
+      // them; reconciliation resumes at ticks recorded after it.
+      for (final predicted in _predicted.values) {
+        predicted
+          ..history.clear()
+          ..pendingServer.clear();
+      }
       _inputHistory.clear();
+      _lastInput.clear();
+      _noSnapBefore = sync.localTick;
     }
     if (predictions.isEmpty || !ready) return;
     final dt = world.getResource<FixedTimestep>()?.stepSeconds ?? 0;
@@ -761,19 +944,38 @@ class _ClientSide {
       }
     }
 
-    // 2. Predict this tick.
+    // 2. Predict this tick; carry smoothed corrections along.
     for (final entry in _tickInputs) {
+      final ghosts = _predicted[entry.netId]?.ghosts;
+      final context = PredictContext(
+        world: world,
+        entity: entry.entity,
+        tick: tick,
+        dt: dt,
+      );
       for (final p in predictions) {
         final c = p.component;
         if (!c.has(world, entry.entity)) continue;
-        c.insert(
-          world,
-          entry.entity,
-          p.step(c.get(world, entry.entity), entry.input, dt),
-        );
+        final state = p.step(c.get(world, entry.entity), entry.input, context);
+        c.insert(world, entry.entity, state);
+        final ghost = ghosts?[c.index];
+        if (ghost == null) continue;
+        final left = ghost.$2 * (1 - p.correctionBlend);
+        if (left < 0.01) {
+          ghosts!.remove(c.index);
+          p.clearSmoothed(world, entry.entity);
+          continue;
+        }
+        final carried = p.step(ghost.$1, entry.input, context);
+        ghosts![c.index] = (carried, left);
+        p.setSmoothed(world, entry.entity, c.lerp(carried, state, 1 - left));
       }
     }
   }
+
+  /// Server states for ticks before this (the last tick jump) are not
+  /// snapped to: they predate everything the client predicted since.
+  int _noSnapBefore = 0;
 
   void _reconcile(
     World world,
@@ -790,9 +992,11 @@ class _ClientSide {
     final server = c.decode(serverBytes);
     final recorded = predicted.history[serverTick]?[c.index];
     if (recorded == null) {
-      if (predicted.history.isEmpty ||
-          serverTick > predicted.history.lastKey()!) {
-        // Server is ahead of our prediction (e.g. after a tick reset).
+      if (serverTick >= _noSnapBefore &&
+          (predicted.history.isEmpty ||
+              serverTick > predicted.history.lastKey()!)) {
+        // Nothing predicted to compare with (an idle entity, or the server
+        // is ahead of our prediction): take the server state.
         c.insert(world, info.entity, server);
       }
       return; // older than our history: nothing to compare against
@@ -806,11 +1010,29 @@ class _ClientSide {
     final inputs = _inputHistory[info.netId];
     for (var t = serverTick + 1; t < tick; t++) {
       final bytes = inputs?[t];
-      if (bytes != null) state = p.step(state, rep.decode(bytes), dt);
+      if (bytes != null) {
+        state = p.step(
+          state,
+          rep.decode(bytes),
+          PredictContext(
+            world: world,
+            entity: info.entity,
+            tick: t,
+            dt: dt,
+            replaying: true,
+          ),
+        );
+      }
       predicted.history[t]?[c.index] = c.encodeValue(state);
     }
     if (p.correctionBlend < 1 && mispredicted != null) {
-      state = c.lerp(mispredicted, state, p.correctionBlend);
+      // Draw from where the old prediction was (or was being drawn).
+      final ghost = predicted.ghosts[c.index];
+      final drawn = ghost == null
+          ? mispredicted
+          : c.lerp(ghost.$1, mispredicted, 1 - ghost.$2);
+      predicted.ghosts[c.index] = (drawn, 1.0);
+      p.setSmoothed(world, info.entity, drawn);
     }
     c.insert(world, info.entity, state);
     session.stats.corrections++;
@@ -827,13 +1049,18 @@ class _ClientSide {
     final tick = sync.localTick;
     if (ready) _recordPredictions(world, tick);
 
+    final actions = _actionsToSend(world);
     var redundancy = math.max(1, _config.inputRedundancy);
     while (true) {
       final payload = InputPacket(
         clientTick: tick,
         reliableAck: channel.receivedAck,
+        bulkAck: bulk.receivedAck,
+        chunkAck: _chunkAck,
+        chunkAckBits: _chunkAckBits,
         lastSnapshotTick: lastSnapshotTick,
         streams: ready ? _buildStreams(tick, redundancy) : const [],
+        actions: actions,
       ).encode();
       if (payload.length <= Packet.maxPayloadBytes || redundancy == 1) {
         if (payload.length <= Packet.maxPayloadBytes) {
@@ -850,11 +1077,48 @@ class _ClientSide {
         final targetNetId =
             explicitNetId ??
             (target == null ? 0 : registry?.getNetId(target) ?? 0);
+        if (channel.isFull) {
+          // The host stopped acknowledging; the stream can't continue.
+          _rpcs.clear();
+          session._failClient('Reliable channel overflow');
+          return;
+        }
         channel.enqueue(_rpcMessage(index, targetNetId, bytes));
       }
       _rpcs.clear();
     }
+
     _flushChannel();
+  }
+
+  /// Bytes of an input packet actions may use, so inputs always fit.
+  static const int _actionBudgetBytes = Packet.maxPayloadBytes ~/ 2;
+
+  /// The unacknowledged actions, oldest first, as many as fit in
+  /// [_actionBudgetBytes] (at least one).
+  List<ActionEntry> _actionsToSend(World world) {
+    final out = <ActionEntry>[];
+    var bytes = 0;
+    final registry = world.getResource<NetworkEntityRegistry>();
+    for (final MapEntry(key: seq, value: (a, payload, netId))
+        in _unacked.entries) {
+      var targetNetId = netId;
+      if (targetNetId == null) {
+        final target = a.target;
+        targetNetId = target == null ? 0 : registry?.getNetId(target) ?? 0;
+        _unacked[seq] = (a, payload, targetNetId);
+      }
+      final entry = ActionEntry(a.index, seq, a.tick, targetNetId, payload);
+      if (out.isNotEmpty &&
+          bytes + entry.maxEncodedBytes > _actionBudgetBytes) {
+        break;
+      }
+      bytes += entry.maxEncodedBytes;
+      out.add(entry);
+    }
+    out.addAll(_rawActions);
+    _rawActions.clear();
+    return out;
   }
 
   void _recordPredictions(World world, int tick) {

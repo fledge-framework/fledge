@@ -177,6 +177,51 @@ void main() {
       },
     );
 
+    test('caps connects awaiting authentication', () async {
+      final net = LoopbackNetwork();
+      final gate = Completer<bool>();
+      var authCalls = 0;
+      final host = NetworkHost(
+        transport: net.createTransport(),
+        maxPendingConnects: 2,
+        authenticator: (_, _) {
+          authCalls++;
+          return gate.future;
+        },
+      );
+      await host.start(7777);
+      final hostAddr = const NetAddress('127.0.0.1', 7777);
+
+      final raws = <LoopbackTransport>[];
+      for (var i = 0; i < 3; i++) {
+        final raw = net.createTransport(host: '10.0.0.${i + 2}');
+        await raw.bind(5000);
+        raws.add(raw);
+        await raw.send(hostAddr, _connectPacket());
+      }
+      await Future<void>.delayed(Duration.zero);
+      expect(authCalls, 2, reason: 'the third connect is ignored');
+
+      gate.complete(true);
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(host.peerCount, 2);
+
+      // A retry from the third address now gets through.
+      await raws[2].send(hostAddr, _connectPacket());
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(authCalls, 3);
+      expect(host.peerCount, 3);
+
+      expect(
+        () => NetworkHost(
+          transport: net.createTransport(),
+          maxPendingConnects: 0,
+        ),
+        throwsArgumentError,
+      );
+      await host.stop();
+    });
+
     test('rejected client may retry after authentication fails', () async {
       final net = LoopbackNetwork();
       var allow = false;

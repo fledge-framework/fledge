@@ -124,4 +124,140 @@ void main() {
       }
     },
   );
+
+  test(
+    'particles beyond the packed y window still carry a precise sub-order',
+    () async {
+      // y * ySortScale clamps at y = 9,999.9, so the integer keys tie;
+      // the unclamped preciseSubOrder breaks the tie by position.
+      final app = App()
+        ..insertResource<WallTime>(WallTime())
+        ..addPlugin(RenderPlugin())
+        ..addPlugin(const ParticlePlugin());
+      app.world.spawn()
+        ..insert(
+          GlobalTransform2D(
+            Matrix3.identity()..setColumn(2, Vector3(0, 20000, 1)),
+          ),
+        )
+        ..insert(
+          ParticleEmitter(
+            template: _shortTemplate(),
+            emitRate: 50.0,
+            texture: _tex(),
+            pool: ParticlePool(16),
+            rng: math.Random(1),
+          ),
+        );
+      final time = app.world.getResource<WallTime>()!;
+      for (var i = 0; i < 3; i++) {
+        time.delta = 0.05;
+        await app.tick();
+      }
+
+      final sprites = [
+        for (final (_, s)
+            in app.world
+                .getResource<RenderWorld>()!
+                .query1<ExtractedSprite>()
+                .iter())
+          s,
+      ];
+      expect(sprites, isNotEmpty);
+      for (final s in sprites) {
+        expect(s.sortKey, DrawLayer.particles.sortKey(subOrder: 99999));
+        expect(s.preciseSubOrder, isNotNull);
+        expect(
+          s.preciseSubOrder!,
+          greaterThan(19000 * DrawLayerExtension.ySortScale),
+        );
+      }
+    },
+  );
+
+  group('particles share the sprite y-sort convention', () {
+    ExtractedSprite extractParticleAt(double y, {int layerSubOrder = 0}) {
+      final world = World();
+      final pool = ParticlePool(1)
+        ..spawn(
+          position: Vector2(0, y),
+          velocity: Vector2.zero(),
+          maxLifetime: 1,
+          colorStart: const Color(0xFFFFFFFF),
+          colorEnd: const Color(0xFFFFFFFF),
+        );
+      world.spawn()
+        ..insert(GlobalTransform2D.identity())
+        ..insert(
+          ParticleEmitter(
+            template: _shortTemplate(),
+            emitRate: 0,
+            texture: _tex(),
+            pool: pool,
+            layer: DrawLayer.characters,
+            layerSubOrder: layerSubOrder,
+          ),
+        );
+      final rw = RenderWorld();
+      ParticleExtractor().extract(world, rw);
+      return rw.query1<ExtractedSprite>().iter().single.$2;
+    }
+
+    ExtractedSprite extractSpriteAt(double y) {
+      final world = World();
+      world.spawn()
+        ..insert(Sprite(texture: _tex()))
+        ..insert(GlobalTransform2D(Matrix3.identity()..setEntry(1, 2, y)));
+      final rw = RenderWorld();
+      SpriteExtractor().extract(world, rw);
+      return rw.query1<ExtractedSprite>().iter().single.$2;
+    }
+
+    test('particle at y=100 sorts between sprites at y=99 and y=101', () {
+      final above = extractSpriteAt(99);
+      final particle = extractParticleAt(100);
+      final below = extractSpriteAt(101);
+      final sorted = [below, particle, above];
+      ExtractedSprite.sortByDrawOrder(sorted);
+      expect(sorted, [above, particle, below]);
+      // Integer keys alone already agree (same units as sprites).
+      expect(particle.sortKey, greaterThan(above.sortKey));
+      expect(particle.sortKey, lessThan(below.sortKey));
+    });
+
+    test('particle and sprite at equal y produce equal sort keys', () {
+      for (final y in [0.0, 100.0, 1234.56, 20000.0, -50.0]) {
+        final particle = extractParticleAt(y);
+        final sprite = extractSpriteAt(y);
+        expect(particle.sortKey, sprite.sortKey, reason: 'y = $y');
+        expect(
+          particle.preciseSubOrder,
+          sprite.preciseSubOrder,
+          reason: 'y = $y',
+        );
+        expect(ExtractedSprite.compareDrawOrder(particle, sprite), 0);
+      }
+    });
+
+    test('sub-order matches DrawLayerExtension.ySortSubOrder', () {
+      final particle = extractParticleAt(123.45);
+      expect(
+        particle.sortKey,
+        DrawLayer.characters.sortKey(
+          subOrder: DrawLayerExtension.ySortSubOrder(123.45),
+        ),
+      );
+      expect(
+        particle.preciseSubOrder,
+        // Vector2 is float32, hence the tolerance.
+        closeTo(123.45 * DrawLayerExtension.ySortScale, 1e-3),
+      );
+    });
+
+    test('explicit layerSubOrder carries no precise sub-order', () {
+      final particle = extractParticleAt(100, layerSubOrder: 7);
+      expect(particle.sortKey, DrawLayer.characters.sortKey(subOrder: 7));
+      expect(particle.preciseSubOrder, isNull);
+    });
+  });
 }

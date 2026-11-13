@@ -93,20 +93,133 @@ void _drawRadial(Canvas canvas, Rect viewport, ExtractedLight light) {
   // giving full color from center to innerRadius, then falling off.
   final innerStop = (light.innerRadius / radius).clamp(0.0, 1.0);
   final coreColor = _scaleAlpha(light.color, light.intensity);
-  const transparent = Color(0x00000000);
-
-  final shader = Gradient.radial(
-    center,
-    radius,
-    <Color>[coreColor, coreColor, transparent],
-    <double>[0.0, innerStop, 1.0],
-  );
+  final (colors, stops) = falloffStops(coreColor, innerStop, light.bands);
+  final shader = Gradient.radial(center, radius, colors, stops);
 
   final paint = Paint()
     ..shader = shader
     ..blendMode = BlendMode.plus;
 
-  canvas.drawRect(lightRect, paint);
+  // A circle, not its bounding rect: nothing past the light's edge is
+  // touched, whatever a renderer does beyond the gradient's last stop.
+  if (light.aspect == 1) {
+    canvas.drawCircle(center, radius, paint);
+    return;
+  }
+  // An ellipse: the circle, squashed about its centre.
+  canvas
+    ..save()
+    ..translate(center.dx, center.dy)
+    ..scale(1, light.aspect)
+    ..translate(-center.dx, -center.dy)
+    ..drawCircle(center, radius, paint)
+    ..restore();
+}
+
+/// Gradient samples of the smooth falloff, between the inner radius and
+/// the edge.
+const _smoothSamples = 12;
+
+/// A hair, in gradient units: how close two stops can be for a hard step.
+/// Stops are never repeated, since renderers disagree on which colour wins
+/// at a repeated stop (and some extend the wrong one past the last stop).
+const _step = 1e-3;
+
+/// The gradient for a light of [core] colour that's full strength out to
+/// [innerStop] (a fraction of its radius) and gone at the edge.
+///
+/// With [bands] 0, the light fades as light does: quickly near the source,
+/// then a long soft tail that reaches nothing with no visible edge
+/// (`(1 - u²)²` of the distance `u` past the inner radius). With [bands]
+/// > 0 the same curve is stepped into that many flat rings, for a
+/// pixel-art look.
+(List<Color>, List<double>) falloffStops(
+  Color core,
+  double innerStop,
+  int bands,
+) {
+  const transparent = Color(0x00000000);
+  final inner = innerStop.clamp(0.0, 1.0 - _step * 4);
+  double level(double u) {
+    final f = 1 - u * u;
+    return f * f;
+  }
+
+  final colors = <Color>[core];
+  final stops = <double>[0.0];
+  if (inner > 0) {
+    colors.add(core);
+    stops.add(inner);
+  }
+  if (bands <= 0) {
+    for (var i = 1; i < _smoothSamples; i++) {
+      final u = i / _smoothSamples;
+      colors.add(_scaleAlpha(core, level(u)));
+      stops.add(inner + (1 - inner) * u);
+    }
+  } else {
+    for (var k = 0; k < bands; k++) {
+      // Ring k: one flat level, the curve at the ring's middle.
+      final start = inner + (1 - inner) * k / bands;
+      final end = inner + (1 - inner) * (k + 1) / bands;
+      final ring = _scaleAlpha(core, level((k + 0.5) / bands));
+      colors.addAll([ring, ring]);
+      stops.addAll([start + (k == 0 && inner == 0 ? 0 : _step), end - _step]);
+    }
+  }
+  colors.add(transparent);
+  stops.add(1.0);
+  return (colors, stops);
+}
+
+/// Draws the [AmbientBlend.lightMap] model over sprites already on
+/// [canvas]: a layer filled with [base] (the light everything gets) with
+/// every light added in, multiplied onto the scene. [area] is the world
+/// rect to cover (the visible world, a little inflated); [bounds], if
+/// given, limits the darkening to that rect (full light outside it).
+void renderLightMap(
+  RenderWorld renderWorld,
+  Canvas canvas,
+  Rect area,
+  Color base, {
+  Rect? bounds,
+}) {
+  canvas.saveLayer(area, Paint()..blendMode = BlendMode.multiply);
+  try {
+    final fill = Paint()..color = base.withValues(alpha: 1);
+    if (bounds == null) {
+      canvas.drawRect(area, fill);
+    } else {
+      canvas
+        ..drawRect(area, Paint()..color = const Color(0xFFFFFFFF))
+        ..drawRect(bounds, fill);
+    }
+    renderLightsToCanvas(renderWorld, canvas, area.size, worldViewport: area);
+  } finally {
+    canvas.restore();
+  }
+}
+
+/// Adds every light's `glow` halo over the scene: half the light's radius,
+/// full colour at the centre, at `glow` x intensity strength.
+void renderLightGlows(RenderWorld renderWorld, Canvas canvas, Rect area) {
+  for (final (_, light) in renderWorld.query1<ExtractedLight>().iter()) {
+    if (light.glow <= 0 || light.type == LightType.directional) continue;
+    final radius = light.radius / 2;
+    if (radius <= 0) continue;
+    final center = Offset(light.position.x, light.position.y);
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    if (!rect.overlaps(area)) continue;
+    final core = _scaleAlpha(light.color, light.glow * light.intensity);
+    final (colors, stops) = falloffStops(core, 0, 0);
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..blendMode = BlendMode.plus
+        ..shader = Gradient.radial(center, radius, colors, stops),
+    );
+  }
 }
 
 /// Build a wedge-shaped clip path centred on the light's world-space

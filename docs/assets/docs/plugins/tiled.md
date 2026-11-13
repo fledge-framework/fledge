@@ -606,8 +606,20 @@ The `TilemapExtractor` checks each layer's `layerClass` property:
 final drawLayer = (layer.layerClass == 'above')
     ? DrawLayer.foreground
     : DrawLayer.ground;
-final sortKey = drawLayer.sortKey(subOrder: tile.y * 100 + layer.layerIndex);
+// Sub-order row * 100 + layerIndex, clamped into the layer's range.
+final sortKey = tileSortKey(
+  drawLayer: drawLayer,
+  row: tile.y,
+  layerIndex: layer.layerIndex,
+);
+// Unclamped tie-breaker (same units), carried as preciseSubOrder.
+final preciseSubOrder = tilePreciseSubOrder(
+  row: tile.y,
+  layerIndex: layer.layerIndex,
+);
 ```
+
+Within a `DrawLayer`, tiles sort by row first, then by Tiled layer index (layer indices 0 to 99). The packed integer sub-order `row * 100 + layerIndex` only fits rows 0 to 999, so it is clamped to the top of the layer range and can never spill into the next `DrawLayer`. The unclamped value travels with the tile as `preciseSubOrder` on both `ExtractedSprite` and the deprecated `ExtractedTile`. `ExtractedSprite.sortByDrawOrder` (used by the built-in render paths) and `ExtractedTile.compareDrawOrder` use it to break ties, so maps taller than 1,000 rows still sort by row, then layer index.
 
 This places tiles into the correct `DrawLayer` range:
 
@@ -956,6 +968,11 @@ for (final (_, tile) in renderWorld.query1<ExtractedTile>().iter()) {
   // based on layer.layerClass == 'above'
   final sortKey = tile.sortKey;
 }
+
+// Sort with the tie-breaker so maps taller than 1,000 rows order by row.
+final tiles = [
+  for (final (_, t) in renderWorld.query1<ExtractedTile>().iter()) t,
+]..sort(ExtractedTile.compareDrawOrder);
 ```
 
 The sort key is computed using `DrawLayer` ranges, enabling proper depth sorting with characters:
@@ -1076,7 +1093,7 @@ Render World Entities
     ├── texture: TextureHandle
     ├── sourceRect: Rect (already computed)
     ├── position: Offset (world space)
-    └── flipFlags, color, sortKey
+    └── flipFlags, color, sortKey, preciseSubOrder
 ```
 
 ### UV Coordinate Conversion

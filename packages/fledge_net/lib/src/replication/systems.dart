@@ -1,9 +1,9 @@
 import 'package:fledge_ecs/fledge_ecs.dart';
 
 import '../plugin.dart';
-import '../sync/network_identity.dart';
 import 'components.dart';
 import 'events.dart';
+import 'network_identity.dart';
 import 'registry.dart';
 import 'session.dart';
 
@@ -36,7 +36,7 @@ abstract class _NetSystem implements System {
 }
 
 /// `Schedules.first`, `FirstSets.platform`: drives the host/client
-/// (`update()`: pings, timeouts, retransmits), answers tick sync, turns
+/// (`update()`: pings, timeouts), answers tick sync, turns
 /// connection changes into ECS events and resends reliable messages.
 class NetPumpSystem extends _NetSystem {
   /// Name for `before:` / `after:`.
@@ -76,7 +76,13 @@ class NetReceiveSystem extends _NetSystem {
           for (final c in registry.components) c.componentId,
         },
         resourceReads: {FixedTimestep},
-        resourceWrites: {NetworkSession, NetworkEntityRegistry, NetworkTick},
+        resourceWrites: {
+          NetworkSession,
+          NetworkEntityRegistry,
+          NetworkTick,
+          // Clients apply replicated resources here.
+          for (final r in registry.resources) r.type,
+        },
         eventWrites: {
           NetPeerDisconnected,
           NetDisconnected,
@@ -84,6 +90,7 @@ class NetReceiveSystem extends _NetSystem {
           NetEntitySpawned,
           NetEntityDespawned,
           for (final r in registry.rpcs) r.eventType,
+          for (final a in registry.actions) a.resolvedType,
         },
       );
 
@@ -91,8 +98,15 @@ class NetReceiveSystem extends _NetSystem {
   void runNet(NetworkSession session, World world) => session.receive(world);
 }
 
-/// `Schedules.first`, after `NetReceiveSystem`: writes interpolated
-/// component values for entities this client does not predict.
+/// `Schedules.update`, `UpdateSets.receive`: writes interpolated component
+/// values for entities this client does not predict.
+///
+/// It runs after the frame's fixed steps, so remote entities are sampled
+/// at the same moment as everything drawn from the fixed simulation with
+/// `FixedTimestep.alpha` (the local, predicted avatar). Systems that draw
+/// interpolated components go after [systemName]. Don't give interpolated
+/// entities a fixed-step render interpolation of their own (such as
+/// `PreviousTransform2D`): their values already change every frame.
 class NetInterpolationSystem extends _NetSystem {
   /// Name for `before:` / `after:`.
   static const String systemName = 'net_interpolation';
@@ -103,7 +117,7 @@ class NetInterpolationSystem extends _NetSystem {
   NetInterpolationSystem(ReplicationRegistry registry)
     : meta = SystemMeta(
         name: systemName,
-        after: [NetReceiveSystem.systemName],
+        sets: const [UpdateSets.receive],
         writes: {
           for (final c in registry.components)
             if (c.interpolated) c.componentId,
@@ -135,7 +149,8 @@ class NetTickSystem extends _NetSystem {
 
 /// `Schedules.fixedPreUpdate`, after `NetSets.localInput`: builds
 /// `NetInputs<I>` for this tick (host: validated client inputs + local;
-/// client: own inputs, recorded for sending and replay).
+/// client: own inputs, recorded for sending and replay) and, on the host,
+/// this tick's `NetActions<T>`.
 class NetInputSystem extends _NetSystem {
   /// Name for `before:` / `after:`.
   static const String systemName = 'net_input';
@@ -155,6 +170,7 @@ class NetInputSystem extends _NetSystem {
             registry.inputReplicator!.inputsType,
             registry.inputReplicator!.localInputsType,
           ],
+          for (final a in registry.actions) a.actionsType,
         },
       );
 
@@ -178,7 +194,12 @@ class NetPredictSystem extends _NetSystem {
     : meta = SystemMeta(
         name: systemName,
         after: const [NetInputSystem.systemName],
-        writes: {for (final p in registry.predictions) p.component.componentId},
+        writes: {
+          for (final p in registry.predictions) ...[
+            p.component.componentId,
+            p.smoothedComponentId,
+          ],
+        },
         resourceReads: {
           FixedTimestep,
           if (registry.inputReplicator != null)
@@ -209,10 +230,17 @@ class NetSendSystem extends _NetSystem {
           ComponentId.of<Replicated>(),
           ComponentId.of<Parent>(),
           for (final c in registry.components) c.componentId,
+          // Whatever the app's interest position getter reads.
+          ...registry.positionReads,
         },
         writes: {ComponentId.of<NetworkIdentity>()},
-        resourceReads: {NetworkTick},
+        resourceReads: {
+          NetworkTick,
+          // The host encodes replicated resources here.
+          for (final r in registry.resources) r.type,
+        },
         resourceWrites: {NetworkSession, NetworkEntityRegistry},
+        eventWrites: {for (final a in registry.actions) a.resolvedType},
       );
 
   @override

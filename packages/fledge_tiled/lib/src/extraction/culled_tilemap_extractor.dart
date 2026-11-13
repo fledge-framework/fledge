@@ -4,13 +4,7 @@ import 'package:fledge_camera_2d/fledge_camera_2d.dart'
     show Camera2D, ViewportSize;
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart'
-    show
-        DrawLayer,
-        DrawLayerExtension,
-        Extractor,
-        GlobalTransform2D,
-        RenderWorld,
-        Transform2D;
+    show DrawLayer, Extractor, GlobalTransform2D, RenderWorld, Transform2D;
 import 'package:vector_math/vector_math.dart' show Vector2;
 
 import '../components/tile_layer.dart';
@@ -264,11 +258,20 @@ class CulledTilemapExtractor extends Extractor {
       // Sort key based on layer class:
       // - "above" layers use DrawLayer.foreground (renders above characters)
       // - Other layers use DrawLayer.ground (renders below characters)
+      // Sub-order: row * 100 + layerIndex (row first, then layer index),
+      // clamped into the layer range; the unclamped value rides along as
+      // the precise sub-order so rows >= 1,000 still sort by row.
       final drawLayer = (layer.layerClass == 'above')
           ? DrawLayer.foreground
           : DrawLayer.ground;
-      final sortKey = drawLayer.sortKey(
-        subOrder: tile.y * 100 + layer.layerIndex,
+      final sortKey = tileSortKey(
+        drawLayer: drawLayer,
+        row: tile.y,
+        layerIndex: layer.layerIndex,
+      );
+      final preciseSubOrder = tilePreciseSubOrder(
+        row: tile.y,
+        layerIndex: layer.layerIndex,
       );
 
       // Emit both ExtractedSprite (widget path) and ExtractedTile
@@ -284,6 +287,7 @@ class CulledTilemapExtractor extends Extractor {
           color: layerColor,
           sortKey: sortKey,
           flipFlags: tile.flipFlags,
+          preciseSubOrder: preciseSubOrder,
         ),
       );
       // ignore: deprecated_member_use_from_same_package
@@ -297,6 +301,7 @@ class CulledTilemapExtractor extends Extractor {
           color: layerColor,
           sortKey: sortKey,
           flipFlags: tile.flipFlags,
+          preciseSubOrder: preciseSubOrder,
         ),
       );
     }

@@ -154,20 +154,7 @@ class CanvasSpriteDrawer implements SpriteDrawer {
       return;
     }
 
-    // Sub-batch by flip flags. Each of the four possible flip states
-    // (none, X, Y, XY) becomes a separate drawRawAtlas call wrapped
-    // in canvas.scale(±1, ±1); Skia can't mirror inside an RSTransform
-    // and refuses inverted source rects, so this is the correct
-    // batching contract for mirror support.
     final vp = batch.first.viewProjection;
-
-    // Bucket entries by flip flags. For the common non-flipped case
-    // this stays a single bucket and produces exactly one draw call,
-    // identical to the pre-Batch-3-#16 fast path.
-    final buckets = <int, List<BackendSpriteData>>{};
-    for (final s in batch) {
-      buckets.putIfAbsent(s.flipFlags, () => <BackendSpriteData>[]).add(s);
-    }
 
     if (vp != null) {
       canvas.save();
@@ -177,36 +164,54 @@ class CanvasSpriteDrawer implements SpriteDrawer {
       canvas.transform(Float64List.fromList(vp.storage));
     }
 
-    for (final entry in buckets.entries) {
-      final flipFlags = entry.key;
-      final bucket = entry.value;
-      if (flipFlags == 0) {
-        // Fast path — the common non-mirrored case. One drawRawAtlas
-        // for every sprite in the bucket.
-        _drawSubBatch(canvas, image, bucket);
-        continue;
+    // Walk the batch in order (it arrives sorted by draw order) and
+    // collect contiguous runs of "fast" sprites (unflipped, with a
+    // similarity source-to-world map: uniform scale + rotation) into a
+    // single drawRawAtlas call. Any other sprite flushes the pending
+    // run and is drawn on its own, so painter's order is preserved
+    // across the path split. For the common all-uniform, unflipped
+    // batch this is still exactly one draw call.
+    var runStart = 0;
+    for (var i = 0; i < batch.length; i++) {
+      final sprite = batch[i];
+      final uniform = isSimilaritySpriteMap(
+        transform: sprite.transform,
+        sourceRect: sprite.sourceRect,
+        destRect: sprite.destRect,
+      );
+      if (sprite.flipFlags == 0 && uniform) continue;
+
+      if (i > runStart) {
+        _drawSubBatch(canvas, image, batch.sublist(runStart, i));
       }
-      // Mirrored sprites: canvas.scale mirrors around the origin, so
-      // a shared batched draw would swap their positions across the
-      // canvas. Draw each flipped sprite individually with a
-      // save/translate/scale/translate/restore pivoted on its own
-      // world-space centre. Loses the drawRawAtlas fast path but
-      // keeps mirrored draws correct.
-      final flipX = (flipFlags & 1) != 0;
-      final flipY = (flipFlags & 2) != 0;
-      final sx = flipX ? -1.0 : 1.0;
-      final sy = flipY ? -1.0 : 1.0;
-      for (final sprite in bucket) {
-        final s = sprite.transform.storage;
-        final pivotX = s[6];
-        final pivotY = s[7];
-        canvas.save();
-        canvas.translate(pivotX, pivotY);
-        canvas.scale(sx, sy);
-        canvas.translate(-pivotX, -pivotY);
-        _drawSubBatch(canvas, image, [sprite]);
-        canvas.restore();
+      runStart = i + 1;
+
+      if (sprite.flipFlags == 0) {
+        // Unflipped, non-similarity map (non-uniform scale / shear).
+        _drawAffineSprite(canvas, image, sprite);
+      } else {
+        // Mirrored sprites: flip in sprite-local space (about the
+        // anchor, along the sprite's own axes) *before* the entity
+        // transform, i.e. world = transform * diag(±1, ±1) * local.
+        // A world-axis mirror about the entity position would displace
+        // rotated sprites. Skia can't mirror inside an RSTransform and
+        // refuses inverted source rects, so this always takes the
+        // per-sprite affine path.
+        _drawAffineSprite(
+          canvas,
+          image,
+          sprite,
+          mirrorX: sprite.flipX,
+          mirrorY: sprite.flipY,
+        );
       }
+    }
+    if (runStart < batch.length) {
+      _drawSubBatch(
+        canvas,
+        image,
+        runStart == 0 ? batch : batch.sublist(runStart),
+      );
     }
 
     if (vp != null) {
@@ -214,9 +219,65 @@ class CanvasSpriteDrawer implements SpriteDrawer {
     }
   }
 
-  /// Issue one drawRawAtlas call for a bucket of same-flip sprites.
-  /// Kept as a helper so both the fast path and the per-sprite
-  /// mirrored path share the transform / srcRect packing.
+  /// Draw one sprite whose source-to-world map is not a similarity
+  /// (non-uniform scale from `Sprite.customSize` / `Transform2D.scale`,
+  /// shear, or a reflection), which an [RSTransform] cannot express.
+  ///
+  /// The full affine map is pushed onto the canvas and the sprite is
+  /// drawn through `drawRawAtlas` with an identity RSTransform, so the
+  /// tint (`BlendMode.modulate`), filtering and [paint] match the
+  /// batched fast path exactly.
+  ///
+  /// [mirrorX] / [mirrorY] mirror the sprite in its local space (about
+  /// the local origin, which is the anchor point, along the sprite's
+  /// own axes) before [BackendSpriteData.transform] is applied:
+  /// `world = transform * diag(±1, ±1) * local`.
+  void _drawAffineSprite(
+    Canvas canvas,
+    Image image,
+    BackendSpriteData sprite, {
+    bool mirrorX = false,
+    bool mirrorY = false,
+  }) {
+    final src = sprite.sourceRect;
+    final dest = sprite.destRect;
+    final kx = src.width == 0 ? 0.0 : dest.width / src.width;
+    final ky = src.height == 0 ? 0.0 : dest.height / src.height;
+    final m = sprite.transform.storage;
+    final fx = mirrorX ? -1.0 : 1.0;
+    final fy = mirrorY ? -1.0 : 1.0;
+    final a = m[0] * fx, b = m[1] * fx, c = m[3] * fy, d = m[4] * fy;
+    final e = m[6], f = m[7];
+
+    // Source-rect-local (u, v) to world, with M_lin already including
+    // the local mirror diag(fx, fy):
+    //   world = M_lin * (dest.topLeft + diag(kx, ky) * (u, v)) + (e, f)
+    final tx = a * dest.left + c * dest.top + e;
+    final ty = b * dest.left + d * dest.top + f;
+    canvas.save();
+    canvas.transform(
+      Float64List.fromList(<double>[
+        a * kx, b * kx, 0, 0, //
+        c * ky, d * ky, 0, 0, //
+        0, 0, 1, 0, //
+        tx, ty, 0, 1, //
+      ]),
+    );
+    canvas.drawRawAtlas(
+      image,
+      Float32List.fromList(const [1, 0, 0, 0]),
+      Float32List.fromList([src.left, src.top, src.right, src.bottom]),
+      Int32List.fromList([sprite.color.toARGB32()]),
+      BlendMode.modulate,
+      null,
+      paint,
+    );
+    canvas.restore();
+  }
+
+  /// Issue one drawRawAtlas call for a run of unflipped sprites whose
+  /// source-to-world maps are similarities (see
+  /// [isSimilaritySpriteMap]).
   void _drawSubBatch(
     Canvas canvas,
     Image image,
@@ -323,11 +384,12 @@ class SpriteRSTransform {
 /// exactly that composed map, expressed in
 /// scale-rotation-translation form.
 ///
-/// Assumes the sprite scale factor `k` is uniform in x and y
-/// (`destRect.width / sourceRect.width ==
-/// destRect.height / sourceRect.height`). Non-uniform scaling is out
-/// of scope for the drawRawAtlas path — Flame has the same
-/// constraint.
+/// Only exact when the composed map is a similarity, i.e. when
+/// [isSimilaritySpriteMap] returns `true`: the sprite scale factor `k`
+/// is uniform in x and y (`destRect.width / sourceRect.width ==
+/// destRect.height / sourceRect.height`) and [transform] is a rotation
+/// plus uniform, non-mirroring scale. [CanvasSpriteDrawer] routes every
+/// other sprite through a per-sprite affine path instead of this one.
 SpriteRSTransform composeSpriteRSTransform({
   required Matrix3 transform,
   required Rect sourceRect,
@@ -390,4 +452,38 @@ SpriteRSTransform composeSpriteRSTransform({
     scale: scale,
     rotation: rotation,
   );
+}
+
+/// Whether the source-to-world map of a sprite is a similarity
+/// (rotation + uniform positive scale + translation) and can therefore
+/// be drawn exactly through a `Canvas.drawRawAtlas` [RSTransform].
+///
+/// The map is `transform * diag(kx, ky)` with
+/// `kx = destRect.width / sourceRect.width` and
+/// `ky = destRect.height / sourceRect.height`. It is a similarity when
+/// its linear part has the form `[[p, -q], [q, p]]`. That fails for a
+/// non-square `Sprite.customSize` on a differently-shaped source, for a
+/// `Transform2D.scale` with `x != y`, for shear, and for negative
+/// (mirroring) scale. Comparisons use a small relative tolerance so
+/// float32 rounding in [Matrix3] storage does not knock uniform sprites
+/// off the batched fast path.
+bool isSimilaritySpriteMap({
+  required Matrix3 transform,
+  required Rect sourceRect,
+  required Rect destRect,
+}) {
+  final kx = sourceRect.width == 0 ? 0.0 : destRect.width / sourceRect.width;
+  final ky = sourceRect.height == 0 ? 0.0 : destRect.height / sourceRect.height;
+  final s = transform.storage;
+  final m00 = s[0] * kx; // x axis, x component
+  final m10 = s[1] * kx; // x axis, y component
+  final m01 = s[3] * ky; // y axis, x component
+  final m11 = s[4] * ky; // y axis, y component
+  final magnitude = math.max(
+    math.max(m00.abs(), m10.abs()),
+    math.max(m01.abs(), m11.abs()),
+  );
+  if (magnitude == 0) return true; // Degenerate: draws nothing either way.
+  final tolerance = magnitude * 1e-5;
+  return (m00 - m11).abs() <= tolerance && (m01 + m10).abs() <= tolerance;
 }

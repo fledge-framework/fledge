@@ -237,7 +237,7 @@ If an `addSystem` or `configureSet` call would create a cycle it throws a `State
 - Set ordering affects all systems in the set
 - Individual system ordering is combined with set ordering
 - `checkScheduleOrdering()` treats set-derived and transitive edges as explicit ordering
-- The default `Scheduler()` pre-configures the [standard phases of `first`](/docs/guides/scheduling#standard-phases-of-first) (`FirstSets`)
+- The default `Scheduler()` pre-configures the [standard phases of `first`](/docs/guides/scheduling#standard-phases-of-first) (`FirstSets`) and of [`update`](/docs/guides/scheduling#standard-phases-of-update) (`UpdateSets`)
 
 ## See Also
 

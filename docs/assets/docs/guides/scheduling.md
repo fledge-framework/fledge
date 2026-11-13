@@ -77,6 +77,17 @@ class LevelIntroSystem implements System {
 
 Systems in `first` that join no phase are unordered relative to the phases, so `App.checkScheduleOrdering()` still reports them when they conflict with a phased system. `Scheduler.empty()` configures no phases. See [System Sets](/docs/api/system-sets) for how set ordering resolves.
 
+## Standard Phases of `update`
+
+`Schedules.update` has two phases, defined in `UpdateSets` and chained the same way:
+
+| Phase | Runs | Built-in members |
+|-------|------|------------------|
+| `UpdateSets.receive` | 1st | `NetInterpolationSystem` (remote entities' interpolated state) |
+| `UpdateSets.simulate` | 2nd | `CollisionResolutionSystem`, `VelocityIntegrationSystem`, `CollisionDetectionSystem` (`PhysicsMode.variable`) |
+
+Join `UpdateSets.simulate` with variable-step movement and logic that should see this frame's received state, or order against a phase with `after: [UpdateSets.receive]`.
+
 ## Parallel Execution
 
 Systems in the same schedule run in parallel when they don't conflict:

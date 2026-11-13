@@ -122,6 +122,46 @@ void main() {
     }
   }
 
+  test('NetSendSystem declares what the interest position getter reads', () {
+    final registry = buildRegistry();
+    expect(registry.positionReads, {ComponentId.of<GlobalPos>()});
+    expect(
+      NetSendSystem(registry).meta.reads,
+      contains(ComponentId.of<GlobalPos>()),
+    );
+
+    final custom = ReplicationRegistry()
+      ..position(
+        (world, e) => null,
+        reads: {ComponentId.of<Pos>(), ComponentId.of<GlobalPos>()},
+      );
+    expect(
+      NetSendSystem(custom).meta.reads,
+      containsAll([ComponentId.of<Pos>(), ComponentId.of<GlobalPos>()]),
+    );
+    custom.freeze();
+    expect(
+      () => custom.positionFrom<GlobalPos>((g) => (g.x, g.y)),
+      throwsStateError,
+    );
+  });
+
+  test('a system writing the position component in fixedLast must order '
+      'against NetSendSystem', () {
+    final app = App()
+      ..addPlugin(NetworkPlugin(replication: buildRegistry()))
+      ..addSystem(
+        _StandIn(
+          SystemMeta(
+            name: 'late_global_pos_writer',
+            writes: {ComponentId.of<GlobalPos>()},
+          ),
+        ),
+        schedule: Schedules.fixedLast,
+      );
+    expect(app.checkScheduleOrdering(), isNotEmpty);
+  });
+
   test('systems are registered and no-ops offline', () async {
     final app = App()
       ..insertResource(WallTime()..delta = 0.02)

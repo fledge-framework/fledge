@@ -98,9 +98,17 @@ void main() {
       final hostSession = NetTestbed.session(host);
       final before = hostSession.stats.snapshotChunksSent;
       final interval = host.world.getResource<NetworkConfig>()!.syncInterval;
+      // The first snapshot after the change carries all 400: several chunks.
+      await bed.frames(interval);
+      final first = hostSession.stats.snapshotChunksSent - before;
+      expect(first, greaterThanOrEqualTo(4), reason: 'multi-chunk');
       await bed.frames(interval * 20);
-      final perSnapshot = (hostSession.stats.snapshotChunksSent - before) / 20;
-      expect(perSnapshot, greaterThanOrEqualTo(4), reason: 'multi-chunk');
+      // Once acknowledged, nothing changed is sent again: one small chunk a
+      // snapshot (resends of lost chunks aside).
+      final settled = hostSession.stats.snapshotChunksSent;
+      await bed.frames(interval * 10);
+      final perSnapshot = (hostSession.stats.snapshotChunksSent - settled) / 10;
+      expect(perSnapshot, lessThan(1.5), reason: 'only changes are sent');
 
       for (var i = 0; i < count; i++) {
         final mirror = entityFor(client, netIdOf(host, entities[i]));

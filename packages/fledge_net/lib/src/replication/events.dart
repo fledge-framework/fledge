@@ -10,6 +10,12 @@ enum OwnedEntityPolicy {
 
   /// Keep the entities and transfer ownership to the host (`ownerId` 0).
   releaseToHost,
+
+  /// Keep the entities, owned by the host for now, and give them back to
+  /// the player when the same identity joins again (see
+  /// `NetPeerConnected.returned`). Anonymous players' entities are simply
+  /// released to the host.
+  holdForReturn,
 }
 
 /// Host: a client finished connecting. It receives the full relevant
@@ -18,7 +24,18 @@ class NetPeerConnected {
   /// The new peer's id.
   final int peerId;
 
-  const NetPeerConnected(this.peerId);
+  /// Who the player is (their `ClientIdentity`), or empty if anonymous.
+  final String identity;
+
+  /// Network ids handed back to this player because they joined again with
+  /// the same identity (`OwnedEntityPolicy.holdForReturn`).
+  final List<int> returned;
+
+  const NetPeerConnected(
+    this.peerId, {
+    this.identity = '',
+    this.returned = const [],
+  });
 }
 
 /// Host: a client left (disconnect, timeout or kick). Its owned entities
@@ -26,6 +43,9 @@ class NetPeerConnected {
 class NetPeerDisconnected {
   /// The departed peer's id.
   final int peerId;
+
+  /// Who the player was, or empty if anonymous.
+  final String identity;
 
   /// Human-readable reason (never contains secrets).
   final String reason;
@@ -39,6 +59,7 @@ class NetPeerDisconnected {
   const NetPeerDisconnected(
     this.peerId,
     this.reason, {
+    this.identity = '',
     this.ownedNetIds = const [],
     this.policy = OwnedEntityPolicy.despawn,
   });
@@ -80,6 +101,10 @@ enum NetRejectionKind {
 
   /// A message a client is not allowed to send (e.g. a spawn).
   message,
+
+  /// An action out of sequence, or targeting an entity the peer does not
+  /// own (the sender is told it was rejected, when it can be).
+  action,
 }
 
 /// Host: a client sent something it is not authorised to send. The data

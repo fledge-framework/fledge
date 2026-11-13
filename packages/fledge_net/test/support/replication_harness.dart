@@ -93,10 +93,7 @@ ReplicationRegistry buildRegistry({bool predict = true, double blend = 1}) {
     ..component<Health>('health', healthCodec)
     ..input<Move>(moveCodec)
     ..rpc<Emote>('emote', emoteCodec)
-    ..positionOf = (world, e) {
-      final g = world.get<GlobalPos>(e);
-      return g == null ? null : (g.x, g.y);
-    };
+    ..positionFrom<GlobalPos>((g) => (g.x, g.y));
   if (predict) {
     r.predict<Pos, Move>(
       step: stepPos,
@@ -176,6 +173,7 @@ class EventLog {
   final spawned = <NetEntitySpawned>[];
   final despawned = <NetEntityDespawned>[];
   final emotes = <NetRpcReceived<Emote>>[];
+  final resourceUpdates = <NetResourceUpdated>[];
 }
 
 /// Host scene: a vehicle plus one avatar per connected peer.
@@ -243,6 +241,7 @@ class EventRecorderSystem implements System {
     log.spawned.addAll(world.eventReader<NetEntitySpawned>().read());
     log.despawned.addAll(world.eventReader<NetEntityDespawned>().read());
     log.emotes.addAll(world.eventReader<NetRpcReceived<Emote>>().read());
+    log.resourceUpdates.addAll(world.eventReader<NetResourceUpdated>().read());
     return Future.value();
   }
 }
@@ -320,6 +319,9 @@ class NetTestbed {
   final List<App> clients = [];
   int frameCount = 0;
 
+  /// Apps that skip frames (a stalled process); the network keeps going.
+  final Set<App> paused = {};
+
   NetTestbed({
     this.tickRate = 50,
     Duration latency = Duration.zero,
@@ -390,9 +392,11 @@ class NetTestbed {
   /// after it on the configured link.
   Future<App> addClient({
     Duration readyTimeout = const Duration(seconds: 5),
+    IdentityProvider? identity,
   }) async {
     final app = createApp(isHost: false);
     clients.add(app);
+    if (identity != null) session(app).config.identityProvider = identity;
     final loss = net.packetLoss;
     net.packetLoss = 0;
     final ok = await pumpUntil(session(app).join('127.0.0.1', 7777));
@@ -414,9 +418,48 @@ class NetTestbed {
   Future<void> frame() async {
     await net.advance(Duration(milliseconds: stepMs));
     for (final app in apps) {
-      await app.tick();
+      if (!paused.contains(app)) await app.tick();
     }
     frameCount++;
+  }
+
+  /// Runs every app at its own frame rate for [duration] of network time,
+  /// like separate machines: [fps] per app (default: the tick rate), and
+  /// [clockRate] per app scaling the frame time the app believes passed (a
+  /// clock running fast or slow; 1 = exact). Apps in [paused] skip their
+  /// frames. [afterFrame] runs after each app frame.
+  Future<void> runRealtime(
+    Duration duration, {
+    Map<App, double> fps = const {},
+    Map<App, double> clockRate = const {},
+    void Function(App app, double frameMs)? afterFrame,
+  }) async {
+    final start = clock.nowMs.toDouble();
+    final end = start + duration.inMicroseconds / 1000;
+    final next = {for (final app in apps) app: start};
+    while (true) {
+      App? app;
+      var at = double.infinity;
+      for (final MapEntry(key: a, value: t) in next.entries) {
+        if (t < at) {
+          app = a;
+          at = t;
+        }
+      }
+      if (app == null || at > end) break;
+      final ms = at.floor() - clock.nowMs;
+      if (ms > 0) await net.advance(Duration(milliseconds: ms));
+      final interval = 1000 / (fps[app] ?? tickRate.toDouble());
+      next[app] = at + interval;
+      if (paused.contains(app)) continue;
+      final frameMs = interval * (clockRate[app] ?? 1);
+      app.world.getResource<WallTime>()!.delta = frameMs / 1000;
+      await app.tick();
+      afterFrame?.call(app, frameMs);
+    }
+    for (final app in apps) {
+      app.world.getResource<WallTime>()!.delta = stepMs / 1000;
+    }
   }
 
   Future<void> frames(int n) async {

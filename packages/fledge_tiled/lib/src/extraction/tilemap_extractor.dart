@@ -1,13 +1,8 @@
-import 'dart:ui' show Offset;
+import 'dart:ui' show Offset, Rect;
 
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart'
-    show
-        DrawLayer,
-        DrawLayerExtension,
-        Extractor,
-        GlobalTransform2D,
-        RenderWorld;
+    show ActiveCameraView, DrawLayer, Extractor, GlobalTransform2D, RenderWorld;
 import 'package:vector_math/vector_math.dart' show Vector2;
 
 import '../components/tile_layer.dart';
@@ -27,10 +22,22 @@ class TilemapExtractor extends Extractor {
 
   TilemapExtractor({this.respectVisibility = true});
 
+  /// World units beyond the camera's last view that are still extracted.
+  static const double cullMargin = 64;
+
+  Rect? _visible;
+
   @override
   void extract(World mainWorld, RenderWorld renderWorld) {
     // ignore: deprecated_member_use_from_same_package
     final legacyAssets = mainWorld.getResource<TilemapAssets>();
+    // Only tiles near the camera's last view are extracted: a large map
+    // otherwise rebuilds every tile of every layer each frame. The margin
+    // covers camera movement since that paint.
+    _visible = mainWorld
+        .getResource<ActiveCameraView>()
+        ?.visibleWorldRect
+        ?.inflate(cullMargin);
 
     // Query for tilemap entities
     for (final (mapEntity, tilemap, mapTransform)
@@ -145,15 +152,31 @@ class TilemapExtractor extends Extractor {
       worldX = mapPos.x;
       worldY = mapPos.y;
 
+      final visible = _visible;
+      if (visible != null &&
+          !visible.overlaps(
+            Rect.fromLTWH(worldX, worldY, tileWidth, tileHeight),
+          )) {
+        continue;
+      }
+
       // Sort key based on layer class:
       // - "above" layers use DrawLayer.foreground (renders above characters)
       // - Other layers use DrawLayer.ground (renders below characters)
-      // subOrder: Y * 100 for depth + layerIndex for ordering multiple layers
+      // Sub-order: row * 100 + layerIndex (row first, then layer index),
+      // clamped into the layer range; the unclamped value rides along as
+      // the precise sub-order so rows >= 1,000 still sort by row.
       final drawLayer = (layer.layerClass == 'above')
           ? DrawLayer.foreground
           : DrawLayer.ground;
-      final sortKey = drawLayer.sortKey(
-        subOrder: tile.y * 100 + layer.layerIndex,
+      final sortKey = tileSortKey(
+        drawLayer: drawLayer,
+        row: tile.y,
+        layerIndex: layer.layerIndex,
+      );
+      final preciseSubOrder = tilePreciseSubOrder(
+        row: tile.y,
+        layerIndex: layer.layerIndex,
       );
 
       // Emit both ExtractedSprite (drawn by FledgeRenderView /
@@ -171,6 +194,7 @@ class TilemapExtractor extends Extractor {
           color: layerColor,
           sortKey: sortKey,
           flipFlags: tile.flipFlags,
+          preciseSubOrder: preciseSubOrder,
         ),
       );
       // ignore: deprecated_member_use_from_same_package
@@ -184,6 +208,7 @@ class TilemapExtractor extends Extractor {
           color: layerColor,
           sortKey: sortKey,
           flipFlags: tile.flipFlags,
+          preciseSubOrder: preciseSubOrder,
         ),
       );
     }

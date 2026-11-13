@@ -43,8 +43,25 @@ class DisplaySyncSystem implements System {
   @override
   bool shouldRun(World world) => runCondition?.call(world) ?? true;
 
+  /// A display query in flight, started by an earlier frame.
+  Future<_DisplayQuery>? _query;
+
+  /// The finished query, waiting for the next frame to apply it.
+  _DisplayQuery? _result;
+
   @override
   Future<void> run(World world) async {
+    // Never awaits the platform: a tick that waits on a platform call
+    // stalls until a later turn of the event loop, so the frame is drawn
+    // before the tick's movement has happened and the next frame shows
+    // two steps at once. The query runs in the background; its result is
+    // applied on the first frame after it arrives.
+    final result = _result;
+    if (result != null) {
+      _result = null;
+      _apply(world, result);
+    }
+    if (_query != null) return;
     final now = DateTime.now();
     if (now.difference(_lastSync) < _syncInterval) return;
     _lastSync = now;
@@ -52,20 +69,41 @@ class DisplaySyncSystem implements System {
     final displayInfo = world.getResource<DisplayInfo>();
     if (displayInfo == null || !displayInfo.isInitialized) return;
 
-    // Fetch current display info. If the backend throws (disconnected
-    // monitor mid-enumeration, permission revoked, etc.) we leave the
-    // cached DisplayInfo intact and emit a failure event instead.
-    final List<dynamic> screenDisplays;
-    final dynamic primaryDisplay;
+    _query = _fetch().then((query) {
+      _result = query;
+      _query = null;
+      return query;
+    });
+  }
+
+  /// Asks the platform for its displays. If the backend throws
+  /// (disconnected monitor mid-enumeration, permission revoked, etc.) the
+  /// query carries the error, and the cached [DisplayInfo] is left intact.
+  static Future<_DisplayQuery> _fetch() async {
     try {
-      screenDisplays = await screenRetriever.getAllDisplays();
-      primaryDisplay = await screenRetriever.getPrimaryDisplay();
+      final screenDisplays = await screenRetriever.getAllDisplays();
+      final primaryDisplay = await screenRetriever.getPrimaryDisplay();
+      return _DisplayQuery(screenDisplays, primaryDisplay, null);
     } catch (e) {
+      return _DisplayQuery(const [], null, e);
+    }
+  }
+
+  void _apply(World world, _DisplayQuery query) {
+    final error = query.error;
+    if (error != null) {
       world.eventWriter<WindowOperationFailed>().send(
-        WindowOperationFailed(operation: 'syncDisplays', reason: e.toString()),
+        WindowOperationFailed(
+          operation: 'syncDisplays',
+          reason: error.toString(),
+        ),
       );
       return;
     }
+    final displayInfo = world.getResource<DisplayInfo>();
+    if (displayInfo == null || !displayInfo.isInitialized) return;
+    final screenDisplays = query.displays;
+    final dynamic primaryDisplay = query.primary;
 
     // Build updated Display objects
     final displays = <Display>[];
@@ -118,4 +156,14 @@ class DisplaySyncSystem implements System {
 
     return false;
   }
+}
+
+/// A finished display query: the platform's displays and primary display,
+/// or the error it threw.
+class _DisplayQuery {
+  const _DisplayQuery(this.displays, this.primary, this.error);
+
+  final List<dynamic> displays;
+  final dynamic primary;
+  final Object? error;
 }

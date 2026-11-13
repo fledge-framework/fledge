@@ -39,6 +39,19 @@ InputWidget(
 );
 ```
 
+## Buttons in the fixed step
+
+`justPressed` describes the current frame, and a frame can run the fixed-timestep chain zero times (missing the press) or several times (seeing it twice). Systems in the fixed schedules read `fixedJustPressed` / `fixedJustReleased` instead: a press is held until a fixed step has run, then cleared in `Schedules.fixedLast` by `InputFixedLatchSystem` (installed by the plugin), so exactly one fixed step sees it.
+
+```dart
+// In a system on Schedules.fixedUpdate:
+if (actions.fixedJustPressed(ActionId.fromEnum(Actions.jump))) {
+  velocity.y = jumpSpeed;
+}
+```
+
+Held buttons and axes are state, not edges, so `isPressed` and `getVector2` work the same in either schedule.
+
 ## Documentation
 
 See the [Fledge documentation site](https://fledge-framework.dev/docs/plugins/input) for guides, API reference, and advanced usage.

@@ -72,7 +72,7 @@ Deprecated: `stage: CoreStage.foo` on `App.addSystem` still works for one releas
 
 Class-based public systems expose `static const String systemName` and use it in `SystemMeta(name: systemName)`. Always reference the constant in `before:`/`after:` (e.g. `after: {TransformPropagateSystem.systemName}`), never a string literal — the values are inconsistent (`'CameraFollowSystem'` vs `'transform_propagate'`). New public systems should follow this pattern.
 
-Packages that don't depend on each other can't reference each other's constants. In `Schedules.first`, order them through the standard `FirstSets` phases (`frameStart` → `platform` → `input` → `content`, chained by every default `Scheduler()`): a system joins with `SystemMeta(sets: [FirstSets.input])`, and `before:`/`after:` may name a set. Never order across packages with string literals.
+Packages that don't depend on each other can't reference each other's constants. In `Schedules.first`, order them through the standard `FirstSets` phases (`frameStart` → `platform` → `input` → `content`), and in `Schedules.update` through `UpdateSets` (`receive` → `simulate`); every default `Scheduler()` chains both. A system joins with `SystemMeta(sets: [FirstSets.input])`, and `before:`/`after:` may name a set. Never order across packages with string literals.
 
 ### Codegen: Query vs QueryMut
 `@system`-annotated functions signal component intent through the parameter type: `Query1..4<T>` = reads, `QueryMut1..4<T>` = writes. The generator emits the correct `reads:`/`writes:` sets in `SystemMeta`. Mixed reads/writes on a single query → hand-write a class-based `System` subclass. The `@reflectable` annotation is not implemented (reserved for `fledge_debug`).

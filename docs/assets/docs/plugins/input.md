@@ -410,6 +410,19 @@ if (primary != null) {
 }
 ```
 
+### Buttons in the fixed step
+
+`justPressed` and `justReleased` describe the current frame. A frame can run the fixed-timestep chain zero times, missing the press, or several times, seeing it twice. Systems in the fixed schedules use `fixedJustPressed` and `fixedJustReleased` instead: a press is held until a fixed step has run, then cleared by `InputFixedLatchSystem` in `Schedules.fixedLast`, so exactly one fixed step sees each press.
+
+```dart
+// On Schedules.fixedUpdate:
+if (actions.fixedJustPressed(ActionId('jump'))) {
+  velocity.y = jumpSpeed;
+}
+```
+
+Held buttons and axes are state rather than edges, so `isPressed` and `getVector2` read the same in either schedule.
+
 ## Resources Reference
 
 | Resource | Description |
@@ -429,6 +442,7 @@ if (primary != null) {
 | `ContextUpdateSystem<S>` | first (`FirstSets.input`) | Updates active context from game state |
 | `ActionResolutionSystem` | first (`FirstSets.input`) | Resolves actions from raw input |
 | `InputFrameEndSystem` | last | Clears input transition flags |
+| `InputFixedLatchSystem` | fixedLast | Clears the presses held for the fixed step (`fixedJustPressed`) |
 
 The `FirstSets.input` phase runs after window / audio platform systems and before content spawning (tilemaps, hot reload) — see [Standard Phases of `first`](/docs/guides/scheduling#standard-phases-of-first). To read resolved actions in `first`, add `after: [ActionResolutionSystem.systemName]` (or `after: [FirstSets.input]`); systems in `preUpdate` or later need no ordering.
 

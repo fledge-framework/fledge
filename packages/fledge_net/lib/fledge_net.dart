@@ -64,19 +64,25 @@ export 'src/connection/host.dart';
 export 'src/connection/peer.dart';
 export 'src/connection/protocol_mismatch.dart';
 
-// Sync
-export 'src/sync/input_sync.dart';
-export 'src/sync/interest_manager.dart';
-export 'src/sync/network_identity.dart';
-export 'src/sync/state_sync.dart';
-
 // Replication
+export 'src/replication/actions.dart'
+    show
+        NetAction,
+        NetActions,
+        NetActionResolved,
+        NetActionTicket,
+        NetPendingAction;
 export 'src/replication/codec.dart';
 export 'src/replication/components.dart';
 export 'src/replication/events.dart';
+export 'src/replication/identity.dart';
 export 'src/replication/inputs.dart';
-export 'src/replication/registry.dart' show ReplicationRegistry, PositionGetter;
+export 'src/replication/network_identity.dart';
+export 'src/replication/registry.dart'
+    show ReplicationRegistry, PositionGetter, NetSmoothed, PredictContext;
 export 'src/replication/reliable_channel.dart';
+export 'src/replication/resources.dart'
+    show ResourceCodec, ChunkVersions, NetResourceUpdated;
 export 'src/replication/session.dart';
 export 'src/replication/systems.dart';
 export 'src/replication/tick_sync.dart';

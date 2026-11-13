@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:collection';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -40,11 +39,13 @@ class HostDataEvent {
 
 /// Network client for connecting to a game host.
 ///
-/// The client:
-/// - Connects to a host by address or hostname
-/// - Sends inputs to the host
-/// - Receives state updates from the host
-/// - Predicts local state for responsiveness
+/// The client connects to a host by address or hostname (retrying the
+/// connect request until answered), pings it for RTT, detects a silent
+/// host and exchanges datagrams with it.
+///
+/// Every send is a single unreliable datagram. For reliable, ordered
+/// delivery layer a `ReliableChannel` over [PacketType.replication] (or
+/// your own type), as the replication layer does.
 class NetworkClient {
   /// Transport for network communication.
   final Transport transport;
@@ -64,8 +65,8 @@ class NetworkClient {
   /// until [connectionTimeout].
   final Duration connectRetryInterval;
 
-  /// Monotonic clock used for ping timestamps, RTT, ping cadence, the
-  /// connected-state timeout and reliable retransmits.
+  /// Monotonic clock used for ping timestamps, RTT, ping cadence and the
+  /// connected-state timeout.
   final NetClock clock;
 
   /// Default for [disconnectRedundancy].
@@ -112,12 +113,6 @@ class NetworkClient {
   ///
   /// Measured from ping/pong echoes of this client's own [clock].
   double rtt = 0;
-
-  /// Pending reliable packets waiting for acknowledgment.
-  final Queue<_ClientPendingPacket> _pendingReliable = Queue();
-
-  /// Maximum retransmit attempts before dropping.
-  static const int _maxRetransmits = 10;
 
   /// Time of last received packet ([clock] milliseconds).
   int _lastReceiveMs = 0;
@@ -192,14 +187,11 @@ class NetworkClient {
   /// Host address (numeric, after hostname resolution).
   NetAddress? get hostAddress => _hostAddress;
 
-  /// Retransmit timeout for reliable packets: `rtt * 2` clamped to
-  /// `100ms..5000ms`, or 100ms before the first RTT sample.
-  Duration get retransmitTimeout => rtt > 0
-      ? Duration(milliseconds: (rtt * 2.0).clamp(100, 5000).toInt())
-      : const Duration(milliseconds: 100);
-
   /// Credentials to send during connection handshake.
   Uint8List? _credentials;
+
+  /// The identity to present during the handshake.
+  String _clientId = anonymousClientId;
 
   /// Connect to a host.
   ///
@@ -208,27 +200,38 @@ class NetworkClient {
   /// The connect request is re-sent every [connectRetryInterval] until the
   /// host accepts or rejects it, or [connectionTimeout] elapses.
   ///
-  /// Optionally provide [credentials] for authentication (e.g., password hash,
-  /// token). The host's authenticator callback receives these credentials.
-  Future<bool> connect(String host, int port, {Uint8List? credentials}) async {
+  /// [clientId] is the player identity to present (see `ClientIdentity`);
+  /// without one the client is anonymous. Optionally provide [credentials]
+  /// for authentication (e.g., password hash, token). The host's
+  /// authenticator callback receives both.
+  Future<bool> connect(
+    String host,
+    int port, {
+    String clientId = anonymousClientId,
+    Uint8List? credentials,
+  }) async {
     if (_state != ClientState.disconnected) {
       throw StateError('Client not disconnected');
     }
+    _clientId = clientId;
     _credentials = credentials;
 
     _setState(ClientState.connecting);
     final completer = _connectCompleter = Completer<bool>();
 
     try {
-      final String address;
+      final NetAddress address;
       try {
-        address = await _resolveHost(host);
+        final t = transport;
+        address = t is AddressResolver
+            ? await (t as AddressResolver).resolve(host, port)
+            : NetAddress(await _resolveHost(host), port);
       } catch (e) {
         _failConnect('Could not resolve host "$host": $e');
         return false;
       }
       if (_state != ClientState.connecting) return false;
-      _hostAddress = NetAddress(address, port);
+      _hostAddress = address;
 
       // Bind to any available port
       await transport.bind(0);
@@ -320,9 +323,8 @@ class NetworkClient {
 
   /// Update client (call every frame).
   ///
-  /// Checks the connection timeout, pings the host every [pingInterval]
-  /// and retransmits unacknowledged reliable packets. Connect retries do
-  /// not depend on this being called.
+  /// Checks the connection timeout and pings the host every
+  /// [pingInterval]. Connect retries do not depend on this being called.
   void update() {
     if (_state != ClientState.connected) return;
 
@@ -340,9 +342,6 @@ class NetworkClient {
       _lastPingMs = now;
       _sendPing();
     }
-
-    // Retransmit reliable packets
-    _retransmitReliable(now);
   }
 
   void _setState(ClientState newState, [String? reason]) {
@@ -426,7 +425,6 @@ class NetworkClient {
 
     // Update sequence tracking
     _processReceivedSequence(packet.header.sequence);
-    _processAck(packet.header.ack, packet.header.ackBits);
 
     // Handle packet type
     switch (packet.header.type) {
@@ -463,7 +461,7 @@ class NetworkClient {
   }
 
   void _handleConnectAccepted(Uint8List payload) {
-    // Duplicates (retransmits, re-sent acceptances) are expected.
+    // Duplicates (re-sent acceptances, duplicated datagrams) are expected.
     if (_state != ClientState.connecting) return;
     final reader = PacketReader(payload);
     _localPeerId = reader.readInt32();
@@ -522,20 +520,8 @@ class NetworkClient {
     final host = _hostAddress;
     if (host == null) return;
 
-    final sequence = _nextSequence;
-    final data = _buildPacket(type, payload, sequence);
+    final data = _buildPacket(type, payload, _nextSequence);
     await transport.send(host, data);
-
-    // Queue reliable packets for retransmission
-    if (type.isReliable) {
-      _pendingReliable.add(
-        _ClientPendingPacket(
-          sequence: sequence,
-          data: data,
-          sentMs: clock.nowMs,
-        ),
-      );
-    }
   }
 
   /// Fire-and-forget send that swallows transport errors (e.g. the
@@ -544,45 +530,16 @@ class NetworkClient {
     unawaited(_sendToHost(type, payload).catchError((Object _) {}));
   }
 
-  void _processAck(int ack, int ackBits) {
-    _pendingReliable.removeWhere((pending) {
-      if (pending.sequence == ack) return true;
-      final diff = (ack - pending.sequence) & 0xFFFF;
-      if (diff > 0 && diff <= 32) {
-        final bit = 1 << (diff - 1);
-        if ((ackBits & bit) != 0) return true;
-      }
-      return false;
-    });
-  }
-
-  void _retransmitReliable(int nowMs) {
-    final timeoutMs = retransmitTimeout.inMilliseconds;
-
-    _pendingReliable.removeWhere((p) => p.retransmitCount >= _maxRetransmits);
-
-    final host = _hostAddress;
-    if (host == null) return;
-    for (final pending in _pendingReliable) {
-      if (nowMs - pending.sentMs > timeoutMs) {
-        pending.sentMs = nowMs;
-        pending.retransmitCount++;
-        unawaited(transport.send(host, pending.data).catchError((Object _) {}));
-      }
-    }
-  }
-
   Uint8List _buildConnectPacket() {
     final builder = PacketBuilder()
-      ..writeString('FledgeClient'); // Client identifier
+      ..writeString(_clientId); // Who this player is
     final credentials = _credentials;
     if (credentials != null) {
       builder.writeBytes(credentials);
     } else {
       builder.writeUint16(0); // No credentials
     }
-    // Retries resend these exact bytes; the connect handshake has its own
-    // retry loop, so it is not queued with the other reliable packets.
+    // Retries resend these exact bytes until the host answers.
     return _buildPacket(PacketType.connect, builder.build(), _nextSequence);
   }
 
@@ -594,8 +551,10 @@ class NetworkClient {
     }
     try {
       await transport.send(host, packet);
-    } on StateError {
-      // Transport closed while connecting (e.g. disconnect()); ignore.
+    } catch (_) {
+      // Transport closed while connecting (e.g. disconnect()) or a socket
+      // error: the next retry (or the timeout) takes over. Retries run
+      // from a Timer, so nothing may escape as an unhandled error.
     }
   }
 
@@ -619,17 +578,4 @@ class NetworkClient {
     return ((seq1 > seq2) && (seq1 - seq2 <= 32768)) ||
         ((seq1 < seq2) && (seq2 - seq1 > 32768));
   }
-}
-
-class _ClientPendingPacket {
-  final int sequence;
-  final Uint8List data;
-  int sentMs;
-  int retransmitCount = 0;
-
-  _ClientPendingPacket({
-    required this.sequence,
-    required this.data,
-    required this.sentMs,
-  });
 }

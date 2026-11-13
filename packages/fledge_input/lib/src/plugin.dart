@@ -11,6 +11,7 @@ import 'systems/input_polling_system.dart';
 import 'systems/action_resolution_system.dart';
 import 'systems/context_update_system.dart';
 import 'systems/input_frame_end_system.dart';
+import 'systems/input_fixed_latch_system.dart';
 
 /// Plugin that adds comprehensive input handling to a Fledge app.
 ///
@@ -143,6 +144,9 @@ class InputPlugin<S extends Enum> implements Plugin {
 
     // Clear transition flags at end of frame, after all systems have read input
     app.addSystem(InputFrameEndSystem(), schedule: Schedules.last);
+
+    // Presses held for the fixed step are cleared once a fixed step has run.
+    app.addSystem(InputFixedLatchSystem(), schedule: Schedules.fixedLast);
   }
 
   @override

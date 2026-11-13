@@ -140,9 +140,12 @@ class BackendSpriteData {
   /// apply this either as a pre-multiply or via `canvas.transform`.
   final Matrix4? viewProjection;
 
-  /// Packed flip flags: bit 0 = flipX, bit 1 = flipY. The drawer
-  /// sub-batches by this value and applies a `canvas.scale(±1, ±1)`
-  /// around each sub-batch's `drawRawAtlas` call.
+  /// Packed flip flags: bit 0 = flipX, bit 1 = flipY. A flip mirrors
+  /// the sprite in its own local space, about the anchor (the local
+  /// origin of [destRect]) and along its own axes, before [transform]
+  /// is applied: `world = transform * diag(±1, ±1) * local`. A rotated
+  /// sprite therefore mirrors along its rotated axes and stays on its
+  /// anchor.
   final int flipFlags;
 
   /// Creates backend sprite data.

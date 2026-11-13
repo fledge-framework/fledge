@@ -1,7 +1,7 @@
 import 'dart:ui' show Color, Rect;
 
-/// How [AmbientLight] is applied to the scene by
-/// [LitFledgeRenderView].
+/// How [AmbientLight] is applied to the scene (by the lighting view pass
+/// that `LightingPlugin` adds to every `FledgeRenderView`).
 enum AmbientBlend {
   /// Legacy behaviour: paint the ambient fill *before* sprites, at
   /// normal blend. Sprites always draw at full brightness on top;
@@ -13,7 +13,22 @@ enum AmbientBlend {
   /// so it darkens (or tints) the sprite layer too. Additive lights
   /// then still brighten pixels on top. In this mode the pre-sprite
   /// ambient fill is skipped so empty cells are not double-darkened.
+  ///
+  /// The lights are *added* over the darkened scene, so they paint a
+  /// glow rather than reveal what's under them; prefer [lightMap].
   overSprites,
+
+  /// The usual 2D lighting model, and the one to reach for: the ambient
+  /// colour and every light are added into a light map, and the sprites
+  /// are multiplied by it. A pixel ends up as its sprite colour × (ambient
+  /// + the lights reaching it), so a lamp at night shows the ground in its
+  /// true colours around it, and nothing gets brighter than it's drawn.
+  /// `Sprite.emissive` sprites draw after the light map, at full
+  /// brightness. Lights' `glow` halos are added on top.
+  ///
+  /// [AmbientLight.intensity] works as in [overSprites]: the map's base is
+  /// `lerp(white, color, intensity)`, so `0` is full daylight.
+  lightMap,
 }
 
 /// Scene-wide ambient illumination.

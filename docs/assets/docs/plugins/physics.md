@@ -340,6 +340,37 @@ App()
   .addSystem(CollisionCleanupSystem(), schedule: Schedules.last);
 ```
 
+## Pathfinding
+
+A* on a grid: `CollisionGrid` marks which cells are walkable and, optionally, what each costs to cross (`setCost`, default 1). `Pathfinder` finds the cheapest path, so given costs, walkers keep to roads and cut across open ground only where the way round is much longer. With `fledge_tiled`, `TerrainGrid.fromTilemap` and `applyTerrainCosts` set costs from a map's terrain.
+
+```dart
+final grid = CollisionGrid(width: 64, height: 48);
+grid.setBlocked(10, 4);   // a wall
+grid.setCost(12, 4, 3);   // rough ground
+final result = const Pathfinder().findPath(grid, 0, 0, 40, 30);
+```
+
+### Walking like people: lanes
+
+A raw path hugs the inside of every bend, and line-of-sight smoothing (`smoothPath`) straightens it into diagonals across the road. For people in a town, shape the grid and the path instead:
+
+1. **`EdgeDistance.of(grid)`** measures how far each cell is from the edge of its ground (a blocked cell or dearer ground). Pass `wallsAreEdges: false` to measure by the ground alone, so props on a square don't push paths around.
+2. **`preferCentres(grid, edges)`** makes the sides of every stretch of ground a little dearer, so A* follows the middle of the road.
+3. **`keepToSide(grid, edges, points)`** shifts each waypoint to the right of travel (or `side: Side.left`), by a share of the half-width there, like traffic. Walkers going opposite ways take opposite halves of a road.
+4. **`simplifyPath(grid, points)`** drops waypoints that lie close to a straight line (Ramer-Douglas-Peucker). Runs of grid steps become straight walks, and bends stay where they are: it never cuts a corner.
+
+```dart
+final edges = EdgeDistance.of(grid, wallsAreEdges: false);
+preferCentres(grid, edges); // once, when the grid is built
+
+final cells = [start, ...const Pathfinder().findPath(grid, sx, sy, gx, gy).path!];
+final centres = [for (final (x, y) in cells) (x + 0.5, y + 0.5)];
+final way = simplifyPath(grid, keepToSide(grid, edges, centres));
+```
+
+Path coordinates are in grid cells as continuous values: a cell's centre is (x + 0.5, y + 0.5).
+
 ## Components Reference
 
 ### CollisionConfig

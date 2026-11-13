@@ -37,6 +37,15 @@ class NetAddress {
 }
 
 /// Received packet from network.
+/// A [Transport] whose addresses aren't IP addresses or host names, such
+/// as Steam IDs. `NetworkClient.connect` asks it to resolve the host
+/// instead of looking it up in DNS.
+abstract interface class AddressResolver {
+  /// The address to send to for [host] and [port], or throws if [host]
+  /// isn't an address this transport understands.
+  Future<NetAddress> resolve(String host, int port);
+}
+
 class ReceivedPacket {
   /// Source address of the packet.
   final NetAddress source;

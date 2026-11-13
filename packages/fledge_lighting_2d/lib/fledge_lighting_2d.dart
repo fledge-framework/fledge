@@ -1,9 +1,9 @@
 /// 2D dynamic lighting for Fledge.
 ///
-/// Phase 6c of the restructure: point / directional / spot lights,
-/// ambient light, and a lighting-aware `CustomPaint` widget that
-/// stacks the three passes (ambient → sprites → additive lights) on
-/// top of the existing `fledge_render_2d` sprite pipeline.
+/// Point, directional and spot lights and ambient light, drawn by a
+/// `ViewPass` in every `FledgeRenderView`. [AmbientBlend.lightMap] is the
+/// usual 2D model: ambient and lights add into a light map that multiplies
+/// the sprites, with `Sprite.emissive` sprites drawn after it.
 ///
 /// ## Contents
 ///
@@ -14,8 +14,10 @@
 /// - [ExtractedLight] — render-side data.
 /// - [LightExtractor] — extractor mirroring `SpriteExtractor`.
 /// - [linearAttenuation] — falloff math shared with the drawer.
-/// - [renderLightsToCanvas] — the additive-light draw pass.
-/// - [LitFledgeRenderView] — lighting-aware widget wrapper.
+/// - [renderLightsToCanvas], [renderLightMap], [renderLightGlows] — the
+///   draw passes.
+/// - [LightingViewPass] — draws them in every `FledgeRenderView`.
+/// - [LitFledgeRenderView] — deprecated; a plain `FledgeRenderView` now.
 /// - [LightingPlugin] — wires the extractor + ambient resource.
 ///
 /// Shadow tracing, per-pixel normal-mapped lighting, and cookie
@@ -30,4 +32,5 @@ export 'src/light2d.dart';
 export 'src/light_extractor.dart';
 export 'src/lighting_plugin.dart';
 export 'src/lighting_render_node.dart';
+export 'src/lighting_view_pass.dart';
 export 'src/lit_fledge_render_view.dart';

@@ -110,6 +110,7 @@ export 'src/material/shader_material.dart';
 export 'src/material/sprite_material.dart';
 
 // Character
+export 'src/character/facing.dart';
 export 'src/character/orientation.dart';
 
 // Transitions
@@ -146,3 +147,4 @@ export 'src/render/plugin/render_plugin.dart';
 
 // Widget
 export 'src/widget/fledge_render_view.dart';
+export 'src/widget/view_pass.dart';

@@ -22,7 +22,8 @@ You are the expert on `packages/fledge_render_2d`.
 - Two-world model: the `RenderWorld` is cleared and rebuilt every frame by extractors (in `Schedules.extract`) before render systems run in `Schedules.render`. Never store game state there; only resources persist.
 - `Transform2D` is local — `TransformPropagateSystem` derives `GlobalTransform2D` using `fledge_ecs`'s `Parent`/`Children` hierarchy. When adding transform-affecting components, respect that composition.
 - Public systems expose `static const String systemName` (`TransformPropagateSystem`, `SnapshotPreviousTransformSystem`, `AnimateSystem`, transition systems); other packages order against those constants.
-- Sprite batching (`SpriteBatchSystem`) groups extracted sprites by texture; changing what participates in grouping changes draw-call counts. Profile before merging.
+- Sprite batching (`SpriteBatchSystem`, and `renderSpritesToDrawer` on the widget path) sorts with `ExtractedSprite.sortByDrawOrder` and merges only contiguous same-texture runs, so cross-texture painter's order holds; never regroup by texture across the frame. Changing what participates in grouping changes draw-call counts. Profile before merging.
+- Flip is applied in sprite-local space (about the anchor, along the sprite's own axes), not as a world-axis mirror about the entity position.
 - Camera components, follow, shake, parallax, letterbox, and pixel-perfect snapping are in `fledge_camera_2d`, which writes `ActiveCameraView` for this package's widget path. Depends on `fledge_assets` for `Assets<Texture>`.
 - This is a Flutter package: tests run under `flutter test`. Golden-style render assertions are sensitive to font/platform — flag any churn in the PR body.
 - Many packages depend on this one (camera_2d, lighting_2d, ui, particles, physics, audio, tiled, debug). When `RenderContext`, extractor, or slot shapes change, check those consumers.

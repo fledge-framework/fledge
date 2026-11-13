@@ -75,10 +75,7 @@ ReplicationRegistry _replication() => ReplicationRegistry()
     )..rotation = s.rotation,
     error: (a, b) => (a.translation - b.translation).length,
   )
-  ..positionOf = (world, e) {
-    final g = world.get<GlobalTransform2D>(e);
-    return g == null ? null : (g.x, g.y);
-  };
+  ..positionFrom<GlobalTransform2D>((g) => (g.x, g.y));
 
 /// Plugin groups; each inner list is added in order and kept adjacent
 /// when the outer list is reversed (YarnPlugin must precede

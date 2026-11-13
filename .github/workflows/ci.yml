@@ -144,6 +144,7 @@ jobs:
           - fledge_window
           - fledge_yarn
           - fledge_net
+          - fledge_net_steam
     steps:
       - uses: actions/checkout@v4
 

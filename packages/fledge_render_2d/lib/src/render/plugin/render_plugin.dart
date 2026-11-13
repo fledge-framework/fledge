@@ -6,6 +6,7 @@ import '../../backend/gpu_render_context.dart' show GpuSpriteDrawer;
 import '../../sprite/sprite_render_node.dart' show SpriteDrawer;
 import '../../sprite/texture.dart' show Texture;
 import '../../transitions/transition_state.dart' show TransitionCompleted;
+import '../../widget/view_pass.dart' show ViewPasses;
 import '../context/render_context.dart';
 import '../extract/extract.dart';
 import '../world/render_world.dart';
@@ -100,6 +101,7 @@ class RenderPlugin implements Plugin {
 
     // Insert core render resources
     app.insertResource(Extractors());
+    app.insertResource(ViewPasses());
     app.insertResource(RenderWorld());
     app.insertResource(RenderBackendResource(backend));
 

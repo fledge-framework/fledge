@@ -179,4 +179,21 @@ class ParticleEmitter {
     if (duration != null && elapsedSinceStart >= duration) return false;
     return true;
   }
+
+  /// Spawns [count] particles at [origin] at once, for one-off effects such
+  /// as an impact or a pickup. It ignores [emitRate], [isActive] and
+  /// [maxDuration], so an emitter with `emitRate: 0` can serve as a reusable
+  /// burst source. Stops early if the pool fills, and returns how many
+  /// particles it spawned.
+  int burst(int count, Vector2 origin, {math.Random? random}) {
+    final source = random ?? rng ?? _burstRng;
+    var spawned = 0;
+    while (spawned < count && !pool.isFull) {
+      template.spawnInto(pool, origin: origin, rng: source);
+      spawned++;
+    }
+    return spawned;
+  }
+
+  static final math.Random _burstRng = math.Random();
 }

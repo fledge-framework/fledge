@@ -17,6 +17,8 @@
 ///   [DebugCameraFrustumGizmo], [DebugOverlayEntity] — component
 ///   markers.
 /// - [DebugGizmosLayer] — `CustomPainter` overlay for gizmos.
+/// - [DebugPerfPanel] — Flutter performance panel for games with a
+///   Flutter UI.
 /// - [DebugPlugin] — one-plugin setup.
 /// - [SystemProfilerHook] — reserved callback shape for a future
 ///   per-system profiler hook (see the README).
@@ -34,3 +36,4 @@ export 'src/systems/overlay_populate_system.dart' show OverlayPopulateSystem;
 export 'src/systems/schedule_ordering_report_system.dart';
 export 'src/systems/system_stats_system.dart';
 export 'src/widgets/debug_gizmos_layer.dart';
+export 'src/widgets/debug_perf_panel.dart';

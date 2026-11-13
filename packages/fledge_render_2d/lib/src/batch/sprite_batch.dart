@@ -43,7 +43,9 @@ class SpriteInstance {
 /// A batch of sprites sharing the same texture.
 ///
 /// Batching sprites by texture reduces draw calls and improves
-/// rendering performance.
+/// rendering performance. [SpriteBatchSystem] emits one batch per
+/// contiguous same-texture run in draw order, so the same texture can
+/// appear in several batches when other textures interleave with it.
 class SpriteBatch {
   /// The shared texture for all sprites in this batch.
   final TextureHandle texture;
@@ -74,7 +76,11 @@ class SpriteBatch {
   bool get isNotEmpty => instances.isNotEmpty;
 }
 
-/// Collection of sprite batches organized by texture.
+/// Collection of sprite batches in draw order.
+///
+/// [all] is ordered back to front: drawing the batches in list order
+/// (and each batch's instances in order) reproduces the sprites' sort
+/// order. A texture may occur in more than one batch.
 class SpriteBatches {
   final List<SpriteBatch> _batches;
 
@@ -95,15 +101,22 @@ class SpriteBatches {
 ///
 /// This system runs in the queue stage and:
 /// 1. Collects all extracted sprites
-/// 2. Sorts them by sort key
-/// 3. Groups them by texture into batches
+/// 2. Sorts them into draw order ([ExtractedSprite.sortByDrawOrder])
+/// 3. Groups each contiguous same-texture run into a batch
+///
+/// Only *contiguous* runs are merged, so painter's order is preserved
+/// across textures (A, B, A by y stays three batches, drawn in that
+/// order). This is the same strategy as `renderSpritesToDrawer`; when
+/// every sprite shares a texture, or the textures are already
+/// separated by the sort order, it yields the minimum number of
+/// batches (one per run).
 class SpriteBatchSystem implements RenderSystem {
   @override
   String get name => 'sprite_batch';
 
   @override
   Future<void> run(World mainWorld, RenderWorld renderWorld) async {
-    final batches = <int, SpriteBatch>{};
+    final batches = <SpriteBatch>[];
 
     // Collect and sort sprites
     final sprites = <ExtractedSprite>[];
@@ -111,15 +124,19 @@ class SpriteBatchSystem implements RenderSystem {
       sprites.add(sprite);
     }
 
-    // Sort by sort key (Y-sorting for typical 2D)
-    sprites.sort((a, b) => a.sortKey.compareTo(b.sortKey));
+    // Sort into draw order: sort key, then the unclamped precise
+    // sub-order (Y-sorting for typical 2D), stable for full ties.
+    ExtractedSprite.sortByDrawOrder(sprites);
 
-    // Group into batches by texture
+    // Group contiguous same-texture runs into batches. Grouping by
+    // texture across the whole frame would hoist every later sprite of
+    // a texture underneath sprites of other textures it should cover.
+    SpriteBatch? batch;
     for (final sprite in sprites) {
-      final batch = batches.putIfAbsent(
-        sprite.texture.id,
-        () => SpriteBatch(sprite.texture),
-      );
+      if (batch == null || batch.texture.id != sprite.texture.id) {
+        batch = SpriteBatch(sprite.texture);
+        batches.add(batch);
+      }
 
       // Compute destination rect based on size and anchor. Anchor is
       // normalised in [0..1] and describes where inside the sprite
@@ -139,7 +156,7 @@ class SpriteBatchSystem implements RenderSystem {
       // Flip is expressed via bit flags on the backend data, not by
       // inverting the source rect — Skia rejects inverted srcRects
       // and the RSTransform path can't represent a single-axis
-      // mirror. The canvas drawer sub-batches by flip flags.
+      // mirror. The canvas drawer mirrors flipped sprites in local space.
       batch.add(
         SpriteInstance(
           sourceRect: sprite.sourceRect,
@@ -152,6 +169,6 @@ class SpriteBatchSystem implements RenderSystem {
     }
 
     // Store batches as resource
-    renderWorld.insertResource(SpriteBatches(batches.values.toList()));
+    renderWorld.insertResource(SpriteBatches(batches));
   }
 }

@@ -38,6 +38,15 @@ Paint the scene into a Flutter widget:
 runApp(MaterialApp(home: FledgeRenderView(app: app)));
 ```
 
+## Directional sprites
+
+`Orientation` tracks one of four cardinal `Direction`s. For 8-, 16- or N-view sprites, `Facing` holds a continuous angle (radians, `0` = +x, clockwise on screen like `Transform2D.rotation`) and picks the view:
+
+```dart
+final facing = Facing()..updateFromVector(vx, vy);
+final view = facing.viewIndex(16); // 0 = right, 4 = down, 8 = left, 12 = up
+```
+
 ## Documentation
 
 See the [Fledge documentation site](https://fledge-framework.dev/docs/plugins/render) for guides, API reference, and advanced usage.

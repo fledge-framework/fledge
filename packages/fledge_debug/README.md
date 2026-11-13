@@ -34,6 +34,19 @@ runApp(DebugGizmosLayer(
 ));
 ```
 
+### Performance panel for Flutter UIs
+
+Games that draw their HUD in Flutter can show the stats without `fledge_ui`: install `DebugStatsPlugin` and put a `DebugPerfPanel` over the render view. It shows FPS and frame times, the app's tick time, Flutter's build and raster times with a count of frames that missed their refresh, entity and sprite counts, and a frame-time graph.
+
+```dart
+app.addPlugin(const DebugStatsPlugin());
+
+Stack(children: [
+  FledgeRenderView(app: app),
+  if (showPerf) Positioned(top: 8, left: 8, child: DebugPerfPanel(app: app)),
+]);
+```
+
 ## Documentation
 
 See the [Fledge documentation site](https://fledge-framework.dev/docs/plugins/debug) for guides, API reference, and advanced usage.

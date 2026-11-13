@@ -19,31 +19,24 @@ void main() {
       expect(id.isOwnedBy(1), false);
     });
 
-    test('transferAuthority updates ownerId and hasAuthority', () {
-      final id = NetworkIdentity(netId: 1, ownerId: 0, hasAuthority: true);
-
-      // Transfer to client 3 without local authority.
-      id.transferAuthority(3);
-      expect(id.ownerId, 3);
-      expect(id.hasAuthority, false);
+    test('hasAuthority is ownership by the local peer', () {
+      // Host (local peer 0).
+      expect(NetworkIdentity(netId: 1).hasAuthority, isTrue);
+      expect(NetworkIdentity(netId: 1, ownerId: 3).hasAuthority, isFalse);
+      // Client 3.
+      expect(
+        NetworkIdentity(netId: 1, ownerId: 3, localPeerId: 3).hasAuthority,
+        isTrue,
+      );
+      expect(NetworkIdentity(netId: 1, localPeerId: 3).hasAuthority, isFalse);
     });
 
-    test('transferAuthority with localAuthority true', () {
-      final id = NetworkIdentity(netId: 1, ownerId: 0, hasAuthority: false);
-
-      id.transferAuthority(5, localAuthority: true);
-      expect(id.ownerId, 5);
-      expect(id.hasAuthority, true);
-    });
-
-    test('transferAuthority back to host', () {
-      final id = NetworkIdentity(netId: 1, ownerId: 3, hasAuthority: true);
-
-      id.transferAuthority(0, localAuthority: true);
-      expect(id.ownerId, 0);
-      expect(id.hasAuthority, true);
-      expect(id.isOwnedBy(0), true);
-      expect(id.isOwnedBy(3), false);
+    test('hasAuthority follows ownerId changes', () {
+      final id = NetworkIdentity(netId: 1, ownerId: 3);
+      expect(id.hasAuthority, isFalse);
+      id.ownerId = 0;
+      expect(id.hasAuthority, isTrue);
+      expect(id.isOwnedBy(3), isFalse);
     });
   });
 }

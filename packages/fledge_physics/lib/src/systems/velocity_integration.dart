@@ -38,6 +38,7 @@ class VelocityIntegrationSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
     name: systemName,
+    sets: const [UpdateSets.simulate],
     reads: {ComponentId.of<Velocity>()},
     writes: {ComponentId.of<Transform2D>()},
     after: const [CollisionResolutionSystem.systemName],

@@ -31,11 +31,13 @@ class PeerDataEvent {
 
 /// Network host for authoritative game sessions.
 ///
-/// The host:
-/// - Accepts client connections
-/// - Runs authoritative game simulation
-/// - Broadcasts state updates to all clients
-/// - Validates client inputs
+/// The host accepts client connections (handshake, optional
+/// authentication), pings peers for RTT, times out silent peers and
+/// exchanges datagrams with them.
+///
+/// Every send is a single unreliable datagram. For reliable, ordered
+/// delivery layer a `ReliableChannel` over [PacketType.replication] (or
+/// your own type), as the replication layer does.
 class NetworkHost {
   /// Transport for network communication.
   final Transport transport;
@@ -46,9 +48,6 @@ class NetworkHost {
   /// Connection timeout duration.
   final Duration connectionTimeout;
 
-  /// Retransmit timeout for reliable packets.
-  final Duration retransmitTimeout;
-
   /// Optional authenticator for validating client connections.
   ///
   /// While a connect from an address is being authenticated, further
@@ -57,14 +56,32 @@ class NetworkHost {
   final Future<bool> Function(String clientId, Uint8List credentials)?
   authenticator;
 
+  /// Like [authenticator], but also told the [NetAddress] the connect came
+  /// from (for transports whose addresses are authenticated identities,
+  /// such as Steam IDs). Used instead of [authenticator] when set.
+  final Future<bool> Function(
+    String clientId,
+    Uint8List credentials,
+    NetAddress source,
+  )?
+  sourceAuthenticator;
+
+  /// Default for [maxPendingConnects].
+  static const int defaultMaxPendingConnects = 64;
+
+  /// Most connect requests awaiting the [authenticator] at once. Connects
+  /// from new addresses beyond it are ignored (the client retries), which
+  /// bounds the memory and authenticator calls a flood of connects
+  /// (possibly from spoofed addresses) can cause.
+  final int maxPendingConnects;
+
   /// How often [update] pings each peer to measure [Peer.rtt].
   ///
   /// A newly connected peer is pinged on the first [update] after it
   /// connects.
   final Duration pingInterval;
 
-  /// Monotonic clock used for ping timestamps, RTT, peer timeouts and
-  /// reliable retransmits.
+  /// Monotonic clock used for ping timestamps, RTT and peer timeouts.
   final NetClock clock;
 
   /// Default for [disconnectRedundancy].
@@ -119,21 +136,38 @@ class NetworkHost {
   final _mismatchController =
       StreamController<ProtocolMismatchEvent>.broadcast();
 
+  /// Whether a client connecting with the identifier of an already
+  /// connected peer replaces that peer (the same player rejoining after a
+  /// crash or from a new address) instead of joining alongside it.
+  /// Anonymous clients ([anonymousClientId]) never replace each other.
+  /// `NetworkSession` turns this on, since its identifiers are player
+  /// identities.
+  final bool replaceSameIdentity;
+
   NetworkHost({
     required this.transport,
     this.maxPeers = 8,
     this.connectionTimeout = const Duration(seconds: 10),
-    this.retransmitTimeout = const Duration(milliseconds: 100),
     this.authenticator,
+    this.sourceAuthenticator,
+    this.maxPendingConnects = defaultMaxPendingConnects,
     this.pingInterval = const Duration(seconds: 1),
     NetClock? clock,
     this.disconnectRedundancy = defaultDisconnectRedundancy,
     this.disconnectRedundancyInterval = defaultDisconnectRedundancyInterval,
+    this.replaceSameIdentity = false,
   }) : clock = clock ?? NetClock.system {
     if (disconnectRedundancy < 1) {
       throw ArgumentError.value(
         disconnectRedundancy,
         'disconnectRedundancy',
+        'must be at least 1',
+      );
+    }
+    if (maxPendingConnects < 1) {
+      throw ArgumentError.value(
+        maxPendingConnects,
+        'maxPendingConnects',
         'must be at least 1',
       );
     }
@@ -292,8 +326,8 @@ class NetworkHost {
 
   /// Update host (call every frame).
   ///
-  /// Times out silent peers, pings peers every [pingInterval] (for
-  /// [Peer.rtt]) and retransmits unacknowledged reliable packets.
+  /// Times out silent peers and pings peers every [pingInterval] (for
+  /// [Peer.rtt]).
   void update() {
     if (!_running || _stopping) return;
 
@@ -310,15 +344,16 @@ class NetworkHost {
       final lastPing = _lastPingMs[peer.id];
       if (lastPing == null || nowMs - lastPing >= pingInterval.inMilliseconds) {
         _lastPingMs[peer.id] = nowMs;
-        _sendPing(peer);
-      }
-
-      // Retransmit reliable packets
-      final retransmits = peer.getPacketsToRetransmit(retransmitTimeout);
-      for (final data in retransmits) {
-        transport.send(peer.address, data);
+        _ignoreErrors(_sendPing(peer));
       }
     }
+  }
+
+  /// Fire-and-forget: a failing transport (closed, socket error) drops the
+  /// datagram like the network would, instead of raising an unhandled
+  /// asynchronous error.
+  static void _ignoreErrors(Future<void> send) {
+    unawaited(send.catchError((Object _) {}));
   }
 
   void _handlePacket(ReceivedPacket received) {
@@ -357,7 +392,6 @@ class NetworkHost {
 
     // Update peer state
     peer.processReceivedSequence(packet.header.sequence);
-    peer.processAck(packet.header.ack, packet.header.ackBits);
 
     // Handle packet type
     switch (packet.header.type) {
@@ -365,7 +399,7 @@ class NetworkHost {
         _removePeer(peer, 'Client disconnected');
 
       case PacketType.ping:
-        _sendPong(peer, packet);
+        _ignoreErrors(_sendPong(peer, packet));
 
       case PacketType.pong:
         // The payload echoes the timestamp from our own ping.
@@ -403,10 +437,12 @@ class NetworkHost {
         received.data.length > 5 &&
         received.data[5] == PacketType.connect.value;
     if (isConnect) {
-      _sendReject(
-        received.source,
-        'Protocol version mismatch: host v${PacketHeader.version}, '
-        'client v$remoteVersion',
+      _ignoreErrors(
+        _sendReject(
+          received.source,
+          'Protocol version mismatch: host v${PacketHeader.version}, '
+          'client v$remoteVersion',
+        ),
       );
     }
   }
@@ -414,8 +450,9 @@ class NetworkHost {
   void _handleConnect(NetAddress source, Packet packet, Peer? existing) {
     if (existing != null) {
       // The client is still retrying, so it never saw our acceptance.
-      // Re-send it; peers are created once per address.
-      if (existing.isConnected) _sendAccept(existing);
+      // Re-send it; peers are created once per address. This retry loop
+      // is what makes `connectAccepted` reliable.
+      if (existing.isConnected) _ignoreErrors(_sendAccept(existing));
       return;
     }
 
@@ -423,7 +460,7 @@ class NetworkHost {
     if (_pendingConnects.contains(source)) return;
 
     if (_peers.length >= maxPeers) {
-      _sendReject(source, 'Server full');
+      _ignoreErrors(_sendReject(source, 'Server full'));
       return;
     }
 
@@ -433,40 +470,65 @@ class NetworkHost {
     final credentials = reader.hasMore ? reader.readBytes() : Uint8List(0);
     final sequence = packet.header.sequence;
 
-    final auth = authenticator;
+    final withSource = sourceAuthenticator;
+    final plain = authenticator;
+    final Future<bool> Function(String, Uint8List)? auth = withSource != null
+        ? (id, credentials) => withSource(id, credentials, source)
+        : plain;
     if (auth == null) {
       // Accept new connection (no authentication configured)
-      _sendAccept(_createPeer(source, sequence));
+      _ignoreErrors(_sendAccept(_createPeer(source, sequence, clientId)));
       return;
     }
 
+    // Too many authentications in flight: ignore; the client retries.
+    if (_pendingConnects.length >= maxPendingConnects) return;
+
     _pendingConnects.add(source);
     Future<bool>.sync(() => auth(clientId, credentials)).then(
-      (accepted) => _finishConnect(source, sequence, accepted),
-      onError: (Object _) => _finishConnect(source, sequence, false),
+      (accepted) => _finishConnect(source, sequence, clientId, accepted),
+      onError: (Object _) => _finishConnect(source, sequence, clientId, false),
     );
   }
 
-  void _finishConnect(NetAddress source, int sequence, bool accepted) {
+  void _finishConnect(
+    NetAddress source,
+    int sequence,
+    String clientId,
+    bool accepted,
+  ) {
     _pendingConnects.remove(source);
     if (!_running || _peersByAddress.containsKey(source)) return;
 
     if (!accepted) {
-      _sendReject(source, 'Authentication failed');
+      _ignoreErrors(_sendReject(source, 'Authentication failed'));
       return;
     }
     // Capacity may have filled up while authentication was in flight.
     if (_peers.length >= maxPeers) {
-      _sendReject(source, 'Server full');
+      _ignoreErrors(_sendReject(source, 'Server full'));
       return;
     }
-    _sendAccept(_createPeer(source, sequence));
+    _ignoreErrors(_sendAccept(_createPeer(source, sequence, clientId)));
   }
 
-  Peer _createPeer(NetAddress address, int connectSequence) {
+  Peer _createPeer(NetAddress address, int connectSequence, String identity) {
+    // The same player connecting again (after a crash, or from a new
+    // address) replaces their old connection rather than waiting for it to
+    // time out. Anonymous clients never replace each other.
+    if (replaceSameIdentity &&
+        identity.isNotEmpty &&
+        identity != anonymousClientId) {
+      for (final old in _peers.values.toList()) {
+        if (old.identity == identity) {
+          _removePeer(old, 'Reconnected from another connection');
+        }
+      }
+    }
     final peer = Peer(
       id: _nextPeerId++,
       address: address,
+      identity: identity,
       state: PeerState.connected,
       clock: clock,
     );
@@ -494,15 +556,8 @@ class NetworkHost {
     Uint8List payload,
   ) async {
     final data = _buildPacket(peer, type, payload);
-    final sequence = peer.lastSentSequence;
-
     await transport.send(peer.address, data);
     peer.markSent();
-
-    // Queue reliable packets for retransmission
-    if (type.isReliable) {
-      peer.addPendingReliable(sequence, data);
-    }
   }
 
   /// Serialize a packet to [peer], consuming its next sequence number.

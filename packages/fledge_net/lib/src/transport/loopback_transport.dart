@@ -75,7 +75,7 @@ class LoopbackStats {
 /// each due datagram at its exact delivery time and letting listeners react
 /// (and send replies) before moving on. Give the same clock to
 /// `NetworkHost(clock:)` / `NetworkClient(clock:)` and RTT, ping cadence
-/// and retransmit timing become fully deterministic.
+/// and peer timeouts become fully deterministic.
 ///
 /// ```dart
 /// final net = LoopbackNetwork(

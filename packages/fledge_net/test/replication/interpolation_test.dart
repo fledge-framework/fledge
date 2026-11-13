@@ -82,12 +82,14 @@ void main() {
         // back), although snapshots arrive only every 3 ticks.
         expect(run.roughFrames, 0, reason: 'seed $seed: ${run.deltas}');
 
-        // Lag = (delay + mean snapshot age on arrival) * 0.2 u/tick.
+        // Lag = (delay + mean snapshot age when sampled) * 0.2 u/tick.
         // Delay: 170 ms = 8.5 ticks. Age: 50..80 ms one-way, delivered
         // on 20 ms frame boundaries = 3 frames (1/3) or 4 frames (2/3),
-        // mean 3.67 ticks. (8.5 + 3.67) * 0.2 = 2.43, steady.
+        // mean 3.67 ticks, less the frame the fixed pass has already run
+        // when interpolation samples (in update): 2.67.
+        // (8.5 + 2.67) * 0.2 = 2.23, steady.
         for (final lag in run.lags) {
-          expect(lag, inInclusiveRange(2.3, 2.55), reason: 'seed $seed');
+          expect(lag, inInclusiveRange(2.1, 2.35), reason: 'seed $seed');
         }
         final lagSpread =
             run.lags.reduce((a, b) => a > b ? a : b) -

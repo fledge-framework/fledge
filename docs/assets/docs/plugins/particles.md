@@ -122,6 +122,7 @@ Extracted particles are `ExtractedSprite`s in the reserved `DrawLayer.particles`
 - Particles composite between characters and UI layers by default.
 - The sprite render path handles them — no special particle shader, no extra draw pass.
 - You can override `layer` and `layerSubOrder` on an emitter to shift particles above or below other content (e.g. muzzle-flash sparks above the character).
+- With `layerSubOrder: 0` (the default) particles y-sort exactly like sprites: the packed sub-order is `DrawLayerExtension.ySortSubOrder(y)` and `preciseSubOrder` is `y * DrawLayerExtension.ySortScale`. A particle and a sprite in the same layer interleave by y (a particle at y = 100 draws between sprites at y = 99 and y = 101), at any y and any separation. See [Y-sort range](/docs/plugins/render#y-sort-range).
 
 ## Custom effects
 

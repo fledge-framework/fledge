@@ -117,6 +117,7 @@ export 'src/systems/input_polling_system.dart';
 export 'src/systems/action_resolution_system.dart';
 export 'src/systems/context_update_system.dart';
 export 'src/systems/input_frame_end_system.dart';
+export 'src/systems/input_fixed_latch_system.dart';
 
 // Widget
 export 'src/widget/input_widget.dart';

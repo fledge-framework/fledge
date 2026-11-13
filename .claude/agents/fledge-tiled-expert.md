@@ -9,6 +9,7 @@ You are the expert on `packages/fledge_tiled`.
 ## Non-obvious behavior
 
 - **`class="above"` on a layer** flips its render depth so characters render BELOW that layer (extracted to `DrawLayer.foreground`). This is a Tiled-side convention this package reads — if you touch layer parsing or extraction, preserve it.
+- Tile draw order: `tileSortKey` packs `row * 100 + layerIndex` clamped into the `DrawLayer` range (never crosses into the next layer); `tilePreciseSubOrder` (same value, unclamped) is passed as `preciseSubOrder` to `tileToSprite` and `ExtractedTile`, so rows >= 1,000 still sort by row then layer index. Use both helpers in any new extractor. Tests: `test/tile_sort_order_test.dart`.
 - Parsing uses `package:tiled` (plus `package:xml`); maps/tilesets load through `fledge_assets` (`Assets<TilemapAsset>` / `Assets<TilesetAsset>`).
 - Object layers spawn entities (`TilemapSpawnSystem`, `Schedules.first`, `systemName = 'tilemap_spawn'`). The property→component mapping is type-safe (see `properties/tiled_properties.dart`); adding new supported types requires updating both the parser and any docs.
 - Animated tiles are advanced by `TileAnimationSystem` in `Schedules.update`, reading the `WallTime` resource (requires `WallTimePlugin`) — verify schedule placement if that system moves.

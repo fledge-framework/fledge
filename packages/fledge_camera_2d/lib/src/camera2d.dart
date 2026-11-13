@@ -1,3 +1,5 @@
+import 'dart:ui' show Size;
+
 import 'package:fledge_render_2d/fledge_render_2d.dart'
     show GlobalTransform2D, RenderSize, Viewport;
 import 'package:vector_math/vector_math.dart';
@@ -58,6 +60,36 @@ class Camera2D {
   /// camera's Transform2D translation accordingly.
   bool pixelPerfect;
 
+  /// Make the widget render path (`FledgeRenderView`,
+  /// `LitFledgeRenderView`, `DebugGizmosLayer`) honour the projection's
+  /// scale, so the projection's visible height fills the widget.
+  ///
+  /// Off by default: widgets then draw one world unit per logical pixel and
+  /// only follow the camera's position. With [pixelPerfect] also on, the
+  /// zoom is rounded down to a whole number (when at least 1) so pixel art
+  /// stays crisp; more of the world shows instead of pixels stretching.
+  ///
+  /// Map pointer positions with `activeCameraScreenToWorld`, which uses the
+  /// same zoom.
+  bool scaleWidgetView;
+
+  /// Scroll by fractions of a screen pixel in the widget render path, so a
+  /// pixel-art camera glides evenly at any speed and refresh rate.
+  ///
+  /// A [pixelPerfect] camera can only move in whole screen pixels, so a
+  /// speed that isn't a whole number of pixels per frame (a 120 units/s
+  /// walk at 144 Hz and zoom 2 is 1.67 pixels a frame) mixes 1- and
+  /// 2-pixel steps and judders. With this on, the world is drawn with the
+  /// camera on whole pixels, as crisp as before, and the finished frame is
+  /// then shifted by the leftover fraction of a pixel, blended across one
+  /// screen pixel at its edges. The camera follow stops snapping the
+  /// camera's transform; the render does it.
+  ///
+  /// Costs one offscreen image per frame. Only the `FledgeRenderView`
+  /// sprite pass is drawn this way; other widget layers line up with it
+  /// through the same unrounded camera offset.
+  bool subpixelScroll;
+
   /// Creates a 2D camera.
   Camera2D({
     Projection? projection,
@@ -65,7 +97,34 @@ class Camera2D {
     this.viewport = Viewport.fullScreen,
     this.isActive = true,
     this.pixelPerfect = false,
+    this.scaleWidgetView = false,
+    this.subpixelScroll = false,
   }) : projection = projection ?? OrthographicProjection();
+
+  /// Logical pixels per world unit for the widget render path at
+  /// [widgetSize] (logical pixels, on a display with [devicePixelRatio]
+  /// physical pixels per logical one). 1 unless [scaleWidgetView] is on.
+  ///
+  /// With [pixelPerfect], the zoom is the largest that puts each world unit
+  /// on a **whole number of physical pixels**: under fractional display
+  /// scaling (125 %, 150 %) a whole logical zoom would draw art pixels at
+  /// uneven widths and make anything moving a whole world unit step by
+  /// uneven pixel counts, so a sprite on the nearest pixel would visibly
+  /// run ahead of a smoothly scrolling camera and snap back.
+  double widgetZoom(Size widgetSize, {double devicePixelRatio = 1}) {
+    if (!scaleWidgetView) return 1;
+    final visible = projection.visibleHeight(
+      RenderSize(widgetSize.width, widgetSize.height),
+    );
+    if (visible <= 0 || widgetSize.height <= 0) return 1;
+    final zoom = widgetSize.height / visible;
+    if (!pixelPerfect) return zoom;
+    final dpr = devicePixelRatio > 0 ? devicePixelRatio : 1.0;
+    final physical = zoom * dpr;
+    // A whole number of physical pixels, rounding a hair of float error up.
+    final whole = (physical + 1e-9).floorToDouble();
+    return whole >= 1 ? whole / dpr : zoom;
+  }
 
   /// Get the view matrix (inverse of camera transform).
   Matrix4 viewMatrix(GlobalTransform2D transform) {

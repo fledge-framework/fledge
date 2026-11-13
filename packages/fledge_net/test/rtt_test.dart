@@ -101,20 +101,6 @@ void main() {
       expect(host.peers.single.rtt, 100);
     });
 
-    test('retransmit timeouts reflect the measured RTT', () async {
-      await setUpLink(startMs: 0, latency: const Duration(milliseconds: 150));
-      expect(client.retransmitTimeout, const Duration(milliseconds: 100));
-
-      await run(const Duration(milliseconds: 1500));
-
-      expect(client.rtt, 300);
-      expect(client.retransmitTimeout, const Duration(milliseconds: 600));
-      expect(
-        host.peers.single.retransmitTimeout(host.retransmitTimeout),
-        const Duration(milliseconds: 600),
-      );
-    });
-
     test('RTT stays within the latency envelope under jitter', () async {
       await setUpLink(
         startMs: 0,

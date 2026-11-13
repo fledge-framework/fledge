@@ -4,6 +4,7 @@ library;
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -12,19 +13,23 @@ import 'package:meta/meta.dart';
 
 import '../connection/client.dart';
 import '../connection/host.dart';
+import '../connection/peer.dart';
 import '../connection/protocol_mismatch.dart';
 import '../plugin.dart';
 import '../protocol/net_clock.dart';
 import '../protocol/packet.dart';
-import '../sync/network_identity.dart';
 import '../transport/encrypted_transport.dart';
 import '../transport/transport.dart';
 import '../transport/udp_transport.dart';
+import 'actions.dart';
 import 'components.dart';
 import 'events.dart';
+import 'identity.dart';
 import 'inputs.dart';
+import 'network_identity.dart';
 import 'registry.dart';
 import 'reliable_channel.dart';
+import 'resources.dart';
 import 'tick_sync.dart';
 import 'wire.dart';
 
@@ -51,6 +56,10 @@ class NetworkStats {
   /// Host: RPCs dropped because the sender does not own the target.
   int rejectedRpcs = 0;
 
+  /// Actions dropped or rejected by the host's own checks (sequence,
+  /// target ownership, decoding).
+  int rejectedActions = 0;
+
   /// Host: reliable messages a client is not allowed to send.
   int rejectedMessages = 0;
 
@@ -63,11 +72,21 @@ class NetworkStats {
   /// Client: snapshot chunks received.
   int snapshotChunksReceived = 0;
 
+  /// Host: resource chunks queued for clients.
+  int resourceChunksSent = 0;
+
+  /// Client: resource chunks applied.
+  int resourceChunksReceived = 0;
+
   /// Host: inputs that arrived after their tick was simulated.
   int lateInputs = 0;
 
   /// Client: hard tick resets.
   int tickResets = 0;
+
+  /// Host: entities skipped because their encoded state exceeded
+  /// `NetworkSession.maxEntityStateBytes` (each counted once).
+  int oversizedEntities = 0;
 }
 
 /// Resource that owns the live [NetworkHost] or [NetworkClient] and runs
@@ -118,6 +137,32 @@ class NetworkSession {
     this.transportFactory,
   }) : clock = clock ?? NetClock.system;
 
+  /// Largest encoded replicated state of one entity, in bytes: the
+  /// registered components' codec output plus a few bytes of framing
+  /// (a presence mask and one length varint per component).
+  ///
+  /// It is what fits one reliable spawn message (and therefore one
+  /// snapshot entry). The host does not replicate an entity whose state is
+  /// larger: it is reported once (`dart:developer` log, and
+  /// [NetworkStats.oversizedEntities]), never spawned on clients, or
+  /// despawned on clients if it grew past the limit, and replicated again
+  /// once it fits. Everything else keeps replicating.
+  /// Largest encoded action payload. Actions are resent in every input
+  /// packet until acknowledged, so they must stay small: send what the
+  /// player did (a slot, a tile), not the state it produces.
+  static const int maxActionBytes = 256;
+
+  static const int maxEntityStateBytes =
+      ReliableChannel.maxFragmentBytes - _spawnHeaderMaxBytes <
+          _snapshotEntryMaxBytes
+      ? ReliableChannel.maxFragmentBytes - _spawnHeaderMaxBytes
+      : _snapshotEntryMaxBytes;
+
+  /// Room for one entity in a snapshot chunk: the payload less the
+  /// header, the entity count and the entity's net id.
+  static const int _snapshotEntryMaxBytes =
+      Packet.maxPayloadBytes - SnapshotHeader.maxBytes - 5 - 5;
+
   /// Current role.
   NetworkRole get role => _role;
 
@@ -145,6 +190,19 @@ class NetworkSession {
   int? get localPeerId {
     if (_host != null) return 0;
     return _client?.peerId;
+  }
+
+  /// The newest host tick whose state this instance has: on a client, the
+  /// newest snapshot received; on the host, the current tick; 0 offline.
+  ///
+  /// Entity state from a snapshot reflects the host up to this tick, so a
+  /// client re-applying its `pendingActions` over such state skips those
+  /// sent at or before it (the host has applied them by then, unless they
+  /// reached it late).
+  int get lastSnapshotTick {
+    final c = _client;
+    if (c != null) return c.lastSnapshotTick;
+    return _host != null ? _host!._actionTick : 0;
   }
 
   /// Host: connected peer ids, ascending.
@@ -180,12 +238,14 @@ class NetworkSession {
   /// is enabled without a key.
   Future<void> host({int port = 7777, Transport? transport}) async {
     _checkCanStart();
+    _localIdentity = (await config.identityProvider?.identify())?.id;
     final t = _prepareTransport(transport);
     final networkHost = NetworkHost(
       transport: t,
       maxPeers: config.maxPeers,
       connectionTimeout: config.connectionTimeout,
-      authenticator: _hostAuthenticator(),
+      sourceAuthenticator: _hostAuthenticator(),
+      replaceSameIdentity: true,
       pingInterval: const Duration(milliseconds: 500),
       clock: clock,
     );
@@ -222,6 +282,14 @@ class NetworkSession {
     Uint8List? credentials,
   }) async {
     _checkCanStart();
+    final ClientIdentity? identity;
+    try {
+      identity = await config.identityProvider?.identify();
+    } catch (e) {
+      _lastError = 'Could not identify the player: $e';
+      return false;
+    }
+    _localIdentity = identity?.id;
     final t = _prepareTransport(transport);
     final networkClient = NetworkClient(
       transport: t,
@@ -238,9 +306,14 @@ class NetworkSession {
     final ok = await networkClient.connect(
       address,
       port,
-      credentials:
-          credentials ??
-          (password == null ? null : Uint8List.fromList(utf8.encode(password))),
+      clientId: identity?.id ?? anonymousClientId,
+      credentials: _frameCredentials(
+        credentials ??
+            (password == null
+                ? Uint8List(0)
+                : Uint8List.fromList(utf8.encode(password))),
+        identity?.proof ?? Uint8List(0),
+      ),
     );
     if (!identical(_client, side)) return false; // closed meanwhile
     if (!ok) {
@@ -335,16 +408,72 @@ class NetworkSession {
     return t;
   }
 
-  Future<bool> Function(String clientId, Uint8List credentials)?
+  /// The connect handshake's credentials: the password (or app
+  /// credentials) and the identity proof, each length-prefixed.
+  static Uint8List _frameCredentials(Uint8List secret, Uint8List proof) =>
+      (PacketBuilder()
+            ..writeBytes(secret)
+            ..writeBytes(proof))
+          .build();
+
+  /// Checks a joining client: its credentials framing, the password, its
+  /// identity (with [NetworkConfig.identityVerifier]) and then any custom
+  /// [NetworkConfig.authenticator], which receives the password slot.
+  Future<bool> Function(
+    String clientId,
+    Uint8List credentials,
+    NetAddress source,
+  )
   _hostAuthenticator() {
     final custom = config.authenticator;
     final password = config.serverPassword;
-    if (password == null) return custom;
-    final expected = Uint8List.fromList(utf8.encode(password));
-    return (clientId, credentials) async {
-      if (!_constantTimeEquals(expected, credentials)) return false;
-      return custom == null ? true : custom(clientId, credentials);
+    final expected = password == null
+        ? null
+        : Uint8List.fromList(utf8.encode(password));
+    final verifier = config.identityVerifier;
+    return (clientId, credentials, source) async {
+      final Uint8List secret;
+      final Uint8List proof;
+      try {
+        final reader = PacketReader(credentials);
+        secret = reader.readBytes();
+        proof = reader.readBytes();
+      } on Object {
+        return false;
+      }
+      if (expected != null && !_constantTimeEquals(expected, secret)) {
+        return false;
+      }
+      if (clientId != anonymousClientId) {
+        if (ClientIdentity.validate(clientId) != null) return false;
+        if (verifier != null &&
+            !await verifier.verify(clientId, proof, source: source)) {
+          return false;
+        }
+      }
+      return custom == null ? true : custom(clientId, secret);
     };
+  }
+
+  String? _localIdentity;
+
+  /// This player's identity, from [NetworkConfig.identityProvider], once a
+  /// session has started (null if none was configured).
+  String? get localIdentity => _localIdentity;
+
+  /// Host: the identity peer [peerId] joined with, or null if it joined
+  /// anonymously or isn't connected.
+  String? identityOf(int peerId) {
+    final identity = _host?.identityOf(peerId) ?? '';
+    return identity.isEmpty || identity == anonymousClientId ? null : identity;
+  }
+
+  /// Host: the connected peer that joined as [identity], or null.
+  int? peerFor(String identity) {
+    for (final peer in _host?.host.peers ?? const <Peer>[]) {
+      if (peer.identity == identity && peer.isConnected) return peer.id;
+    }
+    return null;
   }
 
   static bool _constantTimeEquals(Uint8List a, Uint8List b) {
@@ -400,6 +529,116 @@ class NetworkSession {
     if (h == null) throw StateError('sendRpcTo is host-only');
     final rep = _rpcRep<T>();
     h.queueRpc(rep.index, rep.encode(value), target, peerId, null);
+  }
+
+  // Actions --------------------------------------------------------------------
+
+  /// Send player action [value] (type [T] must be registered with
+  /// `ReplicationRegistry.action`), optionally naming a [target] entity
+  /// the sender owns.
+  ///
+  /// The host gets it exactly once, in order, in `NetActions<T>` on the
+  /// tick it was sent at (the host's own actions on its next tick), and
+  /// accepts or rejects it with [resolveAction]. Until the host's state
+  /// shows the result it is listed by [pendingActions]; the outcome
+  /// arrives as a `NetActionResolved<T>` event.
+  ///
+  /// Call it from a fixed-step system (e.g. alongside the tick's inputs)
+  /// so the action carries that tick.
+  NetActionTicket sendAction<T>(T value, {Entity? target}) {
+    final rep = _actionRep<T>();
+    final h = _host;
+    if (h != null) return h.queueLocalAction(rep.index, value, target);
+    final c = _client;
+    if (c == null || !c.connected) throw StateError('Not connected');
+    final length = rep.encode(value).length;
+    if (length > maxActionBytes) {
+      throw ArgumentError.value(
+        length,
+        'action payload',
+        'exceeds maxActionBytes ($maxActionBytes)',
+      );
+    }
+    return c.queueAction(rep.index, value, target);
+  }
+
+  /// Host: accept or reject [action] (from this tick's `NetActions<T>`).
+  /// [reason] travels to the sender with the outcome. An action not
+  /// resolved by the end of its tick is accepted. Returns `false` if it
+  /// was already resolved.
+  bool resolveAction(
+    NetAction<Object?> action, {
+    required bool accepted,
+    String? reason,
+  }) {
+    final h = _host;
+    if (h == null) throw StateError('resolveAction is host-only');
+    return h.resolveAction(
+      action.peerId,
+      action.seq,
+      accepted: accepted,
+      reason: reason,
+    );
+  }
+
+  /// Actions of type [T] this instance sent whose effect the host's
+  /// state does not show yet, oldest first: not yet resolved, or accepted
+  /// at a tick newer than the latest snapshot. A rejected action leaves
+  /// the list at once.
+  ///
+  /// This is how a client shows an action straight away: draw (or apply
+  /// to a copy of) the authoritative state, then each pending action's
+  /// effect on top. Accepted actions stay listed until the host's state
+  /// includes them, so the effect never flickers off and back on.
+  ///
+  /// Replicated resources are exact here: a resolution is sent after every
+  /// resource chunk queued before it. Entity state is as of the newest
+  /// snapshot ([lastSnapshotTick]), which under a tight send budget may not
+  /// list every change; to re-apply actions over it (an action that isn't
+  /// idempotent, such as moving an item), skip those whose tick is at or
+  /// before [lastSnapshotTick].
+  List<NetPendingAction<T>> pendingActions<T>() {
+    final rep = _actionRep<T>();
+    final source = _host != null
+        ? _host!.localOutstanding(rep.index)
+        : _client?.outstanding(rep.index) ?? const <OutstandingAction>[];
+    return [
+      for (final a in source)
+        rep.pending(
+              a.seq,
+              a.tick,
+              a.value,
+              a.target,
+              accepted: a.acceptedAt != null,
+            )
+            as NetPendingAction<T>,
+    ];
+  }
+
+  /// Client: put action [value] on the wire with a chosen [seq], [tick]
+  /// and [targetNetId], bypassing the client's own bookkeeping (testing
+  /// hook; see `package:fledge_net/testing.dart`).
+  @internal
+  void queueRawAction<T>(
+    T value, {
+    required int seq,
+    required int tick,
+    int targetNetId = 0,
+  }) {
+    final c = _client;
+    if (c == null) throw StateError('queueRawAction is client-only');
+    final rep = _actionRep<T>();
+    c._rawActions.add(
+      ActionEntry(rep.index, seq, tick, targetNetId, rep.encode(value)),
+    );
+  }
+
+  ActionReplicator<Object?> _actionRep<T>() {
+    final rep = registry.actionFor(T);
+    if (rep == null) {
+      throw ArgumentError('Action type $T is not registered');
+    }
+    return rep;
   }
 
   RpcReplicator<Object?> _rpcRep<T>() {
@@ -465,6 +704,7 @@ class NetworkSession {
   @internal
   void gatherInputs(World world) {
     _host?.gatherInputs(world);
+    _host?.releaseActions(world);
     _client?.gatherInputs(world);
   }
 
@@ -498,13 +738,15 @@ class NetworkSession {
     }
   }
 
-  /// Fire-and-forget send. Transport failures (closed transport, socket
-  /// errors) are dropped like any lost datagram; programming errors such
-  /// as an oversized payload ([ArgumentError]) still surface.
-  static void _sendSafely(Future<void> Function() send) {
-    unawaited(
-      send().catchError((Object _) {}, test: (e) => e is! ArgumentError),
-    );
+  /// Fire-and-forget send of [payload].
+  ///
+  /// An oversized payload is a programming error: it throws
+  /// [ArgumentError] synchronously, at the call site, instead of becoming
+  /// an unhandled asynchronous error. Asynchronous failures (closed
+  /// transport, socket errors) are dropped like any lost datagram.
+  static void _sendSafely(Uint8List payload, Future<void> Function() send) {
+    Packet.checkPayloadSize(payload);
+    unawaited(send().catchError((Object _) {}));
   }
 }
 

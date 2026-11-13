@@ -62,7 +62,43 @@ app.world.spawn()
   ..insert(const Position(0, 0));
 ```
 
-Clients submit input for entities they own through `NetLocalInputs<Move>` (in a `Schedules.fixedPreUpdate` system that joins `NetSets.localInput`); the owning client predicts immediately and the host applies the same step. Test whole sessions in one process with `LoopbackNetwork` and a `ManualNetClock`. For authority tests, the test-only `package:fledge_net/testing.dart` lets a client session send forged inputs and RPCs (`sendRawInput`, `sendRawRpc`).
+Clients submit input for entities they own through `NetLocalInputs<Move>` (in a `Schedules.fixedPreUpdate` system that joins `NetSets.localInput`); the owning client predicts immediately and the host applies the same step. A step that reads the world (collision) registers as `stepWith:` and gets a `PredictContext`. Test whole sessions in one process with `LoopbackNetwork` and a `ManualNetClock`. For authority tests, the test-only `package:fledge_net/testing.dart` lets a client session send forged inputs and RPCs (`sendRawInput`, `sendRawRpc`).
+
+## Player actions
+
+Inputs are level state sent every tick. Discrete things a player does (use an item, place a machine) are actions: exactly once, in order, on the tick they were sent, accepted or rejected by the host, and shown by the sender straight away.
+
+```dart
+registry.action<UseItem>('use', useItemCodec);
+
+session.sendAction(UseItem(slot: 2));                    // client
+for (final a in world.getResource<NetActions<UseItem>>()!.entries) {
+  session.resolveAction(a, accepted: canUse(a.value));  // host, fixedUpdate
+}
+session.pendingActions<UseItem>();                       // client: draw these on top
+```
+
+## Scaling to a shared world
+
+- **Change-only snapshots**: each client is sent only what changed since its last acknowledged copy.
+- **Replicated resources**: big shared state (a tile map) replicates in versioned chunks, only the changed ones, on its own reliable channel: `registry.resource<Farm>('farm', FarmCodec())`.
+- **Send budget**: `NetworkConfig(sendBudgetBytesPerSecond: …)` (64 KiB/s by default) caps what each client is sent; big joins stream in.
+- **Visibility**: `Replicated(ownerOnly: true)` for private entities, `component<T>(…, ownerOnly: true)` for private components on shared ones, `NetworkConfig.relevance` for custom rules, `interestRadius` for distance.
+- Reliable messages up to 1 MiB are fragmented automatically.
+
+## Player identity
+
+Players can join with a stable identity (`dev:<name>` for LAN and development, `steam:<id>` from `fledge_net_steam`, `hub:<account>` for a gateway), so the host recognises a returning player whatever transport or address they use:
+
+```dart
+NetworkConfig(
+  identityProvider: DevIdentityProvider(savedName),     // client
+  identityVerifier: const TrustingVerifier(),           // host
+  disconnectPolicy: OwnedEntityPolicy.holdForReturn,    // keep what they owned
+);
+```
+
+With `holdForReturn`, a returning player gets their entities back (`NetPeerConnected.returned`). See the Player Identity section of the documentation for hubs and mixed verifiers.
 
 ## Documentation
 

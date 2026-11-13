@@ -549,22 +549,25 @@ class Scheduler {
     Schedules.fixedLast,
   ];
 
-  /// Creates a scheduler with every schedule in [Schedules.all] registered
-  /// and the standard [FirstSets] phases of [Schedules.first] chained in
-  /// order (`frameStart` → `platform` → `input` → `content`).
+  /// Creates a scheduler with every schedule in [Schedules.all] registered,
+  /// the standard [FirstSets] phases of [Schedules.first] chained in order
+  /// (`frameStart` → `platform` → `input` → `content`) and the
+  /// [UpdateSets] phases of [Schedules.update] (`receive` → `simulate`).
   Scheduler() {
     for (final schedule in Schedules.all) {
       addStage(schedule.name);
     }
-    const chain = FirstSets.chain;
-    for (var i = 0; i + 1 < chain.length; i++) {
-      sets.configure(chain[i], (s) => s.before(chain[i + 1]));
+    for (final chain in const [FirstSets.chain, UpdateSets.chain]) {
+      for (var i = 0; i + 1 < chain.length; i++) {
+        sets.configure(chain[i], (s) => s.before(chain[i + 1]));
+      }
+      sets.getOrCreate(chain.last);
     }
-    sets.getOrCreate(chain.last);
   }
 
   /// Creates an empty scheduler with no schedules registered and no
-  /// system sets configured (not even the standard [FirstSets] phases).
+  /// system sets configured (not even the standard [FirstSets] and
+  /// [UpdateSets] phases).
   Scheduler.empty();
 
   /// Adds a new stage to the scheduler.

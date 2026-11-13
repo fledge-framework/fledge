@@ -319,9 +319,41 @@ Documents/
       "experience": 1250,
       "completedQuests": ["intro", "forest_rescue"]
     }
+  },
+  "entities": {
+    "player:1": {
+      "health": {"hp": 7}
+    }
   }
 }
 ```
+
+The `entities` section appears once any component type is registered (see below).
+
+## Saving Entities
+
+State that belongs to one entity (a player, an NPC, a placed chest) lives in components. Give the entity a stable `SaveId` and register its component types with `SaveManager.components`; the components must mix in `Saveable`, and their `saveKey` names them in the file.
+
+```dart
+final saveManager = world.getResource<SaveManager>()!;
+saveManager.components
+  ..register(Health.new)
+  ..register(Inventory.new);
+
+world.spawn()
+  ..insert(const SaveId('npc:ada'))
+  ..insert(Health())
+  ..insert(Inventory());
+```
+
+On load:
+
+- an entity already carrying the saved `SaveId` is updated in place, keeping its other components;
+- a saved id that no entity carries is spawned, with its components built from the registered constructors; `SaveManager.lastSpawned` lists these so the game can add sprites and other unsaved components;
+- entities whose ids aren't in the file are left alone;
+- unregistered keys in the file are ignored.
+
+Ids must be unique and stable across sessions, for example `player:<account>` or `chest:12`. Two component types can't share a save key; registering a second type with the same key throws.
 
 ## SavePlugin
 

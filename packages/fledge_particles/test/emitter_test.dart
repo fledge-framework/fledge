@@ -195,4 +195,38 @@ void main() {
       expect(emitter.pool.liveCount, 0);
     });
   });
+
+  group('burst', () {
+    ParticleEmitter emitter(int capacity) => ParticleEmitter(
+      template: ParticleTemplate(
+        lifetimeMin: 1,
+        lifetimeMax: 1,
+        velocityMin: Vector2.zero(),
+        velocityMax: Vector2.zero(),
+        acceleration: Vector2.zero(),
+        sizeMin: 1,
+        sizeMax: 1,
+        colorStart: const Color(0xFFFFFFFF),
+        colorEnd: const Color(0xFFFFFFFF),
+      ),
+      emitRate: 0,
+      texture: const TextureHandle(id: 1, width: 1, height: 1),
+      pool: ParticlePool(capacity),
+    );
+
+    test('spawns the count at the origin, even with no emit rate', () {
+      final e = emitter(10);
+      expect(e.burst(4, Vector2(3, 5)), 4);
+      expect(e.pool.live.length, 4);
+      for (final p in e.pool.live) {
+        expect(p.position, Vector2(3, 5));
+      }
+    });
+
+    test('stops when the pool is full', () {
+      final e = emitter(3);
+      expect(e.burst(5, Vector2.zero()), 3);
+      expect(e.burst(1, Vector2.zero()), 0);
+    });
+  });
 }

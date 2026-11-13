@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:fledge_net/fledge_net.dart';
 import 'package:test/test.dart';
 
@@ -46,9 +44,8 @@ void main() {
       expect(named.name, 'Player1');
     });
 
-    test('initial rtt and packet loss are zero', () {
+    test('initial rtt is zero', () {
       expect(peer.rtt, 0);
-      expect(peer.packetLoss, 0);
     });
 
     test('userData starts empty', () {
@@ -119,44 +116,6 @@ void main() {
       });
     });
 
-    group('reliable packets', () {
-      test('addPendingReliable stores packets', () {
-        peer.addPendingReliable(1, Uint8List.fromList([1]));
-        peer.addPendingReliable(2, Uint8List.fromList([2]));
-
-        // No retransmits yet (just added)
-        final retransmits = peer.getPacketsToRetransmit(
-          const Duration(seconds: 10),
-        );
-        expect(retransmits, isEmpty);
-      });
-
-      test('processAck removes matching sequence', () {
-        peer.addPendingReliable(5, Uint8List.fromList([1]));
-        peer.addPendingReliable(6, Uint8List.fromList([2]));
-        peer.addPendingReliable(7, Uint8List.fromList([3]));
-
-        // Ack sequence 6
-        peer.processAck(6, 0);
-
-        // Ack sequence 5 via ack bits (ack=7, bit 0 means seq 6, bit 1 means seq 5)
-        // Actually: diff = (7 - 5) & 0xFFFF = 2, bit = 1 << (2-1) = 0x02
-        peer.processAck(7, 0x02); // acks seq 5 via bits
-
-        // Only sequence 7 should be acked by the direct ack=7 call above
-        // After both processAck calls: 6 was removed by first call,
-        // 5 was removed by second call (ackBits), 7 was removed by direct ack
-        // All should be removed
-      });
-
-      test('processAck removes via ack bits', () {
-        peer.addPendingReliable(10, Uint8List.fromList([1]));
-        // ack=12, diff for seq 10 = 2, bit = 1 << (2-1) = 0x02
-        peer.processAck(12, 0x02);
-        // Packet 10 should be removed
-      });
-    });
-
     group('RTT', () {
       test('updateRtt sets initial rtt from sample', () {
         expect(peer.updateRtt(1000, nowTimestamp: 1050), isTrue);
@@ -189,17 +148,6 @@ void main() {
           isFalse,
         );
         expect(peer.rtt, 80);
-      });
-
-      test('retransmitTimeout derives from rtt', () {
-        const fallback = Duration(milliseconds: 100);
-        expect(peer.retransmitTimeout(fallback), fallback);
-        peer.rtt = 120;
-        expect(peer.retransmitTimeout(fallback).inMilliseconds, 240);
-        peer.rtt = 10;
-        expect(peer.retransmitTimeout(fallback).inMilliseconds, 100);
-        peer.rtt = 9000;
-        expect(peer.retransmitTimeout(fallback).inMilliseconds, 5000);
       });
     });
   });

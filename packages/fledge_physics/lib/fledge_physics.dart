@@ -87,6 +87,7 @@ export 'src/broad_phase/spatial_hash.dart';
 
 // Pathfinding
 export 'src/pathfinding/collision_grid.dart';
+export 'src/pathfinding/lanes.dart';
 export 'src/pathfinding/pathfinder.dart';
 
 // Modes / timing

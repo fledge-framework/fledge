@@ -258,6 +258,11 @@ class _InputWidgetState extends State<InputWidget> {
     final mouse = _mouse;
     if (mouse == null) return;
 
+    // Record where the press happened. A touch tap, or a pointer that
+    // jumps into the widget and presses straight away, arrives without a
+    // preceding hover/move, so the last known position would be stale.
+    mouse.onMove(event.localPosition.dx, event.localPosition.dy);
+
     // Decode which button was pressed
     if (event.buttons & kPrimaryButton != 0) mouse.buttonDown(0);
     if (event.buttons & kSecondaryButton != 0) mouse.buttonDown(2);
@@ -269,6 +274,7 @@ class _InputWidgetState extends State<InputWidget> {
   void _handlePointerUp(PointerUpEvent event) {
     final mouse = _mouse;
     if (mouse == null) return;
+    mouse.onMove(event.localPosition.dx, event.localPosition.dy);
 
     // On pointer up, the button field is the button that was released
     mouse.buttonUp(event.pointer);

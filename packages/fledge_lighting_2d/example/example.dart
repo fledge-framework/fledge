@@ -11,8 +11,8 @@ import 'package:vector_math/vector_math.dart';
 /// [RenderPlugin]'s render pipeline and inserts an [AmbientLight]
 /// resource. Attach a [Light2D] alongside `Transform2D` +
 /// `GlobalTransform2D` and the extractor emits an `ExtractedLight`
-/// each frame — the additive light pass then runs inside
-/// [LitFledgeRenderView].
+/// each frame, and the lighting view pass draws it in every
+/// `FledgeRenderView` of the app.
 void main() async {
   final app = App()
     ..addPlugin(const WallTimePlugin())

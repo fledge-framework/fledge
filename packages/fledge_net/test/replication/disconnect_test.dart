@@ -45,7 +45,7 @@ void main() {
             NetTestbed.log(stayer).despawned.map((e) => e.netId),
             contains(avatarNetId),
           );
-        case OwnedEntityPolicy.releaseToHost:
+        case OwnedEntityPolicy.releaseToHost || OwnedEntityPolicy.holdForReturn:
           expect(host.world.get<NetworkIdentity>(avatar)!.ownerId, 0);
           final mirror = entityFor(stayer, avatarNetId)!;
           expect(stayer.world.get<NetworkIdentity>(mirror)!.ownerId, 0);

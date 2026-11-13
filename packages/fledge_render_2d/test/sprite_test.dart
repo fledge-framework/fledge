@@ -484,8 +484,12 @@ void main() {
       // Check batches were created
       final batches = renderWorld.getResource<SpriteBatches>();
       expect(batches, isNotNull);
-      expect(batches!.batchCount, 2); // Two different textures
+      // Sort order is texture1, texture2, texture1: three contiguous
+      // runs. Merging both texture1 sprites into one batch would draw
+      // the sortKey-300 sprite underneath the sortKey-200 one.
+      expect(batches!.batchCount, 3);
       expect(batches.totalSprites, 3);
+      expect(batches.all.map((b) => b.texture.id), [1, 2, 1]);
     });
 
     test('sorts sprites by sort key', () async {

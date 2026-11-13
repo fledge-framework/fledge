@@ -27,6 +27,7 @@ workspace:
   - packages/fledge_tween
   - packages/fledge_particles
   - packages/fledge_net
+  - packages/fledge_net_steam
   - examples/basic_ecs
   - examples/advanced_ecs
   - examples/drifter

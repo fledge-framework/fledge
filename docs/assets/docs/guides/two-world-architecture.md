@@ -465,21 +465,22 @@ In render systems, query the render world:
 class SpriteBatchSystem implements RenderSystem {
   @override
   void run(World mainWorld, RenderWorld renderWorld) {
-    // Query extracted sprites from render world
-    final sprites = renderWorld.query1<ExtractedSprite>()
-      .iter()
-      .toList()
-      ..sort((a, b) => a.$2.sortKey.compareTo(b.$2.sortKey));
+    // Query extracted sprites from render world, in draw order
+    final sprites = [
+      for (final (_, s) in renderWorld.query1<ExtractedSprite>().iter()) s,
+    ];
+    ExtractedSprite.sortByDrawOrder(sprites);
 
-    // Batch by texture for efficient rendering
-    final batches = <TextureHandle, List<ExtractedSprite>>{};
-    for (final (_, sprite) in sprites) {
-      batches.putIfAbsent(sprite.texture, () => []).add(sprite);
-    }
-
-    // Render each batch
-    for (final entry in batches.entries) {
-      renderBatch(entry.key, entry.value);
+    // Batch contiguous same-texture runs. Grouping by texture across
+    // the whole frame would break painter's order between textures.
+    var i = 0;
+    while (i < sprites.length) {
+      final texture = sprites[i].texture;
+      final batch = <ExtractedSprite>[];
+      while (i < sprites.length && sprites[i].texture.id == texture.id) {
+        batch.add(sprites[i++]);
+      }
+      renderBatch(texture, batch);
     }
   }
 }

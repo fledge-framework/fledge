@@ -1,91 +1,79 @@
 import 'package:fledge_ecs/fledge_ecs.dart';
+import 'package:meta/meta.dart';
 
-/// Component that marks an entity as networked.
+/// Network identity of a replicated entity: its network id and owner.
 ///
-/// Entities with this component will be synchronized across the network.
+/// The replication layer inserts it (from `Replicated` on the host, from
+/// spawn messages on clients); games read it and, on the host, change
+/// ownership by assigning [ownerId].
 class NetworkIdentity {
   /// Unique network ID for this entity.
   final int netId;
 
   /// Owner peer ID (0 = host-owned, >0 = client-owned).
+  ///
+  /// Assign it on the host to move ownership; the change is replicated.
+  /// Assigning it on a client has no effect on what the host accepts.
   int ownerId;
 
-  /// Whether this entity is local authority.
-  bool hasAuthority;
-
-  /// Spawn type for replication.
-  final String? spawnType;
+  /// Peer id of the instance holding this component: `0` on the host,
+  /// the client's own peer id on a client.
+  final int localPeerId;
 
   NetworkIdentity({
     required this.netId,
     this.ownerId = 0,
-    this.hasAuthority = false,
-    this.spawnType,
+    this.localPeerId = 0,
   });
+
+  /// Whether the local instance owns (controls) this entity: it submits
+  /// the entity's inputs and, on a client, predicts it.
+  ///
+  /// `ownerId == localPeerId`, so it follows ownership changes. On the
+  /// host it is `true` only for host-owned entities; the host still
+  /// simulates every entity, but a client-owned entity is driven by that
+  /// client's inputs.
+  bool get hasAuthority => ownerId == localPeerId;
 
   /// Check if a given peer owns this entity.
   bool isOwnedBy(int peerId) => ownerId == peerId;
-
-  /// Transfer authority to a new owner.
-  ///
-  /// Sets [ownerId] and updates [hasAuthority] based on whether the
-  /// transfer is to the local instance.
-  void transferAuthority(int newOwnerId, {bool localAuthority = false}) {
-    ownerId = newOwnerId;
-    hasAuthority = localAuthority;
-  }
 }
 
-/// Tracks which components should be synchronized.
+/// Resource mapping network ids to entities (inserted by `NetworkPlugin`).
 ///
-/// Nothing reads this type: register replicated components (and their
-/// interpolation) on a `ReplicationRegistry` instead; the sync rate is
-/// `NetworkConfig.syncRate`.
-@Deprecated(
-  'Unused. Register components on ReplicationRegistry and set '
-  'NetworkConfig.syncRate instead.',
-)
-class NetworkSyncConfig {
-  /// Components that are synchronized from owner to others.
-  final Set<ComponentId> syncedComponents;
-
-  /// Components that are interpolated on non-owners.
-  final Set<ComponentId> interpolatedComponents;
-
-  /// Sync rate in Hz.
-  final double syncRate;
-
-  NetworkSyncConfig({
-    Set<ComponentId>? syncedComponents,
-    Set<ComponentId>? interpolatedComponents,
-    this.syncRate = 20,
-  }) : syncedComponents = syncedComponents ?? {},
-       interpolatedComponents = interpolatedComponents ?? {};
-}
-
-/// Registry for networked entities.
+/// Maintained by the replication layer: the host registers an entity when
+/// it first replicates it, clients when a spawn arrives. Games only look
+/// entities up.
 class NetworkEntityRegistry {
-  /// Net ID to entity mapping.
   final Map<int, Entity> _entities = {};
-
-  /// Entity to net ID mapping.
   final Map<Entity, int> _netIds = {};
-
-  /// Next available network ID.
   int _nextNetId = 1;
 
   /// Register an entity with a network ID.
+  @internal
   void register(Entity entity, int netId) {
     _entities[netId] = entity;
     _netIds[entity] = netId;
   }
 
   /// Unregister an entity.
+  @internal
   void unregister(Entity entity) {
     final netId = _netIds.remove(entity);
     if (netId != null) {
       _entities.remove(netId);
     }
+  }
+
+  /// Generate a new unique network ID.
+  @internal
+  int generateNetId() => _nextNetId++;
+
+  /// Clear all registrations.
+  @internal
+  void clear() {
+    _entities.clear();
+    _netIds.clear();
   }
 
   /// Get entity by network ID.
@@ -97,52 +85,9 @@ class NetworkEntityRegistry {
   /// Check if entity is registered.
   bool isRegistered(Entity entity) => _netIds.containsKey(entity);
 
-  /// Generate a new unique network ID.
-  int generateNetId() => _nextNetId++;
-
   /// All registered entities.
   Iterable<Entity> get entities => _entities.values;
 
   /// Number of registered entities.
   int get count => _entities.length;
-
-  /// Clear all registrations.
-  void clear() {
-    _entities.clear();
-    _netIds.clear();
-  }
-}
-
-/// Pending network spawn request.
-///
-/// Nothing reads this type: the replication layer spawns entities marked
-/// `Replicated` on the host.
-@Deprecated('Unused. Mark host entities with Replicated instead.')
-class PendingSpawn {
-  final int netId;
-  final String spawnType;
-  final int ownerId;
-  final Map<String, dynamic> initialState;
-  final DateTime requestTime;
-
-  PendingSpawn({
-    required this.netId,
-    required this.spawnType,
-    required this.ownerId,
-    required this.initialState,
-    DateTime? requestTime,
-  }) : requestTime = requestTime ?? DateTime.now();
-}
-
-/// Pending network despawn request.
-///
-/// Nothing reads this type: despawning a `Replicated` host entity (or
-/// removing the marker) despawns it on clients.
-@Deprecated('Unused. Despawn the Replicated host entity instead.')
-class PendingDespawn {
-  final int netId;
-  final DateTime requestTime;
-
-  PendingDespawn({required this.netId, DateTime? requestTime})
-    : requestTime = requestTime ?? DateTime.now();
 }

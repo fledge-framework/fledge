@@ -47,6 +47,37 @@ void main() async {
 }
 ```
 
+## Saving Entities
+
+Per-entity state (players, NPCs, placed objects) lives in components, not resources. Mark the entity with a stable `SaveId` and register the component types once; every marked entity then has those components saved under its id, in the file's `entities` section.
+
+```dart
+class Health with Saveable {
+  int hp = 10;
+
+  @override
+  String get saveKey => 'health';
+
+  @override
+  Map<String, dynamic> toSaveJson() => {'hp': hp};
+
+  @override
+  void loadFromSaveJson(Map<String, dynamic> json) => hp = json['hp'] as int;
+}
+
+final saveManager = app.world.getResource<SaveManager>()!;
+saveManager.components
+  ..register(Inventory.new)
+  ..register(Health.new);
+
+app.world.spawn()
+  ..insert(const SaveId('player:1'))
+  ..insert(Inventory())
+  ..insert(Health());
+```
+
+On load, an entity already carrying the same `SaveId` is updated in place (its other components are kept); a saved id nobody carries is spawned, with its components created from the registered constructors. `saveManager.lastSpawned` lists those new entities so the game can attach what isn't saved (sprites, colliders). Entities whose ids aren't in the save are left alone. Migrations see the `entities` section like any other part of the file.
+
 ## Migrations and Backups
 
 ```dart

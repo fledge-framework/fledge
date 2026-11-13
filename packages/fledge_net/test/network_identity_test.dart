@@ -1,6 +1,3 @@
-// Exercises the deprecated NetworkSyncConfig / PendingSpawn / PendingDespawn
-// types until they are removed.
-// ignore_for_file: deprecated_member_use_from_same_package
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_net/fledge_net.dart';
 import 'package:test/test.dart';
@@ -16,46 +13,26 @@ void main() {
       expect(id.netId, 42);
     });
 
-    test('defaults to host-owned with no authority', () {
+    test('defaults to host-owned, held by the host', () {
       final id = NetworkIdentity(netId: 1);
       expect(id.ownerId, 0);
-      expect(id.hasAuthority, false);
-      expect(id.spawnType, isNull);
+      expect(id.localPeerId, 0);
+      expect(id.hasAuthority, true);
     });
 
     test('accepts all parameters', () {
-      final id = NetworkIdentity(
-        netId: 5,
-        ownerId: 3,
-        hasAuthority: true,
-        spawnType: 'player',
-      );
+      final id = NetworkIdentity(netId: 5, ownerId: 3, localPeerId: 3);
       expect(id.netId, 5);
       expect(id.ownerId, 3);
+      expect(id.localPeerId, 3);
       expect(id.hasAuthority, true);
-      expect(id.spawnType, 'player');
     });
 
-    test('ownerId and hasAuthority are mutable', () {
+    test('ownerId is mutable', () {
       final id = NetworkIdentity(netId: 1);
       id.ownerId = 5;
-      id.hasAuthority = true;
       expect(id.ownerId, 5);
-      expect(id.hasAuthority, true);
-    });
-  });
-
-  group('NetworkSyncConfig', () {
-    test('defaults to empty sets and 20hz', () {
-      final config = NetworkSyncConfig();
-      expect(config.syncedComponents, isEmpty);
-      expect(config.interpolatedComponents, isEmpty);
-      expect(config.syncRate, 20);
-    });
-
-    test('accepts custom sync rate', () {
-      final config = NetworkSyncConfig(syncRate: 60);
-      expect(config.syncRate, 60);
+      expect(id.hasAuthority, false);
     });
   });
 
@@ -155,55 +132,6 @@ void main() {
         expect(registry.getEntity(i + 1), entities[i]);
         expect(registry.getNetId(entities[i]), i + 1);
       }
-    });
-  });
-
-  group('PendingSpawn', () {
-    test('stores all fields', () {
-      final spawn = PendingSpawn(
-        netId: 5,
-        spawnType: 'enemy',
-        ownerId: 0,
-        initialState: {'x': 10.0, 'y': 20.0},
-      );
-      expect(spawn.netId, 5);
-      expect(spawn.spawnType, 'enemy');
-      expect(spawn.ownerId, 0);
-      expect(spawn.initialState['x'], 10.0);
-    });
-
-    test('auto-populates requestTime', () {
-      final before = DateTime.now();
-      final spawn = PendingSpawn(
-        netId: 1,
-        spawnType: 'test',
-        ownerId: 0,
-        initialState: {},
-      );
-      expect(
-        spawn.requestTime.isAfter(
-          before.subtract(const Duration(milliseconds: 1)),
-        ),
-        true,
-      );
-    });
-  });
-
-  group('PendingDespawn', () {
-    test('stores netId', () {
-      final despawn = PendingDespawn(netId: 7);
-      expect(despawn.netId, 7);
-    });
-
-    test('auto-populates requestTime', () {
-      final before = DateTime.now();
-      final despawn = PendingDespawn(netId: 1);
-      expect(
-        despawn.requestTime.isAfter(
-          before.subtract(const Duration(milliseconds: 1)),
-        ),
-        true,
-      );
     });
   });
 }

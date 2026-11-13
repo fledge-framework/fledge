@@ -159,23 +159,21 @@ void main() {
     const frameMs = [13, 27, 20, 33, 7, 31, 9];
     final stepCounts = <int>{};
     var last = client.world.get<Pos>(vehicle)!.x;
-    var prevMs = 20;
     for (var i = 0; i < 300; i++) {
       if (i == 60) bed.net.latency = const Duration(milliseconds: 90);
       final ms = frameMs[i % frameMs.length];
       await frame(ms);
       stepCounts.add(ts.stepsThisFrame);
       final x = client.world.get<Pos>(vehicle)!.x;
-      // Interpolation runs in Schedules.first, so a frame shows the
-      // time the previous frame's fixed pass consumed.
-      final expected = 10 * prevMs / 1000;
+      // Interpolation runs in Schedules.update, after the fixed pass, so
+      // a frame shows the time this frame consumed.
+      final expected = 10 * ms / 1000;
       expect(
         x - last,
         inInclusiveRange(expected * 0.9 - 1e-6, expected * 1.1 + 1e-6),
-        reason: 'frame $i (${ms}ms, prev ${prevMs}ms)',
+        reason: 'frame $i (${ms}ms)',
       );
       last = x;
-      prevMs = ms;
     }
     // The simulation clock really was corrected meanwhile.
     expect(stepCounts, containsAll([0, 1, 2]));

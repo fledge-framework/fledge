@@ -96,13 +96,18 @@ ObliqueProjection(viewportHeight: 200, angle: math.pi / 6)
 
 ## Follow
 
-`CameraFollow` smoothly lerps the camera's `Transform2D.translation` toward another entity each frame:
+`CameraFollow` smoothly moves the camera's `Transform2D.translation` toward another entity each frame:
 
 ```dart
 world.get<CameraFollow>(cameraEntity)!.smoothing = 0.15;  // damped follow
 world.get<CameraFollow>(cameraEntity)!.smoothing = 1.0;   // instant snap
+world.get<CameraFollow>(cameraEntity)!.smoothTime = 0.25; // spring: eases in and out
 world.get<CameraFollow>(cameraEntity)!.offset = const Offset(0, -20);
 ```
+
+`smoothing` is the fraction of the remaining distance covered per 1/60 s. `smoothTime`, when set, replaces it with a critically damped spring that settles in about that many seconds without overshooting. Both are timed by `WallTime.delta`, so the follow feels the same at any refresh rate. With `Camera2D.pixelPerfect`, the follow keeps its own unrounded position and only the transform is snapped, so a catch-up never stalls a pixel short of the target.
+
+A pixel-perfect camera still moves in whole screen pixels, so a speed that isn't a whole number of pixels per frame (common at 120 or 144 Hz) mixes step sizes and judders. Set `Camera2D.subpixelScroll` to draw the world with the camera on whole pixels and shift the finished frame by the leftover fraction, blended across one screen pixel. The camera then glides evenly at any refresh rate, and the art stays crisp.
 
 The system uses the target's `GlobalTransform2D`, so it works with parented targets. When the target entity is despawned, `CameraFollowSystem` logs a warning once and stops updating that camera.
 

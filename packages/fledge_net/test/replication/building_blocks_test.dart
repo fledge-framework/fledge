@@ -38,16 +38,16 @@ void main() {
   group('ReliableChannel', () {
     test('delivers in order, once, despite reordering and duplicates', () {
       final rx = ReliableChannel();
-      final tx = ReliableChannel(maxPacketBytes: 20);
+      final tx = ReliableChannel();
       for (var i = 0; i < 5; i++) {
-        tx.enqueue(bytes([i]));
+        tx.enqueue(Uint8List(500)..[0] = i);
       }
       final parts = tx.takePackets(nowMs: 0, resendAfterMs: 100, ack: 0);
       expect(parts.length, greaterThan(1));
       for (final p in [...parts.reversed, ...parts]) {
         rx.receivePacket(p);
       }
-      expect(rx.drain().map((m) => m.single), [0, 1, 2, 3, 4]);
+      expect(rx.drain().map((m) => m.first), [0, 1, 2, 3, 4]);
       expect(rx.drain(), isEmpty);
       expect(rx.receivedAck, 5);
     });
@@ -77,9 +77,154 @@ void main() {
     test('rejects oversized messages', () {
       final ch = ReliableChannel();
       expect(
-        () => ch.enqueue(Uint8List(ch.maxMessageBytes + 1)),
+        () => ch.enqueue(Uint8List(ReliableChannel.maxMessageBytes + 1)),
         throwsArgumentError,
       );
+      ch.enqueue(Uint8List(ReliableChannel.maxFragmentBytes));
+      final packet = ch.takePackets(nowMs: 0, resendAfterMs: 1, ack: 0).single;
+      expect(packet.length, lessThanOrEqualTo(Packet.maxPayloadBytes));
+    });
+
+    Uint8List patterned(int length) =>
+        Uint8List.fromList([for (var i = 0; i < length; i++) i * 7 % 251]);
+
+    /// Moves every packet [tx] has from it to [rx], in [order] if given,
+    /// skipping the ones [drop] picks, and acks back.
+    void deliver(
+      ReliableChannel tx,
+      ReliableChannel rx, {
+      int nowMs = 0,
+      bool Function(int index)? drop,
+      bool reverse = false,
+    }) {
+      var packets = tx.takePackets(
+        nowMs: nowMs,
+        resendAfterMs: 10,
+        ack: 0,
+        maxPackets: 100000,
+      );
+      if (reverse) packets = packets.reversed.toList();
+      for (var i = 0; i < packets.length; i++) {
+        if (drop?.call(i) ?? false) continue;
+        rx.receivePacket(packets[i]);
+      }
+      tx.onAck(rx.receivedAck);
+    }
+
+    test('a message bigger than a packet arrives whole, in fragments', () {
+      final tx = ReliableChannel();
+      final rx = ReliableChannel();
+      final big = patterned(ReliableChannel.maxFragmentBytes * 5 + 17);
+      tx
+        ..enqueue(Uint8List.fromList([1]))
+        ..enqueue(big)
+        ..enqueue(Uint8List.fromList([2]));
+      expect(tx.unackedCount, 1 + 6 + 1);
+      deliver(tx, rx, reverse: true);
+      final got = rx.drain();
+      expect(got.length, 3);
+      expect(got[0], [1]);
+      expect(got[1], big);
+      expect(got[2], [2]);
+      expect(tx.unackedCount, 0);
+      expect(tx.unackedBytes, 0);
+    });
+
+    test('lost fragments are resent and the message still arrives whole', () {
+      final tx = ReliableChannel();
+      final rx = ReliableChannel();
+      final big = patterned(ReliableChannel.maxMessageBytes);
+      tx.enqueue(big);
+      deliver(tx, rx, drop: (i) => i.isOdd);
+      expect(rx.drain(), isEmpty);
+      deliver(tx, rx, nowMs: 100);
+      expect(rx.drain().single, big);
+    });
+
+    test('maxBytes spreads a big message over several calls', () {
+      final tx = ReliableChannel()
+        ..enqueue(patterned(ReliableChannel.maxFragmentBytes * 10));
+      final first = tx.takePackets(
+        nowMs: 0,
+        resendAfterMs: 1000,
+        ack: 0,
+        maxBytes: 3000,
+      );
+      expect(first.length, lessThanOrEqualTo(3));
+      final rest = tx.takePackets(nowMs: 0, resendAfterMs: 1000, ack: 0);
+      expect(first.length + rest.length, 10);
+    });
+
+    test('a message that would not fit under maxUnacked is refused whole', () {
+      final ch = ReliableChannel(maxUnacked: 4);
+      expect(ch.canEnqueue(ReliableChannel.maxFragmentBytes * 4), isTrue);
+      expect(ch.canEnqueue(ReliableChannel.maxFragmentBytes * 4 + 1), isFalse);
+      expect(
+        () => ch.enqueue(patterned(ReliableChannel.maxFragmentBytes * 5)),
+        throwsStateError,
+      );
+      expect(ch.unackedCount, 0);
+    });
+
+    test('an entry with a bad part byte is malformed', () {
+      final bad =
+          (PacketBuilder()
+                ..writeUint32(0)
+                ..writeVarUint(1)
+                ..writeUint32(1)
+                ..writeVarUint(2)
+                ..writeByte(9)
+                ..writeByte(0))
+              .build();
+      expect(() => ReliableChannel().receivePacket(bad), throwsFormatException);
+    });
+
+    test('caps unacked messages; acks make room again', () {
+      final ch = ReliableChannel(maxUnacked: 3);
+      for (var i = 0; i < 3; i++) {
+        expect(ch.isFull, isFalse);
+        ch.enqueue(bytes([i]));
+      }
+      expect(ch.isFull, isTrue);
+      expect(() => ch.enqueue(bytes([3])), throwsStateError);
+      expect(ch.unackedCount, 3, reason: 'the rejected message is not kept');
+      ch.onAck(1);
+      expect(ch.isFull, isFalse);
+      expect(ch.enqueue(bytes([3])), 4);
+    });
+
+    test('drops messages beyond the receive window until they are resent', () {
+      final tx = ReliableChannel();
+      final rx = ReliableChannel(maxReceiveWindow: 2);
+      final packets = <Uint8List>[];
+      for (var i = 0; i < 4; i++) {
+        tx.enqueue(bytes([i]));
+        // One message per packet.
+        packets.add(
+          tx.takePackets(nowMs: 0, resendAfterMs: 1000, ack: 0).single,
+        );
+      }
+      // seq 1 is delayed. The window counts from the next expected
+      // sequence, so with 2 only seq 2 is buffered; 3 and 4 are dropped.
+      rx
+        ..receivePacket(packets[3])
+        ..receivePacket(packets[2])
+        ..receivePacket(packets[1]);
+      expect(rx.drain(), isEmpty);
+      rx.receivePacket(packets[0]);
+      expect(rx.drain().map((m) => m.single), [0, 1]);
+      expect(rx.receivedAck, 2);
+      // The sender resends the unacked seqs 3 and 4.
+      tx.onAck(rx.receivedAck);
+      rx.receivePacket(
+        tx.takePackets(nowMs: 2000, resendAfterMs: 1000, ack: 0).single,
+      );
+      expect(rx.drain().map((m) => m.single), [2, 3]);
+    });
+
+    test('rejects non-positive bounds', () {
+      expect(() => ReliableChannel(maxUnacked: 0), throwsArgumentError);
+      expect(() => ReliableChannel(maxReceiveWindow: 0), throwsArgumentError);
     });
 
     test('packets never exceed the payload cap', () {
@@ -153,6 +298,13 @@ void main() {
       s.reportLateInputs(3);
       s.reportLateInputs(3);
       expect(s.extraBufferTicks, 1);
+      // Ten quiet seconds (500 steps of 20 ms) give the tick back.
+      for (var i = 0; i < 499; i++) {
+        s.step();
+      }
+      expect(s.extraBufferTicks, 1);
+      s.step();
+      expect(s.extraBufferTicks, 0);
     });
   });
 

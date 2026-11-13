@@ -202,23 +202,6 @@ void main() {
       expect(peer.timeSinceLastReceive, Duration.zero);
     });
 
-    test('reliable retransmits follow the injected clock', () {
-      final c = ManualNetClock();
-      final peer = Peer(
-        id: 1,
-        address: const NetAddress('10.0.0.1', 1),
-        clock: c,
-      );
-      peer.addPendingReliable(1, Uint8List.fromList([1, 2, 3]));
-      const fallback = Duration(milliseconds: 100);
-      expect(peer.getPacketsToRetransmit(fallback), isEmpty);
-      c.advance(const Duration(milliseconds: 101));
-      expect(peer.getPacketsToRetransmit(fallback), hasLength(1));
-      expect(peer.getPacketsToRetransmit(fallback), isEmpty);
-      c.advance(const Duration(milliseconds: 101));
-      expect(peer.getPacketsToRetransmit(fallback), hasLength(1));
-    });
-
     test('back-dating lastReceiveTime still moves the timeout', () {
       final c = ManualNetClock(100000);
       final peer = Peer(

@@ -264,4 +264,40 @@ void main() {
       );
     });
   });
+
+  test(
+    'the fixed step runs on the same frame time as per-frame systems',
+    () async {
+      // A display-driven clock with an early frame (vsync wobble): that
+      // frame counts no time, the next one a whole refresh.
+      var nowUs = 0;
+      final time = WallTime()
+        ..useClock(
+          () => Duration(microseconds: nowUs),
+          frameInterval: const Duration(microseconds: 16667),
+        );
+      final app = App()
+        ..insertResource(time)
+        ..insertResource(
+          FixedTimestep(stepDuration: const Duration(microseconds: 16667)),
+        )
+        ..addSystem(const WallTimeUpdateSystem(), schedule: Schedules.first);
+      final frames = <(double, int)>[];
+      for (final gapUs in [16667, 16667, 16667, 5900, 16667, 16667, 10800]) {
+        nowUs += gapUs;
+        await app.tick();
+        frames.add((
+          app.world.getResource<WallTime>()!.delta,
+          app.world.getResource<FixedTimestep>()!.stepsThisFrame,
+        ));
+      }
+      // Whatever time a frame counts, its fixed steps match it, in that very
+      // frame: no step a frame early or late against the per-frame time.
+      final step = 16667 / 1e6;
+      for (final (i, (delta, steps)) in frames.indexed.skip(1)) {
+        expect(steps, (delta / step).round(), reason: 'frame $i');
+      }
+      expect(frames[3], (0.0, 0), reason: 'the early frame counts nothing');
+    },
+  );
 }

@@ -58,6 +58,23 @@ void main() async {
 }
 ```
 
+### Frame time in Flutter
+
+`WallTime` times frames with a stopwatch read when each tick starts, which
+wanders by a few milliseconds. When a Flutter ticker drives the app, hand it
+the vsync timestamp instead, rounded to whole display refreshes, so movement
+per frame stays even and scrolling doesn't judder:
+
+```dart
+final hz = PlatformDispatcher.instance.views.first.display.refreshRate;
+app.world.getResource<WallTime>()!.useClock(
+  () => SchedulerBinding.instance.currentSystemFrameTimeStamp,
+  frameInterval: WallTime.frameIntervalFor(hz),
+);
+```
+
+`frameIntervalFor` counts a rate just off a standard one as that rate (a 59.94 Hz display reports 59). The reported rate is only a first guess: `WallTime` measures the real interval from the vsync clock and follows it, so a wrong report or a move to another monitor doesn't matter. A frame that arrives less than half an interval after the last adds no time (`delta` is 0), so extra frames don't make game time run ahead.
+
 ## Documentation
 
 See the [Fledge documentation site](https://fledge-framework.dev/docs) for guides, API reference, and advanced usage.

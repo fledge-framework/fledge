@@ -9,14 +9,17 @@ import 'package:flutter/widgets.dart'
         SizedBox,
         Size,
         StatelessWidget,
+        View,
         Widget;
 
 import '../backend/canvas_render_context.dart' show CanvasSpriteDrawer;
-import '../render/camera_view.dart' show withActiveCameraCanvas;
+import '../render/camera_view.dart'
+    show activeCameraVisibleWorldRect, paintActiveCameraView;
 import '../render/world/render_world.dart' show RenderWorld;
 import '../sprite/extracted_sprite.dart' show ExtractedSprite;
 import '../sprite/sprite.dart' show TextureHandle;
 import '../sprite/sprite_render_node.dart' show BackendSpriteData, SpriteDrawer;
+import 'view_pass.dart' show ViewPasses;
 
 /// A widget that paints an [App]'s render world through the installed
 /// [SpriteDrawer].
@@ -58,6 +61,7 @@ class FledgeRenderView extends StatelessWidget {
         painter: _FledgeRenderPainter(
           app: app,
           backgroundColor: backgroundColor,
+          devicePixelRatio: View.maybeOf(context)?.devicePixelRatio ?? 1,
         ),
       ),
     );
@@ -67,8 +71,13 @@ class FledgeRenderView extends StatelessWidget {
 class _FledgeRenderPainter extends CustomPainter {
   final App app;
   final Color? backgroundColor;
+  final double devicePixelRatio;
 
-  _FledgeRenderPainter({required this.app, required this.backgroundColor});
+  _FledgeRenderPainter({
+    required this.app,
+    required this.backgroundColor,
+    required this.devicePixelRatio,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -86,27 +95,45 @@ class _FledgeRenderPainter extends CustomPainter {
     // Canvas backend needs a live `Canvas` handle per frame. Other
     // backends (e.g. the GPU stub) ignore this handshake.
     final canvasDrawer = drawer is CanvasSpriteDrawer ? drawer : null;
-    canvasDrawer?.beginFrame(canvas);
-    try {
-      // Camera-aware sprite pass: if the app has an ActiveCameraView
-      // resource, translate the canvas so the camera's world position
-      // sits at the widget centre. Games without a camera (or before
-      // the camera plugin has run its first tick) fall through to a
-      // no-op — sprites draw at their raw world coordinates.
-      withActiveCameraCanvas(app.world, canvas, size, () {
-        renderSpritesToDrawer(renderWorld, drawer);
-      });
-    } finally {
-      canvasDrawer?.endFrame();
-    }
+    // Camera-aware sprite pass: if the app has an ActiveCameraView
+    // resource, translate the canvas so the camera's world position
+    // sits at the widget centre. Games without a camera (or before
+    // the camera plugin has run its first tick) fall through to a
+    // no-op — sprites draw at their raw world coordinates. A sub-pixel
+    // scrolling camera hands over an offscreen canvas instead.
+    final passes = app.world.getResource<ViewPasses>()?.passes ?? const [];
+    paintActiveCameraView(app.world, canvas, size, (target) {
+      final visible = activeCameraVisibleWorldRect(app.world, size);
+      canvasDrawer?.beginFrame(target);
+      try {
+        // The order is ViewPass's: behind, sprites, over, emissive.
+        for (final pass in passes) {
+          pass.paintBehind(app.world, target, visible);
+        }
+        renderSpritesToDrawer(
+          renderWorld,
+          drawer,
+          where: passes.isEmpty ? null : (s) => !s.emissive,
+        );
+        if (passes.isNotEmpty) {
+          for (final pass in passes) {
+            pass.paintOver(app.world, target, visible);
+          }
+          renderSpritesToDrawer(renderWorld, drawer, where: (s) => s.emissive);
+        }
+      } finally {
+        canvasDrawer?.endFrame();
+      }
+    }, devicePixelRatio: devicePixelRatio);
   }
 
   @override
   bool shouldRepaint(covariant _FledgeRenderPainter oldDelegate) => true;
 }
 
-/// Iterate every [ExtractedSprite] in [renderWorld], sort them by
-/// [ExtractedSprite.sortKey], group contiguous same-texture runs
+/// Iterate every [ExtractedSprite] in [renderWorld], sort them into
+/// draw order ([ExtractedSprite.sortByDrawOrder]: sort key, then the
+/// unclamped precise sub-order, stable for full ties), group contiguous same-texture runs
 /// into batches, and submit each batch to [drawer].
 ///
 /// Exposed as a top-level function so `SpriteRenderNode` and a
@@ -116,13 +143,20 @@ class _FledgeRenderPainter extends CustomPainter {
 /// sub-order) while minimising draw calls: as long as consecutive
 /// sprites share a texture, they collapse into one
 /// `drawSpriteBatch` call.
-void renderSpritesToDrawer(RenderWorld renderWorld, SpriteDrawer drawer) {
+///
+/// [where], if given, draws only the sprites it accepts (e.g. the
+/// emissive ones, after the view passes).
+void renderSpritesToDrawer(
+  RenderWorld renderWorld,
+  SpriteDrawer drawer, {
+  bool Function(ExtractedSprite sprite)? where,
+}) {
   final sprites = <ExtractedSprite>[];
   for (final (_, sprite) in renderWorld.query1<ExtractedSprite>().iter()) {
-    sprites.add(sprite);
+    if (where == null || where(sprite)) sprites.add(sprite);
   }
   if (sprites.isEmpty) return;
-  sprites.sort((a, b) => a.sortKey.compareTo(b.sortKey));
+  ExtractedSprite.sortByDrawOrder(sprites);
 
   var i = 0;
   while (i < sprites.length) {
@@ -159,8 +193,8 @@ BackendSpriteData _toBackendSprite(ExtractedSprite s) {
   // T < B), and the RSTransform path can't express a single-axis
   // mirror — a `-scos` degenerates to a 180° rotation. Instead of
   // inverting the srcRect, hand the flip flags to the backend; the
-  // canvas drawer sub-batches by flip and applies `canvas.scale`
-  // around each sub-batch.
+  // canvas drawer mirrors each flipped sprite in its local space
+  // (about the anchor, along its own axes).
   return BackendSpriteData(
     sourceRect: s.sourceRect,
     destRect: destRect,

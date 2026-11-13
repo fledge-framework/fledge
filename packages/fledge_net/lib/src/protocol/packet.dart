@@ -23,32 +23,22 @@ enum PacketType {
   /// Pong response to ping.
   pong(0x06),
 
-  /// Entity state update.
+  /// Snapshot chunk (replication layer, host to client).
   stateUpdate(0x10),
 
-  /// Input data from client.
+  /// Inputs (replication layer, client to host).
   input(0x11),
-
-  /// Entity spawn notification.
-  entitySpawn(0x12),
-
-  /// Entity despawn notification.
-  entityDespawn(0x13),
 
   /// Ordered reliable replication channel (both directions).
   ///
   /// Carries the replication layer's ordered reliable messages (welcome,
   /// spawn, despawn, re-parent, ownership, RPC). Reliability, ordering
   /// and de-duplication are implemented by `ReliableChannel` with
-  /// cumulative acks, so this type is *unreliable* at the `Peer` level
-  /// (see [isReliable]).
+  /// cumulative acks.
   replication(0x14),
 
   /// Tick synchronisation handshake (unreliable request/response).
   tickSync(0x15),
-
-  /// RPC (remote procedure call).
-  rpc(0x20),
 
   /// Custom game message.
   custom(0xFF);
@@ -56,34 +46,12 @@ enum PacketType {
   final int value;
   const PacketType(this.value);
 
-  /// Whether this packet type requires reliable delivery.
-  ///
-  /// Reliable packets are retransmitted until acknowledged.
-  /// State updates and input are unreliable (sent frequently, latest-wins).
-  bool get isReliable => switch (this) {
-    connect || connectAccepted || connectRejected || disconnect => true,
-    entitySpawn || entityDespawn || rpc => true,
-    _ => false,
-  };
-
   static PacketType? fromValue(int value) {
     for (final type in PacketType.values) {
       if (type.value == value) return type;
     }
     return null;
   }
-}
-
-/// Reliability level for packets.
-enum Reliability {
-  /// Best effort, may be lost (default for state updates).
-  unreliable,
-
-  /// Guaranteed delivery but unordered.
-  reliable,
-
-  /// Guaranteed delivery and ordering.
-  reliableOrdered,
 }
 
 /// Network packet header.
@@ -113,7 +81,7 @@ class PacketHeader {
   /// mismatch" error. `NetworkHost` answers a mismatched `connect` with a
   /// `connectRejected` and `NetworkClient` fails its connect with the same
   /// reason; both also emit a `ProtocolMismatchEvent`.
-  static const int version = 3;
+  static const int version = 4;
 
   /// Packet type.
   final PacketType type;
@@ -268,62 +236,93 @@ class Packet {
 }
 
 /// Packet builder for constructing payloads.
+///
+/// Writes into a growable buffer. [build] returns a copy, so one builder
+/// can be [clear]ed and reused (keeping its capacity) in hot paths.
 class PacketBuilder {
-  final BytesBuilder _builder = BytesBuilder();
+  Uint8List _buffer;
+  ByteData _view;
+  int _length = 0;
+
+  /// Creates a builder with room for [initialCapacity] bytes (it grows as
+  /// needed).
+  PacketBuilder([int initialCapacity = 64])
+    : _buffer = Uint8List(initialCapacity < 8 ? 8 : initialCapacity),
+      _view = ByteData(0) {
+    _view = ByteData.sublistView(_buffer);
+  }
 
   /// Current size of the payload.
-  int get size => _builder.length;
+  int get size => _length;
+
+  void _reserve(int bytes) {
+    final needed = _length + bytes;
+    if (needed <= _buffer.length) return;
+    var capacity = _buffer.length * 2;
+    while (capacity < needed) {
+      capacity *= 2;
+    }
+    final grown = Uint8List(capacity)..setRange(0, _length, _buffer);
+    _buffer = grown;
+    _view = ByteData.sublistView(grown);
+  }
 
   /// Write a boolean.
-  void writeBool(bool value) {
-    _builder.addByte(value ? 1 : 0);
-  }
+  void writeBool(bool value) => writeByte(value ? 1 : 0);
 
   /// Write a single byte.
   void writeByte(int value) {
-    _builder.addByte(value);
+    _reserve(1);
+    _buffer[_length++] = value;
   }
 
   /// Write a 16-bit integer.
   void writeInt16(int value) {
-    final buffer = ByteData(2)..setInt16(0, value, Endian.little);
-    _builder.add(buffer.buffer.asUint8List());
+    _reserve(2);
+    _view.setInt16(_length, value, Endian.little);
+    _length += 2;
   }
 
   /// Write an unsigned 16-bit integer (`0..65535`).
   void writeUint16(int value) {
-    final buffer = ByteData(2)..setUint16(0, value, Endian.little);
-    _builder.add(buffer.buffer.asUint8List());
+    _reserve(2);
+    _view.setUint16(_length, value, Endian.little);
+    _length += 2;
   }
 
   /// Write a 32-bit integer.
   void writeInt32(int value) {
-    final buffer = ByteData(4)..setInt32(0, value, Endian.little);
-    _builder.add(buffer.buffer.asUint8List());
+    _reserve(4);
+    _view.setInt32(_length, value, Endian.little);
+    _length += 4;
   }
 
   /// Write an unsigned 32-bit integer (`0..0xFFFFFFFF`).
   void writeUint32(int value) {
-    final buffer = ByteData(4)..setUint32(0, value, Endian.little);
-    _builder.add(buffer.buffer.asUint8List());
+    _reserve(4);
+    _view.setUint32(_length, value, Endian.little);
+    _length += 4;
   }
 
   /// Write a 64-bit integer.
   void writeInt64(int value) {
-    final buffer = ByteData(8)..setInt64(0, value, Endian.little);
-    _builder.add(buffer.buffer.asUint8List());
+    _reserve(8);
+    _view.setInt64(_length, value, Endian.little);
+    _length += 8;
   }
 
   /// Write a 32-bit float.
   void writeFloat32(double value) {
-    final buffer = ByteData(4)..setFloat32(0, value, Endian.little);
-    _builder.add(buffer.buffer.asUint8List());
+    _reserve(4);
+    _view.setFloat32(_length, value, Endian.little);
+    _length += 4;
   }
 
   /// Write a 64-bit float.
   void writeFloat64(double value) {
-    final buffer = ByteData(8)..setFloat64(0, value, Endian.little);
-    _builder.add(buffer.buffer.asUint8List());
+    _reserve(8);
+    _view.setFloat64(_length, value, Endian.little);
+    _length += 8;
   }
 
   /// Maximum encoded length of [writeString] / [writeBytes] data in bytes.
@@ -354,7 +353,7 @@ class PacketBuilder {
       );
     }
     writeUint16(bytes.length);
-    _builder.add(bytes);
+    writeRawBytes(bytes);
   }
 
   /// Write a non-negative integer as an unsigned LEB128 varint
@@ -367,22 +366,24 @@ class PacketBuilder {
     }
     var v = value;
     while (v >= 0x80) {
-      _builder.addByte((v & 0x7F) | 0x80);
+      writeByte((v & 0x7F) | 0x80);
       v >>= 7;
     }
-    _builder.addByte(v);
+    writeByte(v);
   }
 
   /// Write raw bytes with no length prefix.
   void writeRawBytes(List<int> bytes) {
-    _builder.add(bytes);
+    _reserve(bytes.length);
+    _buffer.setRange(_length, _length + bytes.length, bytes);
+    _length += bytes.length;
   }
 
   /// Write bytes prefixed with their length as a varint (see
   /// [writeVarUint]). Unlike [writeBytes] there is no 64 KiB limit.
   void writeVarBytes(List<int> bytes) {
     writeVarUint(bytes.length);
-    _builder.add(bytes);
+    writeRawBytes(bytes);
   }
 
   /// Write a 3D vector (3 floats).
@@ -400,14 +401,13 @@ class PacketBuilder {
     writeFloat32(w);
   }
 
-  /// Build the payload.
-  Uint8List build() {
-    return _builder.toBytes();
-  }
+  /// Build the payload: a copy of the bytes written so far. The builder
+  /// keeps its contents; call [clear] to reuse it.
+  Uint8List build() => _buffer.sublist(0, _length);
 
-  /// Clear the builder.
+  /// Clear the builder (keeps its capacity).
   void clear() {
-    _builder.clear();
+    _length = 0;
   }
 }
 

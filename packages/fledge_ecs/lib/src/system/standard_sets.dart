@@ -64,3 +64,27 @@ abstract final class FirstSets {
   /// Every phase, in execution order.
   static const List<String> chain = [frameStart, platform, input, content];
 }
+
+/// Standard phases of [Schedules.update], configured in this order by
+/// every [Scheduler] created with the default constructor:
+///
+/// 1. [receive]: state that arrives from outside the frame's simulation
+///    and that the frame's logic reads (network interpolation of remote
+///    entities, `NetInterpolationSystem`).
+/// 2. [simulate]: the frame's variable-step simulation (`fledge_physics`
+///    in `PhysicsMode.variable`).
+///
+/// Join a phase with `SystemMeta(sets: [UpdateSets.simulate])`, or order
+/// against one with `after: [UpdateSets.receive]`, exactly as with
+/// [FirstSets]. Systems in [Schedules.update] that join no phase are
+/// unordered relative to the phases.
+abstract final class UpdateSets {
+  /// State from outside the simulation that update logic reads.
+  static const String receive = 'update.receive';
+
+  /// Variable-step simulation (physics, movement).
+  static const String simulate = 'update.simulate';
+
+  /// Every phase, in execution order.
+  static const List<String> chain = [receive, simulate];
+}

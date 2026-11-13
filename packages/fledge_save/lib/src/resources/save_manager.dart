@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../config/save_config.dart';
+import '../entities/saved_components.dart';
 import '../traits/saveable.dart';
 
 const _logName = 'fledge_save';
@@ -44,6 +45,21 @@ const _tempSuffix = '.tmp';
 /// ```
 class SaveManager {
   final SaveConfig config;
+
+  /// Component types saved on entities marked with [SaveId].
+  ///
+  /// Register a type once (e.g. in a plugin's `build`); every entity that
+  /// carries a [SaveId] then has those components saved under its id, in
+  /// the save file's `entities` section.
+  final SavedComponents components = SavedComponents();
+
+  /// The entities the last successful [load] spawned because no entity
+  /// carried their [SaveId] yet. Games attach the components that aren't
+  /// saved (sprites, colliders) to these.
+  List<Entity> lastSpawned = const [];
+
+  /// The [SaveId]s the last successful [load] restored, spawned or not.
+  List<String> lastLoadedIds = const [];
 
   /// Whether save file existence has been checked.
   bool _initialized = false;
@@ -385,8 +401,9 @@ class SaveManager {
     return {
       'version': config.formatVersion,
       'timestamp': DateTime.now().toIso8601String(),
-      if (metadata != null) 'metadata': metadata,
+      'metadata': ?metadata,
       'resources': resourceData,
+      if (!components.isEmpty) 'entities': components.collect(world),
     };
   }
 
@@ -406,6 +423,15 @@ class SaveManager {
         resource.loadFromSaveJson(data);
       }
     }
+
+    // Restore saved entities
+    final entityData = saveData['entities'] as Map<String, dynamic>?;
+    lastSpawned = entityData == null
+        ? const []
+        : components.restore(world, entityData);
+    lastLoadedIds = entityData == null
+        ? const []
+        : List.unmodifiable(entityData.keys);
 
     return saveData['metadata'] as Map<String, dynamic>?;
   }

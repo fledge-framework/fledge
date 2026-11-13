@@ -147,6 +147,13 @@ class Sprite {
   /// the layer's range.
   int layerSubOrder;
 
+  /// Whether the sprite gives off its own light: `FledgeRenderView` draws
+  /// it after the `ViewPass.paintOver` passes, so a lighting pass that
+  /// darkens the scene leaves it at full brightness (lit windows,
+  /// screens, signs). It still sorts with the other emissive sprites by
+  /// [layer] and sub-order.
+  bool emissive;
+
   /// Creates a sprite component.
   Sprite({
     required this.texture,
@@ -158,6 +165,7 @@ class Sprite {
     this.customSize,
     this.layer = DrawLayer.characters,
     this.layerSubOrder = 0,
+    this.emissive = false,
   }) : anchor = anchor ?? Vector2(0.5, 0.5);
 
   /// The effective source rectangle.

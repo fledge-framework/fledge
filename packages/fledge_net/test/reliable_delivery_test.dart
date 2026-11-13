@@ -1,81 +1,72 @@
+// The connection layer sends single unreliable datagrams; reliable
+// delivery is ReliableChannel's job (see replication/building_blocks_test).
 import 'dart:typed_data';
 
 import 'package:fledge_net/fledge_net.dart';
 import 'package:test/test.dart';
 
+PacketType? _typeOf(Uint8List data) =>
+    data.length > 5 ? PacketType.fromValue(data[5]) : null;
+
 void main() {
-  group('PacketType.isReliable', () {
-    test('returns true for reliable packet types', () {
-      expect(PacketType.connect.isReliable, true);
-      expect(PacketType.connectAccepted.isReliable, true);
-      expect(PacketType.connectRejected.isReliable, true);
-      expect(PacketType.disconnect.isReliable, true);
-      expect(PacketType.entitySpawn.isReliable, true);
-      expect(PacketType.entityDespawn.isReliable, true);
-      expect(PacketType.rpc.isReliable, true);
-    });
+  group('Connection layer delivery', () {
+    late ManualNetClock clock;
+    late LoopbackNetwork net;
+    late NetworkHost host;
+    late NetworkClient client;
+    final sent = <PacketType?>[];
 
-    test('returns false for unreliable packet types', () {
-      expect(PacketType.stateUpdate.isReliable, false);
-      expect(PacketType.input.isReliable, false);
-      expect(PacketType.ping.isReliable, false);
-      expect(PacketType.pong.isReliable, false);
-      expect(PacketType.custom.isReliable, false);
-    });
-  });
-
-  group('Peer reliable delivery', () {
-    late Peer peer;
-
-    setUp(() {
-      peer = Peer(id: 1, address: const NetAddress('10.0.0.1', 8080));
-    });
-
-    test('maxRetransmits is 10', () {
-      expect(Peer.maxRetransmits, 10);
-    });
-
-    test('getPacketsToRetransmit drops packets after max retransmits', () {
-      // Retransmit timing runs on the peer's NetClock (whole ms): drive it
-      // with a manual clock instead of busy-waiting on wall time.
-      final clock = ManualNetClock(1000);
-      final peer = Peer(
-        id: 1,
-        address: const NetAddress('10.0.0.1', 8080),
+    setUp(() async {
+      sent.clear();
+      clock = ManualNetClock();
+      net = LoopbackNetwork(
         clock: clock,
-      )..addPendingReliable(1, Uint8List.fromList([1, 2, 3]));
+        latency: const Duration(milliseconds: 10),
+        filter: (d) {
+          sent.add(_typeOf(d.data));
+          return true;
+        },
+      );
+      host = NetworkHost(transport: net.createTransport(), clock: clock);
+      client = NetworkClient(transport: net.createTransport(), clock: clock);
+      await host.start(7777);
+      final connecting = client.connect('127.0.0.1', 7777);
+      await net.advance(const Duration(milliseconds: 50));
+      expect(await connecting, isTrue);
+    });
 
-      var retransmitted = 0;
-      for (var i = 0; i < Peer.maxRetransmits + 2; i++) {
-        clock.advance(const Duration(milliseconds: 2));
-        retransmitted += peer
-            .getPacketsToRetransmit(const Duration(milliseconds: 1))
-            .length;
+    tearDown(() async {
+      await client.disconnect();
+      await host.stop();
+      net.clearInFlight();
+    });
+
+    test('each send is one datagram, never retransmitted', () async {
+      final received = <PeerDataEvent>[];
+      host.onData.listen(received.add);
+      await client.send(PacketType.custom, Uint8List.fromList([1, 2, 3]));
+      for (var i = 0; i < 100; i++) {
+        host.update();
+        client.update();
+        await net.advance(const Duration(milliseconds: 20));
       }
-
-      expect(retransmitted, Peer.maxRetransmits);
-      expect(peer.droppedReliableCount, 1);
+      expect(sent.where((t) => t == PacketType.custom), hasLength(1));
+      expect(received.where((e) => e.type == PacketType.custom), hasLength(1));
     });
 
-    test('processAck removes acknowledged packets', () {
-      peer.addPendingReliable(1, Uint8List.fromList([10]));
-      peer.addPendingReliable(2, Uint8List.fromList([20]));
-      peer.addPendingReliable(3, Uint8List.fromList([30]));
-
-      // Ack sequence 2 directly.
-      peer.processAck(2, 0);
-
-      // Ack sequence 1 via ack bits: ack=3, diff for seq 1 = 2,
-      // bit = 1 << (2-1) = 0x02.
-      // Also directly acks sequence 3.
-      peer.processAck(3, 0x02);
-
-      // All packets should be removed. Verify by checking that
-      // no retransmits are needed even with a zero timeout.
-      // First we need to wait so they'd be eligible, but since they
-      // were removed, we get nothing.
-      final retransmits = peer.getPacketsToRetransmit(Duration.zero);
-      expect(retransmits, isEmpty);
-    });
+    test(
+      'connectAccepted is not repeated once the client is connected',
+      () async {
+        for (var i = 0; i < 100; i++) {
+          host.update();
+          client.update();
+          await net.advance(const Duration(milliseconds: 20));
+        }
+        expect(
+          sent.where((t) => t == PacketType.connectAccepted),
+          hasLength(1),
+        );
+      },
+    );
   });
 }

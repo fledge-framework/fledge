@@ -94,3 +94,6 @@ export 'src/resources/save_manager.dart';
 
 // Traits
 export 'src/traits/saveable.dart';
+
+// Entities
+export 'src/entities/saved_components.dart';

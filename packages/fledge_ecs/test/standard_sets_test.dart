@@ -21,6 +21,44 @@ class _Plugin implements Plugin {
 void main() {
   setUp(ComponentId.resetRegistry);
 
+  group('UpdateSets', () {
+    test('Scheduler() chains receive before simulate', () {
+      expect(UpdateSets.chain, [UpdateSets.receive, UpdateSets.simulate]);
+      final scheduler = Scheduler();
+      expect(scheduler.sets.get(UpdateSets.receive)!.beforeList, [
+        UpdateSets.simulate,
+      ]);
+      expect(scheduler.sets.contains(UpdateSets.simulate), isTrue);
+    });
+
+    test('phase members are ordered regardless of registration', () async {
+      final log = <String>[];
+      final app = App()
+        ..addSystem(
+          FunctionSystem(
+            'sim',
+            sets: [UpdateSets.simulate],
+            resourceWrites: {_Shared},
+            run: (_) => log.add('sim'),
+          ),
+          schedule: Schedules.update,
+        )
+        ..addSystem(
+          FunctionSystem(
+            'recv',
+            sets: [UpdateSets.receive],
+            resourceWrites: {_Shared},
+            run: (_) => log.add('recv'),
+          ),
+          schedule: Schedules.update,
+        )
+        ..insertResource(_Shared());
+      expect(app.checkScheduleOrdering(), isEmpty);
+      await app.tick();
+      expect(log, ['recv', 'sim']);
+    });
+  });
+
   group('FirstSets', () {
     test('chain lists the phases in order', () {
       expect(FirstSets.chain, [

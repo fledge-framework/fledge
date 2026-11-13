@@ -3,7 +3,7 @@
 The `fledge_render_2d` package is Fledge's rendering package. It ships two things:
 
 1. **Core render infrastructure** — `RenderPlugin`, `Extractors`, `RenderWorld`, `RenderLayer`, and the render graph.
-2. **2D component set** — `Transform2D` / `GlobalTransform2D`, `Sprite`, `AtlasSprite`, `AnimationPlayer`, materials, `Orientation`, `Visibility`, and scene transitions.
+2. **2D component set** — `Transform2D` / `GlobalTransform2D`, `Sprite`, `AtlasSprite`, `AnimationPlayer`, materials, `Orientation` / `Facing`, `Visibility`, and scene transitions.
 
 ## Installation
 
@@ -150,6 +150,22 @@ Fledge uses `DrawLayer` to give layer-based sorting a shared vocabulary across s
 
 Within each layer, entries are sub-sorted by an inner key (usually derived from Y position). This is what makes top-down painter's-algorithm rendering "just work" — characters between roof and floor tiles, sparks above characters, HUD above everything.
 
+### Y-sort range
+
+The packed integer key only has 100,000 sub-orders per layer, so the Y sub-order (`DrawLayerExtension.ySortSubOrder(y)`, i.e. `y * ySortScale` with `ySortScale = 10`) is clamped to `0..99,999`: it distinguishes y = 0 to 9,999.9 at 0.1 px. The built-in sprite path does not stop there. `ExtractedSprite` also carries `preciseSubOrder` (the unclamped `y * ySortScale`), and `renderSpritesToDrawer` / `SpriteBatchSystem` sort with `ExtractedSprite.sortByDrawOrder`:
+
+1. Compare `sortKey`. Layers always win, and anything that ordered differently before still does.
+2. On a tie, compare `preciseSubOrder` (or `sortKey % layerMultiplier` when it is `null`).
+3. On a full tie, keep extraction order (the sort is stable).
+
+Y-sorting is therefore **unbounded** for `Sprite`, `AtlasSprite` and particles: negative y and worlds far beyond 10,000 px tall order correctly. If you write your own extractor that emits `ExtractedSprite`s with a Y-based sub-order, pass `preciseSubOrder: y * DrawLayerExtension.ySortScale` as well. Custom `SortableExtractedData` types that sort only by the integer `sortKey` still see the clamped 0 to 9,999.9 window. An explicit `layerSubOrder` must stay within `0..99,999`.
+
+Particles use exactly the same Y convention as sprites (`ySortSubOrder(y)` packed, `y * ySortScale` precise), so a particle and a sprite in the same `DrawLayer` interleave by y. Tilemaps use a row-based sub-order (`row * 100 + layerIndex`, clamped, with the unclamped value as `preciseSubOrder`); see [Tiled layer depth sorting](/docs/plugins/tiled#layer-depth-sorting).
+
+### Batching
+
+Both draw paths (`renderSpritesToDrawer`, used by `FledgeRenderView`, and the render-graph `SpriteBatchSystem` + `SpriteRenderNode`) sort sprites into draw order first and then merge only **contiguous** same-texture runs into one batch. Sprites of textures A, B, A sorted by y become three batches drawn in that order, so painter's order holds across textures. When every sprite shares a texture, or the sort order already keeps textures apart, you get one batch per texture. Packing sprites into a shared atlas texture keeps the batch count low.
+
 ## Transform2D
 
 `Transform2D` represents local position, rotation, and scale relative to parent entities.
@@ -230,6 +246,10 @@ Sprite(
 )
 ```
 
+`customSize` does not have to match the source's aspect ratio, and `Transform2D.scale` can differ per axis: a 1×1 texture with `customSize: Vector2(32, 12000)` draws as a 32×12000 strip, rotation included. The canvas backend batches uniformly scaled sprites into one `drawRawAtlas` call per contiguous same-texture run. Non-uniformly scaled, sheared or mirrored sprites are drawn one at a time in their sorted position, so draw order is unaffected.
+
+`flipX` / `flipY` mirror the sprite in its **own local space**: about its anchor, along its own axes, before the entity transform is applied. A rotated sprite therefore mirrors along its rotated axes and stays attached to its anchor. For an unrotated sprite this is the familiar mirror about the anchor (a centred sprite flips in place).
+
 ### Anchor Points
 
 The anchor determines the sprite's pivot point:
@@ -257,6 +277,23 @@ entity.get<Visibility>()!.toggle();
 entity.get<Visibility>()!.hide();
 entity.get<Visibility>()!.show();
 ```
+
+### View passes
+
+Plugins can draw in world space around the sprites, through the same camera path (including sub-pixel scrolling), by adding a `ViewPass` to the `ViewPasses` resource that `RenderPlugin` inserts. Every `FledgeRenderView` of the app then draws, in order: each pass's `paintBehind`, the ordinary sprites, each pass's `paintOver`, and last the sprites marked `emissive`. `fledge_lighting_2d` is a view pass; so could be fog, screen tints or debug overlays.
+
+```dart
+class Vignette extends ViewPass {
+  @override
+  void paintOver(World world, Canvas canvas, Rect visibleWorld) {
+    // Draw in world coordinates; visibleWorld is what the camera shows.
+  }
+}
+
+app.world.getResource<ViewPasses>()!.add(Vignette());
+```
+
+`Sprite(emissive: true)` keeps a sprite out of what `paintOver` draws: it's drawn after the passes, so a lighting pass that darkens the scene leaves it at full brightness. With no passes, emissive sprites draw in their usual place.
 
 ### SpriteBundle
 
@@ -785,6 +822,37 @@ if (orientation.updateFromVelocity(velocity.x, velocity.y)) {
 final dir = Direction.fromVelocity(vx, vy);  // returns null if stationary
 final opposite = Direction.right.opposite;     // Direction.left
 ```
+
+### N-direction facing
+
+For sprites drawn from more than four directions (8- or 16-view sprite sheets, pre-rendered 3D), use the `Facing` component. It holds a continuous angle and maps it to a view index for any number of views.
+
+**Convention** (same as `Transform2D.rotation`): radians, `0` faces +x (right), positive angles turn toward +y (down), i.e. clockwise on screen. View `0` faces angle `0`, and view `i` faces `i * 2π / N`, so indices also advance clockwise. Each view covers ±`π / N` around its angle; an angle exactly on a boundary goes to the higher index.
+
+| 8 views | Facing |
+|---------|--------|
+| `0` | right (+X) |
+| `2` | down (+Y, toward the viewer in top-down) |
+| `4` | left (-X) |
+| `6` | up (-Y) |
+
+```dart
+world.spawn()
+  ..insert(Transform2D.from(100, 200))
+  ..insert(Facing()); // defaults to Facing.down, like Orientation
+
+final facing = entity.get<Facing>()!;
+facing.updateFromVector(velocity.x, velocity.y, minLength: 0.1); // keeps last facing when still
+final view = facing.viewIndex(8);   // 0..7
+final dir = facing.direction;       // nearest Direction, for 4-way code
+
+// Pure helpers
+facingViewIndex(angle, 16);         // angle → view index
+facingViewAngle(3, 16);             // view index → centre angle
+Facing(globalTransform.rotation);   // face along the entity's world +x axis
+```
+
+`Facing` only stores state; nothing in `fledge_render_2d` reads it. Directional sprite systems pick the view from it. `GlobalTransform2D.rotation` returns the world-space rotation, so an entity's facing can also come from its (possibly inherited) rotation.
 
 ## Materials
 

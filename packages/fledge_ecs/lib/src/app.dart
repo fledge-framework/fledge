@@ -405,13 +405,16 @@ class App {
       await scheduler.runSchedule(Schedules.startup, world);
     }
 
-    // Frame delta comes from WallTime if available, else the fallback
-    // stopwatch. This is consumed by the fixed-timestep accumulator.
-    final delta = _frameDeltaSeconds();
-
     final timestep = world.getResource<FixedTimestep>()!;
 
     await scheduler.runSchedule(Schedules.first, world);
+    // Frame delta comes from WallTime if available, else the fallback
+    // stopwatch, and feeds the fixed-timestep accumulator. Read it after
+    // Schedules.first, where WallTime takes this frame's time: the fixed
+    // step must run on the same frame time as everything per-frame (a
+    // camera following a fixed-step character), or a frame whose time
+    // differs from the last moves one a frame before the other.
+    final delta = _frameDeltaSeconds();
     await scheduler.runSchedule(Schedules.preUpdate, world);
     await scheduler.runFixedIfDue(timestep, delta, world);
     await scheduler.runSchedule(Schedules.update, world);

@@ -32,6 +32,21 @@ Future<void> main() async {
 }
 ```
 
+### One-off bursts
+
+For impacts and pickups, give an emitter `emitRate: 0` and call `burst`:
+
+```dart
+final chips = ParticleEmitter(
+  template: myChipTemplate,
+  emitRate: 0,
+  texture: whitePixel,
+  pool: ParticlePool(128),
+);
+// ...later, when something is hit:
+chips.burst(6, Vector2(x, y));
+```
+
 ## Documentation
 
 See the [Fledge documentation site](https://fledge-framework.dev/docs/plugins/particles) for guides, API reference, and advanced usage.

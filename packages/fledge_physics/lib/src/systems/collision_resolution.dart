@@ -62,6 +62,7 @@ class CollisionResolutionSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
     name: systemName,
+    sets: const [UpdateSets.simulate],
     reads: {
       ComponentId.of<Transform2D>(),
       ComponentId.of<Collider>(),

@@ -65,13 +65,12 @@ ReplicationRegistry buildReplication() => ReplicationRegistry()
   )
   ..rpc<Emote>('emote', emoteCodec)
   // World position, for interest management.
-  ..positionOf = (world, e) {
-    final g = world.get<GlobalTransform2D>(e);
-    return g == null ? null : (g.x, g.y);
-  };
+  ..positionFrom<GlobalTransform2D>((g) => (g.x, g.y));
 ```
 
 Register the **local** `Transform2D` (relative to the parent). Never replicate `GlobalTransform2D`: clients rebuild it from the replicated hierarchy with `TransformPropagateSystem`.
+
+`positionFrom<C>` declares `C` as a read of `NetSendSystem`, so the scheduler orders it against systems that write `C`. For a position computed from several components, use `position((world, entity) => ..., reads: {ComponentId.of<A>(), ComponentId.of<B>()})` and list every component the getter reads.
 
 > **Registering from an extension:** inside an `extension ... on ReplicationRegistry`, write `this.component<T>(...)`. A bare `component<T>(...)` resolves to the top-level `component` annotation constant exported by `fledge_ecs` and fails to compile. Cascades (`registry..component<T>(...)`) are unaffected.
 
@@ -179,7 +178,33 @@ session.sendRpcTo(peerId, const Emote('you-win'));
 
 RPCs are reliable and ordered together with spawns and despawns, so an RPC that targets a freshly spawned entity never arrives before the spawn. The host rejects (and reports with `NetRejected`) client RPCs whose target the client does not own.
 
-### 8. Test it in one process
+### 8. Player actions
+
+Inputs are **level state** sent every tick (the stick is held left); a repeated or lost one does no harm. Discrete things a player *does* (use an item, place a machine, pick something up) are **actions**: each must happen exactly once, in order, and the player wants to see it straight away.
+
+```dart
+// Both sides:
+registry.action<UseItem>('use', useItemCodec);
+
+// Client (from a fixed-step system, so the action carries this tick):
+final ticket = session.sendAction(UseItem(slot: 2), target: myAvatar);
+
+// Host, Schedules.fixedUpdate:
+for (final a in world.getResource<NetActions<UseItem>>()!.entries) {
+  if (!canUse(a.peerId, a.value)) {
+    session.resolveAction(a, accepted: false, reason: 'out of seeds');
+    continue;
+  }
+  applyUse(a.peerId, a.value);               // accepted by default
+}
+```
+
+- **Exactly once, in order, on its tick.** Actions ride in every input packet until the host acknowledges them, so a lost packet costs a tick, not a resend timeout. The host applies each sequence number once and holds an action until it reaches the tick it was sent at, so it lands on the same tick as the inputs sent with it. A sequence gap (impossible for an honest client) or a target the sender doesn't own is rejected and reported with `NetRejected`.
+- **Resolution.** An action not resolved by the end of its tick counts as accepted. The sender gets one `NetActionResolved<T>` event per action (accepted, reason, the tick it was resolved at).
+- **Showing it straight away.** `session.pendingActions<T>()` lists the sender's actions whose effect the host's state doesn't show yet. Draw the authoritative state, then each pending action's effect on top. A rejected action leaves the list at once; an accepted one stays until the host's state includes it, so the effect never flickers off and back on. For replicated resources this is exact: a resolution travels on the bulk channel behind every resource chunk queued before it. Entity state is as of the newest snapshot.
+- The host's own actions take the same path (peer 0), so host and clients share one code path. Keep payloads small (`NetworkSession.maxActionBytes`, 256): send what the player did (a slot, a tile), never the state it produces.
+
+### 9. Test it in one process
 
 `LoopbackNetwork` with a `ManualNetClock` runs a host and several clients deterministically in one test. Give every app the same clock and a transport factory on the same network, tick them with a fixed frame delta, and advance the network clock by one step per frame:
 
@@ -224,7 +249,7 @@ The package tests (`packages/fledge_net/test/support/replication_harness.dart`) 
 All simulation runs in the fixed-timestep chain, and `NetworkConfig.tickRate` must equal the `FixedTimestep` rate (`config.fixedTimestep()` builds a matching one; `host`/`join` throw otherwise, and clients with a different tick rate are refused).
 
 - **Host:** `NetworkTick.serverTick` is authoritative and advances once per fixed step (`localTick` equals it).
-- **Client:** `NetworkTick.localTick` is the tick the client simulates and produces input for. It **leads** the host by about RTT/2 plus `inputLeadBufferTicks` (default 2), so an input for tick `t` reaches the host just before the host simulates `t`. On connect, a tick-sync handshake (`PacketType.tickSync`, a few request/response round trips, lowest RTT wins) sets the lead. Afterwards every snapshot is a sample, and small errors are corrected by *time dilation*: the client runs its fixed steps slightly faster or slower by nudging the `FixedTimestep` accumulator. Large errors (more than 10 ticks, e.g. after a stall) snap the tick, and prediction history is discarded. If the host reports late inputs, the client widens its buffer by a tick at a time. `NetworkTick.serverTick` on a client is the estimate of the current host tick.
+- **Client:** `NetworkTick.localTick` is the tick the client simulates and produces input for. It **leads** the host by about RTT/2 plus `inputLeadBufferTicks` (default 2), so an input for tick `t` reaches the host just before the host simulates `t`. On connect, a tick-sync handshake (`PacketType.tickSync`, a few request/response round trips, lowest RTT wins) sets the lead. Afterwards every snapshot is a sample, and small errors are corrected by *time dilation*: the client runs its fixed steps slightly faster or slower by nudging the `FixedTimestep` accumulator. Large errors (more than 10 ticks, e.g. after a stall) snap the tick: the prediction history restarts at the new tick while the predicted state is kept, so the avatar doesn't snap back. If the host reports late inputs, the client widens its buffer by a tick at a time, and after 10 seconds without any it narrows it again a tick at a time. `NetworkTick.serverTick` on a client is the estimate of the current host tick.
 
 ### Systems
 
@@ -232,33 +257,77 @@ All simulation runs in the fixed-timestep chain, and `NetworkConfig.tickRate` mu
 |---|---|---|---|
 | `NetPumpSystem` | `first` | `FirstSets.platform` | `host/client.update()`, tick sync, connection events, reliable resends |
 | `NetReceiveSystem` | `first` | after the pump and every `FirstSets` phase | applies packets: spawns, despawns, hierarchy, ownership, snapshots, RPC events (client); validated inputs and RPCs, disconnect policy (host) |
-| `NetInterpolationSystem` | `first` | after receive | writes interpolated components |
+| `NetInterpolationSystem` | `update` | `UpdateSets.receive` | writes interpolated components, after the frame's fixed steps |
 | `NetTickSystem` | `fixedFirst` | | advances `NetworkTick` |
 | `NetInputSystem` | `fixedPreUpdate` | after `NetSets.localInput` | builds `NetInputs<I>` for this tick |
 | `NetPredictSystem` | `fixedPreUpdate` | after input | host: applies `step` to every entity with an input; client: reconciles and predicts its own entities |
 | `NetSendSystem` | `fixedLast` | | host: assigns ids, interest, spawns/despawns, snapshots; client: records predictions, sends inputs |
 
+Interpolated components are written in `update`, after the frame's fixed steps, so remote entities are sampled at the same moment as the local avatar drawn with `FixedTimestep.alpha`; order systems that draw them after `NetInterpolationSystem.systemName`. Interpolated entities change every frame already, so don't also give them fixed-step render interpolation (`PreviousTransform2D`).
+
 Network callbacks never touch the `World`: they append to queues that these systems drain. Each system has a `static const String systemName` for `before:`/`after:`. The plugin is free of ordering ambiguities on its own and together with `PhysicsPlugin`, `RenderPlugin` and `TransformPropagateSystem` (checked by `App.checkScheduleOrdering()` in the tests). Game systems that write replicated components in the same schedules as these systems should order themselves against them.
 
 ### Spawns, despawns and hierarchy
 
-Spawn (with the full initial component state), despawn, re-parent, ownership changes and RPCs travel on one **ordered reliable channel** per client (`ReliableChannel`: sequence numbers, cumulative acks piggybacked on every packet, resend after about 1.5 RTT). A parent is always spawned before its children. A child whose parent is unknown is kept as an orphan and attached when the parent arrives.
+Spawn (with the full initial component state), despawn, re-parent, ownership changes and RPCs travel on an **ordered reliable control channel** per client (`ReliableChannel`: sequence numbers, cumulative acks piggybacked on every packet, resend after about 1.5 RTT). Replicated resources travel on a second reliable channel, the **bulk channel**, so a large world streaming in never delays an RPC. A message bigger than one packet (up to 1 MiB) is split into fragments and reassembled in order. A parent is always spawned before its children. A child whose parent is unknown is kept as an orphan and attached when the parent arrives.
 
 ### Snapshots
 
-Every `tickRate / syncRate` ticks the host sends each client a snapshot of every entity relevant to it. **Each snapshot carries the full state** of those entities (no delta against an acknowledged baseline yet), so a lost snapshot is repaired by the next one and there is no baseline bookkeeping. Snapshots are split into self-contained chunks of at most `Packet.maxPayloadBytes`; one entity never spans two chunks. Each chunk carries the server tick, the last input tick the host simulated for that client (input ack) and the reliable-channel ack. Older data never overwrites newer data. For a co-op game with a few hundred small entities this costs a few KB per snapshot; delta compression against acked baselines is a planned optimisation.
+Every `tickRate / syncRate` ticks the host sends each client a snapshot of **what changed** among the entities relevant to it, compared with that client's last acknowledged copy:
 
-Limits: one entity's replicated state must fit in about 1.1 KB (an error names the entity otherwise), and a registry holds up to 32 component types.
+- Each component has a version that changes when its encoded bytes do. Per client, the host remembers the versions the client has acknowledged; an entity is listed only if a component changed or one was added or removed, and then only the changed components' bytes are sent (with a mask of which components exist, so removals arrive too).
+- Snapshot chunks are numbered per client, and clients acknowledge them (newest plus a 32-chunk bitfield) in every input packet. A lost chunk is never acknowledged, so what it carried is simply sent again.
+- The owner of an entity always gets its predicted components, which reconciliation needs every snapshot.
+- At least one chunk (maybe empty) goes every sync: it carries the server tick, the input ack and the control-channel ack.
+- When every chunk of a tick has arrived, the client knows the entities it didn't hear about held still, and stops interpolating them there (so a mover that stops comes to rest where it stopped).
+
+Chunks are self-contained and at most `Packet.maxPayloadBytes`; one entity never spans two. Older data never overwrites newer data. 2000 static entities cost well under 1 KB/s once acknowledged.
+
+Limits: a registry holds up to 32 component types, and one entity's encoded state (which must fit one snapshot datagram; put larger state in a replicated resource) (its replicated components plus a few bytes of framing) must fit in `NetworkSession.maxEntityStateBytes` (1114 bytes). The host does not replicate a larger entity: it logs a warning once (`dart:developer`, name `fledge_net`), counts it in `NetworkSession.stats.oversizedEntities`, never spawns it on clients (or despawns it there if it grew past the limit), and replicates it again once it fits. Everything else keeps replicating. Children of a skipped entity wait on clients as orphans until it arrives.
+
+### Replicated resources
+
+Large shared state, such as a tile map, belongs in a resource rather than thousands of entities. Register it with a `ResourceCodec` that splits it into chunks and gives each chunk a version (`ChunkVersions` keeps them):
+
+```dart
+registry.resource<Farm>('farm', FarmCodec(), create: Farm.new);
+
+class FarmCodec extends ResourceCodec<Farm> {
+  @override
+  int chunkCount(Farm farm) => farm.chunkCount;          // e.g. 10x10-tile chunks
+  @override
+  int chunkVersion(Farm farm, int chunk) => farm.versions.of(chunk);
+  @override
+  void encodeChunk(Farm farm, int chunk, PacketBuilder out) { /* ... */ }
+  @override
+  void decodeChunk(Farm farm, int chunk, PacketReader input) { /* ... */ }
+}
+
+// On the host, whenever a tile changes:
+farm.versions.bump(chunkOf(tile));
+```
+
+The host sends each client the chunks whose version changed since it last sent them, reliably on the bulk channel; a joining client receives every chunk. Clients apply chunks into their own instance (made with `create` if missing) and receive a `NetResourceUpdated(key, chunk)` event per chunk. `resize` lets resources whose chunk count varies grow or shrink on clients; `ResourceCodec.whole` sends a small resource as one chunk. A 100x100 tile grid with ten changes a second costs under 4 KB/s.
+
+### Send budget
+
+Each client has a byte budget (`sendBudgetBytesPerSecond`, 64 KiB/s by default), spent every tick in priority order: control messages (spawns, RPCs), then snapshots, then resource chunks. What doesn't fit waits for the next tick: unsent snapshot changes stay unacknowledged and go later (a rotating start gives every entity its turn), and spawns and resource chunks are only queued while about two seconds of the budget is unacknowledged. A join of tens of thousands of entities streams in at the budget instead of overflowing the reliable channel; the "Reliable channel overflow" disconnect remains only for a client that stops acknowledging.
 
 ### Interest management
 
-With `interestRadius` and `ReplicationRegistry.positionOf` set, each client receives only:
+With `interestRadius` and an interest position (`ReplicationRegistry.positionFrom` / `position`) set, each client receives only:
 
 - entities within `interestRadius` of the **global** position of the first replicated entity it owns,
 - entities it owns, entities marked `Replicated(alwaysRelevant: true)`, and entities without a position,
 - and the ancestors of all of these (a child is useless without its parent).
 
-A client that owns no positioned entity receives everything. The relevant set is recomputed every tick: entities that enter it are spawned on the client, entities that leave it are despawned.
+A client that owns no positioned entity receives everything. Positioned entities are bucketed in a grid of `interestRadius` cells, so the radius check looks at nearby cells only.
+
+Two rules apply with or without a radius:
+
+- `Replicated(ownerOnly: true)` sends an entity only to its owner (a private entity).
+- `registry.component<T>(…, ownerOnly: true)` sends one component only to the entity's owner: other clients get the entity without it (a player's inventory on a shared player entity). It moves with ownership.
+- `NetworkConfig.relevance`, `(world, entity, peerId) => bool`, hides entities from chosen clients (it isn't asked about entities the client owns). The relevant set is recomputed every tick: entities that enter it are spawned on the client, entities that leave it are despawned.
 
 ### Inputs and authority
 
@@ -270,7 +339,9 @@ Ownership is tracked on the host, and a client submits inputs only for the entit
 
 For entities it owns, a client applies `step(state, input, dt)` (with `dt = FixedTimestep.stepSeconds`) as soon as the input is submitted, and records the predicted state per tick. When a snapshot arrives, the server state for tick `T` is compared with the recorded prediction for `T` using your `error` function. Within `tolerance` nothing happens. Otherwise the client resets to the server state and replays the unacknowledged inputs `T+1 .. now` with `step`, then emits `NetPredictionCorrected`. A deterministic `step` never triggers a correction. Things the client cannot predict (the host teleports the avatar, a host-only system pushes it) are corrected within one round trip.
 
-`correctionBlend` (below 1, requires `interpolate`) softens corrections visually: the corrected state is blended in from the mispredicted one, and later snapshots remove the remaining error over a few round trips. Only `step` is replayed, so keep everything that affects the predicted component inside `step`, or accept corrections for the rest.
+The simulation always takes the corrected state. `correctionBlend` (below 1, requires `interpolate`) smooths the correction **for drawing only**: while it lasts, the entity carries `NetSmoothed<S>`, the value to draw. It starts where the old prediction was drawn, moves with the same inputs as the entity, and closes `correctionBlend` of the remaining gap each tick, after which it is removed. Draw `world.get<NetSmoothed<S>>(e)?.value ?? world.get<S>(e)`.
+
+Only `step` is replayed, so keep everything that affects the predicted component inside `step`, or accept corrections for the rest. A step that needs the world (a collision map, solid tiles) is registered as `stepWith: (state, input, context) => ...`: `PredictContext` gives the world (read only), the entity, the tick and `dt`. Replays see the present world, not the one at the replayed tick, so depend on data that rarely changes (the map), not on other moving entities.
 
 ### Interpolation
 
@@ -282,7 +353,7 @@ By default `interpolationDelay` is derived: two snapshot intervals plus a 50 ms 
 
 When snapshots run out (several lost in a row), the entity is extrapolated along its last segment for up to `maxExtrapolation` ms (default 100) and then held. When data arrives again it blends back onto the interpolated path over one snapshot interval, so there's no jump. Extrapolation calls your `interpolate` function with `t > 1`. If a type can't extrapolate, clamp `t` in that function or set `maxExtrapolation` to 0 (hold).
 
-Interpolation runs in `Schedules.first`, so each frame shows the time consumed by the previous frame's fixed pass. That is a constant one-frame phase, not jitter.
+Interpolation runs in `Schedules.update` (`UpdateSets.receive`), after the frame's fixed steps, so interpolated entities are sampled at the same moment as the local avatar drawn with `FixedTimestep.alpha`. Order systems that draw interpolated components after `NetInterpolationSystem.systemName`, and don't give interpolated entities fixed-step render interpolation (`PreviousTransform2D`) as well: their values already change every frame.
 
 ### Disconnects
 
@@ -290,6 +361,7 @@ When a client leaves (disconnect, timeout, or the host disconnects it), the host
 
 - `OwnedEntityPolicy.despawn` (default): despawned with their children, which despawns them on every client.
 - `OwnedEntityPolicy.releaseToHost`: kept, and ownership moves to the host (`ownerId` 0).
+- `OwnedEntityPolicy.holdForReturn`: kept and owned by the host for now; when a client joins again with the same player identity (see [Player Identity](#player-identity)), ownership goes back to it and `NetPeerConnected.returned` lists the entities. Anonymous players' entities are just released to the host.
 
 When a client's session ends, it despawns every replicated entity and sends `NetDisconnected`.
 
@@ -312,6 +384,8 @@ Every field is used by the replication layer.
 | `encryptionKey` | null | Pre-shared 32-byte key; required when `enableEncryption` is set (starting without one throws; there is no unencrypted fallback). Never logged |
 | `interestRadius` | null | Interest radius; null sends everything to everyone |
 | `maxPeers` | 8 | Maximum clients |
+| `sendBudgetBytesPerSecond` | 65536 | Bytes a second each client may be sent; control, then snapshots, then resource chunks |
+| `relevance` | null | `(world, entity, peerId) => bool` hiding entities from chosen clients |
 | `connectionTimeout` | 10 s | Silence after which a connection is dropped |
 | `disconnectPolicy` | `despawn` | What happens to a departed client's entities |
 | `inputLeadBufferTicks` | 2 | Safety margin in the client's input lead |
@@ -329,7 +403,9 @@ Every field is used by the replication layer.
 | `localPeerId` | 0 on the host, the assigned id on a client |
 | `peerIds`, `rttMs([peerId])` | Connected peers (host), round-trip times |
 | `sendRpc(value, {target, exceptPeer})`, `sendRpcTo(peerId, value, {target})` | RPCs |
-| `stats` | Counters: rejected inputs/RPCs/messages, corrections, snapshot chunks, late inputs, tick resets |
+| `sendAction(value, {target})`, `resolveAction(action, {accepted, reason})`, `pendingActions<T>()` | [Player actions](#8-player-actions) |
+| `stats` | Counters: rejected inputs/RPCs/messages/actions, corrections, snapshot chunks, resource chunks, late inputs, tick resets, oversized entities |
+| `NetworkSession.maxEntityStateBytes` | Largest replicated state of one entity (see [Snapshots](#snapshots)) |
 | `networkHost`, `networkClient`, `tickSync` | The underlying objects, for diagnostics |
 
 Pass `clock:` and `transportFactory:` to `NetworkPlugin` to run on a `ManualNetClock` and a `LoopbackNetwork` in tests.
@@ -365,9 +441,11 @@ host.onData.listen((event) {
 });
 
 // Each frame
-host.update();  // Check timeouts, ping peers (RTT), retransmit
-host.broadcast(PacketType.stateUpdate, stateBytes);
+host.update();  // Check timeouts, ping peers (RTT)
+host.broadcast(PacketType.custom, stateBytes);
 ```
+
+Every send is one unreliable datagram: it may be lost, duplicated or reordered. For reliable, ordered delivery, layer a `ReliableChannel` over the datagrams (see [Reliable delivery](#reliable-delivery)).
 
 `host.update()` pings every peer once per `pingInterval` (default 1 s, first ping on the first update after a peer connects) so `peer.rtt` is measured on the host side too.
 
@@ -384,14 +462,14 @@ client.onStateChange.listen((event) {
 });
 
 client.onData.listen((event) {
-  if (event.type == PacketType.stateUpdate) {
-    // Update interpolation buffers
+  if (event.type == PacketType.custom) {
+    // Handle your message
   }
 });
 
 // Each frame
 client.update();  // Ping, timeout check
-client.send(PacketType.input, inputBytes);
+client.send(PacketType.custom, inputBytes);
 ```
 
 `connect()` accepts a numeric address or a hostname such as `'localhost'`. Hostnames are resolved with `InternetAddress.lookup` before connecting, preferring an IPv4 result (the UDP transport is IPv4-only for now); `client.hostAddress` then holds the numeric address. Pass `hostResolver:` to `NetworkClient` to plug in your own resolution.
@@ -402,136 +480,30 @@ Client states: `disconnected` → `connecting` → `connected` → `failed`.
 
 1. Client sends a `connect` packet, and re-sends it every `connectRetryInterval` (default 250 ms) until the host answers or `connectionTimeout` expires, so a single lost packet doesn't stall the handshake. The retries run on their own timer; you don't need to call `client.update()` during `connect()`.
 2. Host checks capacity — sends `connectRejected` if full
-3. If an `authenticator` is set, the host awaits it. Duplicate `connect` packets from the same address are ignored while authentication is in flight, so one client never becomes two peers.
-4. If accepted, host creates a `Peer` and sends `connectAccepted` with the assigned peer ID. If the client keeps retrying because that reply was lost, the host sends the acceptance again (same peer ID).
+3. If an `authenticator` is set, the host awaits it. Duplicate `connect` packets from the same address are ignored while authentication is in flight, so one client never becomes two peers. At most `maxPendingConnects` (default 64) connects are authenticated at once; connects from further addresses are ignored until a slot frees up (the client keeps retrying), so a flood of connects can't pile up authenticator calls.
+4. If accepted, host creates a `Peer` and sends `connectAccepted` with the assigned peer ID. If the client keeps retrying because that reply was lost, the host sends the acceptance again (same peer ID); this retry loop is what makes the acceptance reliable.
 5. Client transitions to `connected`
 
 ## NetworkIdentity
 
-`NetworkIdentity` records an entity's network id and owner. The replication layer inserts it for you (from `Replicated` on the host, from spawn messages on clients); construct it yourself only for custom protocols:
+`NetworkIdentity` records an entity's network id and owner. The replication layer inserts it (from `Replicated` on the host, from spawn messages on clients):
 
 ```dart
-final entity = world.spawn()
-  ..insert(NetworkIdentity(
-    netId: registry.generateNetId(),
-    ownerId: 0,          // 0 = host-owned, >0 = client peer ID
-    hasAuthority: true,
-    spawnType: 'player',
-  ))
-  ..insert(Position(0, 0));
+final id = world.get<NetworkIdentity>(entity)!;
+id.netId;        // network id, the same on every machine
+id.ownerId;      // 0 = host-owned, >0 = client peer ID
+id.hasAuthority; // this instance owns it: ownerId == localPeerId
+id.ownerId = 2;  // on the host: hand the entity to peer 2 (replicated)
 ```
 
-The `NetworkEntityRegistry` resource provides bidirectional entity ↔ netId lookups:
+`hasAuthority` is `ownerId == localPeerId` (`localPeerId` is 0 on the host, the client's own peer id on a client), so on the host it is `true` only for host-owned entities and it follows ownership changes. The host still simulates every entity; a client-owned entity is driven by that client's inputs.
+
+The `NetworkEntityRegistry` resource provides entity ↔ netId lookups. The replication layer maintains it; its mutators are internal.
 
 ```dart
 final registry = world.getResource<NetworkEntityRegistry>()!;
-registry.register(entity, netId);
-
 final entity = registry.getEntity(netId);
 final netId = registry.getNetId(entity);
-```
-
-## State Synchronization
-
-State is serialized via the `NetworkState` interface:
-
-```dart
-abstract class NetworkState {
-  void serialize(PacketBuilder builder);
-  void deserialize(PacketReader reader);
-}
-```
-
-Fledge is a 2D engine, so the built-in `Transform2DNetworkState` syncs position and rotation as three float32s (12 bytes, plus a 1-byte delta mask):
-
-```dart
-final state = Transform2DNetworkState()
-  ..x = transform.translation.x
-  ..y = transform.translation.y
-  ..rotation = transform.rotation; // radians
-```
-
-Delta encoding uses a 3-bit mask (X, Y, rotation) with a 0.001 epsilon threshold — fields whose difference falls below epsilon are not transmitted, and `createDelta` returns `null` when nothing changed.
-
-### Client-Side Interpolation (low-level)
-
-The replication layer interpolates registered components by server tick (see [Interpolation](#interpolation)). `NetworkInterpolation` is a standalone, wall-clock-keyed helper for custom protocols:
-
-```dart
-entity.insert(NetworkInterpolation(
-  interpolationDelay: 100,  // ms behind server time
-));
-
-// In your system — add incoming state snapshots
-interpolation.addState(serverTick, receivedState);
-
-// Each frame — interpolate between buffered snapshots
-interpolation.update(DateTime.now());
-final smoothed = interpolation.currentState;
-```
-
-## Input Prediction (low-level)
-
-The replication layer does all of this for registered components (see [Prediction and reconciliation](#prediction-and-reconciliation)). `ClientPrediction`, `InputFrame` and `ServerInputQueue` are standalone helpers for custom protocols.
-
-Clients predict locally and reconcile when the server confirms. Prediction, reconciliation, and state-apply logic **must** run on `Schedules.fixedUpdate` (driven by the `FixedTimestep` resource — 60Hz by default). Only the fixed-timestep schedule guarantees the client and server advance the sim at the same rate; running prediction on the variable-rate `Schedules.update` desyncs from the host.
-
-Best-effort transport work (packet pumping, ping/pong, `host.update()` / `client.update()`) can stay on `Schedules.first` or `Schedules.last`, which are frame-rate driven.
-
-```dart
-final prediction = ClientPrediction();
-
-// Register the prediction system on the fixed-timestep schedule.
-app.addSystem(
-  FunctionSystem('predictInput', run: (world) {
-    final input = InputFrame(tick: prediction.nextTick())
-      ..moveX = controller.moveX
-      ..moveY = controller.moveY
-      ..setButton(InputButton.primaryAction, firing);
-
-    prediction.recordInput(input, predictedState);
-
-    // Send unacknowledged inputs to host.
-    final unacked = prediction.getUnackedInputs();
-    client.send(PacketType.input, serializeInputs(unacked));
-  }),
-  schedule: Schedules.fixedUpdate,
-);
-
-// When server state arrives — reconcile.
-final inputsToReplay = prediction.reconcile(serverTick, serverState);
-// Empty when the prediction recorded for serverTick matched serverState
-// (within `tolerance`, or your `statesMatch`). Otherwise
-// prediction.lastReconcileMispredicted is true: reset to serverState and
-// re-simulate the returned inputs.
-```
-
-> Determinism is scoped to the fixed-timestep loop. `fledge_net` relies on both peers running the same `FixedTimestep.stepDuration` for prediction to converge; it is *not* a rollback / GGPO-style netcode.
-
-### InputFrame
-
-Each input frame captures a tick's worth of player input:
-
-- Movement: `moveX`, `moveY` (normalized -1..1). `moveZ` is available for games that use a third axis (e.g. jump strength) but is not used by the built-in 2D state sync.
-- Look: `lookX`, `lookY`
-- Buttons: 32-bit bitfield via `setButton()` / `isButtonPressed()`
-- Custom data: optional `Uint8List` for game-specific input
-
-Predefined button indices: `primaryAction`, `secondaryAction`, `jump`, `crouch`, `sprint`, `interact`, `reload`, `pause`.
-
-### Server-Side Input Processing
-
-```dart
-final inputQueue = ServerInputQueue();
-
-// When input arrives from a client
-inputQueue.addFrames(receivedFrames);
-
-// Each tick — process the next input
-final frame = inputQueue.getNextFrame(currentTick);
-if (frame != null) {
-  applyInput(frame);
-}
 ```
 
 ## Packet Protocol
@@ -567,12 +539,11 @@ Version history: `2` replaced the old 3D transform format with `Transform2DNetwo
 ```
 connect, connectAccepted, connectRejected, disconnect,
 ping, pong,
-stateUpdate, input, entitySpawn, entityDespawn,
-replication, tickSync,
-rpc, custom
+stateUpdate, input, replication, tickSync,
+custom
 ```
 
-The replication layer uses `stateUpdate` (snapshot chunks), `input` (redundant per-tick inputs), `replication` (its ordered reliable channel) and `tickSync`. `entitySpawn`, `entityDespawn` and `rpc` are free for custom protocols.
+The replication layer uses `stateUpdate` (snapshot chunks), `input` (redundant per-tick inputs), `replication` (its ordered reliable channel) and `tickSync`. `custom` is free for your own protocols.
 
 ### Serialization Helpers
 
@@ -600,19 +571,35 @@ final alive = reader.readBool();
 
 ## Reliable Delivery
 
-Critical packet types (`connect`, `disconnect`, `entitySpawn`, `entityDespawn`, `rpc`) are automatically retransmitted until acknowledged. State updates and input are sent unreliably (latest-wins).
+`NetworkHost` and `NetworkClient` send single, unreliable datagrams; only the connect handshake retries on its own. Reliable delivery is `ReliableChannel`: one per direction of a connection, carried in your own packets (the replication layer uses `PacketType.replication`).
 
-Retransmit timeout scales with RTT: `rtt * 2.0`, clamped to 100 ms–5 s (100 ms until the first RTT sample). Packets are dropped after 10 retransmit attempts. (The replication layer does not use this mechanism: its `ReliableChannel` acks cumulatively and never gives up, relying on the connection timeout instead.)
+```dart
+final channel = ReliableChannel();
+channel.enqueue(messageBytes);              // ordered, reliable, deduplicated
+
+// Every tick: new messages plus resends of unacked ones older than the timeout.
+for (final packet in channel.takePackets(
+  nowMs: clock.nowMs,
+  resendAfterMs: 200,
+  ack: channel.receivedAck,                 // piggyback our cumulative ack
+)) {
+  client.send(PacketType.custom, packet);
+}
+
+// On receive:
+channel.onAck(channel.receivePacket(payload));
+for (final message in channel.drain()) { /* in order, exactly once */ }
+```
+
+Acks are cumulative, so a lost ack is repaired by the next packet. The channel never gives up on a message, and it is bounded:
+
+- **Send side**: at most `maxUnacked` messages (default `ReliableChannel.defaultMaxUnacked`, 16384) wait for an ack. Once `isFull`, `enqueue` throws `StateError`. The ordered stream can't be completed after that, so drop the connection: the replication layer disconnects such a peer (`Reliable channel overflow`) or ends the client session.
+- **Receive side**: at most `maxReceiveWindow` out-of-order messages (default `ReliableChannel.defaultMaxReceiveWindow`, 1024; the replication host uses 256 for client channels) are buffered; a message further ahead is dropped and arrives again with the sender's resend.
+- **Message size**: `ReliableChannel.maxMessageBytes` (1134 bytes); one message always fits one packet.
 
 ### Round-trip time
 
-RTT is measured with ping/pong. Each side puts its own monotonic-clock timestamp in a `ping`, and the other side echoes it back unchanged in the `pong`, so the sample is always `now − echoed` on the same clock and is correct across the 32-bit wrap. `client.update()` pings the host, and `host.update()` pings each peer, every `pingInterval`. Results feed `NetworkClient.rtt` and `Peer.rtt`, which are exponential moving averages, and those drive the retransmit timeouts (`client.retransmitTimeout`, `peer.retransmitTimeout(fallback)`). Samples that are negative or above 60 s are discarded.
-
-```dart
-// Check if a packet type is reliable
-PacketType.rpc.isReliable;          // true
-PacketType.stateUpdate.isReliable;  // false
-```
+RTT is measured with ping/pong. Each side puts its own monotonic-clock timestamp in a `ping`, and the other side echoes it back unchanged in the `pong`, so the sample is always `now − echoed` on the same clock and is correct across the 32-bit wrap. `client.update()` pings the host, and `host.update()` pings each peer, every `pingInterval`. Results feed `NetworkClient.rtt` and `Peer.rtt`, which are exponential moving averages (the replication layer derives its resend timeout from them). Samples that are negative or above 60 s are discarded.
 
 ## Authentication
 
@@ -636,6 +623,63 @@ await client.connect('192.168.1.100', 7777, credentials: passwordBytes);
 ```
 
 With `NetworkSession`, set `NetworkConfig.serverPassword` and/or `NetworkConfig.authenticator` instead: the session builds the host authenticator (password compared in constant time; both must accept when both are set) and sends the password as the client's default credentials.
+
+## Player Identity
+
+A player identity is an opaque, stable string the host uses to recognise a returning player, whatever transport or address they connect from. By convention it starts with the scheme that issued it, so identities from different sources never collide: `dev:<name>` for local development and LAN play over direct IP, `steam:<SteamID64>` for Steam (from `fledge_net_steam`), `hub:<account>` for a gateway or hub service. Games compare identities; they never parse them.
+
+The client says who it is with an `IdentityProvider`, and the host checks it with an `IdentityVerifier`:
+
+```dart
+// Development / LAN: a name kept per install, trusted as claimed.
+final config = NetworkConfig(
+  identityProvider: DevIdentityProvider(savedName),
+  identityVerifier: const TrustingVerifier(),
+  disconnectPolicy: OwnedEntityPolicy.holdForReturn,
+);
+
+// A hub: the client presents a token from sign-in; the host asks the hub.
+final hubConfig = NetworkConfig(
+  identityProvider: TokenIdentityProvider(() async => hub.currentSession()),
+  identityVerifier: TokenVerifier((id, token) => hub.verify(id, token)),
+);
+
+// Several at once, by scheme.
+final mixed = NetworkConfig(
+  identityVerifier: SchemeVerifier({
+    'dev': const TrustingVerifier(),
+    'hub': TokenVerifier((id, token) => hub.verify(id, token)),
+  }),
+);
+```
+
+- Without a provider a client joins anonymously; without a verifier the host accepts any well-formed identity as claimed (fine on a LAN, not on the internet).
+- The identity travels in the connect handshake; its proof travels with the password in the credentials, each length-prefixed. A verifier rejection is reported like a wrong password ("Authentication failed").
+- `NetworkSession.localIdentity` is this player's identity (the host's too); on the host, `identityOf(peerId)` and `peerFor(identity)` map between peers and identities, and `NetPeerConnected` / `NetPeerDisconnected` carry it.
+- A client joining with the identity of a player who is still connected (after a crash, or from a new address) replaces the old connection instead of waiting for it to time out. `NetworkHost(replaceSameIdentity: true)` enables this below the session; `NetworkSession` always does.
+- `ClientIdentity.validate` rules: non-empty, at most 128 bytes of UTF-8, no control characters.
+
+## Steam
+
+`fledge_net_steam` runs `fledge_net` over Steam Networking Messages: Valve's relays and NAT traversal, so friends host and join without forwarding ports, and Steam authenticates every datagram's sender.
+
+```dart
+final steam = Steam.init(appId: 480); // Valve's test app during development
+
+final config = NetworkConfig(
+  identityProvider: SteamIdentityProvider(steam),   // steam:<SteamID64>
+  identityVerifier: const SteamIdentityVerifier(),  // only from that Steam user
+);
+
+await session.host(transport: SteamTransport(steam));                  // host
+await session.join('steam:76561198000000000', 0,
+    transport: SteamTransport(steam));                                // friend
+```
+
+- Addresses are Steam users (`NetAddress('steam:<SteamID64>', 0)`); the transport resolves `steam:` hosts itself (`AddressResolver`), so they never reach DNS.
+- The identity needs no proof: under `SteamTransport`, the verifier is told the connect's source address (a Steam ID Steam has authenticated) and accepts a `steam:` identity only from that user. `IdentityVerifier.verify` receives `source` for this.
+- `SteamCoop` hosts and joins through a Steam lobby: the host opens a lobby (naming itself as host) and invites friends from the overlay; friends join by accepting the invite or picking "Join Game", including when Steam launches the game with `+connect_lobby <id>` (`Steam.lobbyFromArgs`).
+- It needs the Steam client running and the `steam_api` library from the Steamworks SDK shipped with the game (or `Steam.init(libraryPath: …)`). See the package README.
 
 ## Encryption
 
@@ -666,51 +710,14 @@ With `NetworkSession`, set `NetworkConfig.enableEncryption: true` and `encryptio
 
 > **Key distribution:** the key is pre-shared — both host and client must be configured with the same 32 bytes before any encrypted traffic flows. A proper key-exchange handshake (ECDH during connect) is on the roadmap; until then, distribute the key via your own out-of-band mechanism (config, login response, etc.).
 
-## Congestion Control
-
-Each peer has a `CongestionController` using AIMD (Additive Increase, Multiplicative Decrease):
-
-- On ack: window increases gradually
-- On packet loss: window halves (minimum 1200 bytes)
-- Maximum window: 256 KB
-
-Retransmit timeout is RTT-adaptive: `rtt * 2.0` clamped to 100 ms–5 s (see [Round-trip time](#round-trip-time)).
-
-## InterestManager
-
-`InterestManager` is a standalone radius filter:
-
-```dart
-final interest = InterestManager(
-  relevanceRadius: 500,
-  positionGetter: (world, entity) {
-    final pos = world.get<Transform2D>(entity)!;
-    return (pos.translation.x, pos.translation.y);
-  },
-);
-
-// Get relevant entities for a peer
-final relevant = interest.getRelevantEntities(peerId, world, registry);
-```
-
-Entities beyond `relevanceRadius` from a peer's owned entity are excluded. The replication layer has its own interest management driven by `NetworkConfig.interestRadius` (see [Interest management](#interest-management)); use `InterestManager` only for custom protocols.
-
 ## Authority Model
 
 `NetworkIdentity` tracks entity ownership:
 
 ```dart
-final identity = NetworkIdentity(
-  netId: registry.generateNetId(),
-  ownerId: peerId,      // Which peer owns this entity
-  hasAuthority: true,    // Whether this instance can modify it
-);
-
-// Check ownership
-identity.isOwnedBy(peerId);  // true
-
-// Transfer ownership
-identity.transferAuthority(newOwnerId, localAuthority: false);
+identity.isOwnedBy(peerId);  // ownerId == peerId
+identity.hasAuthority;       // owned by this instance
+identity.ownerId = newOwner; // host: transfer ownership (replicated)
 ```
 
 The replication layer enforces this on the host: inputs and targeted RPCs for entities the sender does not own are rejected (see [Inputs and authority](#inputs-and-authority)). Custom protocols must check `ownerId == peer.id` themselves.
@@ -760,7 +767,7 @@ for (var i = 0; i < 100; i++) {
 // client.rtt == 100 exactly
 ```
 
-Host peer timeouts and reliable retransmits also follow the injected clock, so advancing a `ManualNetClock` past `connectionTimeout` times out a silent peer without real waiting. `connect()`'s overall timeout and its retries still run on real timers.
+Host peer timeouts and pings also follow the injected clock, so advancing a `ManualNetClock` past `connectionTimeout` times out a silent peer without real waiting. `connect()`'s overall timeout and its retries still run on real timers.
 
 ### Transport delivery contract
 
@@ -776,7 +783,7 @@ See [NetworkConfig](#networkconfig) and [NetworkSession](#networksession) above.
 |--------|-------------|
 | `start(port)` | Bind and start listening |
 | `stop()` | Disconnect all peers (redundant notices) and close |
-| `update()` | Process timeouts, ping peers, retransmit |
+| `update()` | Process timeouts, ping peers |
 | `sendTo(peerId, type, data)` | Send to one peer (payload ≤ `Packet.maxPayloadBytes`) |
 | `broadcast(type, data)` | Send to all connected peers |
 | `broadcastExcept(excludeId, type, data)` | Broadcast excluding one peer |
@@ -784,7 +791,7 @@ See [NetworkConfig](#networkconfig) and [NetworkSession](#networksession) above.
 | `getPeer(id)` | The connected `Peer` (e.g. for `rtt`), or null |
 | `onProtocolMismatch` | Stream of `ProtocolMismatchEvent` |
 
-Constructor options: `maxPeers`, `connectionTimeout`, `retransmitTimeout` (fallback before RTT is known), `authenticator`, `pingInterval` (default 1 s), `clock` (pings, RTT, peer timeouts and retransmits), `disconnectRedundancy` (default 3), `disconnectRedundancyInterval` (default 5 ms).
+Constructor options: `maxPeers`, `connectionTimeout`, `authenticator`, `maxPendingConnects` (default 64), `pingInterval` (default 1 s), `clock` (pings, RTT and peer timeouts), `disconnectRedundancy` (default 3), `disconnectRedundancyInterval` (default 5 ms).
 
 ### NetworkClient
 
@@ -792,12 +799,11 @@ Constructor options: `maxPeers`, `connectionTimeout`, `retransmitTimeout` (fallb
 |--------|-------------|
 | `connect(host, port, {credentials})` | Connect to a host (IP or hostname) with optional auth |
 | `disconnect()` | Send `disconnectRedundancy` disconnect notices, then close |
-| `update()` | Process pings, timeouts and retransmits |
+| `update()` | Process pings and timeouts |
 | `send(type, data)` | Send data to host (payload ≤ `Packet.maxPayloadBytes`) |
 | `state` | Current `ClientState` |
 | `rtt` | Smoothed round-trip time in ms |
 | `lastStateReason` | Reason from the last state change (e.g. `Authentication failed`) |
-| `retransmitTimeout` | Current reliable-retransmit timeout |
 | `onProtocolMismatch` | Stream of `ProtocolMismatchEvent` |
 
 Constructor options: `connectionTimeout`, `pingInterval`, `connectRetryInterval` (default 250 ms), `clock`, `hostResolver`, `disconnectRedundancy` (default 3), `disconnectRedundancyInterval` (default 5 ms).
@@ -807,11 +813,10 @@ Constructor options: `connectionTimeout`, `pingInterval`, `connectRetryInterval`
 | Property | Type | Description |
 |----------|------|-------------|
 | `netId` | `int` | Unique network entity ID |
-| `ownerId` | `int` | Owning peer (0 = host) |
-| `hasAuthority` | `bool` | Whether this instance can modify |
-| `spawnType` | `String?` | Type identifier for remote spawning |
+| `ownerId` | `int` | Owning peer (0 = host); assign on the host to transfer ownership |
+| `localPeerId` | `int` | Peer id of this instance (0 on the host) |
+| `hasAuthority` | `bool` | This instance owns the entity (`ownerId == localPeerId`) |
 | `isOwnedBy(peerId)` | `bool` | Check if peer owns this entity |
-| `transferAuthority(newOwnerId)` | `void` | Transfer ownership to another peer |
 
 ## See Also
 

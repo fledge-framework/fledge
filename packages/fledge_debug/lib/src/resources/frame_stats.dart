@@ -45,6 +45,10 @@ class FrameStats {
   /// Number of frame samples currently held.
   int get sampleCount => _history.length;
 
+  /// The frame deltas (seconds) in the current window, oldest first, e.g.
+  /// for drawing a frame-time graph. A read-only view.
+  List<double> get history => List.unmodifiable(_history);
+
   /// Push a raw frame delta (seconds) into the history and update the
   /// smoothed FPS.
   ///
