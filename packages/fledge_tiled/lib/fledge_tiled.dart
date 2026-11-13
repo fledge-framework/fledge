@@ -122,3 +122,4 @@ export 'src/loader/asset_tilemap_loader.dart';
 
 // Pathfinding (tiled adapter; CollisionGrid + Pathfinder now live in fledge_physics)
 export 'src/pathfinding/collision_extractor.dart';
+export 'src/terrain/terrain_grid.dart';

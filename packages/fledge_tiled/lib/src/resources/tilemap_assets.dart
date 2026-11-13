@@ -97,7 +97,7 @@ class LoadedTilemap {
       final tileset = tilesets[i];
       if (gid >= tileset.firstGid) {
         final localId = gid - tileset.firstGid;
-        if (localId < tileset.tileCount) {
+        if (tileset.containsTile(localId)) {
           return TilesetLookup(
             tileset: tileset,
             tilesetIndex: i,

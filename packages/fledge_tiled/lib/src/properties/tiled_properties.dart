@@ -176,6 +176,15 @@ class TiledProperties {
   int getObjectRefOr(String name, int defaultValue) =>
       getObjectRef(name) ?? defaultValue;
 
+  /// These properties over [defaults]: every property of [defaults] that
+  /// isn't set here, plus all of these. How a tile object inherits its
+  /// tile's properties.
+  TiledProperties withDefaults(TiledProperties defaults) {
+    if (defaults.isEmpty) return this;
+    if (isEmpty) return defaults;
+    return TiledProperties({...defaults._properties, ..._properties});
+  }
+
   /// Checks if a property exists.
   bool has(String name) => _properties.containsKey(name);
 

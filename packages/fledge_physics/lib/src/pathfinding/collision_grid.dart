@@ -1,6 +1,11 @@
+import 'dart:math' as math;
+import 'dart:typed_data';
+
 /// A 2D grid representing walkability for pathfinding.
 ///
-/// Each cell is either walkable (true) or blocked (false).
+/// Each cell is either walkable (true) or blocked (false), and a walkable
+/// cell has a movement cost (1.0 unless set with [setCost]): [Pathfinder]
+/// prefers cheap cells, so a road can cost 1 and open ground 3.
 /// Used by [Pathfinder] for A* pathfinding on tile-based maps.
 ///
 /// Example:
@@ -25,6 +30,11 @@ class CollisionGrid {
 
   /// Internal grid storage. True = walkable, False = blocked.
   final List<List<bool>> _grid;
+
+  /// Per-cell movement costs, row-major; null while every cost is 1.0.
+  Float64List? _costs;
+
+  double? _minCost;
 
   /// Creates a new collision grid with all tiles initially walkable.
   CollisionGrid({required this.width, required this.height})
@@ -110,6 +120,43 @@ class CollisionGrid {
     }
   }
 
+  /// The cost of moving through a tile (1.0 unless set with [setCost]).
+  ///
+  /// Out-of-bounds tiles cost 1.0; they're never walkable anyway.
+  double costAt(int x, int y) {
+    final costs = _costs;
+    if (costs == null || x < 0 || x >= width || y < 0 || y >= height) {
+      return 1.0;
+    }
+    return costs[y * width + x];
+  }
+
+  /// Sets the cost of moving through a tile. [cost] must be positive.
+  ///
+  /// [Pathfinder] weighs each step by the cost of the cells it joins, so a
+  /// path takes a detour along cheap cells when that costs less in total.
+  void setCost(int x, int y, double cost) {
+    if (!(cost > 0)) {
+      throw ArgumentError.value(cost, 'cost', 'must be positive');
+    }
+    if (x < 0 || x >= width || y < 0 || y >= height) return;
+    var costs = _costs;
+    if (costs == null) {
+      costs = _costs = Float64List(width * height);
+      costs.fillRange(0, costs.length, 1.0);
+    }
+    costs[y * width + x] = cost;
+    _minCost = null;
+  }
+
+  /// The lowest cost of any tile: what [Pathfinder] assumes per step of the
+  /// way still ahead, so its estimate never overshoots.
+  double get minCost {
+    final costs = _costs;
+    if (costs == null) return 1.0;
+    return _minCost ??= costs.reduce(math.min);
+  }
+
   /// Count the number of walkable tiles.
   int get walkableCount {
     var count = 0;
@@ -127,6 +174,8 @@ class CollisionGrid {
   /// Create a copy of this grid.
   CollisionGrid copy() {
     final newGrid = List.generate(height, (y) => List<bool>.from(_grid[y]));
-    return CollisionGrid.fromData(newGrid);
+    final copy = CollisionGrid.fromData(newGrid);
+    if (_costs != null) copy._costs = Float64List.fromList(_costs!);
+    return copy;
   }
 }

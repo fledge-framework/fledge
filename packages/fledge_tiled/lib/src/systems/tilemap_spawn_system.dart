@@ -402,10 +402,20 @@ class TilemapSpawnSystem implements System {
     TilemapSpawnConfig config,
   ) {
     final objects = layer.objects.map((obj) {
+      // A tile object takes its tile's class and properties as defaults.
+      final rawGid = obj.gid;
+      final tile = rawGid == null
+          ? null
+          : loaded.getTilesetForGid(rawGid & 0x1FFFFFFF);
+      final ownType = obj.type.isEmpty ? null : obj.type;
+      final tileProperties = tile?.tileset.getProperties(tile.localId);
+      final ownProperties = TiledProperties.fromCustomProperties(
+        obj.properties,
+      );
       return TiledObjectData(
         id: obj.id,
         name: obj.name,
-        type: obj.type,
+        type: ownType ?? tile?.tileset.getTileClass(tile.localId) ?? obj.type,
         x: obj.x,
         y: obj.y,
         width: obj.width,
@@ -414,7 +424,10 @@ class TilemapSpawnSystem implements System {
         shape: _parseShape(obj),
         points: _parsePoints(obj),
         gid: obj.gid,
-        properties: TiledProperties.fromCustomProperties(obj.properties),
+        tile: tile,
+        properties: tileProperties == null
+            ? ownProperties
+            : ownProperties.withDefaults(tileProperties),
         visible: obj.visible,
       );
     }).toList();

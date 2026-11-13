@@ -1,7 +1,8 @@
 import 'dart:ui' show Rect;
 
 import 'package:fledge_physics/fledge_physics.dart';
-import 'package:fledge_render_2d/fledge_render_2d.dart' show TextureAtlas;
+import 'package:fledge_render_2d/fledge_render_2d.dart'
+    show TextureAtlas, TextureHandle;
 
 import '../components/tilemap_animator.dart';
 import '../properties/tiled_properties.dart';
@@ -101,6 +102,18 @@ class LoadedTileset {
   /// Collision shapes per tile (local ID -> shapes).
   final Map<int, List<CollisionShape>> collisionShapes;
 
+  /// Each tile's own image, for an image-collection tileset (local ID ->
+  /// texture); empty for a tileset cut from one image ([atlas]).
+  ///
+  /// An image collection's local IDs can have gaps where tiles were
+  /// removed in Tiled.
+  final Map<int, TextureHandle> tileImages;
+
+  /// Each tile's class (Tiled's "Class", formerly "Type"), by local ID,
+  /// where one is set. A tile object without a class of its own takes its
+  /// tile's.
+  final Map<int, String> tileClasses;
+
   const LoadedTileset({
     required this.source,
     required this.name,
@@ -115,13 +128,26 @@ class LoadedTileset {
     this.tileProperties = const {},
     this.animations = const {},
     this.collisionShapes = const {},
+    this.tileImages = const {},
+    this.tileClasses = const {},
   });
+
+  /// Whether each tile is its own image rather than a cell of [atlas].
+  bool get isImageCollection => tileImages.isNotEmpty;
+
+  /// The tile's own image in an image-collection tileset, or null.
+  TextureHandle? getTileImage(int localId) => tileImages[localId];
+
+  /// The tile's class, or null if none is set.
+  String? getTileClass(int localId) => tileClasses[localId];
 
   /// Gets the source rectangle for a local tile ID.
   Rect getTileRect(int localId) => atlas.getSpriteRect(localId);
 
   /// Checks if a local ID is valid for this tileset.
-  bool containsTile(int localId) => localId >= 0 && localId < tileCount;
+  bool containsTile(int localId) => isImageCollection
+      ? tileImages.containsKey(localId)
+      : localId >= 0 && localId < tileCount;
 
   /// Gets properties for a tile, or null if none defined.
   TiledProperties? getProperties(int localId) => tileProperties[localId];

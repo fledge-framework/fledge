@@ -1,6 +1,10 @@
 import 'dart:ui' show Color, Offset;
 
+import 'package:fledge_physics/fledge_physics.dart' show CollisionShape;
+import 'package:fledge_render_2d/fledge_render_2d.dart' show TextureHandle;
+
 import '../properties/tiled_properties.dart';
+import '../resources/tilemap_assets.dart' show TilesetLookup;
 
 /// Component for object layers from Tiled.
 ///
@@ -120,8 +124,17 @@ class TiledObjectData {
   /// Points are relative to (x, y).
   final List<Offset>? points;
 
-  /// Tile GID (if this is a tile object).
+  /// Tile GID (if this is a tile object), including Tiled's flip flags.
   final int? gid;
+
+  /// The tile a tile object shows: its tileset and local ID, for its image
+  /// ([tileImage]), collision shapes ([tileCollision]) and the rest of the
+  /// tile's data. Null for other objects or an unknown GID.
+  ///
+  /// A tile object's [type] and [properties] already include its tile's:
+  /// the object's own class wins if set, and its own properties override
+  /// the tile's.
+  final TilesetLookup? tile;
 
   /// Custom properties defined in Tiled.
   final TiledProperties properties;
@@ -142,6 +155,7 @@ class TiledObjectData {
     required this.shape,
     this.points,
     this.gid,
+    this.tile,
     required this.properties,
     this.visible = true,
   });
@@ -151,6 +165,17 @@ class TiledObjectData {
 
   /// Returns true if this is a tile object.
   bool get isTileObject => gid != null;
+
+  /// A tile object's image, when its tile is from an image-collection
+  /// tileset. Tiled draws it with its bottom-left corner at ([x], [y]) and
+  /// at [width] × [height] (orthogonal maps, no rotation).
+  TextureHandle? get tileImage => tile?.tileset.getTileImage(tile!.localId);
+
+  /// A tile object's tile collision shapes (Tiled's tile collision editor),
+  /// relative to the tile image's top-left corner at its natural size; empty
+  /// if none.
+  List<CollisionShape> get tileCollision =>
+      tile?.tileset.getCollisionShapes(tile!.localId) ?? const [];
 
   /// Returns true if this is a point object.
   bool get isPoint => shape == ObjectShape.point;

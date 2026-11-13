@@ -1,41 +1,63 @@
-import 'dart:collection';
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'collision_grid.dart';
 
-/// A node in the A* pathfinding algorithm.
-class _PathNode implements Comparable<_PathNode> {
-  final int x;
-  final int y;
-  final double gCost; // Cost from start to this node
-  final double hCost; // Heuristic cost to goal
-  final _PathNode? parent;
+/// An entry in the A* open list. Stale entries (a cheaper way to the same
+/// cell was found after it was pushed) are skipped when popped.
+class _OpenEntry {
+  final int index;
+  final double gCost;
+  final double fCost;
+  final double hCost;
 
-  _PathNode({
-    required this.x,
-    required this.y,
-    required this.gCost,
-    required this.hCost,
-    this.parent,
-  });
+  const _OpenEntry(this.index, this.gCost, this.fCost, this.hCost);
 
-  /// Total cost (f = g + h).
-  double get fCost => gCost + hCost;
+  /// Lower f first; on a tie, the one nearer the goal.
+  bool before(_OpenEntry other) =>
+      fCost < other.fCost || (fCost == other.fCost && hCost < other.hCost);
+}
 
-  @override
-  int compareTo(_PathNode other) {
-    final fCompare = fCost.compareTo(other.fCost);
-    if (fCompare != 0) return fCompare;
-    // Prefer lower h-cost when f-costs are equal
-    return hCost.compareTo(other.hCost);
+/// A binary min-heap of [_OpenEntry].
+class _OpenHeap {
+  final List<_OpenEntry> _items = [];
+
+  bool get isNotEmpty => _items.isNotEmpty;
+
+  void push(_OpenEntry entry) {
+    _items.add(entry);
+    var i = _items.length - 1;
+    while (i > 0) {
+      final parent = (i - 1) >> 1;
+      if (!_items[i].before(_items[parent])) break;
+      final t = _items[i];
+      _items[i] = _items[parent];
+      _items[parent] = t;
+      i = parent;
+    }
   }
 
-  @override
-  bool operator ==(Object other) =>
-      other is _PathNode && x == other.x && y == other.y;
-
-  @override
-  int get hashCode => x.hashCode ^ (y.hashCode << 16);
+  _OpenEntry pop() {
+    final top = _items.first;
+    final last = _items.removeLast();
+    if (_items.isNotEmpty) {
+      _items[0] = last;
+      var i = 0;
+      while (true) {
+        final l = 2 * i + 1;
+        final r = l + 1;
+        var best = i;
+        if (l < _items.length && _items[l].before(_items[best])) best = l;
+        if (r < _items.length && _items[r].before(_items[best])) best = r;
+        if (best == i) break;
+        final t = _items[i];
+        _items[i] = _items[best];
+        _items[best] = t;
+        i = best;
+      }
+    }
+    return top;
+  }
 }
 
 /// Result of a pathfinding operation.
@@ -71,8 +93,11 @@ class PathResult {
 
 /// A* pathfinding for tile-based maps.
 ///
-/// Finds the shortest path between two points on a [CollisionGrid],
-/// avoiding blocked tiles.
+/// Finds the cheapest path between two points on a [CollisionGrid],
+/// avoiding blocked tiles. A step costs its length (1 straight, about 1.414
+/// diagonally) times the mean [CollisionGrid.costAt] of the two cells it
+/// joins, so with every cost left at 1.0 the cheapest path is the shortest,
+/// and with roads cheaper than open ground paths keep to the roads.
 ///
 /// Example:
 /// ```dart
@@ -172,86 +197,64 @@ class Pathfinder {
     int goalX,
     int goalY,
   ) {
-    // Priority queue for open set (nodes to explore)
-    final openSet = SplayTreeSet<_PathNode>();
+    final width = grid.width;
+    final cells = width * grid.height;
+    // Best known cost to each cell, the cell it was reached from, and
+    // whether it's been expanded.
+    final gCosts = Float64List(cells)..fillRange(0, cells, double.infinity);
+    final parents = Int32List(cells)..fillRange(0, cells, -1);
+    final closed = Uint8List(cells);
+    // Never overestimates: every step ahead costs at least the cheapest cell.
+    final hScale = grid.minCost;
+    final neighbors = _getNeighbors();
+    final open = _OpenHeap();
 
-    // Track best g-cost to each position
-    final gCosts = <(int, int), double>{};
-
-    // Track which nodes are in open set
-    final inOpenSet = <(int, int)>{};
-
-    // Start node
-    final startNode = _PathNode(
-      x: startX,
-      y: startY,
-      gCost: 0,
-      hCost: _heuristic(startX, startY, goalX, goalY),
-    );
-    openSet.add(startNode);
-    gCosts[(startX, startY)] = 0;
-    inOpenSet.add((startX, startY));
+    final startIndex = startY * width + startX;
+    final goalIndex = goalY * width + goalX;
+    gCosts[startIndex] = 0;
+    final startH = _heuristic(startX, startY, goalX, goalY) * hScale;
+    open.push(_OpenEntry(startIndex, 0, startH, startH));
 
     var iterations = 0;
 
-    while (openSet.isNotEmpty && iterations < maxIterations) {
+    while (open.isNotEmpty && iterations < maxIterations) {
+      final current = open.pop();
+      final index = current.index;
+      if (closed[index] == 1 || current.gCost > gCosts[index]) continue;
+      closed[index] = 1;
       iterations++;
 
-      // Get node with lowest f-cost
-      final current = openSet.first;
-      openSet.remove(current);
-      inOpenSet.remove((current.x, current.y));
-
-      // Check if we reached the goal
-      if (current.x == goalX && current.y == goalY) {
+      if (index == goalIndex) {
         return PathResult.success(
-          _reconstructPath(current),
+          _reconstructPath(parents, width, startIndex, goalIndex),
           nodesExplored: iterations,
         );
       }
 
-      // Explore neighbors
-      for (final (dx, dy, cost) in _getNeighbors()) {
-        final nx = current.x + dx;
-        final ny = current.y + dy;
+      final cx = index % width;
+      final cy = index ~/ width;
+      final here = grid.costAt(cx, cy);
+      for (final (dx, dy, length) in neighbors) {
+        final nx = cx + dx;
+        final ny = cy + dy;
 
-        // Skip if not walkable
         if (!grid.isWalkable(nx, ny)) continue;
 
         // For diagonal movement, check corner cutting
         if (!allowCornerCutting && dx != 0 && dy != 0) {
-          if (!grid.isWalkable(current.x + dx, current.y) ||
-              !grid.isWalkable(current.x, current.y + dy)) {
+          if (!grid.isWalkable(cx + dx, cy) || !grid.isWalkable(cx, cy + dy)) {
             continue; // Can't cut corners
           }
         }
 
-        final newGCost = current.gCost + cost;
-        final existingGCost = gCosts[(nx, ny)];
-
-        // Skip if we've found a better path to this node
-        if (existingGCost != null && newGCost >= existingGCost) {
-          continue;
-        }
-
-        // This is a better path
-        gCosts[(nx, ny)] = newGCost;
-
-        final neighbor = _PathNode(
-          x: nx,
-          y: ny,
-          gCost: newGCost,
-          hCost: _heuristic(nx, ny, goalX, goalY),
-          parent: current,
-        );
-
-        // Remove old version if in open set
-        if (inOpenSet.contains((nx, ny))) {
-          openSet.removeWhere((n) => n.x == nx && n.y == ny);
-        }
-
-        openSet.add(neighbor);
-        inOpenSet.add((nx, ny));
+        final next = ny * width + nx;
+        if (closed[next] == 1) continue;
+        final gCost = current.gCost + length * (here + grid.costAt(nx, ny)) / 2;
+        if (gCost >= gCosts[next]) continue;
+        gCosts[next] = gCost;
+        parents[next] = index;
+        final hCost = _heuristic(nx, ny, goalX, goalY) * hScale;
+        open.push(_OpenEntry(next, gCost, gCost + hCost, hCost));
       }
     }
 
@@ -304,18 +307,19 @@ class Pathfinder {
     }
   }
 
-  /// Reconstruct path from goal node back to start.
-  List<(int, int)> _reconstructPath(_PathNode goalNode) {
+  /// Reconstruct path from goal back to start (excluding start).
+  List<(int, int)> _reconstructPath(
+    Int32List parents,
+    int width,
+    int startIndex,
+    int goalIndex,
+  ) {
     final path = <(int, int)>[];
-    _PathNode? current = goalNode;
-
-    while (current != null) {
-      path.add((current.x, current.y));
-      current = current.parent;
+    var index = goalIndex;
+    while (index != startIndex) {
+      path.add((index % width, index ~/ width));
+      index = parents[index];
     }
-
-    // Reverse to get start-to-goal order, exclude start position
-    path.removeLast(); // Remove start position
     return path.reversed.toList();
   }
 }

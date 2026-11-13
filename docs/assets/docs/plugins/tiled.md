@@ -132,6 +132,43 @@ SpawnTilemapEvent(
 )
 ```
 
+### Tile Objects and Image Collections
+
+A building or prop with height is best placed as a **tile object** from an
+**image-collection tileset** (each tile its own image): Tiled draws the real art
+in the editor, and the game can Y-sort it against characters, which a tile layer
+can't. Give each tile its class, properties and a collision rectangle (its
+footprint) once, in the tileset; every placement inherits them.
+
+`AssetTilemapLoader` loads each tile's image through your texture loader
+(paths relative to the tileset file, `..` allowed, so a tileset can point at
+images outside the maps folder). A tile object's `TiledObjectData` then has:
+
+- `type`: its own class if set, else its tile's, so `objectTypes` routes it.
+- `properties`: the tile's, overridden by the object's own.
+- `tileImage`: the tile's `TextureHandle`.
+- `tileCollision`: the tile's collision shapes, relative to the image's
+  top-left corner.
+- `tile`: the tileset and local ID, for anything else.
+
+Tiled draws a tile object with its image's **bottom-left** corner at
+`(object.x, object.y)`:
+
+```dart
+'prop': ObjectTypeConfig(
+  createCollider: false,
+  onSpawn: (entity, object) {
+    final top = object.y - object.height; // image top-left is (x, top)
+    final footprint = object.tileCollision.whereType<RectangleShape>().first;
+    walls.add(Rect.fromLTWH(object.x + footprint.x, top + footprint.y,
+        footprint.width, footprint.height));
+    entity
+      ..insert(Transform2D.from(object.x, object.y))
+      ..insert(Sprite(texture: object.tileImage!, anchor: Vector2(0, 1)));
+  },
+),
+```
+
 ### Custom Properties
 
 Access Tiled custom properties with type-safe methods:
@@ -482,6 +519,69 @@ The `PathResult` class contains:
 | `maxIterations` | `int` | `10000` | Maximum A* iterations before giving up |
 | `allowDiagonal` | `bool` | `true` | Allow 8-directional movement instead of 4 |
 | `allowCornerCutting` | `bool` | `false` | Allow diagonal moves through corners (requires `allowDiagonal`) |
+
+#### Movement Costs (Roads and Paths)
+
+Every walkable cell costs 1.0 to move through until you set its cost. A step
+costs its length (1 straight, about 1.414 diagonally) times the mean cost of
+the two cells it joins, and the pathfinder returns the *cheapest* path. Make
+roads cheap and open ground expensive and NPCs keep to the roads, leaving them
+only where the detour would cost more than cutting across:
+
+```dart
+for (final (x, y) in roadTiles) {
+  grid.setCost(x, y, 1.0);
+}
+for (final (x, y) in grassTiles) {
+  grid.setCost(x, y, 3.0); // worth up to a 3× detour to stay on the road
+}
+```
+
+Costs must be positive. Keep the cheapest cost at 1.0 or above where you can:
+the A* estimate scales with `grid.minCost`, and a very cheap cell anywhere
+makes every search explore more of the map.
+
+#### Costs From Painted Terrain
+
+If the map's ground is painted with Tiled's terrain brush (a corner or mixed
+Wang set), read it with `TerrainGrid` and turn it into costs in one call. The
+grid holds the terrain name of each tile corner, so it's twice the map's size
+in tiles:
+
+```dart
+final terrain = TerrainGrid.fromTilemap(tilemap.map, layer: 'ground');
+terrain.terrainAt(100, 40); // 'road', in map pixels from the top-left
+
+final grid = extractCollisionGrid(tilemap, collisionLayers: {'Collision'});
+applyTerrainCosts(
+  grid,
+  terrain,
+  {'road': 1, 'path': 1},
+  defaultCost: 3, // any other terrain
+);
+```
+
+`applyTerrainCosts` accepts a grid at corner resolution (half a tile per cell)
+or tile resolution (each tile costs the mean of its corners).
+`AssetTilemapLoader` restores the Wang tiles that `package:tiled` 0.12 drops
+when parsing TMX/TSX, so build the `TerrainGrid` from a map it loaded.
+
+#### Smoothing Paths
+
+A* paths step from cell to cell. `smoothPath` drops the waypoints a walker
+could skip by heading straight on, but only where the straight line is walkable
+and costs no more than the stretch it replaces. So a walker cuts the corner of
+a road, but not across the grass beside it. Coordinates are continuous, in
+cells (a cell's centre is `(x + 0.5, y + 0.5)`):
+
+```dart
+final cells = pathfinder.findPath(grid, sx, sy, gx, gy).path!;
+final waypoints = smoothPath(
+  grid,
+  (sx + 0.5, sy + 0.5),
+  [for (final (x, y) in cells) (x + 0.5, y + 0.5)],
+);
+```
 
 ### Use Cases
 

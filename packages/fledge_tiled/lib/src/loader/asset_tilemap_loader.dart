@@ -10,6 +10,7 @@ import '../components/tilemap_animator.dart';
 import '../properties/tiled_properties.dart';
 import '../resources/tilemap_assets.dart';
 import '../resources/tileset_registry.dart';
+import '../terrain/wang_repair.dart';
 import 'tilemap_loader.dart';
 
 /// Cache for loaded TSX content, keyed by file path.
@@ -78,6 +79,7 @@ class AssetTilemapLoader implements TilemapLoader {
 
     // Parse the TMX file
     final tiledMap = TiledMap.parseTmx(tmxContent, providers: [provider]);
+    repairWangTiles(tiledMap, tmxContent, provider._contents);
 
     // Load all tilesets
     final loadedTilesets = <LoadedTileset>[];
@@ -107,13 +109,19 @@ class AssetTilemapLoader implements TilemapLoader {
     String basePath,
     TextureLoader textureLoader,
   ) async {
+    // An external tileset's images are relative to its own file, which can
+    // be in another folder than the map.
+    final tilesetDir = tileset.source == null
+        ? basePath
+        : _getDirectory(_resolvePath(basePath, tileset.source!));
+
     // Determine image path and dimensions
     String? imagePath;
     int imageWidth = 0;
     int imageHeight = 0;
 
     if (tileset.image != null) {
-      imagePath = _resolvePath(basePath, tileset.image!.source!);
+      imagePath = _resolvePath(tilesetDir, tileset.image!.source!);
       imageWidth = tileset.image!.width ?? 0;
       imageHeight = tileset.image!.height ?? 0;
     }
@@ -165,9 +173,26 @@ class AssetTilemapLoader implements TilemapLoader {
     final tileProperties = <int, TiledProperties>{};
     final tileAnimations = <int, TileAnimation>{};
     final collisionShapes = <int, List<CollisionShape>>{};
+    final tileImages = <int, TextureHandle>{};
+    final tileClasses = <int, String>{};
 
     for (final tile in tileset.tiles) {
       final localId = tile.localId;
+
+      // Image-collection tilesets: each tile is its own image.
+      final image = tile.image;
+      if (tileset.image == null && image?.source != null) {
+        tileImages[localId] = await textureLoader(
+          _resolvePath(tilesetDir, image!.source!),
+          image.width ?? 0,
+          image.height ?? 0,
+        );
+      }
+
+      final tileClass = tile.type;
+      if (tileClass != null && tileClass.isNotEmpty) {
+        tileClasses[localId] = tileClass;
+      }
 
       // Properties
       if (tile.properties.isNotEmpty) {
@@ -217,6 +242,8 @@ class AssetTilemapLoader implements TilemapLoader {
       tileProperties: tileProperties,
       animations: tileAnimations,
       collisionShapes: collisionShapes,
+      tileImages: tileImages,
+      tileClasses: tileClasses,
     );
   }
 
@@ -289,11 +316,14 @@ class AssetTilemapLoader implements TilemapLoader {
     return path.substring(0, lastSlash + 1);
   }
 
+  /// [relativePath] against [basePath] (a directory ending in `/`), with
+  /// `.` and `..` segments resolved: Flutter asset keys are plain paths, so
+  /// `assets/maps/../art/a.png` must become `assets/art/a.png`.
   String _resolvePath(String basePath, String relativePath) {
-    if (relativePath.startsWith('/')) {
-      return relativePath;
-    }
-    return '$basePath$relativePath';
+    final joined = relativePath.startsWith('/')
+        ? relativePath
+        : '$basePath$relativePath';
+    return normalizeAssetPath(joined);
   }
 }
 
@@ -315,4 +345,22 @@ class _FledgeTsxProvider implements ParserProvider {
   Parser getSource(String path) {
     return _parserCache[path] ??= Parser.fromString(_contents[path]!);
   }
+}
+
+/// [path] with `.` and `..` segments resolved and repeated slashes
+/// collapsed; a `..` above the start of a relative path is kept.
+String normalizeAssetPath(String path) {
+  final absolute = path.startsWith('/');
+  final out = <String>[];
+  for (final segment in path.split('/')) {
+    if (segment.isEmpty || segment == '.') continue;
+    if (segment == '..' && out.isNotEmpty && out.last != '..') {
+      out.removeLast();
+    } else if (segment == '..' && absolute) {
+      continue;
+    } else {
+      out.add(segment);
+    }
+  }
+  return '${absolute ? '/' : ''}${out.join('/')}';
 }
