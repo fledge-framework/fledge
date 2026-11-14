@@ -131,6 +131,15 @@ void preferCentres(
   }
 }
 
+/// Whether a walker fits with their feet exactly at ([x], [y]), in grid
+/// cells as continuous values (a cell's centre is (x + 0.5, y + 0.5)).
+///
+/// A [CollisionGrid] knows only whole cells, typically judged at their
+/// centres, so a point moved off a centre (a lane, a straightened run) can
+/// clip a wall in a gap barely wider than the walker. Given the game's own
+/// geometry, [keepToSide] and [simplifyPath] check every such point.
+typedef PathFits = bool Function(double x, double y);
+
 /// Which side of a path walkers keep to.
 enum Side { left, right }
 
@@ -148,7 +157,7 @@ enum Side { left, right }
 /// reads as one direction. The shift eases in over the first [taper]
 /// points and out over the last, so the path still starts and ends where
 /// it did. A shifted point that would leave walkable ground, or land on
-/// dearer ground, is shifted less.
+/// dearer ground, or where the walker wouldn't [fits], is shifted less.
 List<(double, double)> keepToSide(
   CollisionGrid grid,
   EdgeDistance edges,
@@ -158,6 +167,7 @@ List<(double, double)> keepToSide(
   double maxOffset = 1.5,
   int window = 2,
   int taper = 2,
+  PathFits? fits,
 }) {
   final n = points.length;
   if (n < 2) return [...points];
@@ -185,7 +195,9 @@ List<(double, double)> keepToSide(
     while (offset > 0.05) {
       final q = (p.$1 + nx * offset, p.$2 + ny * offset);
       final qx = q.$1.floor(), qy = q.$2.floor();
-      if (grid.isWalkable(qx, qy) && grid.costAt(qx, qy) <= cost + 0.75) {
+      if (grid.isWalkable(qx, qy) &&
+          grid.costAt(qx, qy) <= cost + 0.75 &&
+          (fits == null || fits(q.$1, q.$2))) {
         break;
       }
       offset /= 2;
@@ -200,7 +212,9 @@ List<(double, double)> keepToSide(
 /// steps becomes one straight walk while every bend stays where it is: a
 /// simplified path is never more than [tolerance] cells from the original.
 /// Unlike `smoothPath`, it never cuts a corner. A straight line that would
-/// cross unwalkable ground is split at its furthest point regardless.
+/// cross unwalkable ground, or pass anywhere the walker wouldn't [fits]
+/// (checked every [sampleStep] cells), is split at its furthest point
+/// regardless.
 ///
 /// Coordinates as for `smoothPath`; the first and last points are kept.
 List<(double, double)> simplifyPath(
@@ -208,6 +222,7 @@ List<(double, double)> simplifyPath(
   List<(double, double)> points, {
   double tolerance = 0.5,
   double sampleStep = 0.25,
+  PathFits? fits,
 }) {
   if (points.length < 3) return [...points];
   bool clear((double, double) a, (double, double) b) {
@@ -218,9 +233,9 @@ List<(double, double)> simplifyPath(
     );
     for (var s = 0; s <= steps; s++) {
       final t = s / steps;
-      if (!grid.isWalkable((a.$1 + dx * t).floor(), (a.$2 + dy * t).floor())) {
-        return false;
-      }
+      final x = a.$1 + dx * t, y = a.$2 + dy * t;
+      if (!grid.isWalkable(x.floor(), y.floor())) return false;
+      if (fits != null && !fits(x, y)) return false;
     }
     return true;
   }

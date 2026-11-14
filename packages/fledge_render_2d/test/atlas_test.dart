@@ -296,6 +296,19 @@ void main() {
       expect(atlasSprite.sourceRect.top, 32);
     });
 
+    test('the atlas can be swapped, keeping the frame', () {
+      const plain = TextureHandle(id: 1, width: 128, height: 128);
+      const hatted = TextureHandle(id: 2, width: 128, height: 128);
+      final sprite = AtlasSprite(
+        atlas: TextureAtlas.grid(texture: plain, columns: 4, rows: 4),
+        index: 5,
+      );
+      sprite.atlas = TextureAtlas.grid(texture: hatted, columns: 4, rows: 4);
+      expect(sprite.atlas.texture, hatted);
+      expect(sprite.index, 5);
+      expect(sprite.sourceRect.left, 32);
+    });
+
     test('setByName updates index', () {
       const texture = TextureHandle(id: 1, width: 128, height: 128);
       final atlas = TextureAtlas.grid(

@@ -185,4 +185,48 @@ void main() {
     final line = [for (var x = 0; x < 10; x++) (x + 0.5, 9.5)];
     expect(simplifyPath(grid, line), [line.first, line.last]);
   });
+
+  group('fits', () {
+    test('keepToSide shifts no further than a walker fits', () {
+      final grid = dusty(20, 9);
+      road(grid, 0, 2, 19, 6);
+      final edges = EdgeDistance.of(grid, wallsAreEdges: false);
+      final straight = [for (var x = 0; x < 20; x++) (x + 0.5, 4.5)];
+      final free = keepToSide(grid, edges, straight);
+      // Something the grid can't see narrows the road's right-hand side
+      // (travelling east, right is +y): nothing below y = 4.8 fits.
+      final narrowed = keepToSide(
+        grid,
+        edges,
+        straight,
+        fits: (x, y) => y <= 4.8,
+      );
+      expect(
+        free.map((p) => p.$2).reduce((a, b) => a > b ? a : b),
+        greaterThan(4.8),
+      );
+      for (final (_, y) in narrowed) {
+        expect(y, lessThanOrEqualTo(4.8));
+      }
+    });
+
+    test('simplifyPath keeps a bend where a straight run would not fit', () {
+      final grid = CollisionGrid(width: 10, height: 10);
+      final elbow = [
+        for (var x = 0; x < 6; x++) (x + 0.5, 0.5),
+        for (var y = 1; y < 6; y++) (5.5, y + 0.5),
+      ];
+      // On an open grid the elbow straightens into one diagonal walk...
+      expect(simplifyPath(grid, elbow, tolerance: 5), hasLength(2));
+      // ...unless the walker can't fit across the corner's inside.
+      final kept = simplifyPath(
+        grid,
+        elbow,
+        tolerance: 5,
+        fits: (x, y) => !(x < 5 && y > 1),
+      );
+      expect(kept.length, greaterThan(2));
+      expect(kept, contains((5.5, 0.5)));
+    });
+  });
 }

@@ -130,8 +130,10 @@ class TextureAtlas {
 /// See [Sprite] for the semantics of [layer] and [layerSubOrder];
 /// they behave identically here.
 class AtlasSprite {
-  /// The texture atlas.
-  final TextureAtlas atlas;
+  /// The texture atlas. Swap it to change the sheet a sprite draws from
+  /// (another outfit, a character with and without a hat) while keeping
+  /// [index] and the rest.
+  TextureAtlas atlas;
 
   /// Current sprite index in the atlas.
   int index;

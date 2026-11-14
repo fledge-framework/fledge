@@ -371,6 +371,13 @@ final way = simplifyPath(grid, keepToSide(grid, edges, centres));
 
 Path coordinates are in grid cells as continuous values: a cell's centre is (x + 0.5, y + 0.5).
 
+The grid only knows whole cells, usually judged at their centres, so a point moved off a centre (a lane, a straightened run) can clip a wall in a gap barely wider than the walker. Pass your own geometry as `fits` (a `PathFits`: does a walker fit with their feet exactly here?) and both functions respect it: `keepToSide` shifts no further than the walker fits, and `simplifyPath` keeps a bend wherever the straight run wouldn't fit.
+
+```dart
+bool fits(double x, double y) => !walls.any(hitboxAt(toWorld(x, y)).overlaps);
+final way = simplifyPath(grid, keepToSide(grid, edges, centres, fits: fits), fits: fits);
+```
+
 ## Components Reference
 
 ### CollisionConfig
