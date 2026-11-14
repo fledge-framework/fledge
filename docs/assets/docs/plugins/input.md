@@ -179,6 +179,20 @@ InputMap.builder()
   .build()
 ```
 
+### Player Rebinding
+
+Every `BindingSource` round-trips through JSON (`toJson`, `BindingSource.fromJson`), so the player's own keys can be saved (for example with fledge_save's `PreferencesFile`). Rebuild the map from them with `bind` (any source as a button) and `bindComposite` (four sources as a Vector2), then swap it into the running context:
+
+```dart
+final map = InputMap.builder()
+    .bind(useKey, ActionId('use'))
+    .bindComposite(ActionId('move'), up: up, down: down, left: left, right: right)
+    .build();
+world.getResource<InputContextRegistry>()!.replaceMap('gameplay', map);
+```
+
+`replaceMap` keeps the context's priority and cursor mode; the next action resolution uses the new map. `fromJson` returns `null` for anything it doesn't recognise, so a stale file falls back to defaults.
+
 ## Context Switching
 
 Different game states often need different input mappings. The input plugin integrates with Fledge's state system:

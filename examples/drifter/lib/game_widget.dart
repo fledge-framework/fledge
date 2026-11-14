@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart' hide Color;
+import 'package:material_ui/material_ui.dart' hide Color;
+
 import 'dart:ui';
 
 import 'package:fledge_camera_2d/fledge_camera_2d.dart';

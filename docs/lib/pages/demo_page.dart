@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
@@ -1375,7 +1375,7 @@ class GridEntityExtractor extends Extractor {
 const _painterCode = '''
 import 'dart:ui';
 
-import 'package:flutter/material.dart' hide Color;
+import 'package:material_ui/material_ui.dart' hide Color;
 
 /// Custom painter that renders from the Render World.
 ///
@@ -1570,7 +1570,7 @@ InputPlugin createInputPlugin() {
 }''';
 
 const _widgetCode = '''
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:fledge_ecs/fledge_ecs.dart' hide State;
 import 'package:fledge_render_2d/fledge_render_2d.dart';
 
@@ -1654,7 +1654,7 @@ class _GridGameWidgetState extends State<GridGameWidget>
 }''';
 
 const _mainCode = '''
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_input/fledge_input.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart';

@@ -18,8 +18,10 @@ typedef CommandCallback = bool Function(String command, List<String> arguments);
 /// hold, wait for a modal to close) can finish before the dialogue
 /// moves on. Return `false` to continue processing as if the command
 /// were a regular one (e.g. malformed arguments: log and carry on).
-typedef PausingCommandCallback =
-    bool Function(String command, List<String> arguments);
+typedef PausingCommandCallback = bool Function(
+  String command,
+  List<String> arguments,
+);
 
 /// Registry for custom Yarn command handlers.
 ///

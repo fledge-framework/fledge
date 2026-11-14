@@ -1,87 +1,101 @@
-import 'package:flutter_soloud/flutter_soloud.dart';
+import '../backend/audio_backend.dart';
+import '../events/audio_events.dart';
 
-/// Resource containing current audio playback state.
+/// Playback state: the engine, what music is playing, live sound voices.
 ///
-/// Access via `world.getResource<AudioState>()` or `world.audioState`.
+/// Inserted by `AudioPlugin` when the app is built (so requests can be
+/// made from the first frame); [isInitialized] turns true once the engine
+/// has started.
 ///
 /// ```dart
-/// final state = world.audioState;
-/// print('Music playing: ${state?.isMusicPlaying}');
-/// print('Current track: ${state?.currentMusicKey}');
+/// final state = world.audioState!;
+/// print('Track: ${state.currentMusicKey}, playing: ${state.isMusicPlaying}');
 /// ```
 class AudioState {
-  /// The underlying SoLoud instance.
-  final SoLoud soloud;
+  AudioState(this.backend);
 
-  /// Currently playing music handle (if any).
-  SoundHandle? currentMusicHandle;
+  /// The engine everything plays through.
+  final AudioBackend backend;
 
-  /// Key of currently playing music track.
-  String? currentMusicKey;
-
-  /// Music that is fading out (during crossfade).
-  SoundHandle? fadingOutMusicHandle;
-
-  /// Duration of active crossfade.
-  Duration? crossfadeDuration;
-
-  /// Elapsed time in current crossfade.
-  double crossfadeElapsed = 0.0;
-
-  /// Target volume for new music during crossfade.
-  double crossfadeTargetVolume = 1.0;
-
-  /// Whether audio is globally paused.
-  bool isPaused = false;
-
-  /// Whether audio was paused due to focus loss.
-  bool pausedByFocusLoss = false;
-
-  /// Active sound effect handles for tracking.
-  final Set<SoundHandle> _activeSounds = {};
-
-  /// Whether the audio engine has been initialized.
+  /// Whether the engine has started. Requests made before then wait.
   bool isInitialized = false;
 
-  AudioState(this.soloud);
+  /// Why the engine couldn't start, if it couldn't (audio stays off).
+  Object? initError;
 
-  /// Whether music is currently playing.
-  bool get isMusicPlaying {
-    if (currentMusicHandle == null) return false;
-    return soloud.getIsValidVoiceHandle(currentMusicHandle!);
+  /// The music track playing now (fading in included), by key.
+  String? currentMusicKey;
+
+  /// Its voice.
+  AudioVoice? currentMusicVoice;
+
+  /// The volume it was asked to play at, before the music channel.
+  double musicVolume = 1.0;
+
+  /// Whether it loops.
+  bool musicLooping = true;
+
+  /// Seconds left of its fade-in (a channel change meanwhile re-targets
+  /// the fade rather than cutting it short).
+  double musicFadeRemaining = 0.0;
+
+  /// The music channel's effective volume last applied to the track.
+  double appliedMusicChannel = 1.0;
+
+  /// Tracks fading out after a crossfade or a fading stop; each stops
+  /// itself at the end of its fade.
+  final List<AudioVoice> fadingOut = [];
+
+  /// The latest music request still waiting (for the engine or its clip).
+  /// Only the latest counts: asking for track B while A is loading means B.
+  MusicRequest? pendingMusic;
+
+  /// Whether audio is paused (everything: music, effects, sources).
+  bool isPaused = false;
+
+  /// Whether the pause came from the window losing focus (and so ends when
+  /// it comes back).
+  bool pausedByFocusLoss = false;
+
+  /// Live sound voices (effects and spatial sources), with their keys.
+  final Map<AudioVoice, String> sounds = {};
+
+  /// Whether a music track is playing (or paused) now.
+  bool get isMusicPlaying =>
+      currentMusicVoice != null && backend.isPlaying(currentMusicVoice!);
+
+  /// Whether a track is fading out under the current one.
+  bool get isCrossfading => fadingOut.isNotEmpty;
+
+  /// Number of live sound voices.
+  int get activeSoundCount => sounds.length;
+
+  /// Pauses every voice. Returns false if already paused.
+  bool pauseAll() {
+    if (isPaused) return false;
+    _setPaused(true);
+    isPaused = true;
+    return true;
   }
 
-  /// Whether a crossfade is in progress.
-  bool get isCrossfading =>
-      crossfadeDuration != null && fadingOutMusicHandle != null;
-
-  /// Current music playback position in seconds.
-  double get musicPosition {
-    if (currentMusicHandle == null) return 0.0;
-    final position = soloud.getPosition(currentMusicHandle!);
-    return position.inMilliseconds / 1000.0;
+  /// Resumes every voice. Returns false if not paused.
+  bool resumeAll() {
+    if (!isPaused) return false;
+    _setPaused(false);
+    isPaused = false;
+    pausedByFocusLoss = false;
+    return true;
   }
 
-  /// Number of currently active sound effects.
-  int get activeSoundCount => _activeSounds.length;
-
-  /// Register an active sound handle (internal use).
-  void registerSound(SoundHandle handle) {
-    _activeSounds.add(handle);
+  void _setPaused(bool paused) {
+    if (currentMusicVoice != null) {
+      backend.setPaused(currentMusicVoice!, paused);
+    }
+    for (final voice in fadingOut) {
+      backend.setPaused(voice, paused);
+    }
+    for (final voice in sounds.keys) {
+      backend.setPaused(voice, paused);
+    }
   }
-
-  /// Unregister a sound handle (internal use).
-  void unregisterSound(SoundHandle handle) {
-    _activeSounds.remove(handle);
-  }
-
-  /// Clean up finished sounds (called by AudioCleanupSystem).
-  void cleanupFinishedSounds() {
-    _activeSounds.removeWhere(
-      (handle) => !soloud.getIsValidVoiceHandle(handle),
-    );
-  }
-
-  /// All active sound handles (read-only).
-  Iterable<SoundHandle> get activeSounds => _activeSounds;
 }

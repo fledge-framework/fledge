@@ -8,7 +8,7 @@ Full-featured audio plugin for [Fledge](https://fledge-framework.dev) games — 
 
 ```yaml
 dependencies:
-  fledge_audio: ^0.2.1
+  fledge_audio: ^0.6.0
 ```
 
 ## Quick Start
@@ -22,18 +22,24 @@ void main() async {
     ..addPlugin(WallTimePlugin())
     ..addPlugin(AudioPlugin());
 
-  await app.tick(); // initialize systems before loading assets
+  // Register clips by key; they load in the background once the engine is
+  // up (music streamed, sounds decoded up front). Nothing waits on them.
+  app.world
+    ..loadMusic('theme', 'assets/music/theme.ogg')
+    ..loadSound('explosion', 'assets/sounds/explosion.wav');
 
-  final assets = app.world.audioAssets!;
-  await assets.loadSound('explosion', 'assets/sounds/explosion.wav');
-  await assets.loadMusic('theme', 'assets/music/theme.mp3');
-
+  // Music waits for its clip; crossfades run on the audio thread.
   app.world.playMusic('theme', crossfade: const Duration(seconds: 2));
-  app.world.playSfx('explosion');
+  app.world.playSfx('explosion', position: (120, 40));
 
   await app.run();
 }
 ```
+
+Nothing in the plugin holds up a frame. Channel volumes reach music that is
+already playing, audio pauses while the window lacks focus, and everything
+above the `AudioBackend` interface can be tested with a fake backend
+(`AudioPlugin(backend: ...)`).
 
 ## Documentation
 

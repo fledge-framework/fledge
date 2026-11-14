@@ -1,89 +1,63 @@
-import 'package:fledge_assets/fledge_assets.dart';
 import 'package:fledge_ecs/fledge_ecs.dart';
-import 'package:flutter_soloud/flutter_soloud.dart';
 
-import '../assets/audio_assets.dart';
 import '../config/audio_config.dart';
 import '../resources/audio_state.dart';
 
-/// System that initializes the SoLoud audio engine.
+/// Starts the audio engine, without holding up the frame.
 ///
-/// Runs once on startup to initialize the audio backend, in the
-/// [FirstSets.platform] phase of `Schedules.first`. It is not exclusive:
-/// it declares writes to every resource it inserts (`Assets<AudioClip>`,
-/// `AudioAssets`, [AudioState]), so it serialises only against systems
-/// that touch those.
+/// Runs in the [FirstSets.platform] phase of `Schedules.first`. On the
+/// first frame it starts the engine and returns at once; when the engine is
+/// up, [AudioState.isInitialized] turns true and the audio systems begin
+/// loading and playing. Everything asked for meanwhile waits (music) or is
+/// reported as skipped (sound effects). If the engine can't start, audio
+/// stays off and [AudioState.initError] says why.
 class AudioInitSystem implements System {
-  final AudioConfig config;
-  bool _initialized = false;
-
   AudioInitSystem(this.config);
 
-  /// The `SystemMeta.name` of [AudioInitSystem]. Games that order
-  /// their own systems relative to this one use it in `before:` /
-  /// `after:`.
+  final AudioConfig config;
+  bool _started = false;
+
+  /// The `SystemMeta.name` of [AudioInitSystem].
   static const String systemName = 'AudioInitSystem';
 
   @override
   SystemMeta get meta => const SystemMeta(
     name: systemName,
     sets: [FirstSets.platform],
-    resourceWrites: {
-      Assets<AudioClip>,
-      // ignore: deprecated_member_use_from_same_package
-      AudioAssets,
-      AudioState,
-    },
+    resourceWrites: {AudioState},
   );
 
   @override
   RunCondition? get runCondition => null;
 
   @override
-  bool shouldRun(World world) => !_initialized;
+  bool shouldRun(World world) => !_started;
 
   @override
   Future<void> run(World world) async {
-    if (_initialized) return;
-    _initialized = true;
-
-    final soloud = SoLoud.instance;
-
-    // Skip if already initialized (e.g., hot reload)
-    if (!soloud.isInitialized) {
-      try {
-        await soloud.init();
-      } catch (e) {
-        // Log error but continue - audio will be disabled
+    if (_started) return;
+    final state = world.getResource<AudioState>();
+    if (state == null) return;
+    _started = true;
+    final backend = state.backend;
+    // Not awaited: the engine starts on its own time.
+    backend.init().then(
+      (_) {
+        try {
+          backend
+            ..setMaxVoices(config.maxConcurrentSounds)
+            ..setMasterVolume(config.masterVolume);
+        } catch (e) {
+          // ignore: avoid_print
+          print('fledge_audio: could not configure the engine: $e');
+        }
+        state.isInitialized = true;
+      },
+      onError: (Object e) {
+        state.initError = e;
         // ignore: avoid_print
-        print('Failed to initialize SoLoud audio engine: $e');
-        return;
-      }
-    }
-
-    // Configure global settings
-    try {
-      soloud.setMaxActiveVoiceCount(config.maxConcurrentSounds);
-      soloud.setGlobalVolume(config.masterVolume);
-    } catch (e) {
-      // ignore: avoid_print
-      print('Failed to configure SoLoud: $e');
-    }
-
-    // Create and insert resources that need the initialized engine.
-    //
-    // - `Assets<AudioClip>` is the new post-Phase-5 store; downstream
-    //   code loads clips as ref-counted handles via `AudioClipLoader`.
-    // - `AudioAssets` stays as a deprecated key-based facade for one
-    //   release (see the class-level `@Deprecated` on it).
-    // ignore: deprecated_member_use_from_same_package
-    final audioAssets = AudioAssets(soloud);
-    final audioState = AudioState(soloud);
-    audioState.isInitialized = true;
-
-    world.insertResource<Assets<AudioClip>>(Assets<AudioClip>());
-    // ignore: deprecated_member_use_from_same_package
-    world.insertResource(audioAssets);
-    world.insertResource(audioState);
+        print('fledge_audio: audio is off, the engine failed to start: $e');
+      },
+    );
   }
 }

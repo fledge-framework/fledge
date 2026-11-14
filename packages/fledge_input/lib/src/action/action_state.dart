@@ -17,7 +17,7 @@ class ActionState {
   final Map<ActionId, ActionValue> _values = {};
 
   /// Presses and releases waiting for the next fixed step.
-  final Set<ActionId> _fixedPressed = {};
+  final Map<ActionId, int> _fixedPressed = {};
   final Set<ActionId> _fixedReleased = {};
 
   /// Get the value of an action.
@@ -58,7 +58,13 @@ class ActionState {
 
   /// Whether [action] was pressed since the last fixed step: true for exactly
   /// one fixed step per press, whatever the frame rate.
-  bool fixedJustPressed(ActionId action) => _fixedPressed.contains(action);
+  bool fixedJustPressed(ActionId action) => _fixedPressed.containsKey(action);
+
+  /// How many times [action] was pressed since the last fixed step. Usually
+  /// 0 or 1; more when several frames each pressed it before a fixed step
+  /// ran, or when one source presses several times a frame (scroll wheel
+  /// steps).
+  int fixedPressCount(ActionId action) => _fixedPressed[action] ?? 0;
 
   /// Whether [action] was released since the last fixed step: true for
   /// exactly one fixed step per release.
@@ -91,7 +97,9 @@ class ActionState {
   void set(ActionId action, ActionValue value) {
     _values[action] = value;
     if (value is ButtonValue) {
-      if (value.justPressed) _fixedPressed.add(action);
+      if (value.presses > 0) {
+        _fixedPressed[action] = (_fixedPressed[action] ?? 0) + value.presses;
+      }
       if (value.justReleased) _fixedReleased.add(action);
     }
   }

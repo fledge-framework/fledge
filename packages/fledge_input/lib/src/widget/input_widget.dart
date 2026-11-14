@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:fledge_ecs/fledge_ecs.dart' hide State;
 import 'package:gamepads/gamepads.dart';
@@ -78,6 +78,9 @@ class _InputWidgetState extends State<InputWidget> {
   late final FocusNode _focusNode = widget.focusNode ?? FocusNode();
   late final bool _ownsFocusNode = widget.focusNode == null;
   StreamSubscription<GamepadEvent>? _gamepadSubscription;
+
+  /// Maps raw platform keys to standard button and axis names.
+  final GamepadNormalizer _normalizer = GamepadNormalizer();
 
   /// Pointer lock stream subscription for FPS-style mouse capture.
   StreamSubscription<PointerLockDelta>? _pointerLockSubscription;
@@ -185,18 +188,7 @@ class _InputWidgetState extends State<InputWidget> {
   }
 
   void _handleGamepadEvent(GamepadEvent event) {
-    final gamepadState = _gamepad;
-    if (gamepadState == null) return;
-
-    // Ensure gamepad exists
-    final gamepad = gamepadState.getOrCreate(event.gamepadId, event.gamepadId);
-
-    // Determine if this is a button or axis based on the key type
-    if (event.type == KeyType.button) {
-      gamepad.setButtonPressed(event.key, event.value > 0.5);
-    } else {
-      gamepad.setAxisValue(event.key, event.value);
-    }
+    _gamepad?.applyEvent(event, _normalizer);
   }
 
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {

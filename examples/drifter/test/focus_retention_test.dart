@@ -1,6 +1,6 @@
 import 'package:drifter_example/game_widget.dart';
 import 'package:fledge_input/fledge_input.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Reproduces the "click-to-pause" regression: a game embedded in a

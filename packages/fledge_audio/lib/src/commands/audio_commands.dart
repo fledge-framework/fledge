@@ -1,27 +1,47 @@
 import 'package:fledge_ecs/fledge_ecs.dart';
 
-import '../assets/audio_assets.dart';
 import '../events/audio_events.dart';
 import '../resources/audio_channels.dart';
+import '../resources/audio_library.dart';
+import '../resources/audio_pump.dart';
 import '../resources/audio_state.dart';
 
-/// Extension methods for audio control on [World].
+/// Audio on [World]: registering clips, playing them, volume.
 extension AudioCommands on World {
-  /// Gets the current audio state, or null if not initialized.
+  /// Playback state, or null without `AudioPlugin`.
   AudioState? get audioState => getResource<AudioState>();
 
-  /// Gets the audio assets resource.
-  AudioAssets? get audioAssets => getResource<AudioAssets>();
+  /// The sounds and music by key.
+  AudioLibrary? get audioLibrary => getResource<AudioLibrary>();
 
-  /// Gets the volume channels resource.
+  /// The volume channels.
   VolumeChannels? get volumeChannels => getResource<VolumeChannels>();
 
-  /// Play a sound effect.
+  /// Registers the sound effect at [assetPath] as [key]. It loads in the
+  /// background once the engine is up (decoded into memory, for instant
+  /// starts).
+  void loadSound(String key, String assetPath) =>
+      _library.addSound(key, assetPath);
+
+  /// Registers the music track at [assetPath] as [key]. It loads in the
+  /// background once the engine is up (streamed while it plays).
+  void loadMusic(String key, String assetPath) =>
+      _library.addMusic(key, assetPath);
+
+  AudioLibrary get _library {
+    final library = audioLibrary;
+    if (library == null) {
+      throw StateError('No AudioLibrary: add AudioPlugin to the app first');
+    }
+    return library;
+  }
+
+  /// Plays a sound effect; with [position], attenuated and panned relative
+  /// to the active `AudioListener`.
   ///
   /// ```dart
-  /// world.playSfx('explosion');
   /// world.playSfx('footstep', volume: 0.5);
-  /// world.playSfx('gunshot', position: (100.0, 200.0));
+  /// world.playSfx('door', position: (120.0, 40.0));
   /// ```
   void playSfx(
     String soundKey, {
@@ -39,11 +59,12 @@ extension AudioCommands on World {
     );
   }
 
-  /// Play a music track.
+  /// Plays a music track, fading from the current one (or from silence)
+  /// over [crossfade]. Asking for the track already playing changes nothing
+  /// unless [restart] is set; a track still loading starts when it's ready.
   ///
   /// ```dart
-  /// world.playMusic('main_theme');
-  /// world.playMusic('battle', crossfade: Duration(seconds: 2));
+  /// world.playMusic('town', crossfade: Duration(seconds: 3));
   /// ```
   void playMusic(
     String musicKey, {
@@ -51,6 +72,7 @@ extension AudioCommands on World {
     double volume = 1.0,
     Duration? crossfade,
     double startPosition = 0.0,
+    bool restart = false,
   }) {
     eventWriter<PlayMusicRequest>().send(
       PlayMusicRequest(
@@ -59,33 +81,27 @@ extension AudioCommands on World {
         volume: volume,
         crossfadeDuration: crossfade,
         startPosition: startPosition,
+        restart: restart,
       ),
     );
   }
 
-  /// Stop the current music.
-  ///
-  /// ```dart
-  /// world.stopMusic();
-  /// world.stopMusic(fadeOut: Duration(seconds: 1));
-  /// ```
+  /// Stops the music, fading out over [fadeOut].
   void stopMusic({Duration? fadeOut}) {
     eventWriter<StopMusicRequest>().send(
       StopMusicRequest(fadeOutDuration: fadeOut),
     );
   }
 
-  /// Pause all audio.
-  void pauseAudio() {
-    eventWriter<PauseAudioRequest>().send(const PauseAudioRequest());
-  }
+  /// Pauses all audio.
+  void pauseAudio() =>
+      eventWriter<PauseAudioRequest>().send(const PauseAudioRequest());
 
-  /// Resume all audio.
-  void resumeAudio() {
-    eventWriter<ResumeAudioRequest>().send(const ResumeAudioRequest());
-  }
+  /// Resumes all audio.
+  void resumeAudio() =>
+      eventWriter<ResumeAudioRequest>().send(const ResumeAudioRequest());
 
-  /// Toggle audio pause state.
+  /// Pauses audio if it's playing, resumes it if it's paused.
   void toggleAudioPause() {
     if (audioState?.isPaused ?? false) {
       resumeAudio();
@@ -94,7 +110,7 @@ extension AudioCommands on World {
     }
   }
 
-  /// Set the volume for a channel.
+  /// Sets a channel's volume, fading over [fade].
   ///
   /// ```dart
   /// world.setVolume(AudioChannel.music, 0.5);
@@ -106,33 +122,49 @@ extension AudioCommands on World {
     );
   }
 
-  /// Get the current volume for a channel.
-  double getVolume(AudioChannel channel) {
-    return volumeChannels?.getVolume(channel) ?? 1.0;
-  }
+  /// A channel's current volume.
+  double getVolume(AudioChannel channel) =>
+      volumeChannels?.getVolume(channel) ?? 1.0;
 
-  /// Preload an audio asset.
+  /// Runs audio for one frame while the world isn't ticking: menus, a
+  /// loading screen, a singleplayer pause. Requests made meanwhile are
+  /// carried out, clips keep loading, fades and focus pause keep working.
+  ///
+  /// Only audio's own event queues advance, so gameplay events waiting for
+  /// the next tick are untouched. [delta] (seconds since the last frame)
+  /// drives channel volume fades.
   ///
   /// ```dart
-  /// world.preloadAudio('assets/sounds/explosion.wav', key: 'explosion');
-  /// world.preloadAudio('assets/music/theme.mp3', key: 'theme', isMusic: true);
+  /// void onFrame() {
+  ///   if (playing) {
+  ///     app.tick();
+  ///   } else {
+  ///     app.world.pumpAudio(delta: dt);
+  ///   }
+  /// }
   /// ```
-  void preloadAudio(
-    String assetPath, {
-    required String key,
-    bool isMusic = false,
-  }) {
-    eventWriter<PreloadAudioRequest>().send(
-      PreloadAudioRequest(assetPath: assetPath, key: key, isMusic: isMusic),
-    );
+  Future<void> pumpAudio({double delta = 0}) async {
+    final pump = getResource<AudioPump>();
+    if (pump == null) return;
+    pump.swapAudioEvents(this);
+    final time = getResource<WallTime>();
+    final before = time?.delta;
+    time?.delta = delta;
+    try {
+      for (final system in pump.systems) {
+        if (system.shouldRun(this)) await system.run(this);
+      }
+    } finally {
+      if (time != null) time.delta = before!;
+    }
   }
 
-  /// Check if music is currently playing.
+  /// Whether music is playing.
   bool get isMusicPlaying => audioState?.isMusicPlaying ?? false;
 
-  /// Get the key of the currently playing music track.
+  /// The key of the music playing now.
   String? get currentMusicKey => audioState?.currentMusicKey;
 
-  /// Check if audio is paused.
+  /// Whether audio is paused.
   bool get isAudioPaused => audioState?.isPaused ?? false;
 }

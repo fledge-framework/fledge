@@ -1,64 +1,50 @@
-/// A full-featured audio plugin for the Fledge ECS game framework.
+/// Music, sound effects and 2D spatial audio for the Fledge ECS game
+/// framework.
 ///
-/// This package provides:
-/// - Background music with crossfading
-/// - Sound effects with volume control
-/// - 2D spatial/positional audio
-/// - Volume channels (master, music, sfx, voice, ambient)
+/// - Music with crossfades (native, on the audio thread), streamed from disk
+/// - Sound effects, optionally positioned in the world
+/// - 2D spatial sources that follow their `Transform2D`
+/// - Volume channels (master, music, sfx, voice, ambient) that reach
+///   what's already playing
 /// - Pause on window focus loss
-///
-/// ## Quick Start
-///
-/// ```dart
-/// import 'package:fledge_audio/fledge_audio.dart';
-///
-/// // Setup
-/// await App()
-///   .addPlugin(WallTimePlugin())
-///   .addPlugin(AudioPlugin())
-///   .run();
-///
-/// // Load assets
-/// final assets = world.audioAssets!;
-/// await assets.loadSound('explosion', 'assets/sounds/explosion.wav');
-/// await assets.loadMusic('theme', 'assets/music/theme.mp3');
-///
-/// // Play audio
-/// world.playSfx('explosion');
-/// world.playMusic('theme', crossfade: Duration(seconds: 2));
-/// ```
-///
-/// ## Spatial Audio
+/// - Nothing ever holds up a frame: the engine starts and clips load in the
+///   background
 ///
 /// ```dart
-/// // Add listener to player/camera
-/// world.spawn()
-///   ..insert(Transform2D.from(0, 0))
-///   ..insert(AudioListener());
+/// final app = App()
+///   ..addPlugin(WallTimePlugin())
+///   ..addPlugin(AudioPlugin());
 ///
-/// // Add audio source to entities
-/// world.spawn()
-///   ..insert(Transform2D.from(100, 50))
-///   ..insert(AudioSource(
-///     soundKey: 'engine',
-///     looping: true,
-///     autoPlay: true,
-///   ));
+/// app.world
+///   ..loadMusic('theme', 'assets/music/theme.ogg')
+///   ..loadSound('door', 'assets/sounds/door.wav');
+///
+/// app.world.playMusic('theme', crossfade: Duration(seconds: 2));
+/// app.world.playSfx('door', position: (120, 40));
 /// ```
+///
+/// Everything above [AudioBackend] is engine-agnostic: [SoLoudBackend] is
+/// the default, and tests pass a fake to `AudioPlugin(backend: ...)`.
 library;
 
 // Plugin
 export 'src/plugin.dart';
 
+// Engine
+export 'src/backend/audio_backend.dart';
+export 'src/backend/soloud_backend.dart';
+
 // Config
 export 'src/config/audio_config.dart';
 
-// Assets
-export 'src/assets/audio_assets.dart';
+// Clips
+export 'src/assets/audio_clip.dart';
 
 // Resources
-export 'src/resources/audio_state.dart';
 export 'src/resources/audio_channels.dart';
+export 'src/resources/audio_library.dart';
+export 'src/resources/audio_pump.dart';
+export 'src/resources/audio_state.dart';
 
 // Components
 export 'src/components/audio_listener.dart';
@@ -76,5 +62,5 @@ export 'src/systems/audio_event_system.dart';
 export 'src/systems/audio_focus_system.dart';
 export 'src/systems/audio_init_system.dart';
 export 'src/systems/channel_fade_system.dart';
-export 'src/systems/music_crossfade_system.dart';
+export 'src/systems/music_volume_system.dart';
 export 'src/systems/spatial_audio_system.dart';

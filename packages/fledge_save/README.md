@@ -105,6 +105,16 @@ await saveManager.load(world, slotName: 'slot1', fromBackup: true);
 - Files from a newer `formatVersion`, or with a missing migration step, are refused (`load` returns `null`) without touching resources. With no `migrations` registered, older files load as-is.
 - `baseDirectory` overrides the app documents directory (useful for tests).
 
+## Preferences
+
+Settings that belong to the machine rather than a save (volume, keys, display) go in a `PreferencesFile`: plain JSON beside the saves, written atomically, readable before any save is loaded. A missing or broken file reads as `null`, so the game falls back to defaults.
+
+```dart
+final prefs = PreferencesFile(gameDirectory: 'MyGame'); // MyGame/settings.json
+final data = await prefs.read() ?? {};
+await prefs.write({...data, 'music': 0.6});
+```
+
 ## Documentation
 
 See the [Fledge documentation site](https://fledge-framework.dev/docs/plugins/save) for guides, API reference, and advanced usage.

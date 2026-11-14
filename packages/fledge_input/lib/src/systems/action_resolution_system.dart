@@ -60,6 +60,10 @@ class ActionResolutionSystem implements System {
 
     // Track intermediate values for combining multiple bindings
     final buttonPhases = <ActionId, ButtonPhase>{};
+    // Presses beyond the usual one: scroll steps, counted per binding.
+    final scrollPresses = <ActionId, int>{};
+    // Actions an ordinary button binding pressed this frame.
+    final buttonPressed = <ActionId>{};
     final axisValues = <ActionId, double>{};
     final vector2Values = <ActionId, (double, double)>{};
 
@@ -77,6 +81,7 @@ class ActionResolutionSystem implements System {
             actionType,
             keyboard,
             buttonPhases,
+            buttonPressed,
             axisValues,
           );
 
@@ -87,11 +92,23 @@ class ActionResolutionSystem implements System {
             actionType,
             mouse,
             buttonPhases,
+            buttonPressed,
             axisValues,
           );
 
         case MouseAxisBinding():
           _processMouseAxisBinding(binding, source, mouse, axisValues);
+
+        case MouseScrollBinding():
+          _processMouseScrollBinding(
+            binding,
+            source,
+            actionType,
+            mouse,
+            buttonPhases,
+            scrollPresses,
+            axisValues,
+          );
 
         case GamepadButtonBinding():
           _processGamepadButtonBinding(
@@ -100,6 +117,7 @@ class ActionResolutionSystem implements System {
             actionType,
             gamepad,
             buttonPhases,
+            buttonPressed,
             axisValues,
           );
 
@@ -134,7 +152,10 @@ class ActionResolutionSystem implements System {
       switch (type) {
         case ActionType.button:
           final phase = buttonPhases[action] ?? ButtonPhase.up;
-          actionState.set(action, ButtonValue(phase));
+          final presses =
+              (scrollPresses[action] ?? 0) +
+              (buttonPressed.contains(action) ? 1 : 0);
+          actionState.set(action, ButtonValue(phase, presses: presses));
 
         case ActionType.axis:
           var value = axisValues[action] ?? 0.0;
@@ -156,6 +177,7 @@ class ActionResolutionSystem implements System {
     ActionType actionType,
     KeyboardState? keyboard,
     Map<ActionId, ButtonPhase> buttonPhases,
+    Set<ActionId> buttonPressed,
     Map<ActionId, double> axisValues,
   ) {
     if (keyboard == null) return;
@@ -171,6 +193,7 @@ class ActionResolutionSystem implements System {
         if (current == null || _phaseOrder(phase) > _phaseOrder(current)) {
           buttonPhases[binding.action] = phase;
         }
+        if (phase == ButtonPhase.justPressed) buttonPressed.add(binding.action);
 
       case ActionType.axis:
         if (isPressed) {
@@ -191,6 +214,7 @@ class ActionResolutionSystem implements System {
     ActionType actionType,
     MouseState? mouse,
     Map<ActionId, ButtonPhase> buttonPhases,
+    Set<ActionId> buttonPressed,
     Map<ActionId, double> axisValues,
   ) {
     if (mouse == null) return;
@@ -205,6 +229,7 @@ class ActionResolutionSystem implements System {
         if (current == null || _phaseOrder(phase) > _phaseOrder(current)) {
           buttonPhases[binding.action] = phase;
         }
+        if (phase == ButtonPhase.justPressed) buttonPressed.add(binding.action);
 
       case ActionType.axis:
         if (isPressed) {
@@ -237,6 +262,7 @@ class ActionResolutionSystem implements System {
     ActionType actionType,
     GamepadState? gamepad,
     Map<ActionId, ButtonPhase> buttonPhases,
+    Set<ActionId> buttonPressed,
     Map<ActionId, double> axisValues,
   ) {
     if (gamepad == null) return;
@@ -254,6 +280,7 @@ class ActionResolutionSystem implements System {
         if (current == null || _phaseOrder(phase) > _phaseOrder(current)) {
           buttonPhases[binding.action] = phase;
         }
+        if (phase == ButtonPhase.justPressed) buttonPressed.add(binding.action);
 
       case ActionType.axis:
         if (isPressed) {
@@ -261,6 +288,35 @@ class ActionResolutionSystem implements System {
           axisValues[binding.action] =
               current + binding.buttonAxisValue * binding.scale;
         }
+
+      default:
+        break;
+    }
+  }
+
+  void _processMouseScrollBinding(
+    InputBinding binding,
+    MouseScrollBinding source,
+    ActionType actionType,
+    MouseState? mouse,
+    Map<ActionId, ButtonPhase> buttonPhases,
+    Map<ActionId, int> scrollPresses,
+    Map<ActionId, double> axisValues,
+  ) {
+    if (mouse == null) return;
+    final steps = mouse.scrollSteps(source.direction);
+    if (steps == 0) return;
+
+    switch (actionType) {
+      case ActionType.button:
+        buttonPhases[binding.action] = ButtonPhase.justPressed;
+        scrollPresses[binding.action] =
+            (scrollPresses[binding.action] ?? 0) + steps;
+
+      case ActionType.axis:
+        final current = axisValues[binding.action] ?? 0.0;
+        axisValues[binding.action] =
+            current + steps * binding.buttonAxisValue * binding.scale;
 
       default:
         break;

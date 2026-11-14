@@ -1,27 +1,30 @@
-import 'package:flutter_soloud/flutter_soloud.dart';
-
+import '../backend/audio_backend.dart';
 import '../resources/audio_channels.dart';
 
-// ============ Request Events (sent by game code) ============
+// ============ Requests (sent by game code) ============
 
 /// Request to play a sound effect.
 ///
 /// ```dart
-/// world.eventWriter<PlaySfxRequest>().send(PlaySfxRequest('explosion'));
-/// // Or use convenience method:
-/// world.playSfx('explosion');
+/// world.playSfx('hoe');
+/// world.playSfx('door', position: (120, 40)); // panned and attenuated
 /// ```
+///
+/// A sound whose clip isn't ready yet (or while audio is paused) is
+/// skipped, with an [AudioFailed] saying why: a late sound effect would be
+/// wrong, unlike late music.
 class PlaySfxRequest {
-  /// Key of the sound in AudioAssets.
+  /// Key of the sound in the `AudioLibrary`.
   final String soundKey;
 
-  /// Volume multiplier (0.0 to 1.0).
+  /// Volume multiplier (0.0 to 1.0), before the sfx channel.
   final double volume;
 
   /// Playback speed/pitch (1.0 = normal).
   final double playbackSpeed;
 
-  /// Position for spatial audio (null = non-spatial).
+  /// World position: attenuated and panned relative to the active
+  /// `AudioListener` (when spatial audio is enabled). Null = not spatial.
   final (double x, double y)? position;
 
   const PlaySfxRequest(
@@ -32,28 +35,42 @@ class PlaySfxRequest {
   });
 }
 
-/// Request to play music.
+/// A music request: play a track, or stop.
+///
+/// Music requests wait (for the engine to start, or the track's clip to
+/// load); only the latest waiting one counts.
+sealed class MusicRequest {
+  const MusicRequest();
+}
+
+/// Request to play a music track.
 ///
 /// ```dart
-/// world.eventWriter<PlayMusicRequest>().send(PlayMusicRequest('battle_theme'));
-/// // Or:
-/// world.playMusic('battle_theme', crossfade: Duration(seconds: 2));
+/// world.playMusic('town', crossfade: Duration(seconds: 3));
 /// ```
-class PlayMusicRequest {
-  /// Key of the music track in AudioAssets.
+///
+/// Asking for the track that's already playing changes nothing (its volume
+/// aside) unless [restart] is set, so a game can ask for "the music for
+/// here" every frame.
+class PlayMusicRequest extends MusicRequest {
+  /// Key of the track in the `AudioLibrary`.
   final String musicKey;
 
   /// Whether to loop the track.
   final bool loop;
 
-  /// Volume (0.0 to 1.0).
+  /// Volume multiplier (0.0 to 1.0), before the music channel.
   final double volume;
 
-  /// Crossfade duration (null = instant switch).
+  /// Fade from the current track (or from silence) over this long. Null
+  /// cuts straight to the new track.
   final Duration? crossfadeDuration;
 
-  /// Starting position in seconds.
+  /// Where to start, in seconds.
   final double startPosition;
+
+  /// Start the track over even if it's already playing.
+  final bool restart;
 
   const PlayMusicRequest(
     this.musicKey, {
@@ -61,12 +78,13 @@ class PlayMusicRequest {
     this.volume = 1.0,
     this.crossfadeDuration,
     this.startPosition = 0.0,
+    this.restart = false,
   });
 }
 
-/// Request to stop music.
-class StopMusicRequest {
-  /// Fade out duration (null = instant stop).
+/// Request to stop the music.
+class StopMusicRequest extends MusicRequest {
+  /// Fade out over this long. Null stops at once.
   final Duration? fadeOutDuration;
 
   const StopMusicRequest({this.fadeOutDuration});
@@ -82,116 +100,87 @@ class ResumeAudioRequest {
   const ResumeAudioRequest();
 }
 
-/// Request to change channel volume.
+/// Request to change a channel's volume. Applies to music that is already
+/// playing, and to spatial sources, as well as to everything started later.
 class SetChannelVolumeRequest {
-  /// The channel to adjust.
   final AudioChannel channel;
 
   /// Target volume (0.0 to 1.0).
   final double volume;
 
-  /// Fade duration (null = instant change).
+  /// Fade to it over this long. Null = at once.
   final Duration? fadeDuration;
 
   const SetChannelVolumeRequest(this.channel, this.volume, {this.fadeDuration});
 }
 
-/// Request to preload an audio asset.
-class PreloadAudioRequest {
-  /// Asset path.
-  final String assetPath;
+// ============ Responses (sent by the audio systems) ============
 
-  /// Key to store under.
-  final String key;
-
-  /// Whether this is music (vs sound effect).
-  final bool isMusic;
-
-  const PreloadAudioRequest({
-    required this.assetPath,
-    required this.key,
-    this.isMusic = false,
-  });
-}
-
-// ============ Response Events (fired by systems) ============
-
-/// Event fired when a sound effect starts playing.
+/// A sound effect started.
 class SfxStarted {
-  /// Key of the sound.
   final String soundKey;
+  final AudioVoice voice;
 
-  /// Playback handle for this instance.
-  final SoundHandle handle;
-
-  const SfxStarted(this.soundKey, this.handle);
+  const SfxStarted(this.soundKey, this.voice);
 }
 
-/// Event fired when a sound effect finishes.
+/// A sound effect (or a spatial source's sound) finished.
 class SfxFinished {
-  /// Key of the sound that finished.
   final String soundKey;
 
   const SfxFinished(this.soundKey);
 }
 
-/// Event fired when music starts playing.
+/// A music track started.
 class MusicStarted {
-  /// Key of the music track.
   final String musicKey;
 
   const MusicStarted(this.musicKey);
 }
 
-/// Event fired when music finishes (if not looping).
+/// A music track that doesn't loop reached its end.
 class MusicFinished {
-  /// Key of the music track that finished.
   final String musicKey;
 
   const MusicFinished(this.musicKey);
 }
 
-/// Event fired when music changes (crossfade complete).
+/// The music changed from one track to another.
 class MusicChanged {
-  /// Previous track key (null if none was playing).
+  /// The track before, or null if there was silence.
   final String? previousKey;
 
-  /// New track key.
   final String newKey;
 
   const MusicChanged({this.previousKey, required this.newKey});
 }
 
-/// Event fired when audio fails to play.
+/// Something couldn't be played or loaded.
 class AudioFailed {
-  /// Key of the audio that failed.
   final String key;
-
-  /// Error message.
   final String error;
 
   const AudioFailed(this.key, this.error);
+
+  @override
+  String toString() => 'AudioFailed($key: $error)';
 }
 
-/// Event fired when audio is paused.
+/// Audio was paused.
 class AudioPaused {
-  /// Whether paused due to focus loss.
   final bool byFocusLoss;
 
   const AudioPaused({this.byFocusLoss = false});
 }
 
-/// Event fired when audio is resumed.
+/// Audio was resumed.
 class AudioResumed {
   const AudioResumed();
 }
 
-/// Event fired when an asset is preloaded.
+/// A clip finished loading and is ready to play.
 class AudioAssetLoaded {
-  /// Asset key.
   final String key;
-
-  /// Whether this is music (vs sound effect).
   final bool isMusic;
 
   const AudioAssetLoaded(this.key, {required this.isMusic});

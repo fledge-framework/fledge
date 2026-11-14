@@ -7,7 +7,7 @@ issue_tracker: https://github.com/fledge-framework/fledge/issues
 
 environment:
   sdk: ^3.11.0
-  flutter: ">=3.41.0"
+  flutter: ">=3.50.0"
 
 resolution: workspace
 
@@ -17,13 +17,12 @@ dependencies:
   fledge_render_2d: ^0.5.0
   flutter:
     sdk: flutter
-  # Requires flutter_soloud 4.x or 5.x. flutter_soloud 4.0 made
-  # `SoLoud.play` (and friends) synchronous — see
-  # `audio_event_system.dart` / `spatial_audio_system.dart` for the
-  # dropped `await`s. Under the old 3.x async signature the code no
-  # longer compiles, so the lower bound is >=4.0.0. The SDK floor above
-  # (Dart 3.11 / Flutter 3.41) matches flutter_soloud 4.0's own minimum.
-  flutter_soloud: ">=4.0.0 <6.0.0"
+  # flutter_soloud 5.3 builds its native library with Dart build hooks
+  # (native assets). That needs Flutter 3.50 (the floor above, higher than
+  # the workspace's usual 3.41): with 3.47, `flutter run` on Windows lost
+  # the library and the app started without audio ("No available native
+  # assets").
+  flutter_soloud: ^5.3.0
   meta: ^1.17.0
 
 dev_dependencies:

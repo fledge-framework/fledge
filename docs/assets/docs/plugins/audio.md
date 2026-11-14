@@ -1,6 +1,8 @@
 # Audio
 
-The `fledge_audio` plugin provides comprehensive audio management with background music, sound effects, 2D spatial audio, and volume channels. It uses flutter_soloud for low-latency FFI-based audio playback.
+The `fledge_audio` plugin plays background music, sound effects and 2D spatial audio, with volume channels. It uses flutter_soloud for low-latency playback, behind a small `AudioBackend` interface.
+
+Nothing in the plugin ever holds up a frame: the engine starts and clips load in the background, and requests made meanwhile wait (music) or are reported as skipped (sound effects).
 
 ## Installation
 
@@ -8,7 +10,7 @@ Add `fledge_audio` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  fledge_audio: ^0.1.0
+  fledge_audio: ^0.6.0
 ```
 
 ## Quick Start
@@ -19,213 +21,131 @@ import 'package:fledge_audio/fledge_audio.dart';
 
 void main() async {
   final app = App()
-    .addPlugin(WallTimePlugin())  // Required for crossfading
-    .addPlugin(AudioPlugin());
+    ..addPlugin(WallTimePlugin()) // fades and channel volumes follow time
+    ..addPlugin(AudioPlugin());
 
-  // Initialize systems
-  await app.tick();
+  // Register clips by key. They load in the background once the engine
+  // has started; nothing waits for them.
+  app.world
+    ..loadMusic('theme', 'assets/music/theme.ogg')
+    ..loadSound('explosion', 'assets/sounds/explosion.wav');
 
-  // Load audio assets
-  final assets = app.world.audioAssets!;
-  await assets.loadSound('explosion', 'assets/sounds/explosion.wav');
-  await assets.loadMusic('theme', 'assets/music/theme.mp3');
+  // Music waits for its clip, so it can be asked for straight away.
+  app.world.playMusic('theme', crossfade: const Duration(seconds: 2));
 
-  // Play music and process the event
-  app.world.playMusic('theme');
-  await app.tick();
-
-  // Start Flutter app
-  runApp(MyGameApp(app: app));
+  await app.run();
 }
 ```
 
-## Understanding Event-Driven Audio
+## How requests are carried out
 
-Audio commands like `playSfx()`, `playMusic()`, and `stopMusic()` use Fledge's **event system**. When you call these methods, they queue a request event that gets processed by the `AudioEventSystem` during the next `app.tick()`.
+Every audio command (`playSfx`, `playMusic`, `setVolume`, ...) sends an event that `AudioEventSystem` handles at the start of the next frame (`Schedules.first`, in `FirstSets.platform`). It reads every request every frame, so none are lost while the engine starts:
 
-### Why This Matters
+- **Channel volume, pause and resume** apply at once, even before the engine is up.
+- **Music** waits until the engine is up and the track's clip has loaded. Only the latest music request counts: asking for track B while A is still loading means B.
+- **Sound effects** play if their clip is ready. Otherwise they are skipped and an `AudioFailed` says why (`still loading`, `audio has not started`, `audio is paused`): a sound effect that arrived late would be wrong.
 
-- **Inside the game loop**: Events are automatically processed each frame - just call `playSfx()` and it plays
-- **Outside the game loop** (e.g., splash screens, main menu before game starts): You must call `app.tick()` to process queued events
+Register clips early (at startup, or behind a loading screen) so sound effects are ready when they're needed. `AudioLibrary.settled` tells you when every registered clip has loaded or failed.
 
-### Playing Audio Before the Game Loop Starts
+## Loading clips
 
 ```dart
-void main() async {
-  final app = App()
-    .addPlugin(WallTimePlugin())
-    .addPlugin(AudioPlugin());
-
-  // First tick initializes the audio system
-  await app.tick();
-
-  // Load assets (direct async call, not event-based)
-  final assets = app.world.audioAssets!;
-  await assets.loadMusic('menu_theme', 'assets/music/menu.mp3');
-
-  // Queue the play request
-  app.world.playMusic('menu_theme');
-
-  // Process the event - music starts playing now
-  await app.tick();
-
-  // Music is now playing on your title/splash screen!
-  runApp(MyGameApp(app: app));
-}
+world.loadSound('hoe', 'assets/sounds/hoe.wav');
+world.loadMusic('town', 'assets/music/town.ogg');
 ```
 
-### Within Systems (Game Loop Active)
+Clips live in the `AudioLibrary` resource, by key, and load through `Assets<AudioClip>` (`fledge_assets`). **Sounds** are decoded into memory for instant starts. **Music** is streamed (decoded while it plays), so a long track never sits whole in memory.
 
-When the game loop is running, events are processed automatically each frame:
+Each clip announces itself with `AudioAssetLoaded` when it's ready, or `AudioFailed` if it can't be loaded. Query a clip with `world.audioLibrary!.statusOf(key)` (`waiting`, `loading`, `ready`, `failed`), and free one with `remove(key, backend)`.
 
-```dart
-class GameplaySystem implements System {
-  @override
-  Future<void> run(World world) async {
-    // This works immediately - event processed next tick
-    if (playerScored) {
-      world.playSfx('score');
-    }
-  }
-}
-```
-
-## Playing Sound Effects
-
-Sound effects are short audio clips for game events like explosions, footsteps, or UI feedback.
-
-### Basic Playback
+## Playing sound effects
 
 ```dart
 world.playSfx('explosion');
+world.playSfx('footstep', volume: 0.5, playbackSpeed: 1.2);
+
+// Positioned in the world: attenuated and panned relative to the active
+// AudioListener (when spatial audio is enabled).
+world.playSfx('door', position: (120.0, 40.0));
 ```
 
-### With Options
+## Playing music
 
 ```dart
-world.playSfx(
-  'footstep',
-  volume: 0.5,           // 0.0 to 1.0
-  playbackSpeed: 1.2,    // Speed multiplier
-  position: (100.0, 50.0), // For spatial audio
-);
-```
+world.playMusic('menu');
 
-## Playing Music
+// Fade from the current track, or in from silence.
+world.playMusic('battle', crossfade: const Duration(seconds: 2));
 
-Music tracks are longer audio files typically used for background ambience or level themes.
-
-### Basic Playback
-
-```dart
-world.playMusic('main_theme');
-```
-
-### With Crossfading
-
-Smoothly transition between tracks:
-
-```dart
 world.playMusic(
-  'battle_theme',
-  crossfade: Duration(seconds: 2),
+  'boss',
+  loop: true,
+  volume: 0.8,          // before the music channel
+  startPosition: 10.0,  // seconds
 );
 ```
 
-### With Options
+Asking for the track that's already playing changes nothing (except its volume), unless you pass `restart: true`. So a game can ask for "the music for here and now" every frame, and only real changes do anything.
+
+Crossfades run on the audio thread (SoLoud's own fades), so they're smooth whatever the frame rate. Each outgoing track fades from wherever it is and stops itself; crossfades that overlap never leave a track behind.
+
+### Stopping music
 
 ```dart
-world.playMusic(
-  'ambient',
-  loop: true,              // Loop the track (default: true)
-  volume: 0.7,             // 0.0 to 1.0
-  crossfade: Duration(seconds: 3),
-  startPosition: 30.0,     // Start at 30 seconds
-);
-```
-
-### Stopping Music
-
-```dart
-// Stop immediately
 world.stopMusic();
-
-// Fade out over 1 second
-world.stopMusic(fadeOut: Duration(seconds: 1));
+world.stopMusic(fadeOut: const Duration(seconds: 1));
 ```
 
-## Volume Channels
+## Volume channels
 
-The plugin provides five volume channels for fine-grained control:
-
-| Channel | Purpose |
-|---------|---------|
-| `master` | Overall volume multiplier |
-| `music` | Background music |
-| `sfx` | Sound effects |
-| `voice` | Voice/dialogue |
-| `ambient` | Environmental sounds |
-
-### Setting Volume
+Five channels: `master`, `music`, `sfx`, `voice`, `ambient`. A sound's volume is its own volume × its channel × master.
 
 ```dart
 world.setVolume(AudioChannel.master, 0.8);
 world.setVolume(AudioChannel.music, 0.5);
-world.setVolume(AudioChannel.sfx, 1.0);
-```
+world.setVolume(AudioChannel.music, 0.2, fade: const Duration(seconds: 2));
 
-### Getting Volume
-
-```dart
 final musicVolume = world.getVolume(AudioChannel.music);
 ```
 
-### Fading Volume
+Channel changes reach the music that's already playing (`MusicVolumeSystem`), and spatial sources, which are re-mixed every frame. A sound effect keeps the volume it started with. A change during a track's fade-in re-targets the fade over the time it has left, rather than cutting it short.
 
-Pass a non-null `fade` duration to ramp the volume linearly to the target:
+## Pause and resume
 
 ```dart
-world.setVolume(
-  AudioChannel.music,
-  0.2,
-  fade: const Duration(seconds: 2),
-);
+world.pauseAudio();
+world.resumeAudio();
+world.toggleAudioPause();
+
+if (world.isAudioPaused) { /* ... */ }
 ```
 
-`ChannelFadeSystem` (registered automatically by `AudioPlugin`) advances every active fade each frame. The fade starts from the channel's current volume, so redirecting mid-ramp picks up from wherever the previous fade left off. `setVolume` without a `fade` cancels any in-flight fade and snaps to the target.
+Pausing pauses every voice: the music, tracks fading out, sound effects and spatial sources. Music started while paused starts paused.
 
-If you hold a `VolumeChannels` reference directly, the same API lives on the resource:
+With `pauseOnFocusLoss` (the default), audio pauses while the window doesn't have focus and resumes when it comes back. Focus only undoes the pauses focus caused: a pause the game asked for stays. Focus comes from Flutter's app lifecycle; to drive it yourself, set `world.getResource<AudioFocus>()!.hasFocus`.
 
-```dart
-final channels = world.getResource<VolumeChannels>()!;
-channels.fadeTo(AudioChannel.sfx, 0.0, const Duration(milliseconds: 500));
-```
+## Audio while the world isn't ticking
 
-## Pause and Resume
-
-### Global Pause
+Games often stop ticking the world on menus, loading screens or a pause screen. Audio still needs to run there: title music has to start, clips keep loading, fades finish, focus pause works. Call `world.pumpAudio` on every frame you don't tick:
 
 ```dart
-world.pauseAudio();   // Pause all audio
-world.resumeAudio();  // Resume all audio
-world.toggleAudioPause(); // Toggle pause state
-```
-
-### Query Pause State
-
-```dart
-if (world.isAudioPaused) {
-  // Audio is paused
+void onFrame(double dt) {
+  if (playing) {
+    app.tick();
+  } else {
+    app.world.playMusic('title', crossfade: const Duration(seconds: 3));
+    app.world.pumpAudio(delta: dt);
+  }
 }
 ```
 
-## Spatial Audio
+It runs the audio systems once, advancing only audio's own event queues, so gameplay events waiting for the next tick are untouched. Spatial sources aren't re-mixed (nothing moves while the world is still).
 
-The plugin supports 2D spatial audio with panning and distance-based volume falloff.
+## Spatial audio
 
-### Setting Up the Listener
+### The listener
 
-Add an `AudioListener` component to your player or camera entity:
+Add an `AudioListener` to your player or camera entity:
 
 ```dart
 world.spawn()
@@ -233,236 +153,121 @@ world.spawn()
   ..insert(AudioListener());
 ```
 
-### Adding Audio Sources
+### Sources
 
 Add `AudioSource` components to entities that emit sound:
 
 ```dart
-// Looping engine sound
-world.spawn()
-  ..insert(Transform2D.from(100, 50))
-  ..insert(AudioSource(
-    soundKey: 'engine',
-    looping: true,
-    autoPlay: true,
-  ));
-
-// One-shot explosion
-world.spawn()
-  ..insert(Transform2D.from(200, 100))
-  ..insert(AudioSource(
-    soundKey: 'explosion',
-    looping: false,
-    autoPlay: true,
-    volume: 0.8,
-  ));
-```
-
-### AudioSource Options
-
-```dart
-AudioSource(
-  soundKey: 'engine',        // Loaded sound asset key
-  looping: true,             // Loop the sound
-  autoPlay: true,            // Start playing automatically
-  volume: 1.0,               // Base volume
-  playbackSpeed: 1.0,       // Speed multiplier
-  channel: AudioChannel.sfx, // Volume channel
-  maxDistance: 500.0,        // Override config max distance
-  referenceDistance: 50.0,   // Override config reference distance
-)
-```
-
-### Spatial Audio Configuration
-
-Configure spatial audio behavior in the plugin:
-
-```dart
-AudioPlugin(config: AudioConfig(
-  spatialConfig: SpatialAudioConfig(
-    enabled: true,
-    maxDistance: 500.0,       // Sound fades to 0 at this distance
-    referenceDistance: 100.0, // Full volume within this distance
-    rolloffFactor: 1.0,       // Attenuation curve steepness
-    maxPan: 0.8,              // Maximum left/right pan (-0.8 to 0.8)
-  ),
-))
-```
-
-`SpatialAudioSystem` reads positions from `Transform2D` (from `fledge_render_2d`). Attach a `Transform2D` to any entity that has an `AudioListener` or `AudioSource`:
-
-```dart
-world.spawn()
-  ..insert(Transform2D.from(playerX, playerY))
-  ..insert(AudioListener());
-
 world.spawn()
   ..insert(Transform2D.from(100, 50))
   ..insert(AudioSource(soundKey: 'engine', looping: true, autoPlay: true));
 ```
 
-The system computes linear distance attenuation (full volume inside `referenceDistance`, silent at `maxDistance`, linear falloff between) and stereo pan from the lateral offset (`(dx / maxDistance).clamp(-maxPan, maxPan)`). Listeners or sources without a `Transform2D` are ignored — spatial audio requires a position.
-
-`SpatialAudioSystem` runs in `Schedules.last`, so it reads each entity's *final* position for the frame — after physics, game movement in `update`, and camera follow / shake / parallax have all written `Transform2D`. Move listeners and sources in any earlier schedule; no explicit ordering against the audio system is needed.
-
-## Configuration
-
-### Default Configuration
-
 ```dart
-AudioPlugin()
-// Or explicitly:
-AudioPlugin.defaults()
+AudioSource(
+  soundKey: 'engine',        // key in the AudioLibrary
+  looping: true,
+  autoPlay: true,            // starts once its clip is ready
+  volume: 1.0,               // before attenuation and the channel
+  playbackSpeed: 1.0,
+  channel: AudioChannel.sfx,
+  maxDistance: 500.0,        // overrides the config
+  referenceDistance: 50.0,   // overrides the config
+)
 ```
 
-### Without Spatial Audio
-
-```dart
-AudioPlugin.nonSpatial()
-```
-
-### Custom Configuration
+### Configuration
 
 ```dart
 AudioPlugin(config: AudioConfig(
-  masterVolume: 0.8,
-  channels: AudioChannelConfig(
-    music: 0.6,
-    sfx: 1.0,
-    voice: 1.0,
-    ambient: 0.8,
-  ),
-  maxConcurrentSounds: 32, // Max simultaneous sounds (default: 32)
-  pauseOnFocusLoss: true,  // Auto-pause when window loses focus
   spatialConfig: SpatialAudioConfig(
     enabled: true,
-    maxDistance: 500.0,
-    referenceDistance: 100.0,
+    maxDistance: 500.0,       // silent at this distance
+    referenceDistance: 100.0, // full volume within it
+    rolloffFactor: 1.0,       // attenuation curve steepness
+    maxPan: 0.8,              // furthest left/right (-0.8 to 0.8)
   ),
 ))
 ```
 
-## Preloading Assets
+Attenuation is linear: full volume inside `referenceDistance`, silent at `maxDistance`. Pan follows the lateral offset (`(dx / maxDistance).clamp(-maxPan, maxPan)`). Listeners and sources without a `Transform2D` are ignored.
 
-### Direct Loading
+`SpatialAudioSystem` runs in `Schedules.last`, so it reads each entity's *final* position for the frame, after physics, movement in `update`, and camera follow, shake and parallax. Move listeners and sources in any earlier schedule; no ordering against the audio systems is needed.
+
+## Configuration
 
 ```dart
-final assets = world.audioAssets!;
-await assets.loadSound('explosion', 'assets/sounds/explosion.wav');
-await assets.loadMusic('theme', 'assets/music/theme.mp3');
+AudioPlugin()               // defaults
+AudioPlugin.nonSpatial()    // no SpatialAudioSystem
+
+AudioPlugin(config: AudioConfig(
+  masterVolume: 0.8,        // the engine's global volume
+  channels: AudioChannelConfig(music: 0.6, sfx: 1.0, voice: 1.0, ambient: 0.8),
+  maxConcurrentSounds: 32,
+  pauseOnFocusLoss: true,
+  spatialConfig: SpatialAudioConfig(maxDistance: 500.0),
+))
 ```
 
-### Event-Based Loading
+## Testing without a sound device
+
+Everything above `AudioBackend` is engine-agnostic. Pass your own backend to test audio logic headlessly:
 
 ```dart
-world.preloadAudio(
-  'assets/sounds/explosion.wav',
-  key: 'explosion',
-  isMusic: false,
-);
-
-// Listen for completion
-for (final event in world.eventReader<AudioAssetLoaded>().read()) {
-  print('Loaded: ${event.key}');
-}
+final app = App()
+  ..insertResource(WallTime())
+  ..addPlugin(AudioPlugin(backend: MyFakeBackend()));
 ```
 
-## Responding to Audio Events
+`SoLoudBackend` (the default) only loads the native library when the engine starts, so an app with `AudioPlugin` can be built, and its schedule checked, without one. If the engine can't start, audio stays off and `world.audioState!.initError` says why.
 
-### Sound Effect Events
-
-```dart
-for (final event in world.eventReader<SfxStarted>().read()) {
-  print('Playing: ${event.soundKey}');
-}
-
-for (final event in world.eventReader<SfxFinished>().read()) {
-  print('Finished: ${event.soundKey}');
-}
-```
-
-### Music Events
+## Responding to audio events
 
 ```dart
-for (final event in world.eventReader<MusicStarted>().read()) {
-  print('Music started: ${event.musicKey}');
+for (final e in world.eventReader<MusicChanged>().read()) {
+  print('Music: ${e.previousKey} -> ${e.newKey}');
 }
-
-for (final event in world.eventReader<MusicChanged>().read()) {
-  print('Music changed: ${event.previousKey} -> ${event.newKey}');
+for (final e in world.eventReader<AudioFailed>().read()) {
+  print('Audio: ${e.key}: ${e.error}');
 }
 ```
 
-### Error Handling
+## Querying state
 
 ```dart
-for (final event in world.eventReader<AudioFailed>().read()) {
-  print('Audio error for ${event.key}: ${event.error}');
-}
+final state = world.audioState!;
+state.isInitialized;      // the engine has started
+state.currentMusicKey;    // or world.currentMusicKey
+state.isMusicPlaying;     // or world.isMusicPlaying
+state.isCrossfading;
+state.activeSoundCount;
 ```
 
-## Querying Audio State
+## Complete example
 
 ```dart
-final state = world.audioState;
-if (state != null) {
-  print('Music playing: ${state.isMusicPlaying}');
-  print('Current track: ${state.currentMusicKey}');
-  print('Music position: ${state.musicPosition}s');
-  print('Active sounds: ${state.activeSoundCount}');
-  print('Is paused: ${state.isPaused}');
-}
-```
-
-## Complete Example
-
-```dart
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:fledge_ecs/fledge_ecs.dart';
-import 'package:fledge_audio/fledge_audio.dart';
-import 'package:fledge_input/fledge_input.dart';
-
-enum Actions { shoot, toggleMusic, volumeUp, volumeDown }
-
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  final inputMap = InputMap.builder()
-    .bindKey(LogicalKeyboardKey.space, ActionId.fromEnum(Actions.shoot))
-    .bindKey(LogicalKeyboardKey.keyM, ActionId.fromEnum(Actions.toggleMusic))
-    .bindKey(LogicalKeyboardKey.equal, ActionId.fromEnum(Actions.volumeUp))
-    .bindKey(LogicalKeyboardKey.minus, ActionId.fromEnum(Actions.volumeDown))
-    .build();
-
+App buildApp() {
   final app = App()
-    .addPlugin(WallTimePlugin())
-    .addPlugin(AudioPlugin())
-    .addPlugin(InputPlugin.simple(
-      context: InputContext(name: 'default', map: inputMap),
-    ))
-    .addSystem(AudioControlSystem());
-
-  // Initialize systems (required before loading assets)
-  await app.tick();
-
-  // Load audio assets
-  final assets = app.world.audioAssets!;
-  await assets.loadSound('laser', 'assets/sounds/laser.wav');
-  await assets.loadMusic('menu', 'assets/music/menu.mp3');
-  await assets.loadMusic('gameplay', 'assets/music/gameplay.mp3');
-
-  // Start menu music before the game loop
-  app.world.playMusic('menu');
-  await app.tick();  // Process the play event
-
-  // Launch the Flutter app with music already playing
-  runApp(MyGameApp(app: app));
+    ..addPlugin(WallTimePlugin())
+    ..addPlugin(AudioPlugin(config: AudioConfig(
+      channels: AudioChannelConfig(music: 0.7),
+    )))
+    ..addSystem(MusicForPlaceSystem(), schedule: Schedules.update);
+  app.world
+    ..loadMusic('village', 'assets/music/village.ogg')
+    ..loadMusic('forest', 'assets/music/forest.ogg')
+    ..loadSound('step', 'assets/sounds/step.wav');
+  return app;
 }
 
-class AudioControlSystem implements System {
+/// Asks for the music for where the player is, every frame: only changes
+/// do anything.
+class MusicForPlaceSystem implements System {
   @override
-  SystemMeta get meta => const SystemMeta(name: 'AudioControlSystem');
+  SystemMeta get meta => const SystemMeta(
+    name: 'music_for_place',
+    eventWrites: {PlayMusicRequest},
+  );
 
   @override
   RunCondition? get runCondition => null;
@@ -472,104 +277,79 @@ class AudioControlSystem implements System {
 
   @override
   Future<void> run(World world) async {
-    final actions = world.getResource<ActionState>()!;
-
-    // Play laser sound on shoot
-    if (actions.justPressed(ActionId.fromEnum(Actions.shoot))) {
-      world.playSfx('laser');
-    }
-
-    // Toggle between menu and gameplay music
-    if (actions.justPressed(ActionId.fromEnum(Actions.toggleMusic))) {
-      final currentMusic = world.currentMusicKey;
-      if (currentMusic == 'menu') {
-        world.playMusic('gameplay', crossfade: Duration(seconds: 2));
-      } else {
-        world.playMusic('menu', crossfade: Duration(seconds: 2));
-      }
-    }
-
-    // Volume controls
-    if (actions.justPressed(ActionId.fromEnum(Actions.volumeUp))) {
-      final current = world.getVolume(AudioChannel.master);
-      world.setVolume(AudioChannel.master, (current + 0.1).clamp(0.0, 1.0));
-    }
-
-    if (actions.justPressed(ActionId.fromEnum(Actions.volumeDown))) {
-      final current = world.getVolume(AudioChannel.master);
-      world.setVolume(AudioChannel.master, (current - 0.1).clamp(0.0, 1.0));
-    }
+    final inForest = /* ... */ false;
+    world.playMusic(
+      inForest ? 'forest' : 'village',
+      crossfade: const Duration(seconds: 3),
+    );
   }
 }
 ```
 
-## Systems Reference
+## Systems reference
 
-| System | Schedule | Description |
-|--------|----------|-------------|
-| `AudioInitSystem` | `first` (`FirstSets.platform`) | Initializes the audio engine once. Not exclusive — declares writes to `Assets<AudioClip>`, `AudioAssets`, and `AudioState` |
-| `AudioEventSystem` | `first` (`FirstSets.platform`) | Processes play / stop / load request events, after `AudioInitSystem` |
-| `AudioFocusSystem` | `first` (`FirstSets.platform`) | Pauses / resumes on window focus changes. Only added when `pauseOnFocusLoss` is true |
-| `ChannelFadeSystem` | `update` | Advances in-flight volume-channel fades |
-| `MusicCrossfadeSystem` | `update` | Advances music crossfades |
-| `SpatialAudioSystem` | `last` | Applies distance attenuation and pan. Only added when spatial audio is enabled |
-| `AudioCleanupSystem` | `last` | Reaps finished playback handles, after `SpatialAudioSystem` |
+| System | Schedule | Purpose |
+|--------|----------|---------|
+| `AudioInitSystem` | `first` (`FirstSets.platform`) | Starts the engine without waiting for it |
+| `AudioEventSystem` | `first` (`FirstSets.platform`) | Carries out requests; starts and settles clip loads |
+| `AudioFocusSystem` | `first` (`FirstSets.platform`) | Pauses while the window lacks focus (if enabled) |
+| `ChannelFadeSystem` | `update` | Advances channel volume fades |
+| `MusicVolumeSystem` | `update` | Applies channel volume to the playing music |
+| `SpatialAudioSystem` | `last` | Plays and mixes `AudioSource`s (if enabled) |
+| `AudioCleanupSystem` | `last` | Forgets ended voices; sends `SfxFinished` / `MusicFinished` |
 
-See [Standard Phases of `first`](/docs/guides/scheduling#standard-phases-of-first) for how `FirstSets.platform` is ordered against input and content systems.
-
-## Resources Reference
+## Resources reference
 
 | Resource | Description |
 |----------|-------------|
-| `AudioAssets` | Loaded sound and music assets |
-| `AudioState` | Current playback state |
-| `VolumeChannels` | Per-channel volume levels |
-| `AudioConfig` | Plugin configuration |
-| `SpatialAudioConfig` | Spatial audio settings |
+| `AudioLibrary` | Sounds and music by key, and their loading status |
+| `Assets<AudioClip>` | The loaded clips (`fledge_assets`) |
+| `AudioState` | The engine, the playing music, live voices, pause state |
+| `VolumeChannels` | Volume per channel, and channel fades |
+| `AudioFocus` | Whether the window has focus |
+| `AudioPump` | The audio systems, for `world.pumpAudio` |
+| `AudioConfig`, `SpatialAudioConfig` | Configuration |
 
-## Events Reference
+## Events reference
 
-### Request Events
-
-| Event | Description |
-|-------|-------------|
-| `PlaySfxRequest` | Request to play a sound effect |
-| `PlayMusicRequest` | Request to play music |
-| `StopMusicRequest` | Request to stop music |
-| `PauseAudioRequest` | Request to pause all audio |
-| `ResumeAudioRequest` | Request to resume all audio |
-| `SetChannelVolumeRequest` | Request to change channel volume |
-| `PreloadAudioRequest` | Request to preload an audio asset |
-
-### Response Events
+### Requests
 
 | Event | Description |
 |-------|-------------|
-| `SfxStarted` | Fired when a sound effect starts playing |
-| `SfxFinished` | Fired when a sound effect finishes |
-| `MusicStarted` | Fired when music starts playing |
-| `MusicFinished` | Fired when music finishes |
-| `MusicChanged` | Fired when music track changes |
-| `AudioFailed` | Fired when an audio operation fails |
-| `AudioPaused` | Fired when audio is paused |
-| `AudioResumed` | Fired when audio is resumed |
-| `AudioAssetLoaded` | Fired when an asset finishes loading |
+| `PlaySfxRequest` | Play a sound effect (optionally positioned) |
+| `PlayMusicRequest` | Play a track (crossfade, restart) |
+| `StopMusicRequest` | Stop the music (optionally fading) |
+| `PauseAudioRequest` / `ResumeAudioRequest` | Pause or resume everything |
+| `SetChannelVolumeRequest` | Set a channel's volume (optionally fading) |
 
-## Components Reference
+### Responses
+
+| Event | Description |
+|-------|-------------|
+| `SfxStarted` | A sound effect started (with its `AudioVoice`) |
+| `SfxFinished` | A sound effect or source sound ended |
+| `MusicStarted` | A track started |
+| `MusicChanged` | The music changed from one track to another |
+| `MusicFinished` | A non-looping track reached its end |
+| `AudioPaused` / `AudioResumed` | Audio paused (by focus loss or not) / resumed |
+| `AudioAssetLoaded` | A clip finished loading |
+| `AudioFailed` | Something couldn't be loaded or played, and why |
+
+## Components reference
 
 | Component | Description |
 |-----------|-------------|
-| `AudioListener` | Marks an entity as the spatial audio receiver |
-| `AudioSource` | Marks an entity as a spatial audio emitter |
+| `AudioListener` | The spatial audio receiver |
+| `AudioSource` | A spatial audio emitter |
 
-## Platform Notes
+## Platform notes
 
-- **Windows/macOS/Linux**: Full support via flutter_soloud FFI
-- **iOS/Android**: Full support via flutter_soloud
-- **Web**: Limited support (uses WebAudio backend)
+- **Windows/macOS/Linux**: full support via flutter_soloud FFI
+- **iOS/Android**: full support via flutter_soloud
+- **Web**: limited support (WebAudio backend)
 
-## See Also
+## See also
 
-- [Plugins Overview](/docs/plugins/overview) - Plugin system introduction
-- [Window Management](/docs/plugins/window) - Pause audio on focus loss integration
-- [App & Plugins Guide](/docs/guides/app-plugins) - Plugin architecture details
+- [Plugins Overview](/docs/plugins/overview): the plugin system
+- [Assets](/docs/plugins/assets): `Assets<T>` and handles
+- [App & Plugins Guide](/docs/guides/app-plugins): plugin architecture

@@ -173,7 +173,7 @@ world.entity(cameraEntity).insert(CameraWipeTransition(
 
 `CameraTransitionSystem` advances `elapsed` each frame. Widget code reads `progress` (or `effectiveProgress` with `reverse` applied) to draw the overlay. Set `reverse = true` to play the transition out instead of in.
 
-Naming note: the components are `CameraFadeTransition` / `CameraWipeTransition` (not `FadeTransition` / `WipeTransition`) to avoid clashing with Flutter's `package:flutter/material.dart` widget classes.
+Naming note: the components are `CameraFadeTransition` / `CameraWipeTransition` (not `FadeTransition` / `WipeTransition`) to avoid clashing with Flutter's `package:material_ui/material_ui.dart` widget classes.
 
 ## Pixel-perfect
 

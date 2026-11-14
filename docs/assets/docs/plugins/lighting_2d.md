@@ -17,7 +17,7 @@ dependencies:
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_lighting_2d/fledge_lighting_2d.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 void main() {
   final app = App()

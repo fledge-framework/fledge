@@ -1,5 +1,18 @@
+import 'package:gamepads/gamepads.dart';
+
 import '../action/action.dart';
 import 'raw_input.dart';
+
+/// The standard key of [button]: the snake_case of its name (`a`,
+/// `left_bumper`, `dpad_up`, `left_stick`), as `GamepadButtonBinding` uses.
+String standardButtonKey(GamepadButton button) => _snake(button.name);
+
+/// The standard key of [axis] (`left_stick_x`, `right_trigger`), as
+/// `GamepadAxisBinding` uses.
+String standardAxisKey(GamepadAxis axis) => _snake(axis.name);
+
+String _snake(String camel) =>
+    camel.replaceAllMapped(RegExp('[A-Z]'), (m) => '_${m[0]!.toLowerCase()}');
 
 /// State for a single gamepad.
 class SingleGamepadState {
@@ -145,6 +158,38 @@ class GamepadState {
       }
     }
     return result;
+  }
+
+  /// Records a raw gamepad [event]: under its raw platform key, and, where
+  /// [normalizer] recognises it, under the standard key too
+  /// ([standardButtonKey], [standardAxisKey]), so bindings to standard names
+  /// work on every platform and controller. Standard stick Y axes are
+  /// flipped to +1 down, matching screen coordinates.
+  void applyEvent(GamepadEvent event, GamepadNormalizer? normalizer) {
+    final gamepad = getOrCreate(event.gamepadId, event.gamepadId);
+    if (event.type == KeyType.button) {
+      gamepad.setButtonPressed(event.key, event.value > 0.5);
+    } else {
+      gamepad.setAxisValue(event.key, event.value);
+    }
+    if (normalizer == null) return;
+    for (final normalized in normalizer.normalize(event)) {
+      final button = normalized.button;
+      final axis = normalized.axis;
+      if (button != null) {
+        gamepad.setButtonPressed(
+          standardButtonKey(button),
+          normalized.value > 0.5,
+        );
+      } else if (axis != null) {
+        final flip =
+            axis == GamepadAxis.leftStickY || axis == GamepadAxis.rightStickY;
+        gamepad.setAxisValue(
+          standardAxisKey(axis),
+          flip ? -normalized.value : normalized.value,
+        );
+      }
+    }
   }
 
   /// Called at the start of each frame.

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -206,38 +206,32 @@ class HomePage extends StatelessWidget {
               _FeatureCard(
                 icon: Icons.grid_view_rounded,
                 title: 'Entity Component System',
-                description:
-                    'Clean separation of data and logic with archetype-based storage for excellent cache locality.',
+                description: 'Clean separation of data and logic with archetype-based storage for excellent cache locality.',
               ),
               _FeatureCard(
                 icon: Icons.code_rounded,
                 title: 'Code Generation',
-                description:
-                    'Minimal boilerplate with annotation-based code generation. Define components and systems with simple decorators.',
+                description: 'Minimal boilerplate with annotation-based code generation. Define components and systems with simple decorators.',
               ),
               _FeatureCard(
                 icon: Icons.speed_rounded,
                 title: 'Parallel Execution',
-                description:
-                    'Automatic parallel system execution based on dependency analysis. Get concurrency without the complexity.',
+                description: 'Automatic parallel system execution based on dependency analysis. Get concurrency without the complexity.',
               ),
               _FeatureCard(
                 icon: Icons.extension_rounded,
                 title: 'Modular Design',
-                description:
-                    'Compose your game from reusable plugins. Add only what you need, extend with your own modules.',
+                description: 'Compose your game from reusable plugins. Add only what you need, extend with your own modules.',
               ),
               _FeatureCard(
                 icon: Icons.check_circle_rounded,
                 title: 'Type Safe',
-                description:
-                    'Full type safety with compile-time checks. Catch errors before runtime with Dart\'s strong typing.',
+                description: 'Full type safety with compile-time checks. Catch errors before runtime with Dart\'s strong typing.',
               ),
               _FeatureCard(
                 icon: Icons.desktop_windows_rounded,
                 title: 'Desktop First',
-                description:
-                    'Optimized for Windows, macOS, and Linux. Build performant desktop games with Flutter.',
+                description: 'Optimized for Windows, macOS, and Linux. Build performant desktop games with Flutter.',
               ),
             ],
           ),

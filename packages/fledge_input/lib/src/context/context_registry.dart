@@ -29,6 +29,22 @@ class InputContextRegistry {
     _stateContexts[_StateKey(S, state.index)] = context.name;
   }
 
+  /// Swap the input map of the context called [name], keeping its priority
+  /// and cursor mode, e.g. after the player rebinds a key. The new map
+  /// applies from the next action resolution. Returns false if there is no
+  /// such context.
+  bool replaceMap(String name, InputMap map) {
+    final old = _contexts[name];
+    if (old == null) return false;
+    _contexts[name] = InputContext(
+      name: old.name,
+      map: map,
+      priority: old.priority,
+      cursorMode: old.cursorMode,
+    );
+    return true;
+  }
+
   /// Get a registered context by name.
   InputContext? getContext(String name) => _contexts[name];
 

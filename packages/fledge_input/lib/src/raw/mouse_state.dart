@@ -30,6 +30,10 @@ class MouseState {
   double scrollX = 0;
   double scrollY = 0;
 
+  /// Scroll wheel steps this frame, per direction (reset each frame). One
+  /// scroll event is one step, however far it scrolls.
+  final Map<ScrollDirection, int> _scrollSteps = {};
+
   /// Button states (index = button number).
   final Map<int, ButtonInputState> _buttons = {};
 
@@ -68,7 +72,16 @@ class MouseState {
   void onScroll(double dx, double dy) {
     scrollX += dx;
     scrollY += dy;
+    void step(ScrollDirection direction) =>
+        _scrollSteps[direction] = (_scrollSteps[direction] ?? 0) + 1;
+    if (dy < 0) step(ScrollDirection.up);
+    if (dy > 0) step(ScrollDirection.down);
+    if (dx < 0) step(ScrollDirection.left);
+    if (dx > 0) step(ScrollDirection.right);
   }
+
+  /// Scroll wheel steps towards [direction] this frame.
+  int scrollSteps(ScrollDirection direction) => _scrollSteps[direction] ?? 0;
 
   /// Check if a button is pressed.
   bool isButtonPressed(int button) {
@@ -102,23 +115,29 @@ class MouseState {
     };
   }
 
-  /// Called at the start of each frame.
+  /// Called at the start of each frame, before actions are resolved.
+  ///
+  /// Keeps everything that arrived since the last frame: scroll and pointer
+  /// events land between frames, so resetting them here would throw them
+  /// away before anything reads them. They're reset in [endFrame].
   void beginFrame() {
-    _prevX = x;
-    _prevY = y;
-    scrollX = 0;
-    scrollY = 0;
-    // Clear locked deltas from previous frame
-    _lockedDeltaX = 0;
-    _lockedDeltaY = 0;
-    _hasLockedDelta = false;
     for (final state in _buttons.values) {
       state.beginFrame();
     }
   }
 
-  /// Called at the end of each frame to clear transition flags.
+  /// Called at the end of each frame, after every system has read input:
+  /// clears transition flags and starts the next frame's scroll and
+  /// movement from zero.
   void endFrame() {
+    _prevX = x;
+    _prevY = y;
+    scrollX = 0;
+    scrollY = 0;
+    _scrollSteps.clear();
+    _lockedDeltaX = 0;
+    _lockedDeltaY = 0;
+    _hasLockedDelta = false;
     for (final state in _buttons.values) {
       state.endFrame();
     }
@@ -135,6 +154,7 @@ class MouseState {
     _hasLockedDelta = false;
     scrollX = 0;
     scrollY = 0;
+    _scrollSteps.clear();
     _buttons.clear();
   }
 }

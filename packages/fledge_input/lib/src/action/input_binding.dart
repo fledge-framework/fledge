@@ -3,8 +3,46 @@ import 'package:flutter/services.dart';
 import 'action.dart';
 
 /// Source of an input binding (which device and input).
+///
+/// Every source round-trips through JSON ([toJson], [BindingSource.fromJson]),
+/// so a game can save the player's rebinds.
 sealed class BindingSource {
   const BindingSource();
+
+  /// A JSON-safe description of this source, read back by
+  /// [BindingSource.fromJson].
+  Map<String, Object?> toJson();
+
+  /// The source [json] describes (from [toJson]), or null if it isn't one,
+  /// e.g. a file written by a newer version.
+  static BindingSource? fromJson(Map<String, Object?> json) {
+    switch (json) {
+      case {'type': 'key', 'key': final int id}:
+        return KeyboardBinding(
+          LogicalKeyboardKey.findKeyByKeyId(id) ?? LogicalKeyboardKey(id),
+        );
+      case {'type': 'mouse_button', 'button': final int button}:
+        return MouseButtonBinding(button);
+      case {'type': 'mouse_axis', 'axis': final String name}:
+        final axis = MouseAxis.values.asNameMap()[name];
+        return axis == null ? null : MouseAxisBinding(axis);
+      case {'type': 'scroll', 'direction': final String name}:
+        final direction = ScrollDirection.values.asNameMap()[name];
+        return direction == null ? null : MouseScrollBinding(direction);
+      case {'type': 'gamepad_button', 'button': final String button}:
+        return GamepadButtonBinding(
+          button,
+          gamepadId: json['gamepad'] as String?,
+        );
+      case {'type': 'gamepad_axis', 'axis': final String axis}:
+        return GamepadAxisBinding(
+          axis,
+          gamepadId: json['gamepad'] as String?,
+          inverted: json['inverted'] == true,
+        );
+    }
+    return null;
+  }
 }
 
 /// Keyboard key binding.
@@ -13,6 +51,9 @@ class KeyboardBinding extends BindingSource {
   final LogicalKeyboardKey key;
 
   const KeyboardBinding(this.key);
+
+  @override
+  Map<String, Object?> toJson() => {'type': 'key', 'key': key.keyId};
 
   @override
   bool operator ==(Object other) =>
@@ -35,6 +76,9 @@ class MouseButtonBinding extends BindingSource {
   static const left = MouseButtonBinding(0);
   static const middle = MouseButtonBinding(1);
   static const right = MouseButtonBinding(2);
+
+  @override
+  Map<String, Object?> toJson() => {'type': 'mouse_button', 'button': button};
 
   @override
   bool operator ==(Object other) =>
@@ -75,6 +119,9 @@ class MouseAxisBinding extends BindingSource {
   const MouseAxisBinding(this.axis);
 
   @override
+  Map<String, Object?> toJson() => {'type': 'mouse_axis', 'axis': axis.name};
+
+  @override
   bool operator ==(Object other) =>
       other is MouseAxisBinding && other.axis == axis;
 
@@ -85,7 +132,61 @@ class MouseAxisBinding extends BindingSource {
   String toString() => 'MouseAxisBinding($axis)';
 }
 
+/// Which way a scroll wheel turns.
+enum ScrollDirection {
+  /// Wheel away from the user (content scrolls up).
+  up,
+
+  /// Wheel towards the user.
+  down,
+
+  /// Horizontal scroll left (tilt wheel, trackpad).
+  left,
+
+  /// Horizontal scroll right.
+  right,
+}
+
+/// The scroll wheel as a button: every wheel step in [direction] is one
+/// press, and a frame with several steps counts them all
+/// ([ButtonValue.presses], [ActionState.fixedPressCount]).
+///
+/// The phase is never `held`: the action is `justPressed` in a frame that
+/// scrolled that way and `up` otherwise.
+class MouseScrollBinding extends BindingSource {
+  final ScrollDirection direction;
+
+  const MouseScrollBinding(this.direction);
+
+  static const up = MouseScrollBinding(ScrollDirection.up);
+  static const down = MouseScrollBinding(ScrollDirection.down);
+  static const left = MouseScrollBinding(ScrollDirection.left);
+  static const right = MouseScrollBinding(ScrollDirection.right);
+
+  @override
+  Map<String, Object?> toJson() => {
+    'type': 'scroll',
+    'direction': direction.name,
+  };
+
+  @override
+  bool operator ==(Object other) =>
+      other is MouseScrollBinding && other.direction == direction;
+
+  @override
+  int get hashCode => direction.hashCode;
+
+  @override
+  String toString() => 'MouseScrollBinding(${direction.name})';
+}
+
 /// Gamepad button binding.
+///
+/// [buttonKey] is either a standard button name, the snake_case of the
+/// `gamepads` package's `GamepadButton` (`a`, `left_bumper`, `dpad_up`,
+/// `left_stick`, `start`, ...; see the constants below), which is the same
+/// on every platform and controller, or a raw platform key as the
+/// `gamepads` package reports it.
 class GamepadButtonBinding extends BindingSource {
   /// Button key string from the gamepads package.
   final String buttonKey;
@@ -112,6 +213,15 @@ class GamepadButtonBinding extends BindingSource {
   static const back = GamepadButtonBinding('back');
   static const leftStickButton = GamepadButtonBinding('left_stick');
   static const rightStickButton = GamepadButtonBinding('right_stick');
+  static const home = GamepadButtonBinding('home');
+  static const touchpad = GamepadButtonBinding('touchpad');
+
+  @override
+  Map<String, Object?> toJson() => {
+    'type': 'gamepad_button',
+    'button': buttonKey,
+    if (gamepadId != null) 'gamepad': gamepadId,
+  };
 
   @override
   bool operator ==(Object other) =>
@@ -127,6 +237,12 @@ class GamepadButtonBinding extends BindingSource {
 }
 
 /// Gamepad axis binding.
+///
+/// [axisKey] is a standard axis name (`left_stick_x`, `left_stick_y`,
+/// `right_stick_x`, `right_stick_y`, `left_trigger`, `right_trigger`) or a
+/// raw platform key. Standard sticks run -1 to 1 with +x right and +y
+/// **down**, like the screen and the keyboard composites; triggers run 0 to
+/// 1.
 class GamepadAxisBinding extends BindingSource {
   /// Axis key from the gamepads package.
   final String axisKey;
@@ -149,6 +265,14 @@ class GamepadAxisBinding extends BindingSource {
   static const rightStickY = GamepadAxisBinding('right_stick_y');
   static const leftTriggerAxis = GamepadAxisBinding('left_trigger');
   static const rightTriggerAxis = GamepadAxisBinding('right_trigger');
+
+  @override
+  Map<String, Object?> toJson() => {
+    'type': 'gamepad_axis',
+    'axis': axisKey,
+    if (gamepadId != null) 'gamepad': gamepadId,
+    if (inverted) 'inverted': true,
+  };
 
   @override
   bool operator ==(Object other) =>

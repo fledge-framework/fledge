@@ -173,7 +173,7 @@ Now we connect Fledge to Flutter. We'll use a `StatefulWidget` with an `Animatio
 Create `lib/game/game_widget.dart`:
 
 ```dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:fledge_ecs/fledge_ecs.dart';
 
 import 'components.dart';
@@ -266,7 +266,7 @@ class SquarePainter extends CustomPainter {
 Update `lib/main.dart`:
 
 ```dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'game/game_widget.dart';
 

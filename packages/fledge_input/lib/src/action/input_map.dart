@@ -49,6 +49,36 @@ class InputMapBuilder {
     return this;
   }
 
+  /// Bind any [source] to a button action, e.g. one read back from a saved
+  /// rebind ([BindingSource.fromJson]).
+  InputMapBuilder bind(BindingSource source, ActionId action) {
+    _bindings.add(InputBinding(action: action, source: source));
+    _actionTypes[action] ??= ActionType.button;
+    return this;
+  }
+
+  /// Bind four sources to a Vector2 action, one per direction: [bindWasd]
+  /// with any keys, e.g. the player's own movement keys.
+  InputMapBuilder bindComposite(
+    ActionId action, {
+    required BindingSource up,
+    required BindingSource down,
+    required BindingSource left,
+    required BindingSource right,
+  }) {
+    _compositeBindings.add(
+      CompositeVector2Binding(
+        action: action,
+        up: up,
+        down: down,
+        left: left,
+        right: right,
+      ),
+    );
+    _actionTypes[action] = ActionType.vector2;
+    return this;
+  }
+
   /// Bind a keyboard key to an axis action (e.g., D for +X, A for -X).
   InputMapBuilder bindKeyToAxis(
     LogicalKeyboardKey key,
@@ -100,6 +130,16 @@ class InputMapBuilder {
   InputMapBuilder bindMouseButton(int button, ActionId action) {
     _bindings.add(
       InputBinding(action: action, source: MouseButtonBinding(button)),
+    );
+    _actionTypes[action] ??= ActionType.button;
+    return this;
+  }
+
+  /// Bind the scroll wheel turning [direction] to a button action: each
+  /// wheel step is one press (see [MouseScrollBinding]).
+  InputMapBuilder bindScroll(ScrollDirection direction, ActionId action) {
+    _bindings.add(
+      InputBinding(action: action, source: MouseScrollBinding(direction)),
     );
     _actionTypes[action] ??= ActionType.button;
     return this;

@@ -91,6 +91,7 @@ export 'src/config/save_config.dart';
 
 // Resources
 export 'src/resources/save_manager.dart';
+export 'src/resources/preferences_file.dart';
 
 // Traits
 export 'src/traits/saveable.dart';

@@ -1,15 +1,19 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../yarn_line.dart' show DialogueLine;
 import 'dialogue_state.dart';
 
 /// Wraps the box's content in its frame (background, border, nine-slice…).
-typedef DialogueFrameBuilder =
-    Widget Function(BuildContext context, Widget child);
+typedef DialogueFrameBuilder = Widget Function(
+  BuildContext context,
+  Widget child,
+);
 
 /// Builds the portrait for [line]'s speaker, or null for none.
-typedef DialoguePortraitBuilder =
-    Widget? Function(BuildContext context, DialogueLine line);
+typedef DialoguePortraitBuilder = Widget? Function(
+  BuildContext context,
+  DialogueLine line,
+);
 
 /// Look of [DialogueBoxWidget] / [DialogueChoiceList].
 class DialogueBoxTheme {

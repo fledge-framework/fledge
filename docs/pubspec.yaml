@@ -4,13 +4,14 @@ publish_to: 'none'
 version: 0.1.2
 
 environment:
-  sdk: ^3.11.0
+  sdk: ^3.13.0
 
 resolution: workspace
 
 dependencies:
   flutter:
     sdk: flutter
+  material_ui: ^1.11.0
   flutter_web_plugins:
     sdk: flutter
 
@@ -42,7 +43,7 @@ dependencies:
   url_launcher: ^6.2.0
 
   # Google Fonts for clean typography
-  google_fonts: ^8.0.2
+  google_fonts: ^9.0.0
 
 dev_dependencies:
   flutter_test:

@@ -1,6 +1,7 @@
 import 'dart:ui' show Color;
 
 import 'package:fledge_ecs/fledge_ecs.dart';
+
 import 'follow.dart';
 import 'parallax.dart';
 import 'shake.dart';
@@ -29,7 +30,7 @@ enum WipeDirection {
 ///
 /// Named `CameraFadeTransition` / `CameraWipeTransition` (not
 /// `FadeTransition` / `WipeTransition`) to avoid clashing with
-/// Flutter's `package:flutter/material.dart` widget classes of the
+/// Flutter's `package:material_ui/material_ui.dart` widget classes of the
 /// same name.
 abstract class CameraTransition {
   /// Total duration in seconds.

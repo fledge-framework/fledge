@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-import 'package:flutter/material.dart' hide Color;
+import 'package:material_ui/material_ui.dart' hide Color;
 import 'package:fledge_ecs/fledge_ecs.dart' hide State;
 import 'package:fledge_input/fledge_input.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart';

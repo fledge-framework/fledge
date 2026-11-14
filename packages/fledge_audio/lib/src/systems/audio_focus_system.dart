@@ -1,4 +1,5 @@
 import 'package:fledge_ecs/fledge_ecs.dart';
+import 'package:flutter/widgets.dart';
 
 import '../config/audio_config.dart';
 import '../events/audio_events.dart';
@@ -6,31 +7,35 @@ import '../resources/audio_state.dart';
 import 'audio_event_system.dart';
 import 'audio_init_system.dart';
 
-/// System that pauses audio when the window loses focus.
+/// Whether the app's window has focus, as far as audio is concerned.
 ///
-/// This system listens for focus change events and automatically
-/// pauses/resumes audio. Requires handling of focus events in your app.
+/// [AudioFocusSystem] keeps it up to date from Flutter's app lifecycle
+/// (inactive or hidden = no focus). Set [hasFocus] yourself to drive it
+/// from elsewhere (tests, a custom window layer).
+class AudioFocus {
+  bool hasFocus = true;
+}
+
+/// Pauses all audio while the window doesn't have focus, and resumes it
+/// when focus comes back (when [AudioConfig.pauseOnFocusLoss] is set).
 ///
-/// You can send focus events manually or integrate with fledge_window:
-/// ```dart
-/// // Manual focus handling
-/// world.eventWriter<WindowFocusChanged>().send(WindowFocusChanged(false));
-/// ```
+/// Runs in the [FirstSets.platform] phase of `Schedules.first`, after this
+/// frame's requests. A pause the game asked for itself is left alone:
+/// focus only undoes the pauses focus caused.
 class AudioFocusSystem implements System {
-  /// The `SystemMeta.name` of [AudioFocusSystem]. Games that order
-  /// their own systems relative to this one use it in `before:` /
-  /// `after:`.
+  /// The `SystemMeta.name` of [AudioFocusSystem].
   static const String systemName = 'AudioFocusSystem';
+
+  AppLifecycleListener? _listener;
 
   @override
   SystemMeta get meta => const SystemMeta(
     name: systemName,
     sets: [FirstSets.platform],
-    // Focus pause/resume applies on top of this frame's explicit requests.
     after: [AudioInitSystem.systemName, AudioEventSystem.systemName],
     eventWrites: {AudioPaused, AudioResumed},
     resourceReads: {AudioConfig},
-    resourceWrites: {AudioState},
+    resourceWrites: {AudioState, AudioFocus},
   );
 
   @override
@@ -41,14 +46,43 @@ class AudioFocusSystem implements System {
 
   @override
   Future<void> run(World world) async {
-    // This system is a placeholder for focus integration.
-    // When integrated with fledge_window, it would read WindowFocusChanged events.
-    //
-    // For now, users can manually pause/resume via:
-    //   world.pauseAudio();
-    //   world.resumeAudio();
-    //
-    // Or by sending events:
-    //   world.eventWriter<PauseAudioRequest>().send(PauseAudioRequest());
+    final focus = world.getResource<AudioFocus>();
+    final state = world.getResource<AudioState>();
+    final config = world.getResource<AudioConfig>();
+    if (focus == null || state == null || config == null) return;
+    _listen(focus);
+    if (!config.pauseOnFocusLoss) return;
+
+    if (!focus.hasFocus && !state.isPaused) {
+      state.pauseAll();
+      state.pausedByFocusLoss = true;
+      world.eventWriter<AudioPaused>().send(
+        const AudioPaused(byFocusLoss: true),
+      );
+    } else if (focus.hasFocus && state.isPaused && state.pausedByFocusLoss) {
+      state.resumeAll();
+      world.eventWriter<AudioResumed>().send(const AudioResumed());
+    }
+  }
+
+  /// Follows the app lifecycle, once a Flutter binding exists (there is
+  /// none in plain Dart tests).
+  void _listen(AudioFocus focus) {
+    if (_listener != null) return;
+    try {
+      WidgetsBinding.instance;
+    } catch (_) {
+      return;
+    }
+    _listener = AppLifecycleListener(
+      onStateChange: (lifecycle) =>
+          focus.hasFocus = lifecycle == AppLifecycleState.resumed,
+    );
+  }
+
+  /// Stops following the app lifecycle (`AudioPlugin.cleanup`).
+  void dispose() {
+    _listener?.dispose();
+    _listener = null;
   }
 }

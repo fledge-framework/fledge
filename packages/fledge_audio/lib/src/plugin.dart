@@ -1,89 +1,81 @@
+import 'package:fledge_assets/fledge_assets.dart';
 import 'package:fledge_ecs/fledge_ecs.dart';
-import 'package:flutter_soloud/flutter_soloud.dart';
 
+import 'assets/audio_clip.dart';
+import 'backend/audio_backend.dart';
+import 'backend/soloud_backend.dart';
 import 'config/audio_config.dart';
 import 'events/audio_events.dart';
 import 'resources/audio_channels.dart';
-import 'systems/audio_init_system.dart';
-import 'systems/audio_event_system.dart';
-import 'systems/channel_fade_system.dart';
-import 'systems/spatial_audio_system.dart';
-import 'systems/music_crossfade_system.dart';
+import 'resources/audio_library.dart';
+import 'resources/audio_pump.dart';
+import 'resources/audio_state.dart';
 import 'systems/audio_cleanup_system.dart';
+import 'systems/audio_event_system.dart';
 import 'systems/audio_focus_system.dart';
+import 'systems/audio_init_system.dart';
+import 'systems/channel_fade_system.dart';
+import 'systems/music_volume_system.dart';
+import 'systems/spatial_audio_system.dart';
 
-/// Plugin that adds audio functionality to a Fledge app.
-///
-/// ## Quick Start
+/// Music, sound effects and 2D spatial audio.
 ///
 /// ```dart
-/// // Basic setup
-/// await App()
-///   .addPlugin(WallTimePlugin())  // Required for crossfading
-///   .addPlugin(AudioPlugin())
-///   .run();
+/// final app = App()
+///   ..addPlugin(WallTimePlugin()) // fades and channel volumes follow time
+///   ..addPlugin(AudioPlugin());
 ///
-/// // Load assets
-/// final assets = app.world.audioAssets!;
-/// await assets.loadSound('explosion', 'assets/sounds/explosion.wav');
-/// await assets.loadMusic('theme', 'assets/music/theme.mp3');
+/// // Register clips any time, before the engine has started too; they load
+/// // in the background once it has.
+/// app.world
+///   ..loadMusic('theme', 'assets/music/theme.ogg')
+///   ..loadSound('door', 'assets/sounds/door.wav');
 ///
-/// // Play audio
-/// app.world.playSfx('explosion');
-/// app.world.playMusic('theme');
+/// // Music waits for its clip, so this can be asked for straight away.
+/// app.world.playMusic('theme', crossfade: Duration(seconds: 2));
+/// app.world.playSfx('door', position: (120, 40));
 /// ```
 ///
-/// ## Spatial Audio
+/// Nothing here ever holds up a frame: the engine starts and clips load in
+/// the background. Every resource is inserted when the app is built, so
+/// requests can be made from the first frame.
 ///
-/// ```dart
-/// // Add listener to player/camera
-/// world.spawn()
-///   ..insert(Transform2D.from(0, 0))
-///   ..insert(AudioListener());
-///
-/// // Add audio source to entities
-/// world.spawn()
-///   ..insert(Transform2D.from(100, 50))
-///   ..insert(AudioSource(
-///     soundKey: 'engine',
-///     looping: true,
-///     autoPlay: true,
-///   ));
-/// ```
-///
-/// ## Volume Control
-///
-/// ```dart
-/// world.setVolume(AudioChannel.master, 0.8);
-/// world.setVolume(AudioChannel.music, 0.5);
-/// world.setVolume(AudioChannel.sfx, 1.0);
-/// ```
+/// [backend] is the engine ([SoLoudBackend] by default); tests pass a fake.
 class AudioPlugin implements Plugin {
   /// Audio configuration.
   final AudioConfig config;
 
+  final AudioBackend? _backend;
+  AudioBackend? _built;
+  AudioFocusSystem? _focus;
+
   /// Creates an audio plugin with custom configuration.
-  const AudioPlugin({this.config = const AudioConfig()});
+  AudioPlugin({this.config = const AudioConfig(), AudioBackend? backend})
+    : _backend = backend;
 
   /// Creates an audio plugin with default settings.
-  const AudioPlugin.defaults() : config = const AudioConfig.defaults();
+  AudioPlugin.defaults()
+    : config = const AudioConfig.defaults(),
+      _backend = null;
 
   /// Creates an audio plugin without spatial audio.
-  const AudioPlugin.nonSpatial() : config = const AudioConfig.nonSpatial();
+  AudioPlugin.nonSpatial()
+    : config = const AudioConfig.nonSpatial(),
+      _backend = null;
 
   @override
   void build(App app) {
-    // Register events
+    final backend = _backend ?? SoLoudBackend();
+    _built = backend;
     app
-        // Request events
+        // Requests
         .addEvent<PlaySfxRequest>()
         .addEvent<PlayMusicRequest>()
         .addEvent<StopMusicRequest>()
         .addEvent<PauseAudioRequest>()
         .addEvent<ResumeAudioRequest>()
         .addEvent<SetChannelVolumeRequest>()
-        .addEvent<PreloadAudioRequest>()
-        // Response events
+        // Responses
         .addEvent<SfxStarted>()
         .addEvent<SfxFinished>()
         .addEvent<MusicStarted>()
@@ -94,48 +86,52 @@ class AudioPlugin implements Plugin {
         .addEvent<AudioResumed>()
         .addEvent<AudioAssetLoaded>();
 
-    // Insert configuration resources
     app
         .insertResource(config)
         .insertResource(config.spatialConfig)
-        .insertResource(VolumeChannels(config.channels));
+        .insertResource(VolumeChannels(config.channels))
+        .insertResource(AudioState(backend))
+        .insertResource(AudioLibrary())
+        .insertResource(AudioFocus());
+    if (app.world.getResource<Assets<AudioClip>>() == null) {
+      app.insertResource(Assets<AudioClip>());
+    }
 
-    // Add systems
-    // Note: AudioAssets and AudioState are inserted by AudioInitSystem
-    // after SoLoud is initialized
-    app.addSystem(AudioInitSystem(config), schedule: Schedules.first);
-    app.addSystem(AudioEventSystem(), schedule: Schedules.first);
-
-    // Advance any in-progress channel volume fades before consumers read
-    // effective volume.
-    app.addSystem(ChannelFadeSystem(), schedule: Schedules.update);
-
+    final init = AudioInitSystem(config);
+    final events = AudioEventSystem();
+    final fades = ChannelFadeSystem();
+    final musicVolume = MusicVolumeSystem();
+    final cleanup = AudioCleanupSystem();
+    final focus = config.pauseOnFocusLoss ? AudioFocusSystem() : null;
+    _focus = focus;
+    app
+      ..addSystem(init, schedule: Schedules.first)
+      ..addSystem(events, schedule: Schedules.first)
+      ..addSystem(fades, schedule: Schedules.update)
+      ..addSystem(musicVolume, schedule: Schedules.update)
+      ..addSystem(cleanup, schedule: Schedules.last);
+    if (focus != null) app.addSystem(focus, schedule: Schedules.first);
     // Spatial audio runs in `last` so it reads final Transform2D values,
     // after every per-frame transform writer (physics, camera, movement).
     if (config.spatialConfig.enabled) {
       app.addSystem(SpatialAudioSystem(), schedule: Schedules.last);
     }
-
-    app.addSystem(MusicCrossfadeSystem(), schedule: Schedules.update);
-    app.addSystem(AudioCleanupSystem(), schedule: Schedules.last);
-
-    if (config.pauseOnFocusLoss) {
-      app.addSystem(AudioFocusSystem(), schedule: Schedules.first);
-    }
+    // The same instances, for `world.pumpAudio` (sources stay where they
+    // are while the world is still, so spatial audio isn't pumped).
+    app.insertResource(
+      AudioPump([init, events, ?focus, fades, musicVolume, cleanup]),
+    );
   }
 
   @override
   void cleanup() {
-    // Shutdown SoLoud when app closes
+    _focus?.dispose();
     try {
-      final soloud = SoLoud.instance;
-      if (soloud.isInitialized) {
-        soloud.deinit();
-      }
+      _built?.deinit();
     } catch (e) {
-      // Ignore cleanup errors - app is shutting down anyway
+      // The app is shutting down anyway.
       // ignore: avoid_print
-      print('Error during SoLoud cleanup: $e');
+      print('fledge_audio: error stopping the engine: $e');
     }
   }
 }

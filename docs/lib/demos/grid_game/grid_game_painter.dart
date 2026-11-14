@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-import 'package:flutter/material.dart' hide Color;
+import 'package:material_ui/material_ui.dart' hide Color;
 
 import 'extraction.dart';
 

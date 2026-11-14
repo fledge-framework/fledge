@@ -59,7 +59,13 @@ class ButtonValue extends ActionValue {
   /// The current phase of the button.
   final ButtonPhase phase;
 
-  const ButtonValue(this.phase);
+  /// Presses this frame: 1 for an ordinary `justPressed` button, more when a
+  /// source can press several times in one frame (scroll wheel steps), 0
+  /// otherwise.
+  final int presses;
+
+  const ButtonValue(this.phase, {int? presses})
+    : presses = presses ?? (phase == ButtonPhase.justPressed ? 1 : 0);
 
   /// True if button is currently down (justPressed or held).
   bool get isPressed =>

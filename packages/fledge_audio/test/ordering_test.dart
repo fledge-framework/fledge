@@ -30,12 +30,15 @@ void main() {
     }
   });
 
-  test('AudioInitSystem declares its access instead of being exclusive', () {
-    final meta = AudioInitSystem(const AudioConfig()).meta;
-    expect(meta.exclusive, isFalse);
+  test('the first-schedule systems declare their access, none exclusive', () {
+    final init = AudioInitSystem(const AudioConfig()).meta;
+    expect(init.exclusive, isFalse);
+    expect(init.resourceWrites, contains(AudioState));
+    final events = AudioEventSystem().meta;
+    expect(events.exclusive, isFalse);
     expect(
-      meta.resourceWrites,
-      containsAll(<Type>[Assets<AudioClip>, AudioState]),
+      events.resourceWrites,
+      containsAll(<Type>[Assets<AudioClip>, AudioState, AudioLibrary]),
     );
   });
 
@@ -43,7 +46,7 @@ void main() {
     'spatial audio runs in last, after update-schedule transform writers',
     () {
       final app = App()
-        ..addPlugin(const AudioPlugin())
+        ..addPlugin(AudioPlugin())
         ..addSystem(
           FunctionSystem(
             'moveThings',

@@ -52,6 +52,7 @@ Make sure you have `fledge_input` added to your `pubspec.yaml`:
 dependencies:
   fledge_ecs: ^0.1.0
   fledge_input: ^0.1.0
+  material_ui: ^1.11.0 # Flutter's Material widgets (`package:material_ui`)
 ```
 
 ## Step 1: Define Components
@@ -520,7 +521,7 @@ class SnakePlugin implements Plugin {
 Now we connect everything to Flutter. Create `lib/game/snake_widget.dart`:
 
 ```dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_input/fledge_input.dart';
 
@@ -714,7 +715,7 @@ class SnakeGamePainter extends CustomPainter {
 Finally, update `lib/main.dart`:
 
 ```dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'game/snake_widget.dart';
 

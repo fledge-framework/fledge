@@ -87,7 +87,7 @@ List<List<Plugin>> rest(PhysicsMode mode, NetworkMode netMode) => [
       context: InputContext(name: 'g', map: InputMap.builder().build()),
     ),
   ],
-  [const AudioPlugin()],
+  [AudioPlugin()],
   [PhysicsPlugin(config: PhysicsConfig(mode: mode))],
   [TiledPlugin()],
   [const UiPlugin()],

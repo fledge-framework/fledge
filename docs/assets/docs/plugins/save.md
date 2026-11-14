@@ -399,6 +399,16 @@ class CloudSaveManager extends SaveManager {
 }
 ```
 
+## Preferences
+
+Settings that belong to the machine rather than to a save (volume, keys, display) go in a `PreferencesFile`: plain JSON beside the saves (`<gameDirectory>/settings.json` by default), written atomically like a save, and readable before any save loads. A missing or unreadable file reads as `null`, so the game starts from its defaults.
+
+```dart
+final prefs = PreferencesFile(gameDirectory: 'MyGame');
+final settings = await prefs.read() ?? {};
+await prefs.write({...settings, 'musicVolume': 0.6});
+```
+
 ## Best Practices
 
 ### 1. Use Stable Save Keys

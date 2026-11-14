@@ -1,4 +1,4 @@
-import 'package:flutter_soloud/flutter_soloud.dart';
+import '../backend/audio_backend.dart';
 
 import '../resources/audio_channels.dart';
 
@@ -18,7 +18,7 @@ import '../resources/audio_channels.dart';
 ///   ));
 /// ```
 class AudioSource {
-  /// Key of the sound to play (from AudioAssets).
+  /// Key of the sound to play (from the `AudioLibrary`).
   String? soundKey;
 
   /// Which channel this source belongs to.
@@ -42,14 +42,14 @@ class AudioSource {
   /// Override for reference distance (null = use global config).
   double? referenceDistance;
 
-  /// Current playback handle (managed by system).
-  SoundHandle? handle;
+  /// The voice playing it (managed by `SpatialAudioSystem`).
+  AudioVoice? voice;
 
   /// Whether this source has been started.
   bool hasStarted = false;
 
   /// Whether this source is currently playing.
-  bool get isPlaying => handle != null;
+  bool get isPlaying => voice != null;
 
   AudioSource({
     this.soundKey,
