@@ -227,9 +227,15 @@ class DialogueRunner {
 
       switch (line) {
         case DialogueLine():
-          _currentLine = line;
+          // Inline expressions (`{$name}`) take their values as shown.
+          _currentLine = DialogueLine(
+            character: line.character,
+            text: variableStorage.interpolate(line.text),
+            tags: line.tags,
+            lineId: line.lineId,
+          );
           _state = DialogueRunnerState.line;
-          onLine?.call(line);
+          onLine?.call(_currentLine!);
           return;
 
         case ChoiceSet():
@@ -325,8 +331,9 @@ class DialogueRunner {
         stop();
         break;
 
-      case 'wait':
-        // Wait is typically handled by the game
+      case 'wait' when !(commandHandler?.hasHandler('wait') ?? false):
+        // A built-in name the game handles: with no handler registered
+        // there's nothing to wait on.
         break;
 
       default:

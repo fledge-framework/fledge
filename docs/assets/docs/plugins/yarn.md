@@ -212,6 +212,18 @@ Arithmetic works everywhere — conditions, `<<set>>`, and inline expressions. M
 <<set $gold -= 25>>         // Subtract from number
 ```
 
+### Variables in Lines
+
+A dialogue line shows the value of any expression in braces:
+
+```yarn
+Shopkeeper: That's {$gold} gold. With the discount, {$gold - 5}.
+```
+
+Whole numbers print without a decimal point. Write `\{` for a literal
+brace. A malformed expression is shown as written. Choice text is not
+interpolated.
+
 ### Variable Storage API
 
 ```dart

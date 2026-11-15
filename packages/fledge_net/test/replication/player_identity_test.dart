@@ -100,6 +100,21 @@ void main() {
       );
     });
 
+    test('nobody joins as the host', () async {
+      bed = NetTestbed(
+        config: () => NetworkConfig(
+          identityProvider: DevIdentityProvider('host'),
+          identityVerifier: const TrustingVerifier(),
+        ),
+      );
+      await bed.startHost();
+      await expectLater(
+        bed.addClient(identity: DevIdentityProvider('host')),
+        throwsA(isA<StateError>()),
+      );
+      await bed.addClient(identity: DevIdentityProvider('friend'));
+    });
+
     test('a password and an identity are checked together', () async {
       bed = NetTestbed(config: () => NetworkConfig(serverPassword: 'pw'));
       final host = await bed.startHost();

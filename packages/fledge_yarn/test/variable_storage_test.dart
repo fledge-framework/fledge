@@ -48,4 +48,28 @@ void main() {
       expect(storage.getNumber('hp'), 10);
     });
   });
+
+  group('interpolate', () {
+    late VariableStorage storage;
+    setUp(() => storage = VariableStorage());
+
+    test('fills inline expressions with their values', () {
+      storage
+        ..setString('item', 'radish')
+        ..setNumber('count', 3);
+      expect(
+        storage.interpolate(r'{$count} {$item}es, {$count * 2} more'),
+        '3 radishes, 6 more',
+      );
+      expect(storage.interpolate(r'A {$item}!'), 'A radish!');
+      expect(storage.interpolate(r'{$count + 0.5}'), '3.5');
+    });
+
+    test('leaves plain text, escapes and malformed braces alone', () {
+      expect(storage.interpolate('No braces here.'), 'No braces here.');
+      expect(storage.interpolate(r'A \{literal}'), 'A {literal}');
+      expect(storage.interpolate('Half {open'), 'Half {open');
+      expect(storage.interpolate(r'{$x +}'), r'{$x +}');
+    });
+  });
 }

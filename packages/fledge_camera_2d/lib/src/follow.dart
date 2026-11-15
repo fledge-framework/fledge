@@ -348,10 +348,16 @@ class CameraFollowSystem implements System {
       // A camera that scales the widget view is shown at the size of the
       // widget it last painted into; other cameras use [ViewportSize].
       final viewport = world.getResource<ViewportSize>() ?? ViewportSize();
-      final drawn = camera.scaleWidgetView
-          ? world.getResource<ActiveCameraView>()?.viewportSize
+      final shown = camera.scaleWidgetView
+          ? world.getResource<ActiveCameraView>()
           : null;
-      final widgetZoom = drawn == null ? 1.0 : camera.widgetZoom(drawn);
+      final drawn = shown?.viewportSize;
+      // At the display scaling it was drawn at, as the view itself is: a
+      // pixel-perfect zoom under 125 % or 150 % scaling differs from the
+      // 1x one, and the bounds would clamp to the wrong visible size.
+      final widgetZoom = drawn == null
+          ? 1.0
+          : camera.widgetZoom(drawn, devicePixelRatio: shown!.devicePixelRatio);
 
       final bounds = follow.bounds;
       if (bounds != null) {

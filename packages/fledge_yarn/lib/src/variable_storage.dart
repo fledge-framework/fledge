@@ -135,6 +135,43 @@ class VariableStorage {
     }
   }
 
+  /// [text] with each inline expression in braces replaced by its value,
+  /// as Yarn writes them: `You brought {$count} radishes`. Whole numbers
+  /// print without a decimal point; `\{` writes a literal brace. A
+  /// malformed expression is left as written, braces and all.
+  String interpolate(String text) {
+    if (!text.contains('{')) return text;
+    final out = StringBuffer();
+    var i = 0;
+    while (i < text.length) {
+      final c = text[i];
+      if (c == r'\' && i + 1 < text.length && text[i + 1] == '{') {
+        out.write('{');
+        i += 2;
+        continue;
+      }
+      final close = c == '{' ? text.indexOf('}', i) : -1;
+      if (close < 0) {
+        out.write(c);
+        i++;
+        continue;
+      }
+      final source = text.substring(i + 1, close);
+      try {
+        final value = _evaluator.evaluate(source);
+        out.write(
+          value is double && value == value.roundToDouble()
+              ? value.toInt()
+              : value,
+        );
+      } on FormatException {
+        out.write(text.substring(i, close + 1));
+      }
+      i = close + 1;
+    }
+    return out.toString();
+  }
+
   /// Execute a set command (e.g., `$var = value`, `$var += 5`, `$var = $a * 2`).
   ///
   /// Malformed expressions are silently ignored.

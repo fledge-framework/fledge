@@ -203,6 +203,32 @@ void main() {
       expect(t.translation.y, 300);
     });
 
+    test(
+      'under display scaling it clamps to the area actually shown',
+      () async {
+        world.get<Camera2D>(cameraEntity)!
+          ..pixelPerfect = true
+          ..scaleWidgetView = true
+          ..projection = OrthographicProjection(viewportHeight: 540);
+        // 1920 x 1080 at 125 %: 1536 x 864 logical. Two physical pixels per
+        // unit (1.6 logical) shows 960 x 540; at 1x it would be 1536 x 864.
+        world.insertResource(
+          ActiveCameraView()
+            ..viewportSize = const Size(1536, 864)
+            ..devicePixelRatio = 1.25,
+        );
+        world.get<CameraFollow>(cameraEntity)!
+          ..smoothing = 1.0
+          ..bounds = const Rect.fromLTRB(0, 0, 2000, 2000);
+
+        await CameraFollowSystem().run(world);
+
+        final t = world.get<Transform2D>(cameraEntity)!;
+        expect(t.translation.x, closeTo(480, 1e-6));
+        expect(t.translation.y, closeTo(270, 1e-6));
+      },
+    );
+
     test('non-pixelPerfect keeps sub-pixel positions', () async {
       world.get<Transform2D>(target)!.translation.setValues(100.6, 200.4);
       world

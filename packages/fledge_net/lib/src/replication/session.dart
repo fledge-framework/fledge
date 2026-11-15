@@ -446,6 +446,10 @@ class NetworkSession {
       }
       if (clientId != anonymousClientId) {
         if (ClientIdentity.validate(clientId) != null) return false;
+        // Nobody joins as the host: with a trusting verifier anyone could
+        // claim it (or a second copy of the game on the host's machine,
+        // sharing its identity, would), and become the host's player.
+        if (clientId == _localIdentity) return false;
         if (verifier != null &&
             !await verifier.verify(clientId, proof, source: source)) {
           return false;
