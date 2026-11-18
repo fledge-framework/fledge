@@ -32,7 +32,7 @@ class SnapshotPreviousTransformSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final (_, transform, previous)
         in world.query2<Transform2D, PreviousTransform2D>().iter()) {
       previous.copyFrom(transform);

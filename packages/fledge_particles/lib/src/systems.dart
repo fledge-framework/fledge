@@ -49,7 +49,7 @@ class ParticleEmitSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     final delta = _frameDelta(world);
     for (final (_, emitter, transform)
         in world.query2<ParticleEmitter, GlobalTransform2D>().iter()) {
@@ -79,7 +79,6 @@ class ParticleEmitSystem implements System {
         toSpawn--;
       }
     }
-    return Future.value();
   }
 
   double _frameDelta(World world) {
@@ -117,16 +116,15 @@ class ParticleUpdateSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     final delta = _frameDelta(world);
-    if (delta <= 0.0) return Future.value();
+    if (delta <= 0.0) return;
 
     for (final (_, emitter) in world.query1<ParticleEmitter>().iter()) {
       for (final p in emitter.pool.live) {
         _advance(p, delta);
       }
     }
-    return Future.value();
   }
 
   static void _advance(Particle p, double delta) {
@@ -178,10 +176,9 @@ class ParticleReapSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     for (final (_, emitter) in world.query1<ParticleEmitter>().iter()) {
       emitter.pool.reap();
     }
-    return Future.value();
   }
 }

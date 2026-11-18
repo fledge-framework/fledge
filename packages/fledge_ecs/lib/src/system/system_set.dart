@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'run_condition.dart';
 import 'system.dart';
 
@@ -176,5 +177,5 @@ class SetConfiguredSystem implements System {
   bool shouldRun(world) => runCondition?.call(world) ?? true;
 
   @override
-  Future<void> run(world) => _inner.run(world);
+  FutureOr<void> run(world) => _inner.run(world);
 }

@@ -68,7 +68,7 @@ class LayoutSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final viewport = world.getResource<ViewportSize>();
     if (viewport == null) return;
 

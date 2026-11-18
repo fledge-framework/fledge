@@ -14,7 +14,7 @@ import 'package:fledge_ecs_annotations/fledge_ecs_annotations.dart';
 part 'systems.g.dart';
 
 @system
-Future<void> movementSystem(World world) async {
+void movementSystem(World world) {
   for (final (entity, pos, vel) in world.query2<Position, Velocity>().iter()) {
     pos.x += vel.dx;
     pos.y += vel.dy;
@@ -32,7 +32,7 @@ class MovementSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final (entity, pos, vel) in world.query2<Position, Velocity>().iter()) {
       pos.x += vel.dx;
       pos.y += vel.dy;
@@ -80,7 +80,7 @@ final physicsSystem = FunctionSystem(
 
 ### SyncSystem (No Async Needed)
 
-For systems that don't need async operations, extend `SyncSystem` to avoid the `Future<void>` boilerplate:
+A system that doesn't await anything should be synchronous: declare `void run(World world)` (or extend `SyncSystem` and implement `runSync`). The scheduler then runs it and moves straight on; an `async` method costs a turn of the event loop every run, even when it awaits nothing.
 
 ```dart
 class MovementSystem extends SyncSystem {
@@ -141,7 +141,7 @@ class CombatSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final players = world.query2<Position, Health>(filter: const With<Player>());
     final enemies = world.query2<Position, Damage>(filter: const With<Enemy>());
 
@@ -180,7 +180,7 @@ class MySystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final (entity, pos) in world.query1<Position>().iter()) {
       // Check for additional components
       if (world.has<Special>(entity)) {
@@ -263,7 +263,7 @@ class InputSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final (_, input) in world.query1<InputReceiver>(filter: const With<Player>()).iter()) {
       // Process player input
     }
@@ -280,7 +280,7 @@ class MovementSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final (_, pos, vel) in world.query2<Position, Velocity>().iter()) {
       // Apply movement
     }
@@ -296,7 +296,7 @@ class CollisionSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final (_, pos, collider) in world.query2<Position, Collider>().iter()) {
       // Detect and resolve collisions
     }
@@ -312,7 +312,7 @@ class RenderSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final (_, pos, sprite) in world.query2<Position, Sprite>().iter()) {
       // Draw sprites
     }
@@ -383,7 +383,7 @@ class CountEnemiesSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final stats = world.getResource<GameStats>()!;
     var count = 0;
     for (final _ in world.query1<Enemy>().iter()) {
@@ -452,7 +452,7 @@ class PlayerFollowCameraSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final playerQuery = world.query1<Position>(filter: const With<Player>());
     final cameraQuery = world.query1<Position>(filter: const With<Camera>());
 
@@ -508,7 +508,7 @@ class IdleToWalkTransitionSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final commands = Commands();
 
     for (final (entity, _) in world.query1<Idle>(filter: const With<HasInput>()).iter()) {
@@ -523,7 +523,7 @@ class IdleToWalkTransitionSystem implements System {
 
 ## Async Systems
 
-For systems that need async operations, use `AsyncFunctionSystem`:
+Rarely needed: the scheduler awaits an async system before the next one starts, so a slow await holds up the whole frame, and systems inside a tick must never await platform calls (start the work in the background and apply its result on a later frame). For the cases that do need it (a one-off load in `startup`, say), use `AsyncFunctionSystem`:
 
 ```dart
 final loadAssetsSystem = AsyncFunctionSystem(
@@ -583,7 +583,7 @@ class GoodSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final query = world.query1<Position>();
     for (final entry in query.iter()) { }
   }
@@ -598,7 +598,7 @@ class BadSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (var i = 0; i < 100; i++) {
       final query = world.query1<Position>(); // Created 100 times!
     }
@@ -630,7 +630,7 @@ class OptionalSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final query = world.query1<RareComponent>();
     if (query.isEmpty) return; // Quick check
 

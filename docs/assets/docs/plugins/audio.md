@@ -139,7 +139,7 @@ void onFrame(double dt) {
 }
 ```
 
-It runs the audio systems once, advancing only audio's own event queues, so gameplay events waiting for the next tick are untouched. Spatial sources aren't re-mixed (nothing moves while the world is still).
+It runs the audio systems once, advancing only audio's own event queues, so gameplay events waiting for the next tick are untouched. Sources run too, so one can be played, stopped or changed from a menu; with nothing moving, their mix stays as it was.
 
 ## Spatial audio
 
@@ -176,6 +176,23 @@ AudioSource(
 )
 ```
 
+Without a `Transform2D` (or with no active listener, or spatial audio off)
+a source plays centred at its volume times its channel's volume.
+
+#### Starting and stopping
+
+```dart
+final source = world.get<AudioSource>(fan)!;
+source.stop(fadeOut: const Duration(milliseconds: 400)); // or at once
+source.play(); // again, from the beginning
+```
+
+`play()` and `stop()` are carried out by `SpatialAudioSystem` at the end of
+the frame, and only the latest call counts. A `play()` waits for the engine
+and the clip; a `stop()` before then cancels the start (an `autoPlay` source
+included). Despawning the entity, or removing its `AudioSource`, stops its
+sound with a short fade.
+
 ### Configuration
 
 ```dart
@@ -198,7 +215,7 @@ Attenuation is linear: full volume inside `referenceDistance`, silent at `maxDis
 
 ```dart
 AudioPlugin()               // defaults
-AudioPlugin.nonSpatial()    // no SpatialAudioSystem
+AudioPlugin.nonSpatial()    // sources play without distance or pan mixing
 
 AudioPlugin(config: AudioConfig(
   masterVolume: 0.8,        // the engine's global volume
@@ -276,7 +293,7 @@ class MusicForPlaceSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final inForest = /* ... */ false;
     world.playMusic(
       inForest ? 'forest' : 'village',
@@ -295,7 +312,7 @@ class MusicForPlaceSystem implements System {
 | `AudioFocusSystem` | `first` (`FirstSets.platform`) | Pauses while the window lacks focus (if enabled) |
 | `ChannelFadeSystem` | `update` | Advances channel volume fades |
 | `MusicVolumeSystem` | `update` | Applies channel volume to the playing music |
-| `SpatialAudioSystem` | `last` | Plays and mixes `AudioSource`s (if enabled) |
+| `SpatialAudioSystem` | `last` | Starts, stops and mixes `AudioSource`s; stops the sounds of despawned sources |
 | `AudioCleanupSystem` | `last` | Forgets ended voices; sends `SfxFinished` / `MusicFinished` |
 
 ## Resources reference

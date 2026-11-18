@@ -25,7 +25,7 @@ class _NoopSystem implements System {
   @override
   bool shouldRun(World world) => true;
   @override
-  Future<void> run(World world) async {}
+  void run(World world) {}
 }
 
 void main() {

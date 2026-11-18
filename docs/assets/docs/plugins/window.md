@@ -128,7 +128,7 @@ await app.close();  // Gracefully closes the application
 ```dart
 class WindowModeSystem implements System {
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final event in world.eventReader<WindowModeChanged>().read()) {
       print('Mode changed: ${event.previousMode} -> ${event.newMode}');
     }
@@ -230,7 +230,7 @@ class WindowToggleSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final actions = world.getResource<ActionState>()!;
 
     if (actions.justPressed(ActionId.fromEnum(Actions.toggleFullscreen))) {
@@ -254,7 +254,7 @@ class WindowEventLoggerSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final event in world.eventReader<WindowModeChanged>().read()) {
       print('Window mode: ${event.previousMode} -> ${event.newMode}');
     }

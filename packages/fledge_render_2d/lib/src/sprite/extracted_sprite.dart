@@ -1,5 +1,5 @@
 import 'dart:math' as math;
-import 'dart:ui' show Color, Offset, Rect;
+import 'dart:ui' show Color, Rect;
 
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:vector_math/vector_math.dart';
@@ -163,13 +163,18 @@ class SpriteExtractor extends Extractor {
   /// World units beyond the camera's last view that are still extracted.
   static const double cullMargin = 64;
 
-  /// Whether a sprite drawn with [m] at [size] could reach into [visible].
+  /// Whether a sprite drawn with [m] at [size] could reach into [visible]
+  /// (allocation-free: it runs for every sprite in the world).
   static bool _onScreen(Rect visible, Matrix3 m, Vector2 size) {
     final s = m.storage;
     final reach =
         size.x * math.sqrt(s[0] * s[0] + s[1] * s[1]) +
         size.y * math.sqrt(s[3] * s[3] + s[4] * s[4]);
-    return visible.inflate(reach).contains(Offset(s[6], s[7]));
+    final x = s[6], y = s[7];
+    return x >= visible.left - reach &&
+        x < visible.right + reach &&
+        y >= visible.top - reach &&
+        y < visible.bottom + reach;
   }
 
   @override
@@ -184,7 +189,16 @@ class SpriteExtractor extends Extractor {
 
     for (final (entity, sprite, globalTransform)
         in mainWorld.query2<Sprite, GlobalTransform2D>().iter()) {
-      // Check visibility
+      // Fully transparent: nothing to draw.
+      if (sprite.color.a == 0) continue;
+      final size = sprite.size;
+      // Cull on where it is before the cost of interpolating it: the
+      // interpolated position is within a fixed step's movement, well
+      // inside the margin.
+      if (visible != null &&
+          !_onScreen(visible, globalTransform.matrix, size)) {
+        continue;
+      }
       final visibility = mainWorld.get<Visibility>(entity);
       if (visibility != null && !visibility.isVisible) continue;
 
@@ -199,9 +213,6 @@ class SpriteExtractor extends Extractor {
         globalTransform,
         alpha,
       );
-      if (visible != null && !_onScreen(visible, renderMatrix, sprite.size)) {
-        continue;
-      }
       final ySorted = sprite.layerSubOrder == 0;
       final y = renderMatrix.storage[7];
       final sub = ySorted
@@ -209,7 +220,7 @@ class SpriteExtractor extends Extractor {
           : sprite.layerSubOrder;
       final sortKey = layer.sortKey(subOrder: sub);
 
-      renderWorld.spawn().insert(
+      renderWorld.add(
         ExtractedSprite(
           entity: entity,
           texture: sprite.texture,
@@ -225,7 +236,7 @@ class SpriteExtractor extends Extractor {
             sprite.flipY,
           ),
           anchor: sprite.anchor.clone(),
-          size: sprite.size,
+          size: size,
           emissive: sprite.emissive,
         ),
       );

@@ -256,21 +256,71 @@ class QueryState {
   }
 }
 
-/// Iterator over query results for a single component.
-///
-/// ## Snapshot semantics
-///
-/// [QueryIter1] takes a snapshot of the entities that match the query at
-/// iterator-construction time. This guarantees that mid-iteration mutations
-/// — inserting a component (which migrates the entity to a new archetype),
-/// removing a component, or despawning the entity — do not silently drop
-/// still-matching entities from the yielded sequence. Each `moveNext`
-/// re-resolves the entity's current archetype/row from [Entities] and
-/// re-validates that it still matches the query; entities that no longer
-/// match are skipped rather than yielded with stale data.
-///
-/// Cost: one `List<Entity>` allocation sized to the total row count of
-/// matching archetypes, plus one entity-location lookup per yield.
+/// Walks a query's snapshot of matching entities. While no table has
+/// changed shape since the snapshot ([Table.structureVersion]), entry `i`
+/// is exactly the next row of the next matching table, so it's read
+/// straight from that table, with no location lookup and no match check.
+/// After any structural change (a spawn, despawn, insert or remove,
+/// typically in the loop body), the rest are looked up one by one as
+/// before: a despawned entity is skipped, one that moved is read where it
+/// is now, one that no longer matches is skipped.
+class _Cursor {
+  _Cursor(this._archetypes, this._entities, this._state, this._snapshot)
+    : _matching = _state.matchingArchetypes,
+      _version = Table.structureVersion;
+
+  final Archetypes _archetypes;
+  final Entities _entities;
+  final QueryState _state;
+  final List<Entity> _snapshot;
+  final List<int> _matching;
+  final int _version;
+
+  int _index = 0;
+  int _tablePos = 0;
+  int _rowInTable = 0;
+  bool _fast = true;
+
+  /// The entity found by [next], its table and row.
+  late Entity entity;
+  late Table table;
+  late int row;
+
+  bool next() {
+    final changeFilters = _state.hasChangeFilters;
+    while (_index < _snapshot.length) {
+      final candidate = _snapshot[_index++];
+      if (_fast && Table.structureVersion == _version) {
+        var t = _archetypes.tableAt(_matching[_tablePos]);
+        while (_rowInTable >= t.length) {
+          _tablePos++;
+          _rowInTable = 0;
+          t = _archetypes.tableAt(_matching[_tablePos]);
+        }
+        final r = _rowInTable++;
+        if (changeFilters && !_state.passesChangeFilters(t, r)) continue;
+        entity = candidate;
+        table = t;
+        row = r;
+        return true;
+      }
+      _fast = false;
+      final location = _entities.getLocation(candidate);
+      if (location == null) continue; // Despawned mid-iteration.
+      final t = _archetypes.tableAt(location.archetypeIndex);
+      if (!_state.tableMatches(t)) continue; // Moved out of the match set.
+      if (changeFilters && !_state.passesChangeFilters(t, location.row)) {
+        continue;
+      }
+      entity = candidate;
+      table = t;
+      row = location.row;
+      return true;
+    }
+    return false;
+  }
+}
+
 class QueryIter1<T1> extends Iterable<(Entity, T1)> {
   final Archetypes _archetypes;
   final Entities _entities;
@@ -282,56 +332,37 @@ class QueryIter1<T1> extends Iterable<(Entity, T1)> {
 
   @override
   Iterator<(Entity, T1)> get iterator =>
-      _QueryIterator1(_archetypes, _entities, _state, _snapshot);
+      _QueryIterator1(_Cursor(_archetypes, _entities, _state, _snapshot));
 }
 
 class _QueryIterator1<T1> implements Iterator<(Entity, T1)> {
-  final Archetypes _archetypes;
-  final Entities _entities;
-  final QueryState _state;
-  final List<Entity> _snapshot;
+  _QueryIterator1(this._cursor) : _id1 = _cursor._state.fetchComponents[0];
 
-  int _index = 0;
-
+  final _Cursor _cursor;
+  final ComponentId _id1;
+  Table? _table;
+  late List<dynamic> _c1;
   (Entity, T1)? _current;
-
-  _QueryIterator1(
-    this._archetypes,
-    this._entities,
-    this._state,
-    this._snapshot,
-  );
 
   @override
   (Entity, T1) get current => _current!;
 
   @override
   bool moveNext() {
-    final componentId = _state.fetchComponents[0];
-
-    while (_index < _snapshot.length) {
-      final entity = _snapshot[_index++];
-      final location = _entities.getLocation(entity);
-      if (location == null) continue; // Despawned mid-iter.
-
-      final table = _archetypes.tableAt(location.archetypeIndex);
-      if (!_state.tableMatches(table)) continue; // Migrated out of match set.
-      if (!_state.passesChangeFilters(table, location.row)) continue;
-
-      final column = table.getColumn(componentId);
-      _current = (entity, column![location.row] as T1);
-      return true;
+    final cursor = _cursor;
+    if (!cursor.next()) {
+      _current = null;
+      return false;
     }
-
-    _current = null;
-    return false;
+    if (!identical(cursor.table, _table)) {
+      _table = cursor.table;
+      _c1 = cursor.table.getColumn(_id1)!;
+    }
+    _current = (cursor.entity, _c1[cursor.row] as T1);
+    return true;
   }
 }
 
-/// Iterator over query results for two components.
-///
-/// See [QueryIter1] for the snapshot semantics that guard against
-/// mid-iteration archetype mutations.
 class QueryIter2<T1, T2> extends Iterable<(Entity, T1, T2)> {
   final Archetypes _archetypes;
   final Entities _entities;
@@ -343,59 +374,41 @@ class QueryIter2<T1, T2> extends Iterable<(Entity, T1, T2)> {
 
   @override
   Iterator<(Entity, T1, T2)> get iterator =>
-      _QueryIterator2(_archetypes, _entities, _state, _snapshot);
+      _QueryIterator2(_Cursor(_archetypes, _entities, _state, _snapshot));
 }
 
 class _QueryIterator2<T1, T2> implements Iterator<(Entity, T1, T2)> {
-  final Archetypes _archetypes;
-  final Entities _entities;
-  final QueryState _state;
-  final List<Entity> _snapshot;
+  _QueryIterator2(this._cursor)
+    : _id1 = _cursor._state.fetchComponents[0],
+      _id2 = _cursor._state.fetchComponents[1];
 
-  int _index = 0;
-
+  final _Cursor _cursor;
+  final ComponentId _id1, _id2;
+  Table? _table;
+  late List<dynamic> _c1, _c2;
   (Entity, T1, T2)? _current;
-
-  _QueryIterator2(
-    this._archetypes,
-    this._entities,
-    this._state,
-    this._snapshot,
-  );
 
   @override
   (Entity, T1, T2) get current => _current!;
 
   @override
   bool moveNext() {
-    final componentId1 = _state.fetchComponents[0];
-    final componentId2 = _state.fetchComponents[1];
-
-    while (_index < _snapshot.length) {
-      final entity = _snapshot[_index++];
-      final location = _entities.getLocation(entity);
-      if (location == null) continue;
-
-      final table = _archetypes.tableAt(location.archetypeIndex);
-      if (!_state.tableMatches(table)) continue;
-      if (!_state.passesChangeFilters(table, location.row)) continue;
-
-      final column1 = table.getColumn(componentId1);
-      final column2 = table.getColumn(componentId2);
-      final row = location.row;
-      _current = (entity, column1![row] as T1, column2![row] as T2);
-      return true;
+    final cursor = _cursor;
+    if (!cursor.next()) {
+      _current = null;
+      return false;
     }
-
-    _current = null;
-    return false;
+    if (!identical(cursor.table, _table)) {
+      final t = _table = cursor.table;
+      _c1 = t.getColumn(_id1)!;
+      _c2 = t.getColumn(_id2)!;
+    }
+    final r = cursor.row;
+    _current = (cursor.entity, _c1[r] as T1, _c2[r] as T2);
+    return true;
   }
 }
 
-/// Iterator over query results for three components.
-///
-/// See [QueryIter1] for the snapshot semantics that guard against
-/// mid-iteration archetype mutations.
 class QueryIter3<T1, T2, T3> extends Iterable<(Entity, T1, T2, T3)> {
   final Archetypes _archetypes;
   final Entities _entities;
@@ -407,66 +420,43 @@ class QueryIter3<T1, T2, T3> extends Iterable<(Entity, T1, T2, T3)> {
 
   @override
   Iterator<(Entity, T1, T2, T3)> get iterator =>
-      _QueryIterator3(_archetypes, _entities, _state, _snapshot);
+      _QueryIterator3(_Cursor(_archetypes, _entities, _state, _snapshot));
 }
 
 class _QueryIterator3<T1, T2, T3> implements Iterator<(Entity, T1, T2, T3)> {
-  final Archetypes _archetypes;
-  final Entities _entities;
-  final QueryState _state;
-  final List<Entity> _snapshot;
+  _QueryIterator3(this._cursor)
+    : _id1 = _cursor._state.fetchComponents[0],
+      _id2 = _cursor._state.fetchComponents[1],
+      _id3 = _cursor._state.fetchComponents[2];
 
-  int _index = 0;
-
+  final _Cursor _cursor;
+  final ComponentId _id1, _id2, _id3;
+  Table? _table;
+  late List<dynamic> _c1, _c2, _c3;
   (Entity, T1, T2, T3)? _current;
-
-  _QueryIterator3(
-    this._archetypes,
-    this._entities,
-    this._state,
-    this._snapshot,
-  );
 
   @override
   (Entity, T1, T2, T3) get current => _current!;
 
   @override
   bool moveNext() {
-    final componentId1 = _state.fetchComponents[0];
-    final componentId2 = _state.fetchComponents[1];
-    final componentId3 = _state.fetchComponents[2];
-
-    while (_index < _snapshot.length) {
-      final entity = _snapshot[_index++];
-      final location = _entities.getLocation(entity);
-      if (location == null) continue;
-
-      final table = _archetypes.tableAt(location.archetypeIndex);
-      if (!_state.tableMatches(table)) continue;
-      if (!_state.passesChangeFilters(table, location.row)) continue;
-
-      final column1 = table.getColumn(componentId1);
-      final column2 = table.getColumn(componentId2);
-      final column3 = table.getColumn(componentId3);
-      final row = location.row;
-      _current = (
-        entity,
-        column1![row] as T1,
-        column2![row] as T2,
-        column3![row] as T3,
-      );
-      return true;
+    final cursor = _cursor;
+    if (!cursor.next()) {
+      _current = null;
+      return false;
     }
-
-    _current = null;
-    return false;
+    if (!identical(cursor.table, _table)) {
+      final t = _table = cursor.table;
+      _c1 = t.getColumn(_id1)!;
+      _c2 = t.getColumn(_id2)!;
+      _c3 = t.getColumn(_id3)!;
+    }
+    final r = cursor.row;
+    _current = (cursor.entity, _c1[r] as T1, _c2[r] as T2, _c3[r] as T3);
+    return true;
   }
 }
 
-/// Iterator over query results for four components.
-///
-/// See [QueryIter1] for the snapshot semantics that guard against
-/// mid-iteration archetype mutations.
 class QueryIter4<T1, T2, T3, T4> extends Iterable<(Entity, T1, T2, T3, T4)> {
   final Archetypes _archetypes;
   final Entities _entities;
@@ -478,62 +468,48 @@ class QueryIter4<T1, T2, T3, T4> extends Iterable<(Entity, T1, T2, T3, T4)> {
 
   @override
   Iterator<(Entity, T1, T2, T3, T4)> get iterator =>
-      _QueryIterator4(_archetypes, _entities, _state, _snapshot);
+      _QueryIterator4(_Cursor(_archetypes, _entities, _state, _snapshot));
 }
 
 class _QueryIterator4<T1, T2, T3, T4>
     implements Iterator<(Entity, T1, T2, T3, T4)> {
-  final Archetypes _archetypes;
-  final Entities _entities;
-  final QueryState _state;
-  final List<Entity> _snapshot;
+  _QueryIterator4(this._cursor)
+    : _id1 = _cursor._state.fetchComponents[0],
+      _id2 = _cursor._state.fetchComponents[1],
+      _id3 = _cursor._state.fetchComponents[2],
+      _id4 = _cursor._state.fetchComponents[3];
 
-  int _index = 0;
-
+  final _Cursor _cursor;
+  final ComponentId _id1, _id2, _id3, _id4;
+  Table? _table;
+  late List<dynamic> _c1, _c2, _c3, _c4;
   (Entity, T1, T2, T3, T4)? _current;
-
-  _QueryIterator4(
-    this._archetypes,
-    this._entities,
-    this._state,
-    this._snapshot,
-  );
 
   @override
   (Entity, T1, T2, T3, T4) get current => _current!;
 
   @override
   bool moveNext() {
-    final componentId1 = _state.fetchComponents[0];
-    final componentId2 = _state.fetchComponents[1];
-    final componentId3 = _state.fetchComponents[2];
-    final componentId4 = _state.fetchComponents[3];
-
-    while (_index < _snapshot.length) {
-      final entity = _snapshot[_index++];
-      final location = _entities.getLocation(entity);
-      if (location == null) continue;
-
-      final table = _archetypes.tableAt(location.archetypeIndex);
-      if (!_state.tableMatches(table)) continue;
-      if (!_state.passesChangeFilters(table, location.row)) continue;
-
-      final column1 = table.getColumn(componentId1);
-      final column2 = table.getColumn(componentId2);
-      final column3 = table.getColumn(componentId3);
-      final column4 = table.getColumn(componentId4);
-      final row = location.row;
-      _current = (
-        entity,
-        column1![row] as T1,
-        column2![row] as T2,
-        column3![row] as T3,
-        column4![row] as T4,
-      );
-      return true;
+    final cursor = _cursor;
+    if (!cursor.next()) {
+      _current = null;
+      return false;
     }
-
-    _current = null;
-    return false;
+    if (!identical(cursor.table, _table)) {
+      final t = _table = cursor.table;
+      _c1 = t.getColumn(_id1)!;
+      _c2 = t.getColumn(_id2)!;
+      _c3 = t.getColumn(_id3)!;
+      _c4 = t.getColumn(_id4)!;
+    }
+    final r = cursor.row;
+    _current = (
+      cursor.entity,
+      _c1[r] as T1,
+      _c2[r] as T2,
+      _c3[r] as T3,
+      _c4[r] as T4,
+    );
+    return true;
   }
 }

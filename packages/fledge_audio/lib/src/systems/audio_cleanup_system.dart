@@ -28,7 +28,7 @@ class AudioCleanupSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final state = world.getResource<AudioState>();
     if (state == null || !state.isInitialized) return;
     final backend = state.backend;

@@ -91,7 +91,7 @@ void main() {
         // ExtractedSprite entities. Register a SpriteExtractor manually —
         // the RenderPlugin doesn't add it (that's the callers' job).
         app.world.getResource<Extractors>()!.register(SpriteExtractor());
-        await RenderExtractionSystem().run(app.world);
+        RenderExtractionSystem().run(app.world);
 
         final renderWorld = app.world.getResource<RenderWorld>()!;
         expect(renderWorld.query1<ExtractedLight>().iter().length, 3);

@@ -101,6 +101,7 @@ class AudioPlugin implements Plugin {
     final events = AudioEventSystem();
     final fades = ChannelFadeSystem();
     final musicVolume = MusicVolumeSystem();
+    final sources = SpatialAudioSystem();
     final cleanup = AudioCleanupSystem();
     final focus = config.pauseOnFocusLoss ? AudioFocusSystem() : null;
     _focus = focus;
@@ -109,17 +110,16 @@ class AudioPlugin implements Plugin {
       ..addSystem(events, schedule: Schedules.first)
       ..addSystem(fades, schedule: Schedules.update)
       ..addSystem(musicVolume, schedule: Schedules.update)
+      // Sources (spatial or not) run in `last` so they read final
+      // Transform2D values, after every per-frame transform writer
+      // (physics, camera, movement).
+      ..addSystem(sources, schedule: Schedules.last)
       ..addSystem(cleanup, schedule: Schedules.last);
     if (focus != null) app.addSystem(focus, schedule: Schedules.first);
-    // Spatial audio runs in `last` so it reads final Transform2D values,
-    // after every per-frame transform writer (physics, camera, movement).
-    if (config.spatialConfig.enabled) {
-      app.addSystem(SpatialAudioSystem(), schedule: Schedules.last);
-    }
-    // The same instances, for `world.pumpAudio` (sources stay where they
-    // are while the world is still, so spatial audio isn't pumped).
+    // The same instances, for `world.pumpAudio` (so sources can be played
+    // and stopped from a menu while the world is still).
     app.insertResource(
-      AudioPump([init, events, ?focus, fades, musicVolume, cleanup]),
+      AudioPump([init, events, ?focus, fades, musicVolume, sources, cleanup]),
     );
   }
 

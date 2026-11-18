@@ -36,11 +36,11 @@ class RenderExtractionSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     final extractors = world.getResource<Extractors>();
     final renderWorld = world.getResource<RenderWorld>();
 
-    if (extractors == null || renderWorld == null) return Future.value();
+    if (extractors == null || renderWorld == null) return;
 
     // Clear previous frame's render data
     renderWorld.clear();
@@ -49,8 +49,6 @@ class RenderExtractionSystem implements System {
     for (final extractor in extractors.all) {
       extractor.extract(world, renderWorld);
     }
-
-    return Future.value();
   }
 }
 

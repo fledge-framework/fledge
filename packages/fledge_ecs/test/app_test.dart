@@ -24,9 +24,8 @@ class CounterSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     count++;
-    return Future.value();
   }
 }
 
@@ -89,6 +88,24 @@ void main() {
       final app = App()..addSystems([CounterSystem(), CounterSystem()]);
 
       expect(app.scheduler.systemCount, equals(2));
+    });
+
+    test('a system timer hears every system run, with its schedule', () async {
+      final system = CounterSystem();
+      final app = App()..addSystem(system);
+      final timings = <SystemTiming>[];
+      app.scheduler.systemTimer = timings.add;
+      await app.tick();
+      final mine = timings.where((t) => t.system == system.meta.name);
+      expect(mine, hasLength(1));
+      expect(mine.single.stage, Schedules.update.name);
+      expect(
+        mine.single.syncMicros,
+        lessThanOrEqualTo(mine.single.totalMicros),
+      );
+      app.scheduler.systemTimer = null;
+      await app.tick();
+      expect(timings.where((t) => t.system == system.meta.name), hasLength(1));
     });
 
     test('tick runs systems', () async {

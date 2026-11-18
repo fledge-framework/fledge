@@ -94,6 +94,37 @@ void main() {
       expect(s.transform.storage[1], closeTo(-1, 1e-9));
     });
 
+    test("every one of Tiled's eight orientations draws as Tiled shows it", () {
+      const h = TileFlipFlags.horizontal;
+      const v = TileFlipFlags.vertical;
+      const d = TileFlipFlags.diagonal;
+      for (final flags in [0, h, v, d, h | v, h | d, v | d, h | v | d]) {
+        // What Tiled does to the tile's local x and y axes: D swaps them,
+        // then H negates x and V negates y.
+        var (ax, ay, bx, by) = flags & d != 0 ? (0, 1, 1, 0) : (1, 0, 0, 1);
+        if (flags & h != 0) (ax, bx) = (-ax, -bx);
+        if (flags & v != 0) (ay, by) = (-ay, -by);
+        final s = tileToSprite(
+          texture: texture,
+          sourceRect: src,
+          tileTopLeft: Offset.zero,
+          tileWidth: 16,
+          tileHeight: 16,
+          color: const Color(0xFFFFFFFF),
+          sortKey: 0,
+          flipFlags: flags,
+        );
+        // The renderer mirrors x in the tile's own space, then transforms.
+        final m = s.transform.storage;
+        final sx = s.flipX ? -1.0 : 1.0;
+        expect(s.flipY, isFalse);
+        expect(m[0] * sx, closeTo(ax.toDouble(), 1e-9), reason: '$flags');
+        expect(m[1] * sx, closeTo(ay.toDouble(), 1e-9), reason: '$flags');
+        expect(m[3], closeTo(bx.toDouble(), 1e-9), reason: '$flags');
+        expect(m[4], closeTo(by.toDouble(), 1e-9), reason: '$flags');
+      }
+    });
+
     test('layer derived from sortKey', () {
       // ground = index 1, characters = index 2, foreground = index 3.
       final key = DrawLayer.foreground.sortKey(subOrder: 500);

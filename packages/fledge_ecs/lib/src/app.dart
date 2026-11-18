@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:fledge_ecs_annotations/fledge_ecs_annotations.dart';
 
 import 'entity.dart';
@@ -726,5 +727,5 @@ class _StateConditionSystem implements System {
   bool shouldRun(World world) => runCondition?.call(world) ?? true;
 
   @override
-  Future<void> run(World world) => _inner.run(world);
+  FutureOr<void> run(World world) => _inner.run(world);
 }

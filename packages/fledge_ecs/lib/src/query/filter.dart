@@ -26,6 +26,12 @@ class With<T> extends QueryFilter {
   const With();
 
   @override
+  bool operator ==(Object other) => other.runtimeType == runtimeType;
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
   Set<ComponentId> get required => {ComponentId.of<T>()};
 }
 
@@ -37,6 +43,12 @@ class With<T> extends QueryFilter {
 /// ```
 class Without<T> extends QueryFilter {
   const Without();
+
+  @override
+  bool operator ==(Object other) => other.runtimeType == runtimeType;
+
+  @override
+  int get hashCode => runtimeType.hashCode;
 
   @override
   Set<ComponentId> get excluded => {ComponentId.of<T>()};
@@ -54,6 +66,18 @@ class And<T extends Record> extends QueryFilter {
   const And(this.filters);
 
   @override
+  bool operator ==(Object other) {
+    if (other is! And || other.filters.length != filters.length) return false;
+    for (var i = 0; i < filters.length; i++) {
+      if (filters[i] != other.filters[i]) return false;
+    }
+    return true;
+  }
+
+  @override
+  int get hashCode => Object.hashAll(filters);
+
+  @override
   Set<ComponentId> get required => filters.expand((f) => f.required).toSet();
 
   @override
@@ -63,6 +87,12 @@ class And<T extends Record> extends QueryFilter {
 /// Marker for no filter.
 class NoFilter extends QueryFilter {
   const NoFilter();
+
+  @override
+  bool operator ==(Object other) => other is NoFilter;
+
+  @override
+  int get hashCode => 0;
 }
 
 /// Filter for entities where component [T] was added recently.

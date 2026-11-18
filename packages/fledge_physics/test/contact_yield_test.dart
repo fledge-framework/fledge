@@ -59,7 +59,7 @@ void main() {
         for (var step = 1; step <= 8; step++) {
           // Re-arm velocity every step (blocking zeroes it).
           world.get<Velocity>(a.entity)!.x = 4;
-          await resolver.run(world);
+          resolver.run(world);
           if (tracker.isYielding(a.entity, b.entity)) {
             yieldedOnStep = step;
             break;
@@ -80,7 +80,7 @@ void main() {
 
         // Once yielding, blocking is off — A's velocity is preserved.
         world.get<Velocity>(a.entity)!.x = 4;
-        await resolver.run(world);
+        resolver.run(world);
         expect(world.get<Velocity>(a.entity)!.x, 4.0);
       },
     );
@@ -99,7 +99,7 @@ void main() {
       // Drive through the yield threshold.
       for (var step = 0; step < 10; step++) {
         world.get<Velocity>(a.entity)!.x = 4;
-        await resolver.run(world);
+        resolver.run(world);
         if (tracker.isYielding(a.entity, b.entity)) break;
       }
       expect(tracker.isYielding(a.entity, b.entity), isTrue);
@@ -108,7 +108,7 @@ void main() {
       world.get<Transform2D>(b.entity)!.translation.x = 1000;
       world.get<Velocity>(a.entity)!.x = 0;
 
-      await resolver.run(world);
+      resolver.run(world);
 
       expect(tracker.isYielding(a.entity, b.entity), isFalse);
       expect(tracker.contactAge(a.entity, b.entity), isNull);
@@ -129,7 +129,7 @@ void main() {
         int startedCount = 0;
         for (var step = 0; step < 12; step++) {
           world.get<Velocity>(a.entity)!.x = 4;
-          await resolver.run(world);
+          resolver.run(world);
           world.updateEvents();
           startedCount += world
               .eventReader<ContactYieldStarted>()
@@ -154,7 +154,7 @@ void main() {
       // Get into yielding.
       for (var step = 0; step < 12; step++) {
         world.get<Velocity>(a.entity)!.x = 4;
-        await resolver.run(world);
+        resolver.run(world);
         world.updateEvents();
         if (tracker.isYielding(a.entity, b.entity)) break;
       }
@@ -162,7 +162,7 @@ void main() {
       // Separate.
       world.get<Transform2D>(b.entity)!.translation.x = 1000;
       world.get<Velocity>(a.entity)!.x = 0;
-      await resolver.run(world);
+      resolver.run(world);
       world.updateEvents();
 
       final ended = world.eventReader<ContactYieldEnded>().read().toList();
@@ -191,7 +191,7 @@ void main() {
       for (var step = 0; step < 15; step++) {
         // Re-arm the intent each step; resolution zeroes it.
         world.get<Velocity>(a.entity)!.x = 4;
-        await resolver.run(world);
+        resolver.run(world);
         if (tracker.isYielding(a.entity, b.entity)) break;
       }
 
@@ -206,7 +206,7 @@ void main() {
 
       // Once yielding, blocking is off — A's velocity is preserved.
       world.get<Velocity>(a.entity)!.x = 4;
-      await resolver.run(world);
+      resolver.run(world);
       expect(world.get<Velocity>(a.entity)!.x, 4.0);
     });
 
@@ -228,7 +228,7 @@ void main() {
       for (var step = 0; step < 15; step++) {
         world.get<Velocity>(a.entity)!.x = 4;
         world.get<Velocity>(b.entity)!.x = -4;
-        await resolver.run(world);
+        resolver.run(world);
         if (tracker.isYielding(a.entity, b.entity)) break;
       }
 
@@ -249,7 +249,7 @@ void main() {
 
       for (var step = 0; step < 30; step++) {
         world.get<Velocity>(a.entity)!.x = 4;
-        await resolver.run(world);
+        resolver.run(world);
       }
       expect(tracker.isYielding(a.entity, b.entity), isFalse);
     });

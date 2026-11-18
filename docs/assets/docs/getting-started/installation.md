@@ -102,7 +102,7 @@ class MovementSystem implements System {
   );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     // Your logic here
   }
 }

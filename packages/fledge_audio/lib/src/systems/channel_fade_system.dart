@@ -27,7 +27,7 @@ class ChannelFadeSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final time = world.getResource<WallTime>();
     final channels = world.getResource<VolumeChannels>();
     if (time == null || channels == null) return;

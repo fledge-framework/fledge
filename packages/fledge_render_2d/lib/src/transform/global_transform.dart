@@ -17,6 +17,25 @@ class GlobalTransform2D {
   /// Creates a global transform with the given matrix.
   GlobalTransform2D([Matrix3? matrix]) : matrix = matrix ?? Matrix3.identity();
 
+  /// Bumped by `TransformPropagateSystem` whenever it changes [matrix], so
+  /// children know when their parent moved.
+  int version = 0;
+
+  /// What `TransformPropagateSystem` last computed [matrix] from: the local
+  /// transform's values and the parent's [version] (NaN until computed).
+  /// Unchanged inputs skip the work.
+  double sourceX = double.nan,
+      sourceY = 0,
+      sourceRotation = 0,
+      sourceScaleX = 0,
+      sourceScaleY = 0,
+      sourceSkew = 0;
+  int sourceParentVersion = -1;
+
+  /// The parent's global transform it was computed under (a re-parented
+  /// entity is recomputed even if the versions happen to match).
+  GlobalTransform2D? sourceParent;
+
   /// Creates an identity global transform.
   factory GlobalTransform2D.identity() => GlobalTransform2D();
 

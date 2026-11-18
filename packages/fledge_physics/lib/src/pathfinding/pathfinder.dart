@@ -200,10 +200,25 @@ class Pathfinder {
     final width = grid.width;
     final cells = width * grid.height;
     // Best known cost to each cell, the cell it was reached from, and
-    // whether it's been expanded.
-    final gCosts = Float64List(cells)..fillRange(0, cells, double.infinity);
-    final parents = Int32List(cells)..fillRange(0, cells, -1);
-    final closed = Uint8List(cells);
+    // whether it's been expanded: whole-grid arrays kept between searches
+    // (a town-sized grid is 50,000 cells), valid for a cell only where its
+    // stamp is this search's ([_Scratch]).
+    final scratch = _Scratch.forCells(cells);
+    final stamp = scratch.begin();
+    final stamps = scratch.stamps;
+    final gCosts = scratch.gCosts;
+    final parents = scratch.parents;
+    final closed = scratch.closed;
+    double gCostOf(int i) => stamps[i] == stamp ? gCosts[i] : double.infinity;
+    void touch(int i) {
+      if (stamps[i] != stamp) {
+        stamps[i] = stamp;
+        gCosts[i] = double.infinity;
+        parents[i] = -1;
+        closed[i] = 0;
+      }
+    }
+
     // Never overestimates: every step ahead costs at least the cheapest cell.
     final hScale = grid.minCost;
     final neighbors = _getNeighbors();
@@ -211,6 +226,7 @@ class Pathfinder {
 
     final startIndex = startY * width + startX;
     final goalIndex = goalY * width + goalX;
+    touch(startIndex);
     gCosts[startIndex] = 0;
     final startH = _heuristic(startX, startY, goalX, goalY) * hScale;
     open.push(_OpenEntry(startIndex, 0, startH, startH));
@@ -220,7 +236,10 @@ class Pathfinder {
     while (open.isNotEmpty && iterations < maxIterations) {
       final current = open.pop();
       final index = current.index;
-      if (closed[index] == 1 || current.gCost > gCosts[index]) continue;
+      if ((stamps[index] == stamp && closed[index] == 1) ||
+          current.gCost > gCostOf(index)) {
+        continue;
+      }
       closed[index] = 1;
       iterations++;
 
@@ -248,6 +267,7 @@ class Pathfinder {
         }
 
         final next = ny * width + nx;
+        touch(next);
         if (closed[next] == 1) continue;
         final gCost = current.gCost + length * (here + grid.costAt(nx, ny)) / 2;
         if (gCost >= gCosts[next]) continue;
@@ -321,5 +341,40 @@ class Pathfinder {
       index = parents[index];
     }
     return path.reversed.toList();
+  }
+}
+
+/// A search's whole-grid working arrays, kept for the next search of a grid
+/// that size (one isolate runs one search at a time). A cell's entries hold
+/// for a search only where its stamp is that search's; others read as
+/// unvisited, so nothing is cleared between searches.
+class _Scratch {
+  _Scratch(int cells)
+    : stamps = Int32List(cells),
+      gCosts = Float64List(cells),
+      parents = Int32List(cells),
+      closed = Uint8List(cells);
+
+  static _Scratch? _last;
+
+  static _Scratch forCells(int cells) {
+    final last = _last;
+    if (last != null && last.stamps.length >= cells) return last;
+    return _last = _Scratch(cells);
+  }
+
+  final Int32List stamps;
+  final Float64List gCosts;
+  final Int32List parents;
+  final Uint8List closed;
+  int _stamp = 0;
+
+  /// Starts a search: its stamp.
+  int begin() {
+    if (++_stamp == 0x7fffffff) {
+      stamps.fillRange(0, stamps.length, 0);
+      _stamp = 1;
+    }
+    return _stamp;
   }
 }

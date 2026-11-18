@@ -85,6 +85,16 @@ class SoLoudBackend implements AudioBackend {
   }
 
   @override
+  void setSpeed(AudioVoice voice, double speed) {
+    if (_valid(voice)) {
+      _soloud.setRelativePlaySpeed(
+        _handle(voice),
+        speed < AudioBackend.minSpeed ? AudioBackend.minSpeed : speed,
+      );
+    }
+  }
+
+  @override
   void setPaused(AudioVoice voice, bool paused) {
     if (_valid(voice)) _soloud.setPause(_handle(voice), paused);
   }

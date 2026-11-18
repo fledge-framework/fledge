@@ -28,10 +28,9 @@ abstract class _NetSystem implements System {
   void runNet(NetworkSession session, World world);
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     final session = world.getResource<NetworkSession>();
     if (session != null) runNet(session, world);
-    return Future.value();
   }
 }
 

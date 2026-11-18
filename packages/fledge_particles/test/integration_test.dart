@@ -108,6 +108,11 @@ void main() {
       // sort range.
       for (final (_, sprite) in rw.query1<ExtractedSprite>().iter()) {
         expect(sprite.layer, DrawLayer.particles);
+        // The quad is the particle's size; the transform doesn't scale it
+        // again (the pipeline multiplies the two).
+        expect(sprite.size, Vector2(4, 4));
+        final m = sprite.transform.storage;
+        expect(math.sqrt(m[0] * m[0] + m[1] * m[1]), closeTo(1, 1e-9));
         expect(
           sprite.sortKey,
           greaterThanOrEqualTo(

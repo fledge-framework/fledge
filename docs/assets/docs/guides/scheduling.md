@@ -46,7 +46,7 @@ The runtime container that dispatches schedules is the `Scheduler` (previously c
 | `FirstSets.input` | 3rd | `InputPollingSystem`, `ContextUpdateSystem<S>`, `ActionResolutionSystem` |
 | `FirstSets.content` | 4th | `HotReloadPollSystem`, `TilemapSpawnSystem` |
 
-Every system in an earlier phase runs before every system in a later one, regardless of plugin registration order. Within a phase, systems are ordered by their own `before:` / `after:` and run in parallel when they don't conflict.
+Every system in an earlier phase runs before every system in a later one, regardless of plugin registration order. Within a phase, systems are ordered by their own `before:` / `after:`.
 
 A game system joins a phase by declaring membership, or orders itself against a whole phase without joining it — set names work anywhere a system name does:
 
@@ -88,16 +88,16 @@ Systems in `first` that join no phase are unordered relative to the phases, so `
 
 Join `UpdateSets.simulate` with variable-step movement and logic that should see this frame's received state, or order against a phase with `after: [UpdateSets.receive]`.
 
-## Parallel Execution
+## Conflicts and ordering
 
-Systems in the same schedule run in parallel when they don't conflict:
+Systems in a schedule run one at a time. What they declare they read and write says which pairs **conflict**: a conflicting pair always runs in a fixed order (give it one with `before:` / `after:`; `checkScheduleOrdering()` reports pairs left to registration order), while systems that don't conflict have no guaranteed order between them. Dart runs one isolate, so systems never run at the same time; make them synchronous (`void run`) and they run back to back.
 
 - **No conflict**: Different component access
 - **Conflict**: Same component, at least one writes
 
 ```dart-tabs
 // @tab Annotations
-// Can run in parallel (different components)
+// Independent (different components): no guaranteed order between them
 @system
 void systemA(Query1<Position> query) {
   for (final (_, pos) in query.iter()) { }
@@ -108,7 +108,7 @@ void systemB(Query1<Health> query) {
   for (final (_, health) in query.iter()) { }
 }
 
-// Must run sequentially (same component)
+// Conflict (same component): always run in a fixed order
 @system
 void systemC(Query1<Position> query) {
   for (final (_, pos) in query.iter()) { }
@@ -119,13 +119,13 @@ void systemD(QueryMut1<Position> query) {
   for (final (_, pos) in query.iter()) { }
 }
 // @tab Inheritance
-// Can run in parallel (different components)
+// Independent (different components): no guaranteed order between them
 class SystemA implements System {
   @override
   SystemMeta get meta => SystemMeta(name: 'systemA', reads: {ComponentId.of<Position>()});
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final (_, pos) in world.query1<Position>().iter()) { }
   }
 }
@@ -135,18 +135,18 @@ class SystemB implements System {
   SystemMeta get meta => SystemMeta(name: 'systemB', reads: {ComponentId.of<Health>()});
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final (_, health) in world.query1<Health>().iter()) { }
   }
 }
 
-// Must run sequentially (same component)
+// Conflict (same component): always run in a fixed order
 class SystemC implements System {
   @override
   SystemMeta get meta => SystemMeta(name: 'systemC', reads: {ComponentId.of<Position>()});
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final (_, pos) in world.query1<Position>().iter()) { }
   }
 }
@@ -156,7 +156,7 @@ class SystemD implements System {
   SystemMeta get meta => SystemMeta(name: 'systemD', writes: {ComponentId.of<Position>()});
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final (_, pos) in world.query1<Position>().iter()) { }
   }
 }

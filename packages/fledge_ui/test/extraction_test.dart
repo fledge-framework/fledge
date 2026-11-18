@@ -33,7 +33,7 @@ void main() {
                   ..insert(UiText(text: 'Score: 0', fontSize: 16)))
                 .entity;
 
-        await layout.run(mainWorld);
+        layout.run(mainWorld);
         extractor.extract(mainWorld, renderWorld);
 
         final results = <ExtractedUiText>[];
@@ -61,7 +61,7 @@ void main() {
           ..insert(const UiSize(width: 32, height: 32))
           ..insert(const UiImage(texture: texture, tint: Color(0xFFFF00FF)));
 
-        await layout.run(mainWorld);
+        layout.run(mainWorld);
         extractor.extract(mainWorld, renderWorld);
 
         final results = renderWorld
@@ -87,7 +87,7 @@ void main() {
         ..insert(const UiOffset(x: -10, y: -10))
         ..insert(const UiRect(color: Color(0xFF00FF00)));
 
-      await layout.run(mainWorld);
+      layout.run(mainWorld);
       extractor.extract(mainWorld, renderWorld);
 
       final results = renderWorld
@@ -112,7 +112,7 @@ void main() {
           ..insert(const UiSize(width: 100, height: 40))
           ..insert(const UiRect(color: Color(0xFF123456), borderRadius: 8));
 
-        await layout.run(mainWorld);
+        layout.run(mainWorld);
         extractor.extract(mainWorld, renderWorld);
 
         final result = renderWorld.query1<ExtractedUiRect>().iter().single.$2;
@@ -141,7 +141,7 @@ void main() {
           ..insert(const UiAnchorComponent(UiAnchor.topLeft))
           ..insert(UiText(text: 'B'));
 
-        await layout.run(mainWorld);
+        layout.run(mainWorld);
         extractor.extract(mainWorld, renderWorld);
 
         final keys = <int>[];
@@ -167,7 +167,7 @@ void main() {
                 ..insert(UiText(text: 'Score: 0')))
               .entity;
 
-      await layout.run(mainWorld);
+      layout.run(mainWorld);
       extractor.extract(mainWorld, renderWorld);
       expect(
         renderWorld.query1<ExtractedUiText>().iter().single.$2.text,

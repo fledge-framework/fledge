@@ -18,7 +18,7 @@ import 'package:fledge_ecs/fledge_ecs.dart';
 // @tab Annotations
 // Use the @system annotation on a function
 @system
-Future<void> movementSystem(World world) async {
+void movementSystem(World world) {
   for (final (entity, pos, vel) in world.query2<Position, Velocity>().iter()) {
     pos.x += vel.dx;
     pos.y += vel.dy;
@@ -38,7 +38,7 @@ class MovementSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final (entity, pos, vel) in world.query2<Position, Velocity>().iter()) {
       pos.x += vel.dx;
       pos.y += vel.dy;
@@ -56,7 +56,7 @@ class MovementSystem implements System {
 abstract class System {
   SystemMeta get meta;
   RunCondition? get runCondition => null;
-  Future<void> run(World world);
+  FutureOr<void> run(World world); // sync systems: `void run(World world)`
   bool shouldRun(World world) => runCondition?.call(world) ?? true;
 }
 ```
@@ -74,7 +74,7 @@ class SystemMeta {
   final Set<Type> resourceWrites;
   final Set<Type> eventReads;
   final Set<Type> eventWrites;
-  final bool exclusive;        // Never runs in parallel with anything
+  final bool exclusive;        // Conflicts with every other system
   final List<String> before;   // Systems or sets this runs before
   final List<String> after;    // Systems or sets this runs after
   final List<String> sets;     // System sets this belongs to
@@ -193,12 +193,12 @@ app.addSystem(renderSystem,    schedule: Schedules.last);
 
 > The old `stage:` parameter with `CoreStage.foo` is aliased to `schedule: Schedules.foo` for one release. Prefer the new names.
 
-## Parallel Execution
+## Conflicts and ordering
 
-Systems that don't conflict run in parallel:
+Systems in a schedule run one at a time. What they declare they read and write says which pairs **conflict**: a conflicting pair always runs in a fixed order (give it one with `before:` / `after:`; `checkScheduleOrdering()` reports pairs left to registration order), while systems that don't conflict have no guaranteed order between them. Dart runs one isolate, so systems never run at the same time; make them synchronous (`void run`) and they run back to back.
 
 ```dart
-// These can run in parallel (different components)
+// Independent (different components): no guaranteed order between them
 @system
 void systemA(World world) {
   for (final (_, pos) in world.query1<Position>().iter()) { }
@@ -209,7 +209,7 @@ void systemB(World world) {
   for (final (_, health) in world.query1<Health>().iter()) { }
 }
 
-// These must run sequentially (both write Position)
+// Conflict (both write Position): always run in a fixed order
 @system
 void systemC(World world) {
   for (final (_, pos) in world.query1<Position>().iter()) { }

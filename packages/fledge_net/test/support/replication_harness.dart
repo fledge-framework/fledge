@@ -128,7 +128,7 @@ class GlobalPosPropagateSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     final roots = [
       for (final (e, _)
           in world.query1<Pos>(filter: const Without<Parent>()).iter())
@@ -137,7 +137,6 @@ class GlobalPosPropagateSystem implements System {
     for (final e in roots) {
       _apply(world, e, 0, 0);
     }
-    return Future.value();
   }
 
   void _apply(World world, Entity e, double px, double py) {
@@ -204,15 +203,14 @@ class SubmitInputSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     final move = world.getResource<Driving>()?.move;
     final peer = world.getResource<NetworkSession>()?.localPeerId;
-    if (move == null || peer == null) return Future.value();
+    if (move == null || peer == null) return;
     final inputs = world.getResource<NetLocalInputs<Move>>()!;
     for (final (e, id) in world.query1<NetworkIdentity>().iter()) {
       if (id.ownerId == peer) inputs.submit(e, move);
     }
-    return Future.value();
   }
 }
 
@@ -228,7 +226,7 @@ class EventRecorderSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     final log = world.getResource<EventLog>()!;
     log.peerConnected.addAll(world.eventReader<NetPeerConnected>().read());
     log.peerDisconnected.addAll(
@@ -242,7 +240,6 @@ class EventRecorderSystem implements System {
     log.despawned.addAll(world.eventReader<NetEntityDespawned>().read());
     log.emotes.addAll(world.eventReader<NetRpcReceived<Emote>>().read());
     log.resourceUpdates.addAll(world.eventReader<NetResourceUpdated>().read());
-    return Future.value();
   }
 }
 
@@ -260,7 +257,7 @@ class HostSceneSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     final scene = world.getResource<HostScene>()!;
     final vehicle = scene.vehicle;
     for (final e in world.eventReader<NetPeerConnected>().read()) {
@@ -272,7 +269,6 @@ class HostSceneSystem implements System {
       world.setParent(avatar.entity, vehicle);
       scene.avatars[e.peerId] = avatar.entity;
     }
-    return Future.value();
   }
 }
 
@@ -292,16 +288,15 @@ class VehicleMoveSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     final scene = world.getResource<HostScene>()!;
     final v = scene.vehicle;
     if (v == null || scene.vehicleVx == 0 || !world.isAlive(v)) {
-      return Future.value();
+      return;
     }
     final dt = world.getResource<FixedTimestep>()!.stepSeconds;
     final p = world.get<Pos>(v)!;
     world.insert(v, Pos(p.x + scene.vehicleVx * dt, p.y));
-    return Future.value();
   }
 }
 

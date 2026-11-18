@@ -54,6 +54,17 @@ void main() {
       expect(matrix[4], equals(3)); // scale y
     });
 
+    test('toMatrix applies skew after scale: x leans with y', () {
+      final transform = Transform2D(scale: Vector2(1, 0.5), skew: 0.6);
+      final m = transform.toMatrix();
+      // A point 10 px down (local) lands 5 px down and 3 px right.
+      final p = m.transform(Vector3(0, 10, 1));
+      expect(p.x, closeTo(3, 1e-9));
+      expect(p.y, closeTo(5, 1e-9));
+      expect(transform.clone().skew, 0.6);
+      expect((Transform2D()..copyFrom(transform)).skew, 0.6);
+    });
+
     test('rotationDegrees getter/setter', () {
       final transform = Transform2D();
 
@@ -142,12 +153,29 @@ void main() {
       final entity = world.spawn()..insert(Transform2D.from(50, 100));
 
       final system = TransformPropagateSystem();
-      await system.run(world);
+      system.run(world);
 
       final global = world.get<GlobalTransform2D>(entity.entity);
       expect(global, isNotNull);
       expect(global!.x, equals(50));
       expect(global.y, equals(100));
+    });
+
+    test('a skewed root and its child get the sheared matrix; changing only '
+        'the skew recomputes it', () async {
+      final world = World();
+      final root = world.spawn()
+        ..insert(Transform2D(translation: Vector2(5, 0), skew: 0.5));
+      final child = world.spawnChild(root.entity)
+        ..insert(Transform2D.from(0, 10));
+      final system = TransformPropagateSystem();
+      system.run(world);
+      final global = world.get<GlobalTransform2D>(child.entity)!;
+      expect(global.x, closeTo(10, 1e-9)); // 5 + 0.5 * 10
+      expect(global.y, closeTo(10, 1e-9));
+      world.get<Transform2D>(root.entity)!.skew = 0;
+      system.run(world);
+      expect(world.get<GlobalTransform2D>(child.entity)!.x, closeTo(5, 1e-9));
     });
 
     test('propagates to children', () async {
@@ -159,7 +187,7 @@ void main() {
         ..insert(Transform2D.from(5, 5));
 
       final system = TransformPropagateSystem();
-      await system.run(world);
+      system.run(world);
 
       final childGlobal = world.get<GlobalTransform2D>(child.entity);
       expect(childGlobal, isNotNull);
@@ -179,7 +207,7 @@ void main() {
         ..insert(Transform2D.from(1, 0));
 
       final system = TransformPropagateSystem();
-      await system.run(world);
+      system.run(world);
 
       final grandchildGlobal = world.get<GlobalTransform2D>(grandchild.entity);
       expect(grandchildGlobal, isNotNull);

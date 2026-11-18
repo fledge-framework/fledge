@@ -167,4 +167,30 @@ void main() {
       expect(() => grid.setCost(0, 0, -1), throwsArgumentError);
     });
   });
+
+  test('searches back to back (the working arrays are reused) find the same '
+      'ways as fresh ones, across grids of different sizes', () {
+    const finder = Pathfinder();
+    CollisionGrid maze(int w, int h, int seed) {
+      final grid = CollisionGrid(width: w, height: h);
+      for (var y = 1; y < h - 1; y += 2) {
+        for (var x = 0; x < w - 1; x++) {
+          if ((x + y + seed) % 7 != 0) grid.setBlocked(x, y);
+        }
+      }
+      return grid;
+    }
+
+    final big = maze(60, 40, 1);
+    final small = maze(12, 9, 3);
+    final first = finder.findPath(big, 0, 0, 59, 39);
+    final other = finder.findPath(small, 0, 0, 11, 8);
+    final again = finder.findPath(big, 0, 0, 59, 39);
+    final reverse = finder.findPath(big, 59, 39, 0, 0);
+    expect(first.success, isTrue);
+    expect(other.success, isTrue);
+    expect(again.path, first.path, reason: 'same way the second time');
+    expect(reverse.success, isTrue);
+    expect(reverse.path!.length, first.path!.length);
+  });
 }

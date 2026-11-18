@@ -94,7 +94,7 @@ class DisplayScoreSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final score = world.getResource<Score>();
     if (score != null) {
       print('Current score: ${score.value}');
@@ -110,7 +110,7 @@ class UpdateTimeSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final time = world.getResource<WallTime>();
     if (time != null) {
       time.elapsed += time.delta;
@@ -126,7 +126,7 @@ class AddScoreSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final score = world.getResource<Score>()!;
     for (final (entity, _) in world.query1<Collected>().iter()) {
       score.value += 10;
@@ -158,7 +158,7 @@ class DebugSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final debug = world.getResource<DebugConfig>();
     if (debug != null) {
       // Debug mode is enabled
@@ -207,7 +207,7 @@ void systemB(World world) {
   score.value *= 2;
 }
 
-// These can run in parallel (different resources)
+// Independent (different resources): no guaranteed order between them
 @system
 void systemC(World world) {
   final time = world.getResource<WallTime>()!;
@@ -226,7 +226,7 @@ class SystemA implements System {
   SystemMeta get meta => SystemMeta(name: 'systemA', resourceWrites: {Score});
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final score = world.getResource<Score>()!;
     score.value += 10;
   }
@@ -237,19 +237,19 @@ class SystemB implements System {
   SystemMeta get meta => SystemMeta(name: 'systemB', resourceWrites: {Score});
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final score = world.getResource<Score>()!;
     score.value *= 2;
   }
 }
 
-// These can run in parallel (different resources)
+// Independent (different resources): no guaranteed order between them
 class SystemC implements System {
   @override
   SystemMeta get meta => SystemMeta(name: 'systemC', resourceReads: {WallTime});
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final time = world.getResource<WallTime>()!;
     print(time.elapsed);
   }
@@ -260,7 +260,7 @@ class SystemD implements System {
   SystemMeta get meta => SystemMeta(name: 'systemD', resourceWrites: {Score});
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final score = world.getResource<Score>()!;
     score.value += 1;
   }
@@ -316,7 +316,7 @@ class MovementSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final dt = world.getResource<WallTime>()!.delta;
     for (final (_, pos, vel) in world.query2<Position, Velocity>().iter()) {
       pos.x += vel.dx * dt;
@@ -367,7 +367,7 @@ class PlayerControlSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final input = world.getResource<Input>()!;
     for (final (_, vel, _) in world.query2<Velocity, Player>().iter()) {
       vel.dx = 0;
@@ -422,7 +422,7 @@ class CheckGameOverSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final players = world.query1<Player>();
     if (players.isEmpty) {
       final state = world.getResource<GameState>()!;
@@ -577,7 +577,7 @@ class MySystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final time = world.getResource<WallTime>()!;
     print('Delta: ${time.delta}');
     print('Elapsed: ${time.elapsed}');
@@ -614,7 +614,7 @@ class DebugFpsSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final frameTime = world.getResource<FrameTime>()!;
     print('FPS: ${frameTime.fps.toStringAsFixed(1)}');
   }

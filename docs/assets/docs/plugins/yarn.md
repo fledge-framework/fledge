@@ -412,8 +412,9 @@ command and the next line do **not** run until release.
 
 ### Dialogue box widget
 
-`DialogueBoxWidget` reads a `DialogueState` and reports taps through
-callbacks — style it with `DialogueBoxTheme`:
+`DialogueBoxWidget` reads a `DialogueState` and reports taps, and the
+pointer moving onto an option, through callbacks — style it with
+`DialogueBoxTheme`:
 
 ```dart
 DialogueBoxWidget(
@@ -422,8 +423,14 @@ DialogueBoxWidget(
       .send(const DialogueAdvanceRequested()),
   onChoiceSelected: (i) => world.eventWriter<DialogueChoiceSelected>()
       .send(DialogueChoiceSelected(i)),
+  // Hovering an option highlights it, as the arrow keys do.
+  onChoiceHovered: (i) => world.eventWriter<DialogueCursorSet>()
+      .send(DialogueCursorSet(i)),
 )
 ```
+
+`DialogueCursorMoved(delta)` moves the highlight a step (keys);
+`DialogueCursorSet(index)` puts it on an option (a hovering pointer).
 
 ### Run conditions
 

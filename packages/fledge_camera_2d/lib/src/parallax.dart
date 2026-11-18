@@ -77,7 +77,7 @@ class ParallaxSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     // Find the active camera with the lowest order — this matches
     // CameraDriverNode's selection.
     double camX = 0;
@@ -94,7 +94,7 @@ class ParallaxSystem implements System {
         found = true;
       }
     }
-    if (!found) return Future.value();
+    if (!found) return;
 
     for (final (_, parallax, transform, global)
         in world.query3<Parallax, Transform2D, GlobalTransform2D>().iter()) {
@@ -102,6 +102,5 @@ class ParallaxSystem implements System {
       global.matrix[6] = transform.translation.x + camX * k;
       global.matrix[7] = transform.translation.y + camY * k;
     }
-    return Future.value();
   }
 }

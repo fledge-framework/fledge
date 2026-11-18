@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart'
         BuildContext,
         CustomPaint,
         CustomPainter,
+        Listenable,
         SizedBox,
         Size,
         StatelessWidget,
@@ -37,9 +38,10 @@ import 'view_pass.dart' show ViewPasses;
 ///
 /// ## Repaint policy
 ///
-/// `shouldRepaint` currently returns `true`, so the view repaints
-/// every time the enclosing widget rebuilds. A change-detection-aware
-/// policy is a follow-up; correctness first.
+/// The view repaints every time the enclosing widget rebuilds, and also
+/// whenever [repaint] notifies: give it a listenable the game loop ticks
+/// once a frame (e.g. a `ValueNotifier<int>` bumped after `App.tick`) and
+/// the world is repainted every frame without rebuilding any widget.
 class FledgeRenderView extends StatelessWidget {
   /// The Fledge app whose render world will be painted.
   final App app;
@@ -47,8 +49,17 @@ class FledgeRenderView extends StatelessWidget {
   /// Optional solid fill drawn before sprites. `null` = transparent.
   final Color? backgroundColor;
 
+  /// Repaints the view whenever it notifies (once a frame, from the game
+  /// loop), without a rebuild. `null` = repaint only on rebuild.
+  final Listenable? repaint;
+
   /// Creates a render view.
-  const FledgeRenderView({super.key, required this.app, this.backgroundColor});
+  const FledgeRenderView({
+    super.key,
+    required this.app,
+    this.backgroundColor,
+    this.repaint,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -62,6 +73,7 @@ class FledgeRenderView extends StatelessWidget {
           app: app,
           backgroundColor: backgroundColor,
           devicePixelRatio: View.maybeOf(context)?.devicePixelRatio ?? 1,
+          repaint: repaint,
         ),
       ),
     );
@@ -77,6 +89,7 @@ class _FledgeRenderPainter extends CustomPainter {
     required this.app,
     required this.backgroundColor,
     required this.devicePixelRatio,
+    super.repaint,
   });
 
   @override

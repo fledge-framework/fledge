@@ -56,9 +56,9 @@ ParticleTemplate _template() => ParticleTemplate(
 /// systems in schedule order (emit → update, then reap).
 Future<void> tick(World world, double dt) async {
   world.getResource<WallTime>()!.delta = dt;
-  await ParticleEmitSystem().run(world);
-  await ParticleUpdateSystem().run(world);
-  await ParticleReapSystem().run(world);
+  ParticleEmitSystem().run(world);
+  ParticleUpdateSystem().run(world);
+  ParticleReapSystem().run(world);
 }
 
 void main() {
@@ -71,8 +71,8 @@ void main() {
         // ParticleReapSystem here. Update still runs so we're
         // exercising the full "particles get advanced" path.
         world.getResource<WallTime>()!.delta = 0.1;
-        await ParticleEmitSystem().run(world);
-        await ParticleUpdateSystem().run(world);
+        ParticleEmitSystem().run(world);
+        ParticleUpdateSystem().run(world);
       }
       expect(emitter.pool.liveCount, 10);
     });
@@ -90,7 +90,7 @@ void main() {
         // Advance a few frames — no new particles should appear.
         for (var i = 0; i < 3; i++) {
           world.getResource<WallTime>()!.delta = 0.1;
-          await ParticleEmitSystem().run(world);
+          ParticleEmitSystem().run(world);
         }
         expect(emitter.pool.liveCount, beforePause);
       },
@@ -105,14 +105,14 @@ void main() {
       // Half a second's worth of emission (~10 particles at rate 20).
       for (var i = 0; i < 5; i++) {
         world.getResource<WallTime>()!.delta = 0.1;
-        await ParticleEmitSystem().run(world);
+        ParticleEmitSystem().run(world);
       }
       final atCap = emitter.pool.liveCount;
 
       // Now push past maxDuration. No new particles should spawn.
       for (var i = 0; i < 5; i++) {
         world.getResource<WallTime>()!.delta = 0.1;
-        await ParticleEmitSystem().run(world);
+        ParticleEmitSystem().run(world);
       }
       expect(emitter.pool.liveCount, atCap);
       // Sanity: canEmit reports the stopped state.
@@ -124,13 +124,13 @@ void main() {
       // four frames → 2 particles.
       final (:world, entity: _, :emitter) = buildWorld(emitRate: 5);
       world.getResource<WallTime>()!.delta = 0.1;
-      await ParticleEmitSystem().run(world);
+      ParticleEmitSystem().run(world);
       expect(emitter.pool.liveCount, 0);
-      await ParticleEmitSystem().run(world);
+      ParticleEmitSystem().run(world);
       expect(emitter.pool.liveCount, 1);
-      await ParticleEmitSystem().run(world);
+      ParticleEmitSystem().run(world);
       expect(emitter.pool.liveCount, 1);
-      await ParticleEmitSystem().run(world);
+      ParticleEmitSystem().run(world);
       expect(emitter.pool.liveCount, 2);
     });
   });
@@ -171,7 +171,7 @@ void main() {
       );
 
       world.getResource<WallTime>()!.delta = 0.1;
-      await ParticleUpdateSystem().run(world);
+      ParticleUpdateSystem().run(world);
 
       final p = emitter.pool.live.first;
       expect(p.position.x, closeTo(10.0, 1e-9));

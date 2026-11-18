@@ -194,7 +194,7 @@ class DamageSystem implements System {
   );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final (entity, _, collision)
         in world.query2<Player, CollisionEvent>().iter()) {
       final other = collision.other;
@@ -237,7 +237,7 @@ class TriggerZone {
 
 class TriggerSystem implements System {
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final (_, collision, trigger)
         in world.query2<CollisionEvent, TriggerZone>().iter()) {
       if (!trigger.hasTriggered && world.has<Player>(collision.other)) {

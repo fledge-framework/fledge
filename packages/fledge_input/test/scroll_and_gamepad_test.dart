@@ -22,7 +22,7 @@ World _world(InputMap map) {
   return world;
 }
 
-Future<void> _resolve(World world) => ActionResolutionSystem().run(world);
+void _resolve(World world) => ActionResolutionSystem().run(world);
 
 void main() {
   group('scroll bindings', () {
@@ -36,7 +36,7 @@ void main() {
       world.getResource<MouseState>()!
         ..onScroll(0, 100)
         ..onScroll(0, 100);
-      await _resolve(world);
+      _resolve(world);
       final actions = world.getResource<ActionState>()!;
       expect(actions.justPressed(_next), isTrue);
       expect(actions.getButton(_next)!.presses, 2);
@@ -72,7 +72,7 @@ void main() {
       final actions = world.getResource<ActionState>()!;
       Future<void> frame() async {
         mouse.beginFrame();
-        await _resolve(world);
+        _resolve(world);
         mouse.endFrame();
       }
 
@@ -96,7 +96,7 @@ void main() {
       );
       world.getResource<KeyboardState>()!.keyDown(LogicalKeyboardKey.tab);
       world.getResource<MouseState>()!.onScroll(0, 10);
-      await _resolve(world);
+      _resolve(world);
       expect(world.getResource<ActionState>()!.fixedPressCount(_next), 2);
     });
   });
@@ -128,7 +128,7 @@ void main() {
         event('rightShoulder', 1),
         GamepadNormalizer.forPlatform(GamepadPlatform.windows),
       );
-      await _resolve(world);
+      _resolve(world);
       final actions = world.getResource<ActionState>()!;
       expect(actions.justPressed(_next), isTrue);
       expect(actions.isPressed(_prev), isFalse);

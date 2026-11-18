@@ -130,7 +130,7 @@ class PlacementGhostSystem implements System {
   bool shouldRun(World world) => _shouldRun(world);
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     final state = world.getResource<PlacementState>();
     final config = world.getResource<PlacementGhostConfig>();
     final ghosts = [
@@ -143,7 +143,7 @@ class PlacementGhostSystem implements System {
       for (final (entity, _) in ghosts) {
         world.despawn(entity);
       }
-      return Future.value();
+      return;
     }
 
     final (x, y) = config.tileToWorld(tile);
@@ -160,14 +160,14 @@ class PlacementGhostSystem implements System {
     }
     if (entity == null) {
       final sprite = config.ghostSpriteFor(world, key);
-      if (sprite == null) return Future.value();
+      if (sprite == null) return;
       final transform = Transform2D.from(x, y);
       world.spawn()
         ..insert(PlacementGhost(key: key, tile: tile, isValid: state.isValid))
         ..insert(transform)
         ..insert(GlobalTransform2D(transform.toMatrix()))
         ..insert(sprite..color = color);
-      return Future.value();
+      return;
     }
 
     final ghost = world.get<PlacementGhost>(entity)!
@@ -182,6 +182,5 @@ class PlacementGhostSystem implements System {
       world.get<GlobalTransform2D>(entity)?.matrix = transform.toMatrix();
     }
     world.get<Sprite>(entity)?.color = color;
-    return Future.value();
   }
 }

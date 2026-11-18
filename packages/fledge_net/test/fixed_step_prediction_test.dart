@@ -23,7 +23,7 @@ class _PredictionSpy implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     world.getResource<_RunCounter>()!.value++;
   }
 }
@@ -135,7 +135,7 @@ class _FixedSpy implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     world.getResource<_FixedCounter>()!.counter.value++;
   }
 }
@@ -154,7 +154,7 @@ class _UpdateSpy implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     world.getResource<_UpdateCounter>()!.counter.value++;
   }
 }

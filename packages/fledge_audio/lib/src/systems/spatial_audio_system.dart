@@ -6,18 +6,25 @@ import 'package:fledge_render_2d/fledge_render_2d.dart' show Transform2D;
 import '../components/audio_listener.dart';
 import '../components/audio_source.dart';
 import '../config/audio_config.dart';
+import '../backend/audio_backend.dart';
 import '../resources/audio_channels.dart';
 import '../resources/audio_library.dart';
 import '../resources/audio_state.dart';
 import 'audio_cleanup_system.dart';
 
-/// Plays [AudioSource]s and keeps their volume and pan following where they
-/// are relative to the active [AudioListener].
+/// Plays, stops and mixes [AudioSource]s: the system that owns their
+/// voices.
 ///
-/// Distance attenuates (linear between the reference and max distances),
-/// lateral offset pans. Listeners and sources without a `Transform2D` are
-/// skipped; sources without one keep whatever volume and pan they started
-/// with.
+/// - Carries out [AudioSource.play] and [AudioSource.stop], and starts
+///   [AudioSource.autoPlay] sources, once the engine is up and the clip has
+///   loaded (while audio is paused, a source starts paused).
+/// - Keeps each voice's volume and pan following where the source is
+///   relative to the active [AudioListener]: distance attenuates (linear
+///   between the reference and max distances), lateral offset pans.
+///   A source without a `Transform2D`, with no active listener, or with
+///   spatial audio off plays centred at its volume times its channel's.
+/// - Stops (with a short fade) the voices of sources that are gone: the
+///   entity was despawned, or its [AudioSource] removed or replaced.
 ///
 /// Registered in `Schedules.last` so it reads final per-frame positions
 /// (every `Transform2D` writer in `update` has run). Within `last` it runs
@@ -25,6 +32,9 @@ import 'audio_cleanup_system.dart';
 class SpatialAudioSystem implements System {
   /// The `SystemMeta.name` of [SpatialAudioSystem].
   static const String systemName = 'SpatialAudioSystem';
+
+  /// How long the voice of a source that's gone fades out for.
+  static const Duration orphanFadeOut = Duration(milliseconds: 100);
 
   @override
   SystemMeta get meta => SystemMeta(
@@ -43,39 +53,54 @@ class SpatialAudioSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) async {
-    final config = world.getResource<SpatialAudioConfig>();
-    if (config == null || !config.enabled) return;
+  void run(World world) {
+    // Before the engine is up, requests and auto-plays wait.
     final state = world.getResource<AudioState>();
     if (state == null || !state.isInitialized) return;
+    final config = world.getResource<SpatialAudioConfig>();
     final channels = world.getResource<VolumeChannels>()!;
     final library = world.getResource<AudioLibrary>()!;
     final backend = state.backend;
 
-    final listener = listenerPosition(world);
-    if (listener == null) return;
+    final listener = config != null && config.enabled
+        ? listenerPosition(world)
+        : null;
 
-    for (final (_, source, transform)
-        in world.query2<AudioSource, Transform2D>().iter()) {
-      // Start auto-play sources once their clip is ready (and not while
-      // audio is paused).
-      if (source.autoPlay &&
-          !source.hasStarted &&
-          !state.isPaused &&
-          source.soundKey != null) {
-        final clip = library.clipOf(source.soundKey!);
-        if (clip != null) {
-          final voice = backend.play(
-            clip.source,
-            volume: 0.0, // set below
-            speed: source.playbackSpeed,
-            looping: source.looping,
-          );
-          source
-            ..voice = voice
-            ..hasStarted = true;
-          state.sounds[voice] = source.soundKey!;
+    // Voices that ended by themselves are no longer the sources' to track.
+    state.sourceVoices.removeWhere((voice) => !backend.isPlaying(voice));
+    final live = <AudioVoice>{};
+
+    for (final (entity, source) in world.query1<AudioSource>().iter()) {
+      final transform = listener == null
+          ? null
+          : world.get<Transform2D>(entity);
+      var volume = source.volume * channels.getEffectiveVolume(source.channel);
+      var pan = 0.0;
+      if (listener != null && transform != null) {
+        final (attenuation, p) = mix(
+          listener,
+          (transform.translation.x, transform.translation.y),
+          config!,
+          referenceDistance: source.referenceDistance,
+          maxDistance: source.maxDistance,
+        );
+        volume *= attenuation;
+        pan = p;
+      }
+
+      final request = source.request;
+      if (request != null && request.isStop) {
+        source
+          ..request = null
+          ..hasStarted = true; // a pending auto-play never starts
+        final voice = source.voice;
+        if (voice != null) {
+          source.voice = null;
+          state.sourceVoices.remove(voice);
+          _stop(state, voice, request.fadeOut);
         }
+      } else if (request != null || (source.autoPlay && !source.hasStarted)) {
+        if (_start(state, library, source, volume, pan)) source.request = null;
       }
 
       final voice = source.voice;
@@ -84,21 +109,71 @@ class SpatialAudioSystem implements System {
         source.voice = null;
         continue;
       }
-      final (attenuation, pan) = mix(
-        listener,
-        (transform.translation.x, transform.translation.y),
-        config,
-        referenceDistance: source.referenceDistance,
-        maxDistance: source.maxDistance,
-      );
-      final volume =
-          source.volume *
-          attenuation *
-          channels.getEffectiveVolume(source.channel);
+      live.add(voice);
       backend
         ..setVolume(voice, volume)
         ..setPan(voice, pan);
+      if (source.voiceSpeed != source.playbackSpeed) {
+        backend.setSpeed(voice, source.playbackSpeed);
+        source.voiceSpeed = source.playbackSpeed;
+      }
     }
+
+    // Voices whose source is gone (despawned, removed or replaced).
+    for (final voice in state.sourceVoices.difference(live)) {
+      state.sourceVoices.remove(voice);
+      _stop(state, voice, orphanFadeOut);
+    }
+  }
+
+  /// Starts [source]'s clip (restarting it if it's playing). False if the
+  /// clip isn't ready yet, so the start waits.
+  static bool _start(
+    AudioState state,
+    AudioLibrary library,
+    AudioSource source,
+    double volume,
+    double pan,
+  ) {
+    final key = source.soundKey;
+    if (key == null) return false;
+    final clip = library.clipOf(key);
+    if (clip == null) return false;
+    final backend = state.backend;
+    final previous = source.voice;
+    if (previous != null) {
+      state.sourceVoices.remove(previous);
+      backend.stop(previous);
+    }
+    final voice = backend.play(
+      clip.source,
+      volume: volume,
+      pan: pan,
+      speed: source.playbackSpeed,
+      looping: source.looping,
+      paused: state.isPaused,
+    );
+    source
+      ..voice = voice
+      ..voiceSpeed = source.playbackSpeed
+      ..hasStarted = true;
+    state.sounds[voice] = key;
+    state.sourceVoices.add(voice);
+    return true;
+  }
+
+  /// Stops [voice], fading out over [fade] unless audio is paused (nobody
+  /// would hear it, and a paused voice's fade waits). It stays in
+  /// [AudioState.sounds] until it ends, so `AudioCleanupSystem` reports it.
+  static void _stop(AudioState state, AudioVoice voice, Duration? fade) {
+    final backend = state.backend;
+    if (fade == null || fade <= Duration.zero || state.isPaused) {
+      backend.stop(voice);
+      return;
+    }
+    backend
+      ..fadeVolume(voice, 0, fade)
+      ..stopAfter(voice, fade);
   }
 
   /// Where the first active [AudioListener] with a `Transform2D` is, or

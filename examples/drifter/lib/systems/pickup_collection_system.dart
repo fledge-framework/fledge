@@ -35,7 +35,7 @@ class PickupCollectionSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final run = world.getResource<RunScore>();
     final high = world.getResource<HighScore>();
     if (run == null || high == null) return;

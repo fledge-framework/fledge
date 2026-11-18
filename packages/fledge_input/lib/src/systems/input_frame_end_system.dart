@@ -27,12 +27,10 @@ class InputFrameEndSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     // Clear transition flags after all systems have read input
     world.getResource<KeyboardState>()?.endFrame();
     world.getResource<MouseState>()?.endFrame();
     world.getResource<GamepadState>()?.endFrame();
-
-    return Future.value();
   }
 }

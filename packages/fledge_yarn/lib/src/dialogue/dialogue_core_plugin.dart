@@ -11,7 +11,7 @@ import 'dialogue_state.dart';
 /// - the [DialogueState] resource (typewriter at [charactersPerSecond]);
 /// - the request events ([DialogueStartRequested],
 ///   [DialogueAdvanceRequested], [DialogueChoiceSelected],
-///   [DialogueCursorMoved], [DialogueSkipRequested],
+///   [DialogueCursorMoved], [DialogueCursorSet], [DialogueSkipRequested],
 ///   [DialogueStopRequested], [DialogueHoldReleased]) and notifications
 ///   ([DialogueStarted], [DialogueLineShown], [DialogueChoicesReady],
 ///   [DialogueChoiceMade], [DialogueEnded]);
@@ -59,6 +59,7 @@ class DialogueCorePlugin implements Plugin {
       ..addEvent<DialogueAdvanceRequested>()
       ..addEvent<DialogueChoiceSelected>()
       ..addEvent<DialogueCursorMoved>()
+      ..addEvent<DialogueCursorSet>()
       ..addEvent<DialogueSkipRequested>()
       ..addEvent<DialogueStopRequested>()
       ..addEvent<DialogueHoldReleased>()

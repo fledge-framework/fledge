@@ -38,7 +38,7 @@ void main() {
     await settle();
   }
 
-  setUp(() {
+  setUp(() async {
     backend = FakeBackend();
     app = App()
       ..insertResource(WallTime())
@@ -48,6 +48,10 @@ void main() {
       ..loadMusic('afternoon', 'music/afternoon.ogg')
       ..loadMusic('night', 'music/night.ogg')
       ..loadSound('hoe', 'sounds/hoe.wav');
+    // The first frame asks the engine to start; a test then starts it.
+    // (Systems run back to back, so an engine that's already up is seen
+    // as started from the frame after it was asked.)
+    await frame();
   });
 
   group('starting up', () {

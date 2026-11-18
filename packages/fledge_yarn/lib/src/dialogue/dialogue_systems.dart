@@ -144,9 +144,9 @@ class DialogueStartSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     final state = world.getResource<DialogueState>();
-    if (state == null) return Future.value();
+    if (state == null) return;
     for (final request in world.eventReader<DialogueStartRequested>().read()) {
       if (state.isActive) {
         _log(
@@ -177,7 +177,6 @@ class DialogueStartSystem implements System {
       runner.startNode(request.node);
       _syncFromRunner(world, state);
     }
-    return Future.value();
   }
 }
 
@@ -200,7 +199,8 @@ class DialogueStartSystem implements System {
 /// 2. [DialogueChoiceSelected] (from any sender): the first in-range one
 ///    selects that option ([DialogueChoiceMade], then the option's body
 ///    runs).
-/// 3. [DialogueCursorMoved]: moves the highlight.
+/// 3. [DialogueCursorMoved] and [DialogueCursorSet]: move the highlight
+///    (keys by a step, a hovering pointer to its option).
 /// 4. [DialogueAdvanceRequested] (coalesced): with a choice pending,
 ///    selects the highlighted option; else completes the line's typing if
 ///    it's still typing; else advances.
@@ -233,6 +233,7 @@ class DialogueAdvanceSystem implements System {
       DialogueAdvanceRequested,
       DialogueChoiceSelected,
       DialogueCursorMoved,
+      DialogueCursorSet,
       DialogueSkipRequested,
     },
     eventWrites: {
@@ -252,9 +253,9 @@ class DialogueAdvanceSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     final state = world.getResource<DialogueState>();
-    if (state == null || !state.isActive) return Future.value();
+    if (state == null || !state.isActive) return;
 
     // Stop.
     for (final stop in world.eventReader<DialogueStopRequested>().read()) {
@@ -263,13 +264,13 @@ class DialogueAdvanceSystem implements System {
           : stop.context == state.context;
       if (applies) {
         _stop(world, state);
-        return Future.value();
+        return;
       }
     }
 
     if (state._startedThisTick) {
       state._startedThisTick = false;
-      return Future.value();
+      return;
     }
     final runner = state._runner!;
 
@@ -282,7 +283,7 @@ class DialogueAdvanceSystem implements System {
         runner.resume();
         _syncFromRunner(world, state);
       }
-      return Future.value();
+      return;
     }
 
     state._type(timeSource.delta(world));
@@ -291,7 +292,7 @@ class DialogueAdvanceSystem implements System {
     if (world.eventReader<DialogueSkipRequested>().isNotEmpty &&
         !state.isWaitingForChoice) {
       _skip(world, state, runner);
-      return Future.value();
+      return;
     }
 
     // 2. A choice from any sender.
@@ -300,18 +301,22 @@ class DialogueAdvanceSystem implements System {
           in world.eventReader<DialogueChoiceSelected>().read()) {
         if (request.index >= 0 && request.index < state.choices.length) {
           _select(world, state, runner, request.index);
-          return Future.value();
+          return;
         }
       }
       // 3. Keyboard highlight.
       for (final move in world.eventReader<DialogueCursorMoved>().read()) {
         state._moveCursor(move.delta);
       }
+      // A pointer over an option highlights it.
+      for (final hover in world.eventReader<DialogueCursorSet>().read()) {
+        state._setCursor(hover.index);
+      }
     }
 
     // 4. Continue.
     if (world.eventReader<DialogueAdvanceRequested>().isEmpty) {
-      return Future.value();
+      return;
     }
     if (state.isWaitingForChoice) {
       _select(world, state, runner, state.cursorIndex);
@@ -321,7 +326,6 @@ class DialogueAdvanceSystem implements System {
       runner.advance();
       _syncFromRunner(world, state);
     }
-    return Future.value();
   }
 
   static void _select(

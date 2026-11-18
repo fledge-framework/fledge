@@ -35,11 +35,10 @@ class FrameStatsSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     final time = world.getResource<WallTime>();
     final stats = world.getResource<FrameStats>();
-    if (time == null || stats == null) return Future.value();
+    if (time == null || stats == null) return;
     stats.recordFrame(time.delta);
-    return Future.value();
   }
 }

@@ -137,7 +137,7 @@ class TweenSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     final delta = _frameDelta(world);
     // Collect entities to touch after iteration so we don't mutate the
     // archetype while iterating it.
@@ -190,8 +190,6 @@ class TweenSystem implements System {
       world.remove<Tweener>(entity);
       world.insert<Tweener>(entity, replacement);
     }
-
-    return Future.value();
   }
 
   Duration _frameDelta(World world) {

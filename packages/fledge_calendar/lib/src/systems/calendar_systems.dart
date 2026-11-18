@@ -51,9 +51,8 @@ class CalendarSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     _runSync(world);
-    return Future.value();
   }
 
   void _runSync(World world) {

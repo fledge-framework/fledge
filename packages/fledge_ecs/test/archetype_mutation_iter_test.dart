@@ -167,5 +167,44 @@ void main() {
       // But a subsequent query sees all 10.
       expect(world.query1<ComponentA>().count(), equals(10));
     });
+
+    test('across tables, a despawn mid-loop (which reorders rows) never '
+        'pairs an entity with another entity’s component', () {
+      final world = World();
+      final values = <Entity, int>{};
+      // Two tables: A only, and A+B.
+      for (var i = 0; i < 6; i++) {
+        final e = world.spawn()..insert(ComponentA(i));
+        if (i.isOdd) e.insert(ComponentB(i));
+        values[e.entity] = i;
+      }
+      final order = world.query1<ComponentA>().iter().map((r) => r.$1).toList();
+      final victim = order[3]; // not yet visited when the loop despawns it
+      final seen = <Entity>[];
+      for (final (entity, a) in world.query1<ComponentA>().iter()) {
+        expect(a.value, values[entity], reason: 'its own component');
+        seen.add(entity);
+        if (seen.length == 1) world.despawn(victim);
+      }
+      expect(seen, isNot(contains(victim)));
+      expect(seen.toSet().length, seen.length, reason: 'none twice');
+      expect(seen.length, 5);
+    });
+
+    test('a two-component query reads both from the same row before and '
+        'after a structural change', () {
+      final world = World();
+      for (var i = 0; i < 5; i++) {
+        world.spawn()
+          ..insert(ComponentA(i))
+          ..insert(ComponentB(i * 10));
+      }
+      var n = 0;
+      for (final (_, a, b) in world.query2<ComponentA, ComponentB>().iter()) {
+        expect(b.value, a.value * 10);
+        if (n++ == 1) world.spawn().insert(ComponentA(99)); // structural
+      }
+      expect(n, 5);
+    });
   });
 }

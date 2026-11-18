@@ -78,7 +78,7 @@ import 'package:fledge_ecs_annotations/fledge_ecs_annotations.dart';
 part 'systems.g.dart';
 
 @system
-Future<void> accelerationSystem(World world) async {
+void accelerationSystem(World world) {
   for (final (_, vel, acc) in world.query2<Velocity, Acceleration>().iter()) {
     vel.dx += acc.ax;
     vel.dy += acc.ay;
@@ -86,7 +86,7 @@ Future<void> accelerationSystem(World world) async {
 }
 
 @system
-Future<void> frictionSystem(World world) async {
+void frictionSystem(World world) {
   for (final (_, vel, friction) in world.query2<Velocity, Friction>().iter()) {
     vel.dx *= friction.factor;
     vel.dy *= friction.factor;
@@ -94,7 +94,7 @@ Future<void> frictionSystem(World world) async {
 }
 
 @system
-Future<void> speedLimitSystem(World world) async {
+void speedLimitSystem(World world) {
   for (final (_, vel, maxSpeed) in world.query2<Velocity, MaxSpeed>().iter()) {
     final speed = sqrt(vel.dx * vel.dx + vel.dy * vel.dy);
     if (speed > maxSpeed.value) {
@@ -106,7 +106,7 @@ Future<void> speedLimitSystem(World world) async {
 }
 
 @system
-Future<void> movementSystem(World world) async {
+void movementSystem(World world) {
   for (final (_, pos, vel) in world.query2<Position, Velocity>().iter()) {
     pos.x += vel.dx;
     pos.y += vel.dy;
@@ -126,7 +126,7 @@ class AccelerationSystem extends System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final (_, vel, acc) in world.query2<Velocity, Acceleration>().iter()) {
       vel.dx += acc.ax;
       vel.dy += acc.ay;
@@ -143,7 +143,7 @@ class FrictionSystem extends System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final (_, vel, friction) in world.query2<Velocity, Friction>().iter()) {
       vel.dx *= friction.factor;
       vel.dy *= friction.factor;
@@ -160,7 +160,7 @@ class SpeedLimitSystem extends System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final (_, vel, maxSpeed) in world.query2<Velocity, MaxSpeed>().iter()) {
       final speed = sqrt(vel.dx * vel.dx + vel.dy * vel.dy);
       if (speed > maxSpeed.value) {
@@ -181,7 +181,7 @@ class MovementSystem extends System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final (_, pos, vel) in world.query2<Position, Velocity>().iter()) {
       pos.x += vel.dx;
       pos.y += vel.dy;

@@ -58,7 +58,7 @@
 /// ```dart
 /// class MySystem implements System {
 ///   @override
-///   Future<void> run(World world) async {
+///   void run(World world) {
 ///     for (final evt in world.eventReader<CollisionEvent>().read()) {
 ///       // evt.entityA collided with evt.entityB
 ///     }

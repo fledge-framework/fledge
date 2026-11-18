@@ -17,7 +17,7 @@ class LightExtractor extends Extractor {
   void extract(World mainWorld, RenderWorld renderWorld) {
     for (final (entity, light, globalTransform)
         in mainWorld.query2<Light2D, GlobalTransform2D>().iter()) {
-      renderWorld.spawn().insert(
+      renderWorld.add(
         ExtractedLight(
           entity: entity,
           type: light.type,

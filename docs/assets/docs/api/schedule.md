@@ -53,7 +53,7 @@ Configures a [system set](/docs/api/system-sets) (creating it if needed) and reb
 Future<void> run(World world)
 ```
 
-Executes all systems in schedule order. Systems within the same schedule may run in parallel if they don't conflict.
+Executes all systems in schedule order, one at a time, each schedule's systems in an order that respects their dependencies.
 
 ```dart
 await scheduler.run(world);
@@ -106,12 +106,12 @@ class Schedules {
 
 Fixed-timestep schedules (`Schedules.fixedFirst`…`Schedules.fixedLast`) run 0..N times per frame driven by the `FixedTimestep` resource. Render pipeline schedules (`Schedules.extract` → `Schedules.render`) are for the render-world extract/dispatch phase.
 
-## Parallel Execution
+## Conflicts and ordering
 
-Within each schedule, non-conflicting systems run in parallel:
+Systems in a schedule run one at a time. What they declare they read and write says which pairs **conflict**: a conflicting pair always runs in a fixed order (give it one with `before:` / `after:`; `checkScheduleOrdering()` reports pairs left to registration order), while systems that don't conflict have no guaranteed order between them. Dart runs one isolate, so systems never run at the same time; make them synchronous (`void run`) and they run back to back.
 
 ```dart
-// These can run in parallel (no conflicts)
+// Independent (no conflicts): no guaranteed order between them
 @system
 void systemA(QueryMut1<Position> query) {  // Writes Position
   for (final (_, pos) in query.iter()) { }
@@ -122,7 +122,7 @@ void systemB(QueryMut1<Health> query) {  // Writes Health
   for (final (_, health) in query.iter()) { }
 }
 
-// These must run sequentially (both write Position)
+// Conflict (both write Position): always run in a fixed order
 @system
 void systemC(QueryMut1<Position> query) {  // Writes Position
   for (final (_, pos) in query.iter()) { }

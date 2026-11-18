@@ -10,7 +10,7 @@ Future<World> publish(Camera2D camera, {double x = 0, double y = 0}) async {
   world.spawn()
     ..insert(GlobalTransform2D()..matrix.setValues(1, 0, 0, 0, 1, 0, x, y, 1))
     ..insert(camera);
-  await const ActiveCameraViewSystem().run(world);
+  const ActiveCameraViewSystem().run(world);
   return world;
 }
 
@@ -166,7 +166,7 @@ void main() {
       final world = await publish(camera);
       expect(world.getResource<ActiveCameraView>()!.zoomFor, isNotNull);
       camera.scaleWidgetView = false;
-      await const ActiveCameraViewSystem().run(world);
+      const ActiveCameraViewSystem().run(world);
       expect(world.getResource<ActiveCameraView>()!.zoomFor, isNull);
     });
   });

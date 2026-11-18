@@ -92,9 +92,11 @@ class DialogueBoxTheme {
 /// and a continue hint.
 ///
 /// Presentation only: it reads [state] and reports taps through
-/// [onAdvance] (tap on the box, not while a choice is pending) and
-/// [onChoiceSelected] (tap on an option). The owner turns those into
-/// `DialogueAdvanceRequested` / `DialogueChoiceSelected` events.
+/// [onAdvance] (tap on the box, not while a choice is pending),
+/// [onChoiceSelected] (tap on an option) and [onChoiceHovered] (the pointer
+/// moving onto an option). The owner turns those into
+/// `DialogueAdvanceRequested` / `DialogueChoiceSelected` /
+/// `DialogueCursorSet` events.
 class DialogueBoxWidget extends StatelessWidget {
   final DialogueState state;
   final DialogueBoxTheme theme;
@@ -111,6 +113,7 @@ class DialogueBoxWidget extends StatelessWidget {
 
   final VoidCallback? onAdvance;
   final ValueChanged<int>? onChoiceSelected;
+  final ValueChanged<int>? onChoiceHovered;
 
   const DialogueBoxWidget({
     super.key,
@@ -121,6 +124,7 @@ class DialogueBoxWidget extends StatelessWidget {
     this.headerTrailing,
     this.onAdvance,
     this.onChoiceSelected,
+    this.onChoiceHovered,
   });
 
   /// Key of the box's tap target.
@@ -131,7 +135,12 @@ class DialogueBoxWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!state.isActive) return const SizedBox.shrink();
+    // Nothing to show while the dialogue is held on a command (a
+    // cutscene's lander coming down, a wait): no line, no choice, no box.
+    if (!state.isActive ||
+        (state.currentLine == null && !state.isWaitingForChoice)) {
+      return const SizedBox.shrink();
+    }
 
     final line = state.currentLine;
     final character = line?.character;
@@ -168,6 +177,7 @@ class DialogueBoxWidget extends StatelessWidget {
               cursorIndex: state.cursorIndex,
               theme: theme,
               onSelected: onChoiceSelected,
+              onHovered: onChoiceHovered,
             ),
           ),
         if (!waiting && state.isLineComplete && theme.continueHint != null)
@@ -211,13 +221,15 @@ class DialogueBoxWidget extends StatelessWidget {
 }
 
 /// A vertical list of options with one highlighted ([cursorIndex]); tapping
-/// an option reports its index through [onSelected]. Used by
-/// [DialogueBoxWidget] and reusable for any dialogue-styled prompt.
+/// an option reports its index through [onSelected], and a pointer moving
+/// onto one through [onHovered] (send `DialogueCursorSet` to highlight it).
+/// Used by [DialogueBoxWidget] and reusable for any dialogue-styled prompt.
 class DialogueChoiceList extends StatelessWidget {
   final List<String> options;
   final int cursorIndex;
   final DialogueBoxTheme theme;
   final ValueChanged<int>? onSelected;
+  final ValueChanged<int>? onHovered;
 
   const DialogueChoiceList({
     super.key,
@@ -225,6 +237,7 @@ class DialogueChoiceList extends StatelessWidget {
     required this.cursorIndex,
     this.theme = const DialogueBoxTheme(),
     this.onSelected,
+    this.onHovered,
   });
 
   /// Key of option [index]'s tap target.
@@ -236,45 +249,53 @@ class DialogueChoiceList extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (var i = 0; i < options.length; i++)
-          GestureDetector(
-            key: optionKey(i),
-            behavior: HitTestBehavior.opaque,
-            onTap: onSelected == null ? null : () => onSelected!(i),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-              margin: const EdgeInsets.only(bottom: 4),
-              decoration: BoxDecoration(
-                color: i == cursorIndex
-                    ? theme.selectedChoiceFill
-                    : Colors.transparent,
-                border: Border.all(
-                  color: i == cursorIndex
-                      ? theme.selectedChoiceBorderColor
-                      : theme.choiceBorderColor,
-                  width: 2,
+          MouseRegion(
+            // The pointer keeps whatever cursor the app shows.
+            cursor: MouseCursor.defer,
+            onEnter: onHovered == null ? null : (_) => onHovered!(i),
+            child: GestureDetector(
+              key: optionKey(i),
+              behavior: HitTestBehavior.opaque,
+              onTap: onSelected == null ? null : () => onSelected!(i),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  vertical: 8,
+                  horizontal: 12,
                 ),
-              ),
-              child: Row(
-                children: [
-                  if (i == cursorIndex)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: Icon(
-                        Icons.arrow_right,
-                        color: theme.choiceCursorColor,
-                        size: 16,
+                margin: const EdgeInsets.only(bottom: 4),
+                decoration: BoxDecoration(
+                  color: i == cursorIndex
+                      ? theme.selectedChoiceFill
+                      : Colors.transparent,
+                  border: Border.all(
+                    color: i == cursorIndex
+                        ? theme.selectedChoiceBorderColor
+                        : theme.choiceBorderColor,
+                    width: 2,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    if (i == cursorIndex)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Icon(
+                          Icons.arrow_right,
+                          color: theme.choiceCursorColor,
+                          size: 16,
+                        ),
+                      ),
+                    Expanded(
+                      child: Text(
+                        options[i],
+                        style: i == cursorIndex
+                            ? theme.selectedChoiceStyle
+                            : theme.choiceStyle,
                       ),
                     ),
-                  Expanded(
-                    child: Text(
-                      options[i],
-                      style: i == cursorIndex
-                          ? theme.selectedChoiceStyle
-                          : theme.choiceStyle,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

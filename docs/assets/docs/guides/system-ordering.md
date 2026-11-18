@@ -72,7 +72,7 @@ class MoveSystem implements System {
   SystemMeta get meta => SystemMeta(name: 'move', writes: {ComponentId.of<Position>()});
 
   @override
-  Future<void> run(World world) async { /* writes Position */ }
+  void run(World world) { /* writes Position */ }
 }
 
 class RenderSystem implements System {
@@ -80,7 +80,7 @@ class RenderSystem implements System {
   SystemMeta get meta => SystemMeta(name: 'render', reads: {ComponentId.of<Position>()});
 
   @override
-  Future<void> run(World world) async { /* reads Position */ }
+  void run(World world) { /* reads Position */ }
 }
 ```
 
@@ -217,11 +217,11 @@ app
 
 ## Order Independence
 
-Systems without conflicts or explicit ordering can run in parallel:
+Systems without conflicts or explicit ordering have no guaranteed order between them (they run one at a time; neither may depend on the other's effects this frame):
 
 ```dart-tabs
 // @tab Annotations
-// These systems are independent - may run in parallel
+// These systems are independent: no guaranteed order between them
 @system
 void audioSystem(World world) {
   for (final (_, audio) in world.query1<AudioSource>().iter()) { }
@@ -232,13 +232,13 @@ void particleSystem(World world) {
   for (final (_, emitter) in world.query1<ParticleEmitter>().iter()) { }
 }
 // @tab Inheritance
-// These systems are independent - may run in parallel
+// These systems are independent: no guaranteed order between them
 class AudioSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(name: 'audio', reads: {ComponentId.of<AudioSource>()});
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final (_, audio) in world.query1<AudioSource>().iter()) { }
   }
 }
@@ -248,7 +248,7 @@ class ParticleSystem implements System {
   SystemMeta get meta => SystemMeta(name: 'particle', reads: {ComponentId.of<ParticleEmitter>()});
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final (_, emitter) in world.query1<ParticleEmitter>().iter()) { }
   }
 }

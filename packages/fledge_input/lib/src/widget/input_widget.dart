@@ -310,7 +310,9 @@ class _InputWidgetState extends State<InputWidget> {
 
   MouseCursor _getCursor() {
     return switch (_currentCursorMode) {
-      CursorMode.visible => SystemMouseCursors.basic,
+      // Visible: whatever cursor the app shows around the game (a custom
+      // one, say), or the system arrow when it shows none.
+      CursorMode.visible => MouseCursor.defer,
       CursorMode.hidden => SystemMouseCursors.none,
       CursorMode.locked => SystemMouseCursors.none,
     };

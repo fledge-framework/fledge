@@ -202,7 +202,7 @@ class InputSystem implements System {
   );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final actions = world.getResource<ActionState>()!;
     final gameState = world.getResource<GameState>()!;
 
@@ -246,7 +246,7 @@ class MovementSystem implements System {
   );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final time = world.getResource<WallTime>()!;
     final config = world.getResource<GameConfig>()!;
     final timer = world.getResource<MoveTimer>()!;
@@ -308,7 +308,7 @@ class FoodCollisionSystem implements System {
   );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final config = world.getResource<GameConfig>()!;
     final score = world.getResource<Score>()!;
     final gameState = world.getResource<GameState>()!;
@@ -404,7 +404,7 @@ class CollisionSystem implements System {
   );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final config = world.getResource<GameConfig>()!;
     final gameState = world.getResource<GameState>()!;
 

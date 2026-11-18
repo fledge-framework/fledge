@@ -52,7 +52,7 @@ void main() async {
 // Read actions in your systems
 class PlayerSystem implements System {
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final actions = world.getResource<ActionState>()!;
 
     if (actions.justPressed(ActionId.fromEnum(Actions.jump))) {
@@ -379,7 +379,7 @@ The primary way to read input:
 ```dart
 class MySystem implements System {
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final actions = world.getResource<ActionState>()!;
 
     // Button actions
@@ -534,7 +534,7 @@ class MenuState {
 // 2. System reads ActionState and updates MenuState
 class MenuInputSystem implements System {
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final actions = world.getResource<ActionState>()!;
     final menu = world.getResource<MenuState>()!;
 
@@ -599,7 +599,7 @@ For mouse clicks and touch, the same pattern applies. If you need clickable butt
 // System handles click state
 class UIClickSystem implements System {
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final mouse = world.getResource<MouseState>()!;
     final uiState = world.getResource<UIState>()!;
 

@@ -80,7 +80,7 @@ class CollisionResolutionSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final double dt;
     if (mode == PhysicsMode.fixed) {
       final ft = world.getResource<FixedTimestep>();

@@ -52,6 +52,23 @@ void main() {
       expect(p.color, const Color(0xFF0000FF));
     });
 
+    test('colorHold keeps the start colour, then blends over the rest', () {
+      final p = Particle(
+        position: Vector2.zero(),
+        velocity: Vector2.zero(),
+        maxLifetime: 1.0,
+        colorStart: const Color(0xFFFFFFFF),
+        colorEnd: const Color(0x00FFFFFF),
+        colorHold: 0.5,
+      );
+      p.lifetime = 0.4;
+      expect(p.color.a, 1.0);
+      p.lifetime = 0.75;
+      expect(p.color.a, closeTo(0.5, 0.01));
+      p.lifetime = 1.0;
+      expect(p.color.a, 0.0);
+    });
+
     test('currentSize ramps between size and size*sizeStartToEnd', () {
       final p = Particle(
         position: Vector2.zero(),

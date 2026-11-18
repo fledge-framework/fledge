@@ -81,7 +81,7 @@ class CollisionDetectionSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     // The plugin registers the event queue at build time; if a caller
     // has ripped the plugin apart and forgotten to register, bail out
     // rather than throwing — this system is otherwise side-effect free.

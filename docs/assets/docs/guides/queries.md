@@ -138,7 +138,7 @@ class GoodSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final query = world.query2<Position, Velocity>();
     for (final entry in query.iter()) { }
     // Can iterate again with cached archetype info
@@ -180,7 +180,7 @@ class LessEfficientSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final (entity, pos) in world.query1<Position>().iter()) {
       if (world.has<Player>(entity)) {
         // Only 1 player among thousands of entities
@@ -198,7 +198,7 @@ class MoreEfficientSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final (entity, pos) in world.query1<Position>(filter: const With<Player>()).iter()) {
       // Directly iterates players only
     }
@@ -234,7 +234,7 @@ class InteractionSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final players = world.query2<Position, Player>();
     final items = world.query2<Position, Item>();
 

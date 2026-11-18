@@ -1085,69 +1085,25 @@ See [Layer Depth Sorting](#layer-depth-sorting) for details on setting this up i
 
 ### Extraction Culling for Large Maps
 
-For large tilemaps (e.g., 100x100 tiles), the default `TilemapExtractor` can cause performance issues because it extracts **all tiles** every frame, even those outside the camera view. The actual culling happens at canvas paint time, but by then the expensive extraction, query, and sort operations have already occurred.
+`TilemapExtractor` (registered by `TiledPlugin`) only extracts the tiles near the camera's last view (`ActiveCameraView`, which the render view keeps current). Each layer keeps an index of its tiles by grid position, and the view is mapped back into the layer's tile coordinates through the map's transform, the camera's zoom and the layer's parallax and offset, so extraction costs what's on screen, not the size of your maps. Several large maps loaded side by side in one world cost no more than one.
 
-Use `CulledTilemapExtractor` to cull tiles at extraction time based on camera position:
-
-```dart
-// In your tilemap plugin, use CulledTilemapExtractor instead of TilemapExtractor
-final extractors = app.world.getResource<Extractors>()!;
-extractors.register(CulledTilemapExtractor());
-```
-
-#### Performance Comparison
-
-| Map Size | TilemapExtractor | CulledTilemapExtractor |
-|----------|------------------|------------------------|
-| 10x10 (100 tiles) | 100 tiles/frame | ~100 tiles/frame |
-| 50x50 (2,500 tiles) | 2,500 tiles/frame | ~300 tiles/frame |
-| 100x100 (10,000 tiles) | 10,000 tiles/frame | ~300-400 tiles/frame |
-
-The culled extractor only extracts tiles within the camera's visible bounds plus a margin, reducing extraction time from O(width×height) to O(screenWidth×screenHeight).
-
-#### Setting Up ViewportSize
-
-`CulledTilemapExtractor` requires knowing the viewport dimensions. Register a `ViewportSize` resource and update it each frame:
+Before the first paint (no known view) every tile is extracted. The margin around the view is `cullMargin` (64 world units by default):
 
 ```dart
-// 1. Register the resource in your game plugin
-app.insertResource(ViewportSize());
-
-// 2. Update each frame in your game loop, BEFORE tick()
-void _gameLoop(Size screenSize) {
-  // Update viewport before extraction runs
-  world.getResource<ViewportSize>()?.updateFromSize(screenSize);
-
-  app.tick();  // Extraction happens here with correct bounds
-  setState(() {});
-}
+extractors.register(TilemapExtractor(cullMargin: 128));
 ```
 
-In a Flutter app:
+The index is rebuilt when a layer's `tiles` list is replaced or changes length, so edit a layer at runtime by replacing its list (or a `TileData` at the same index).
 
-```dart
-Widget build(BuildContext context) {
-  // Capture screen size and update resource
-  final screenSize = MediaQuery.of(context).size;
-  world.getResource<ViewportSize>()?.updateFromSize(screenSize);
+`CulledTilemapExtractor` is deprecated: it's now the same extractor with a 96-unit margin. The deprecated `ExtractedTile` is only emitted with `TilemapExtractor(emitLegacyTiles: true)`.
 
-  return CustomPaint(...);
-}
-```
-
-#### CulledTilemapExtractor Options
+#### TilemapExtractor Options
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `respectVisibility` | `bool` | `true` | Skip layers marked invisible in Tiled |
-| `cullMargin` | `double` | `96.0` | Extra pixels beyond visible bounds to extract (prevents popping) |
-
-```dart
-// Custom configuration
-extractors.register(CulledTilemapExtractor(
-  cullMargin: 128.0,  // Larger margin for fast-moving cameras
-));
-```
+| `cullMargin` | `double` | `64` | World units beyond the view still extracted |
+| `emitLegacyTiles` | `bool` | `false` | Also emit the deprecated `ExtractedTile` |
 
 #### When to Use Each Extractor
 

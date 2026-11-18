@@ -93,7 +93,7 @@ import 'components.dart';
 part 'systems.g.dart';
 
 @system
-Future<void> movementSystem(World world) async {
+void movementSystem(World world) {
   for (final (entity, pos, vel) in world.query2<Position, Velocity>().iter()) {
     pos.x += vel.dx;
     pos.y += vel.dy;
@@ -101,7 +101,7 @@ Future<void> movementSystem(World world) async {
 }
 
 @system
-Future<void> printPositionsSystem(World world) async {
+void printPositionsSystem(World world) {
   for (final (entity, pos) in world.query1<Position>().iter()) {
     print('Entity ${entity.id}: $pos');
   }
@@ -121,7 +121,7 @@ class MovementSystem extends System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final (entity, pos, vel) in world.query2<Position, Velocity>().iter()) {
       pos.x += vel.dx;
       pos.y += vel.dy;
@@ -137,7 +137,7 @@ class PrintPositionsSystem extends System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final (entity, pos) in world.query1<Position>().iter()) {
       print('Entity ${entity.id}: $pos');
     }

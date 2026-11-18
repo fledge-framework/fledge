@@ -78,8 +78,8 @@ void main() {
       );
     final count = _sprites(world);
     // The view plus the margin on each side, in tiles, give or take an edge.
-    const across = (320 + 2 * TilemapExtractor.cullMargin) / _tile + 1;
-    const down = (160 + 2 * TilemapExtractor.cullMargin) / _tile + 1;
+    const across = (320 + 2 * TilemapExtractor.defaultCullMargin) / _tile + 1;
+    const down = (160 + 2 * TilemapExtractor.defaultCullMargin) / _tile + 1;
     expect(count, lessThanOrEqualTo((across + 1) * (down + 1)));
     expect(count, greaterThan(across * down * 0.8));
   });

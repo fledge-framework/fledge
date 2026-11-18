@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:fledge_yarn/fledge_yarn.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,11 +12,13 @@ void main() {
   late DialogueHarness h;
   late int advances;
   late List<int> selected;
+  late List<int> hovered;
 
   setUp(() {
     h = DialogueHarness();
     advances = 0;
     selected = [];
+    hovered = [];
   });
 
   Future<void> pumpBox(
@@ -36,6 +39,7 @@ void main() {
               portraitBuilder: portraitBuilder,
               onAdvance: () => advances++,
               onChoiceSelected: selected.add,
+              onChoiceHovered: hovered.add,
             ),
           ),
         ),
@@ -46,6 +50,30 @@ void main() {
   testWidgets('nothing without an active dialogue', (tester) async {
     await pumpBox(tester);
     expect(find.byKey(DialogueBoxWidget.boxKey), findsNothing);
+  });
+
+  testWidgets('nothing while the dialogue is held on a command (no line '
+      'yet): a cutscene’s opening shows no empty box', (tester) async {
+    registerHoldingCommand(h.commands, h.world, 'hold', (_) => 'beat');
+    h.project.parse('''
+title: Held
+---
+<<hold>>
+Guide: After the beat.
+===
+''');
+    await h.start('Held');
+    await h.ticks(2);
+    expect(h.state.isActive, isTrue);
+    expect(h.state.isHeld, isTrue);
+    await pumpBox(tester);
+    expect(find.byKey(DialogueBoxWidget.boxKey), findsNothing);
+
+    await h.request(const DialogueHoldReleased('beat'));
+    await h.ticks(2, 1);
+    await pumpBox(tester);
+    expect(find.byKey(DialogueBoxWidget.boxKey), findsOneWidget);
+    expect(find.text('After the beat.'), findsOneWidget);
   });
 
   testWidgets('shows the speaker from the line and the typed text', (
@@ -96,6 +124,26 @@ void main() {
     await pumpBox(tester);
     await tester.tap(find.byKey(DialogueBoxWidget.boxKey));
     expect(advances, 1);
+  });
+
+  testWidgets('a pointer moving onto an option reports it', (tester) async {
+    await h.start('intro');
+    await h.advanceLine();
+    await h.advanceLine();
+    await pumpBox(tester);
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: Offset.zero);
+    addTearDown(mouse.removePointer);
+    await mouse.moveTo(
+      tester.getCenter(find.byKey(DialogueChoiceList.optionKey(1))),
+    );
+    await tester.pump();
+    expect(hovered, [1]);
+    await mouse.moveTo(
+      tester.getCenter(find.byKey(DialogueChoiceList.optionKey(0))),
+    );
+    await tester.pump();
+    expect(hovered, [1, 0]);
   });
 
   testWidgets('with a choice pending: options with the highlight; tapping '

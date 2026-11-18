@@ -18,7 +18,7 @@ void main() {
         )
         ..insert(Camera2D());
 
-      await const ActiveCameraViewSystem().run(world);
+      const ActiveCameraViewSystem().run(world);
 
       final view = world.getResource<ActiveCameraView>();
       expect(view, isNotNull);
@@ -42,7 +42,7 @@ void main() {
         )
         ..insert(Camera2D(order: 0));
 
-      await const ActiveCameraViewSystem().run(world);
+      const ActiveCameraViewSystem().run(world);
 
       final view = world.getResource<ActiveCameraView>();
       expect(view!.x, 10);
@@ -56,7 +56,7 @@ void main() {
           GlobalTransform2D()..matrix.setValues(1, 0, 0, 0, 1, 0, 5, 6, 1),
         )
         ..insert(Camera2D(isActive: false));
-      await const ActiveCameraViewSystem().run(world);
+      const ActiveCameraViewSystem().run(world);
       // No active camera → nothing inserted, and no crash.
       expect(world.getResource<ActiveCameraView>(), isNull);
     });
@@ -68,13 +68,13 @@ void main() {
           GlobalTransform2D()..matrix.setValues(1, 0, 0, 0, 1, 0, 1, 2, 1),
         )
         ..insert(Camera2D());
-      await const ActiveCameraViewSystem().run(world);
+      const ActiveCameraViewSystem().run(world);
       final first = world.getResource<ActiveCameraView>();
       world
           .get<GlobalTransform2D>(e.entity)!
           .matrix
           .setValues(1, 0, 0, 0, 1, 0, 50, 60, 1);
-      await const ActiveCameraViewSystem().run(world);
+      const ActiveCameraViewSystem().run(world);
       final second = world.getResource<ActiveCameraView>();
       // Same instance is reused.
       expect(identical(first, second), isTrue);

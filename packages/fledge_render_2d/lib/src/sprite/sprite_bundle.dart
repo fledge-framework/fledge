@@ -45,6 +45,7 @@ class SpriteBundle {
     double rotation = 0,
     double scaleX = 1,
     double scaleY = 1,
+    double skew = 0,
     Color color = const Color(0xFFFFFFFF),
     Vector2? anchor,
     bool visible = true,
@@ -53,6 +54,7 @@ class SpriteBundle {
          translation: Vector2(x, y),
          rotation: rotation,
          scale: Vector2(scaleX, scaleY),
+         skew: skew,
        ),
        globalTransform = GlobalTransform2D(),
        visibility = visible ? null : Visibility(false);

@@ -32,7 +32,7 @@ Fledge is a **desktop-first** game framework that provides:
 
 - **Clean ECS architecture** - Separate data (components) from logic (systems)
 - **Archetype-based storage** - Excellent cache locality for fast iteration
-- **Automatic parallelism** - Systems run concurrently when they don't conflict
+- **Deterministic ordering** - Systems that touch the same data always run in the same order, and ambiguities are reported
 - **Code generation** - Optional annotations to reduce boilerplate
 - **Modular plugins** - Add only what you need (rendering, audio, input, physics)
 
@@ -99,7 +99,7 @@ void movementSystem(World world) {
 | Architecture | Pure ECS | Component-based | Hybrid ECS |
 | Language | Dart | Dart | C# |
 | Platform Focus | Desktop | Mobile-first | Cross-platform |
-| Parallelism | Automatic | Manual | Jobs system |
+| System ordering | Declared, checked | Manual | Manual |
 | Type Safety | Strong (Dart) | Moderate | Weak (runtime) |
 
 Fledge is inspired by [Bevy](https://bevyengine.org/), the popular Rust game engine. If you're coming from Bevy, you'll find familiar concepts like:

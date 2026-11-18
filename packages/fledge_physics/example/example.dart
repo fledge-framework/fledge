@@ -34,7 +34,7 @@ class CollisionResponseSystem extends System {
   );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final evt in world.eventReader<CollisionEvent>().read()) {
       // If one side is the player, look at the other side for a trigger.
       final playerSide = world.has<Player>(evt.entityA)

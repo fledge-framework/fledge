@@ -115,7 +115,7 @@ class MovementSystem implements System {
   );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final (_, pos, vel) in world.query2<Position, Velocity>().iter()) {
       pos.x += vel.dx;
       pos.y += vel.dy;
@@ -137,9 +137,8 @@ The `SystemMeta` declares dependencies:
 | `resourceWrites` | Resources this system modifies |
 
 Fledge uses this information to:
-1. **Run systems in parallel** when they don't conflict
-2. **Detect data races** at runtime
-3. **Order systems** within schedules
+1. **Order systems** within schedules: a pair that conflicts always runs in the same order
+2. **Report ambiguities**: `checkScheduleOrdering()` lists conflicting pairs nothing orders
 
 ### System Guidelines
 
@@ -276,7 +275,7 @@ world.query2<Position, Velocity>();
 
 ## Schedules
 
-Systems run in **schedules**. Schedules run in order; systems within a schedule can run in parallel.
+Systems run in **schedules**. Schedules run in order; within a schedule, systems run one at a time in an order that respects their dependencies.
 
 ```dart
 app.addSystem(inputSystem, schedule: Schedules.preUpdate);

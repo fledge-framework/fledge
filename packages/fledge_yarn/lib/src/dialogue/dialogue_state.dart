@@ -180,6 +180,11 @@ class DialogueState {
     _cursor = (_cursor + delta) % _choices.length;
   }
 
+  void _setCursor(int index) {
+    if (index < 0 || index >= _choices.length) return;
+    _cursor = index;
+  }
+
   /// A holding command ran: hide the line and choices until released.
   void _hold(Object token) {
     _holds.add(token);

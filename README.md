@@ -11,7 +11,7 @@ Fledge brings the power of modern ECS architecture to Flutter, enabling you to b
 ## Features
 
 - **Entity Component System** — Compose game objects from reusable components
-- **System Scheduling** — Automatic parallel execution with dependency resolution, fixed-timestep support, and an ordering-ambiguity checker
+- **System Scheduling** — Dependency resolution computed once per schedule, synchronous systems run back to back, fixed-timestep support, and an ordering-ambiguity checker
 - **Two-World Architecture** — Separate game logic from rendering via extractors and a dedicated render world
 - **Real Canvas Rendering** — Sprite pipeline built on `Canvas.drawRawAtlas` with layer-sorted draws
 - **Ref-counted Assets** — Shared `Handle<T>` + `Assets<T>` store used by render, audio, tiled
@@ -102,7 +102,7 @@ class MovementSystem extends System {
   );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final time = world.getResource<WallTime>()!;
     for (final (_, pos, vel) in world.query2<Position, Velocity>().iter()) {
       pos.x += vel.x * time.delta;

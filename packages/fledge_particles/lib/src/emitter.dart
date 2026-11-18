@@ -46,6 +46,10 @@ class ParticleTemplate {
   /// Color at end of life (`t == 1`).
   final Color colorEnd;
 
+  /// The share of its life (0 to 1) a particle keeps [colorStart] before
+  /// blending towards [colorEnd]. See [Particle.colorHold].
+  final double colorHold;
+
   /// Minimum angular velocity in radians / second.
   final double angularVelocityMin;
 
@@ -64,6 +68,7 @@ class ParticleTemplate {
     this.sizeStartToEnd = 1.0,
     required this.colorStart,
     required this.colorEnd,
+    this.colorHold = 0.0,
     this.angularVelocityMin = 0.0,
     this.angularVelocityMax = 0.0,
   });
@@ -94,6 +99,7 @@ class ParticleTemplate {
       sizeStartToEnd: sizeStartToEnd,
       colorStart: colorStart,
       colorEnd: colorEnd,
+      colorHold: colorHold,
       angularVelocity: angVel,
     );
   }

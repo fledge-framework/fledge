@@ -25,10 +25,19 @@ class Transform2D {
   /// Local scale.
   Vector2 scale;
 
+  /// Local horizontal shear: a point [skew] × its (scaled) y further along
+  /// x, before rotation. 0 is none. A drop shadow lying on the ground leans
+  /// with it.
+  double skew;
+
   /// Creates a transform with the specified values.
-  Transform2D({Vector2? translation, this.rotation = 0, Vector2? scale})
-    : translation = translation ?? Vector2.zero(),
-      scale = scale ?? Vector2(1, 1);
+  Transform2D({
+    Vector2? translation,
+    this.rotation = 0,
+    Vector2? scale,
+    this.skew = 0,
+  }) : translation = translation ?? Vector2.zero(),
+       scale = scale ?? Vector2(1, 1);
 
   /// Creates a transform with only translation.
   factory Transform2D.from(double x, double y) =>
@@ -40,16 +49,16 @@ class Transform2D {
   /// Convert to a 3x3 transformation matrix.
   ///
   /// The matrix applies transformations in order:
-  /// scale -> rotate -> translate
+  /// scale -> skew -> rotate -> translate
   Matrix3 toMatrix() {
     final cos = math.cos(rotation);
     final sin = math.sin(rotation);
 
-    // Scale and rotate
+    // Scale, skew and rotate
     final a = cos * scale.x;
     final b = sin * scale.x;
-    final c = -sin * scale.y;
-    final d = cos * scale.y;
+    final c = (cos * skew - sin) * scale.y;
+    final d = (sin * skew + cos) * scale.y;
 
     // Combine with translation
     return Matrix3(a, b, 0, c, d, 0, translation.x, translation.y, 1);
@@ -89,6 +98,7 @@ class Transform2D {
     translation: translation.clone(),
     rotation: rotation,
     scale: scale.clone(),
+    skew: skew,
   );
 
   /// Copy values from another transform.
@@ -96,6 +106,7 @@ class Transform2D {
     translation.setFrom(other.translation);
     rotation = other.rotation;
     scale.setFrom(other.scale);
+    skew = other.skew;
   }
 
   @override
@@ -103,5 +114,6 @@ class Transform2D {
       'Transform2D('
       'translation: (${translation.x.toStringAsFixed(2)}, ${translation.y.toStringAsFixed(2)}), '
       'rotation: ${rotationDegrees.toStringAsFixed(1)}°, '
-      'scale: (${scale.x.toStringAsFixed(2)}, ${scale.y.toStringAsFixed(2)}))';
+      'scale: (${scale.x.toStringAsFixed(2)}, ${scale.y.toStringAsFixed(2)})'
+      '${skew == 0 ? '' : ', skew: ${skew.toStringAsFixed(2)}'})';
 }

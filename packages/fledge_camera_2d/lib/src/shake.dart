@@ -124,7 +124,7 @@ class CameraShakeSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     final delta = _fixedDelta >= 0
         ? _fixedDelta
         : (world.getResource<WallTime>()?.delta ?? 0.0);
@@ -169,6 +169,5 @@ class CameraShakeSystem implements System {
       shake._lastOffsetY = oy;
       shake._lastRotation = orot;
     }
-    return Future.value();
   }
 }

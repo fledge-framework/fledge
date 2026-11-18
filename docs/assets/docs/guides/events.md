@@ -102,7 +102,7 @@ class CollisionDetectionSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final collisions = world.eventWriter<CollisionEvent>();
     final entities = world.query2<Position, Collider>().iter().toList();
 
@@ -149,7 +149,7 @@ class ExplosionSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final damage = world.eventWriter<DamageEvent>();
 
     for (final (entity, pos, _) in world.query2<Position, Exploding>().iter()) {
@@ -189,7 +189,7 @@ class DamageHandlerSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final event in world.eventReader<DamageEvent>().read()) {
       final health = world.get<Health>(event.target);
       if (health != null) {
@@ -226,7 +226,7 @@ class ScoreHandlerSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final events = world.eventReader<ScoreEvent>();
     if (events.isEmpty) return; // Early exit if no events
 
@@ -272,7 +272,7 @@ class ChainExplosionsSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final reader = world.eventReader<ExplosionEvent>();
     final writer = world.eventWriter<ExplosionEvent>();
 
@@ -317,7 +317,7 @@ class SystemA implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     world.eventWriter<MyEvent>().send(MyEvent()); // Written this frame
   }
 }
@@ -330,7 +330,7 @@ class SystemB implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     // Won't see events from systemA this frame!
     // Will see them next frame
     for (final event in world.eventReader<MyEvent>().read()) {
@@ -413,7 +413,7 @@ class HandleStateChangeSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final state = world.getResource<GameState>()!;
 
     for (final event in world.eventReader<GameStateChange>().read()) {
@@ -461,7 +461,7 @@ class DamageStatsSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final stats = world.getResource<GameStats>()!;
     var totalDamage = 0;
     for (final event in world.eventReader<DamageDealt>().read()) {

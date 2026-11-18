@@ -206,7 +206,7 @@ class FollowTargetSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final (entity, pos, target) in world.query2<Position, Target>().iter()) {
       if (target.entity == null) continue;
       if (!world.isAlive(target.entity!)) {

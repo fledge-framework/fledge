@@ -49,12 +49,12 @@ class ParticleExtractor extends Extractor {
         final sub = ySorted ? DrawLayerExtension.ySortSubOrder(y) : explicitSub;
         final sortKey = layer.sortKey(subOrder: sub);
 
-        renderWorld.spawn().insert(
+        renderWorld.add(
           ExtractedSprite(
             entity: entity,
             texture: texture,
             sourceRect: sourceRect,
-            transform: _matrixFor(p, size),
+            transform: _matrixFor(p),
             color: p.color,
             sortKey: sortKey,
             layer: layer,
@@ -70,20 +70,21 @@ class ParticleExtractor extends Extractor {
 
   /// Build a `Matrix3` for a particle without importing Transform2D.
   ///
-  /// Order matches Transform2D.toMatrix: scale, then rotate, then
-  /// translate — same convention as the sprite pipeline expects.
-  static Matrix3 _matrixFor(Particle p, double size) {
+  /// Rotation and translation only: the particle's size is the
+  /// sprite's `size` (its quad), and the sprite pipeline scales the quad
+  /// by the transform as well, so a scale here would draw it at
+  /// `size * size`. Rotation-then-translate for a Y-down 2D world.
+  static Matrix3 _matrixFor(Particle p) {
     final cos = math.cos(p.rotation);
     final sin = math.sin(p.rotation);
     // Column-major 3x3: [m0..m2, m3..m5, m6..m8] where column-2 is
-    // translation. Scale collapses to `size` on both axes (particles
-    // are square quads). Rotation-then-translate for a Y-down 2D world.
+    // translation.
     final m = Matrix3.zero();
-    m[0] = cos * size;
-    m[1] = sin * size;
+    m[0] = cos;
+    m[1] = sin;
     m[2] = 0.0;
-    m[3] = -sin * size;
-    m[4] = cos * size;
+    m[3] = -sin;
+    m[4] = cos;
     m[5] = 0.0;
     m[6] = p.position.x;
     m[7] = p.position.y;

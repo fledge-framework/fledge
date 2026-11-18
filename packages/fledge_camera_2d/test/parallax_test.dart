@@ -19,7 +19,7 @@ void main() {
                 ..insert(GlobalTransform2D())
                 ..insert(const Parallax(0.5)))
               .entity;
-      await ParallaxSystem().run(world);
+      ParallaxSystem().run(world);
       final g = world.get<GlobalTransform2D>(e)!;
       // effective = transform.pos + (1 - factor) * cameraPos
       //           = (0, 0) + 0.5 * (100, 0) = (50, 0).
@@ -39,7 +39,7 @@ void main() {
                 ..insert(GlobalTransform2D())
                 ..insert(const Parallax(1.0)))
               .entity;
-      await ParallaxSystem().run(world);
+      ParallaxSystem().run(world);
       final g = world.get<GlobalTransform2D>(e)!;
       expect(g.x, closeTo(50, 1e-9));
       expect(g.y, closeTo(60, 1e-9));
@@ -57,7 +57,7 @@ void main() {
                 ..insert(GlobalTransform2D())
                 ..insert(const Parallax(0.0)))
               .entity;
-      await ParallaxSystem().run(world);
+      ParallaxSystem().run(world);
       final g = world.get<GlobalTransform2D>(e)!;
       // effective = transform.pos + camera.pos = (1010, 520).
       expect(g.x, closeTo(1010, 1e-9));
@@ -76,7 +76,7 @@ void main() {
       final g = world.get<GlobalTransform2D>(e)!;
       g.matrix[6] = 99;
       g.matrix[7] = 88;
-      await ParallaxSystem().run(world);
+      ParallaxSystem().run(world);
       // Unchanged because no camera was found.
       expect(g.x, 99);
       expect(g.y, 88);

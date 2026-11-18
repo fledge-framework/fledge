@@ -24,6 +24,29 @@ void main() {
       );
     });
 
+    test('signed varints: zigzag, short either side of zero', () {
+      for (final v in [0, 1, -1, 63, -64, 64, -65, 100000, -100000, 1 << 40]) {
+        final encoded = (PacketBuilder()..writeVarInt(v)).build();
+        expect(PacketReader(encoded).readVarInt(), v);
+        if (v >= -64 && v <= 63) expect(encoded.length, 1);
+      }
+    });
+
+    test('signed varints: the int64 extremes round-trip; bad input throws', () {
+      const max = 0x7FFFFFFFFFFFFFFF;
+      const min = -max - 1;
+      for (final v in [1 << 62, -(1 << 62), (1 << 62) + 1, max, min]) {
+        final encoded = (PacketBuilder()..writeVarInt(v)).build();
+        expect(PacketReader(encoded).readVarInt(), v, reason: '$v');
+        expect(encoded.length, lessThanOrEqualTo(10));
+      }
+      expect(() => PacketReader(bytes([0x80])).readVarInt(), throwsRangeError);
+      expect(
+        () => PacketReader(bytes(List.filled(11, 0xFF))).readVarInt(),
+        throwsFormatException,
+      );
+    });
+
     test('var bytes', () {
       final b = PacketBuilder()
         ..writeVarBytes(bytes([1, 2, 3]))

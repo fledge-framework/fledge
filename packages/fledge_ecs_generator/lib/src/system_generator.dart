@@ -33,11 +33,10 @@ import 'package:source_gen/source_gen.dart';
 ///   );
 ///
 ///   @override
-///   Future<void> run(World world) {
+///   void run(World world) {
 ///     final query = world.query2<Position, Velocity>();
 ///     final time = Res<WallTime>(world.resource<WallTime>());
 ///     movementSystem(query, time);
-///     return Future.value();
 ///   }
 /// }
 /// ```
@@ -113,7 +112,7 @@ class SystemGenerator extends GeneratorForAnnotation<SystemAnnotation> {
 
     // Generate run method
     buffer.writeln('  @override');
-    buffer.writeln('  Future<void> run(World world) {');
+    buffer.writeln('  void run(World world) {');
 
     // Generate query/resource setup
     for (final param in analysis.parameterSetup) {
@@ -123,7 +122,6 @@ class SystemGenerator extends GeneratorForAnnotation<SystemAnnotation> {
     // Call the original function
     final args = params.map((p) => p.name!).join(', ');
     buffer.writeln('    $functionName($args);');
-    buffer.writeln('    return Future.value();');
     buffer.writeln('  }');
 
     buffer.writeln('}');

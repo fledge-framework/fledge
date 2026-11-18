@@ -20,10 +20,9 @@ class _CountJumps implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     steps++;
     if (world.getResource<ActionState>()!.fixedJustPressed(_jump)) jumps++;
-    return Future.value();
   }
 }
 

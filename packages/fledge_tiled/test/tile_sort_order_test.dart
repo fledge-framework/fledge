@@ -1,4 +1,4 @@
-// ExtractedTile is deprecated but still emitted; this test checks it.
+// ExtractedTile is deprecated and only emitted on request; this test checks it.
 // ignore_for_file: deprecated_member_use
 
 import 'dart:ui' show Color, Offset, Rect;
@@ -97,8 +97,12 @@ World _world({TilemapAnimator? animator}) {
 
 void main() {
   for (final (name, extractor) in <(String, Extractor Function())>[
-    ('TilemapExtractor', TilemapExtractor.new),
-    ('CulledTilemapExtractor', CulledTilemapExtractor.new),
+    ('TilemapExtractor', () => TilemapExtractor(emitLegacyTiles: true)),
+    // ignore: deprecated_member_use_from_same_package
+    (
+      'CulledTilemapExtractor',
+      () => CulledTilemapExtractor(emitLegacyTiles: true),
+    ),
   ]) {
     group(name, () {
       late List<ExtractedSprite> sprites;

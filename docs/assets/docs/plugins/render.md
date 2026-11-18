@@ -398,7 +398,7 @@ Move the camera to follow a player:
 ```dart
 class CameraFollowSystem implements System {
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     // Get player position
     final (_, playerTransform) = world
       .query1<Transform2D>(filter: const With<Player>())

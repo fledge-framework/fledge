@@ -98,13 +98,13 @@ void main() {
         ..insert(Transform2D.from(1, 2))
         ..insert(PreviousTransform2D());
 
-      await const SnapshotPreviousTransformSystem().run(world);
+      const SnapshotPreviousTransformSystem().run(world);
       var prev = world.get<PreviousTransform2D>(e.entity)!;
       expect(prev.translation.x, 1.0);
       expect(prev.translation.y, 2.0);
 
       world.get<Transform2D>(e.entity)!.translation.setValues(30, 40);
-      await const SnapshotPreviousTransformSystem().run(world);
+      const SnapshotPreviousTransformSystem().run(world);
       prev = world.get<PreviousTransform2D>(e.entity)!;
       expect(prev.translation.x, 30.0);
       expect(prev.translation.y, 40.0);

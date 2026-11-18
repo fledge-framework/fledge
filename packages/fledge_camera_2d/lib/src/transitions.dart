@@ -141,9 +141,9 @@ class CameraTransitionSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     final delta = world.getResource<WallTime>()?.delta ?? 0.0;
-    if (delta <= 0) return Future.value();
+    if (delta <= 0) return;
 
     // Fades.
     for (final (_, fade) in world.query1<CameraFadeTransition>().iter()) {
@@ -153,6 +153,5 @@ class CameraTransitionSystem implements System {
     for (final (_, wipe) in world.query1<CameraWipeTransition>().iter()) {
       if (!wipe.isComplete) wipe.elapsed += delta;
     }
-    return Future.value();
   }
 }

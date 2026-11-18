@@ -251,9 +251,8 @@ class WallTimeUpdateSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     world.getResource<WallTime>()?.update();
-    return Future.value();
   }
 }
 

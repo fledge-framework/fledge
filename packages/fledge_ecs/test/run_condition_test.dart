@@ -130,7 +130,7 @@ void main() {
       );
 
       expect(system.shouldRun(world), isTrue);
-      await system.run(world);
+      system.run(world);
       expect(executed, isTrue);
     });
 

@@ -50,7 +50,7 @@ class DisplaySyncSystem implements System {
   _DisplayQuery? _result;
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     // Never awaits the platform: a tick that waits on a platform call
     // stalls until a later turn of the event loop, so the frame is drawn
     // before the tick's movement has happened and the next frame shows

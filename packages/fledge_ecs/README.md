@@ -36,7 +36,7 @@ class MovementSystem extends System {
   );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final time = world.getResource<WallTime>()!;
     for (final (_, pos, vel) in world.query2<Position, Velocity>().iter()) {
       pos.x += vel.x * time.delta;

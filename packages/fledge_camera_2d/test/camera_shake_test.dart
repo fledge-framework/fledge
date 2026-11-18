@@ -36,7 +36,7 @@ void main() {
         );
       final system = CameraShakeSystem(fixedDelta: 0.1);
       for (var i = 0; i < 5; i++) {
-        await system.run(world);
+        system.run(world);
       }
       final shake = world.query1<CameraShake>().iter().first.$2;
       // 5 frames * 0.1s * 1.0 decay = 0.5 subtracted → trauma ≈ 0.5.
@@ -59,7 +59,7 @@ void main() {
           ),
         );
       final system = CameraShakeSystem(fixedDelta: 0);
-      await system.run(world);
+      system.run(world);
       final t = world.query1<Transform2D>().iter().first.$2;
       // With trauma=1.0, intensity=1.0. Random in [-1,1] * 10 → |delta| ≤ 10.
       expect(t.translation.x.abs(), lessThanOrEqualTo(10));
@@ -80,10 +80,10 @@ void main() {
           ),
         );
       final system = CameraShakeSystem(fixedDelta: 0.1);
-      await system.run(world);
+      system.run(world);
       // After trauma hits 0, next run should undo any leftover
       // shake, returning translation exactly to 0.
-      await system.run(world);
+      system.run(world);
       final t = world.query1<Transform2D>().iter().first.$2;
       expect(t.translation.x, closeTo(0, 1e-9));
       expect(t.translation.y, closeTo(0, 1e-9));

@@ -54,6 +54,13 @@ abstract interface class AudioBackend {
 
   void setPan(AudioVoice voice, double pan);
 
+  /// Sets [voice]'s playback speed (and so its pitch; 1.0 = as recorded).
+  /// Must be above zero: lower values are clamped to [minSpeed].
+  void setSpeed(AudioVoice voice, double speed);
+
+  /// The slowest speed [setSpeed] plays at.
+  static const minSpeed = 0.01;
+
   void setPaused(AudioVoice voice, bool paused);
 
   /// Jumps [voice] to [position] from its start.

@@ -18,12 +18,12 @@ void main() {
       world.spawn().insert(fade);
 
       time.delta = 0.5;
-      await CameraTransitionSystem().run(world);
+      CameraTransitionSystem().run(world);
       expect(fade.progress, closeTo(0.5, 1e-9));
       expect(fade.isComplete, isFalse);
 
       time.delta = 0.6;
-      await CameraTransitionSystem().run(world);
+      CameraTransitionSystem().run(world);
       expect(fade.isComplete, isTrue);
       expect(fade.progress, closeTo(1.0, 1e-9));
     });
@@ -48,11 +48,11 @@ void main() {
       world.spawn().insert(wipe);
 
       world.getResource<WallTime>()!.delta = 1.0;
-      await CameraTransitionSystem().run(world);
+      CameraTransitionSystem().run(world);
       expect(wipe.progress, closeTo(0.5, 1e-9));
 
       world.getResource<WallTime>()!.delta = 2.0;
-      await CameraTransitionSystem().run(world);
+      CameraTransitionSystem().run(world);
       expect(wipe.isComplete, isTrue);
     });
   });

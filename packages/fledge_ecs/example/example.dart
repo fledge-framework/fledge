@@ -22,7 +22,7 @@ class MovementSystem extends System {
   );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final (_, pos, vel) in world.query2<Position, Velocity>().iter()) {
       pos.x += vel.x;
       pos.y += vel.y;

@@ -118,7 +118,7 @@ Provides `WallTime` resource with delta and elapsed time.
 App().addPlugin(WallTimePlugin());
 
 @system
-Future<void> mySystem(World world) async {
+void mySystem(World world) {
   final time = world.getResource<WallTime>()!;
   print('Delta: ${time.delta}');
   print('Elapsed: ${time.elapsed}');
@@ -138,7 +138,7 @@ Limits frame rate with sleep-based timing.
 App().addPlugin(FrameLimiterPlugin(targetFps: 60));
 
 @system
-Future<void> debugSystem(World world) async {
+void debugSystem(World world) {
   final ft = world.getResource<FrameTime>()!;
   print('FPS: ${ft.fps}');
 }

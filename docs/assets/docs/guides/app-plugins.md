@@ -39,7 +39,7 @@ await app.run();
 
 ```dart
 // Inside a system - World is provided
-Future<void> run(World world) async {
+void run(World world) {
   for (final (_, pos) in world.query1<Position>().iter()) {
     // Process entities
   }
@@ -270,7 +270,7 @@ class MySystem implements System {
   SystemMeta get meta => SystemMeta(name: 'mySystem', resourceReads: {WallTime});
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final time = world.getResource<WallTime>()!;
     final delta = time.delta;      // Seconds since last frame
     final elapsed = time.elapsed;  // Total seconds
@@ -307,7 +307,7 @@ class DebugSystem implements System {
   SystemMeta get meta => SystemMeta(name: 'debug', resourceReads: {FrameTime});
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final ft = world.getResource<FrameTime>()!;
     print('FPS: ${ft.fps}');
     print('Frame time: ${ft.frameTime}ms');
@@ -413,7 +413,7 @@ class MovementSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final dt = world.getResource<WallTime>()!.delta;
     for (final (_, pos, vel) in world.query2<Position, Velocity>().iter()) {
       pos.x += vel.dx * dt;

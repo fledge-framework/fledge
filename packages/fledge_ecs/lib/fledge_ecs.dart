@@ -41,6 +41,9 @@
 /// ```
 library;
 
+// `System.run` returns `FutureOr<void>`: available wherever Fledge is.
+export 'dart:async' show FutureOr;
+
 // Re-export annotations for convenience
 export 'package:fledge_ecs_annotations/fledge_ecs_annotations.dart';
 

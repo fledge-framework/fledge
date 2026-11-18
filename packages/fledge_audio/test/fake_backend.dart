@@ -4,13 +4,21 @@ import 'package:fledge_audio/fledge_audio.dart';
 
 /// A voice in [FakeBackend]: what the engine was told about it.
 class FakeVoice {
-  FakeVoice(this.source, this.volume, this.pan, this.looping, this.paused);
+  FakeVoice(
+    this.source,
+    this.volume,
+    this.pan,
+    this.looping,
+    this.paused, {
+    this.speed = 1.0,
+  });
 
   final Object source;
   double volume;
   double pan;
   final bool looping;
   bool paused;
+  double speed;
   bool playing = true;
 
   /// The last fade asked for: (to, over).
@@ -78,7 +86,7 @@ class FakeBackend implements AudioBackend {
     bool paused = false,
   }) {
     final id = _next++;
-    voices[id] = FakeVoice(source, volume, pan, looping, paused);
+    voices[id] = FakeVoice(source, volume, pan, looping, paused, speed: speed);
     return AudioVoice(id);
   }
 
@@ -103,6 +111,9 @@ class FakeBackend implements AudioBackend {
 
   @override
   void setPan(AudioVoice voice, double pan) => _live(voice)?.pan = pan;
+
+  @override
+  void setSpeed(AudioVoice voice, double speed) => _live(voice)?.speed = speed;
 
   @override
   void setPaused(AudioVoice voice, bool paused) =>

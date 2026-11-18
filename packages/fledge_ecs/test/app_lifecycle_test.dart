@@ -19,7 +19,7 @@ class _SpySystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     world.getResource<_Log>()!.entries.add(tag);
   }
 }

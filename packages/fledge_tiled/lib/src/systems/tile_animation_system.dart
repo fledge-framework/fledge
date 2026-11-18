@@ -24,7 +24,7 @@ class TileAnimationSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final time = world.getResource<WallTime>();
     if (time == null) return;
 

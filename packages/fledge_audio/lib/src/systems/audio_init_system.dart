@@ -34,7 +34,7 @@ class AudioInitSystem implements System {
   bool shouldRun(World world) => !_started;
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     if (_started) return;
     final state = world.getResource<AudioState>();
     if (state == null) return;

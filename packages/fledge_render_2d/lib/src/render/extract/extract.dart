@@ -63,7 +63,7 @@ class ComponentExtractor<TSource, TExtracted> extends Extractor {
     for (final (entity, component)
         in mainWorld.query1<TSource>(filter: _filter).iter()) {
       final extracted = _extractFn(mainWorld, entity, component);
-      renderWorld.spawn().insert(extracted);
+      renderWorld.world.spawnOne<TExtracted>(extracted);
     }
   }
 }

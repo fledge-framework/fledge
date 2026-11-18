@@ -241,6 +241,23 @@ void main() {
       expect(h.state.currentLine!.text, 'Oh.');
     });
 
+    test(
+      'a hovering pointer sets the highlight; out of range, ignored',
+      () async {
+        await toChoice();
+        await h.request(const DialogueCursorSet(2));
+        expect(h.state.cursorIndex, 2);
+        await h.request(const DialogueCursorSet(7));
+        expect(h.state.cursorIndex, 2);
+        await h.request(const DialogueCursorSet(-1));
+        expect(h.state.cursorIndex, 2);
+        // Advance takes the hovered option.
+        await h.request(const DialogueCursorSet(1));
+        await h.request(const DialogueAdvanceRequested());
+        expect(h.state.currentLine!.text, 'Oh.');
+      },
+    );
+
     test('the cursor wraps; advance takes the highlighted option', () async {
       await toChoice();
       expect(h.state.cursorIndex, 0);
@@ -391,13 +408,12 @@ class _TimeoutPicker implements System {
   bool shouldRun(World world) => dialogueActive(world);
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     final index = world.getResource<DialogueState>()!.timeoutChoiceIndex;
     if (index != null) {
       world.eventWriter<DialogueChoiceSelected>().send(
         DialogueChoiceSelected(index),
       );
     }
-    return Future.value();
   }
 }

@@ -23,7 +23,7 @@ class _Harness {
   /// Run one frame with [delta] real seconds; returns that frame's events.
   Future<List<Object>> frame([double delta = 0]) async {
     time.delta = delta;
-    await const CalendarSystem().run(world);
+    const CalendarSystem().run(world);
     world.updateEvents();
     return [
       ...world.eventReader<HourChangedEvent>().read(),

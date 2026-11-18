@@ -47,6 +47,11 @@ class RenderWorld {
   /// Spawn an entity in the render world.
   EntityCommands spawn() => _world.spawn();
 
+  /// Adds one extracted item (an `ExtractedSprite`, a light, ...) as its
+  /// own entity, stored as [T]: what extractors call for each item each
+  /// frame, cheaper than `spawn().insert(item)`.
+  Entity add<T extends Object>(T item) => _world.spawnOne<T>(item);
+
   /// Get a resource from the render world.
   T? getResource<T>() => _world.getResource<T>();
 

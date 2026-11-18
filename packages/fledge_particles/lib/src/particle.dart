@@ -27,7 +27,7 @@ class Particle {
   /// is [isAlive] == false and eligible for reap.
   double maxLifetime;
 
-  /// Base size (half-size or radius, in world units).
+  /// Base size: the width and height of its square, in world units.
   double size;
 
   /// Size ramp: at `t == 0` the effective size equals [size]; at
@@ -40,6 +40,11 @@ class Particle {
 
   /// Color at end of life (`t == 1`).
   Color colorEnd;
+
+  /// The share of its life (0 to 1) it keeps [colorStart] before blending
+  /// towards [colorEnd] over the rest: a cloud that stays solid, then
+  /// fades. `0` blends over the whole life.
+  double colorHold;
 
   /// Rotation in radians.
   double rotation;
@@ -60,6 +65,7 @@ class Particle {
     this.sizeStartToEnd = 1.0,
     required this.colorStart,
     required this.colorEnd,
+    this.colorHold = 0.0,
     this.rotation = 0.0,
     this.angularVelocity = 0.0,
   }) : acceleration = acceleration ?? Vector2.zero();
@@ -71,9 +77,14 @@ class Particle {
   double get t => (lifetime / maxLifetime).clamp(0.0, 1.0);
 
   /// Linearly interpolated color between [colorStart] and [colorEnd]
-  /// based on [t]. `Color.lerp` is non-null when both endpoints are
-  /// non-null, so the bang here is safe.
-  Color get color => Color.lerp(colorStart, colorEnd, t)!;
+  /// based on [t], after the first [colorHold] of its life. `Color.lerp`
+  /// is non-null when both endpoints are non-null, so the bang here is
+  /// safe.
+  Color get color {
+    final hold = colorHold.clamp(0.0, 1.0);
+    final blend = hold >= 1 ? 0.0 : ((t - hold) / (1 - hold)).clamp(0.0, 1.0);
+    return Color.lerp(colorStart, colorEnd, blend)!;
+  }
 
   /// Interpolated size, blending [size] at `t == 0` with
   /// `size * sizeStartToEnd` at `t == 1`.
@@ -134,6 +145,7 @@ class ParticlePool {
     double sizeStartToEnd = 1.0,
     required Color colorStart,
     required Color colorEnd,
+    double colorHold = 0.0,
     double rotation = 0.0,
     double angularVelocity = 0.0,
   }) {
@@ -151,6 +163,7 @@ class ParticlePool {
         sizeStartToEnd: sizeStartToEnd,
         colorStart: colorStart,
         colorEnd: colorEnd,
+        colorHold: colorHold,
         rotation: rotation,
         angularVelocity: angularVelocity,
       );
@@ -164,6 +177,7 @@ class ParticlePool {
       existing.sizeStartToEnd = sizeStartToEnd;
       existing.colorStart = colorStart;
       existing.colorEnd = colorEnd;
+      existing.colorHold = colorHold;
       existing.rotation = rotation;
       existing.angularVelocity = angularVelocity;
     }

@@ -44,7 +44,7 @@ import 'package:fledge_render_2d/fledge_render_2d.dart';
 
 class CameraFollowSystem extends System {
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     // Get player position
     final (_, playerTransform) = world
         .query1<Transform2D>(filter: const With<Player>())
@@ -170,7 +170,7 @@ class CameraFollowSystem extends System {
   );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final playerQuery = world
         .query1<Transform2D>(filter: const With<Player>())
         .iter();

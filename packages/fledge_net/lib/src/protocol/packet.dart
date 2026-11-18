@@ -364,13 +364,26 @@ class PacketBuilder {
     if (value < 0) {
       throw ArgumentError.value(value, 'value', 'must not be negative');
     }
-    var v = value;
-    while (v >= 0x80) {
+    _writeVarBits(value);
+  }
+
+  /// Writes [bits] as LEB128, read as an unsigned 64-bit pattern (so the
+  /// zigzag encoding of any int fits, in at most 10 bytes).
+  void _writeVarBits(int bits) {
+    var v = bits;
+    while (v & ~0x7F != 0) {
       writeByte((v & 0x7F) | 0x80);
-      v >>= 7;
+      v = v >>> 7;
     }
     writeByte(v);
   }
+
+  /// Write a signed integer as a zigzag varint: small magnitudes either
+  /// side of zero stay short (0 -> 1 byte, -1 -> 1 byte, 64 -> 2 bytes).
+  /// Read it with [PacketReader.readVarInt]. For values that may be
+  /// negative, such as grid coordinates; [writeVarUint] throws on those.
+  /// Every int round-trips, the extremes included.
+  void writeVarInt(int value) => _writeVarBits((value << 1) ^ (value >> 63));
 
   /// Write raw bytes with no length prefix.
   void writeRawBytes(List<int> bytes) {
@@ -514,16 +527,30 @@ class PacketReader {
   ///
   /// Throws [FormatException] if the varint is longer than 9 bytes and
   /// [RangeError] if it runs past the end of the data.
-  int readVarUint() {
+  int readVarUint() => _readVarBits(9);
+
+  /// Reads LEB128 of at most [maxBytes] bytes as a 64-bit pattern.
+  int _readVarBits(int maxBytes) {
     var result = 0;
     var shift = 0;
     while (true) {
-      if (shift > 56) throw const FormatException('varint too long');
+      if (shift >= maxBytes * 7) {
+        throw const FormatException('varint too long');
+      }
       final byte = readByte();
       result |= (byte & 0x7F) << shift;
       if (byte & 0x80 == 0) return result;
       shift += 7;
     }
+  }
+
+  /// Read a signed zigzag varint written by [PacketBuilder.writeVarInt].
+  ///
+  /// Throws [FormatException] if it's longer than 10 bytes and
+  /// [RangeError] if it runs past the end of the data.
+  int readVarInt() {
+    final raw = _readVarBits(10);
+    return (raw >>> 1) ^ -(raw & 1);
   }
 
   /// Read [length] raw bytes (a view; copy it if you keep it).

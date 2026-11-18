@@ -38,6 +38,17 @@ Paint the scene into a Flutter widget:
 runApp(MaterialApp(home: FledgeRenderView(app: app)));
 ```
 
+## Transforms
+
+`Transform2D` holds a local `translation`, `rotation`, `scale` and `skew` (a horizontal shear: a point moves `skew` × its scaled y along x, before rotation), applied scale, skew, rotate, translate. A drop shadow lying on the ground is the sprite's silhouette flipped about its base (`Sprite.flipY`), squashed and skewed:
+
+```dart
+world.spawn()
+  ..insert(Transform2D(translation: Vector2(x, y), scale: Vector2(1, 0.45), skew: 0.6))
+  ..insert(GlobalTransform2D())
+  ..insert(Sprite(texture: tex, anchor: Vector2(0.5, 1), flipY: true, color: shade));
+```
+
 ## Directional sprites
 
 `Orientation` tracks one of four cardinal `Direction`s. For 8-, 16- or N-view sprites, `Facing` holds a continuous angle (radians, `0` = +x, clockwise on screen like `Transform2D.rotation`) and picks the view:

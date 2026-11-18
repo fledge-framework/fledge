@@ -14,10 +14,10 @@ void main() {
           ..insert(Velocity(4, 0));
 
         const sys = VelocityIntegrationSystem.fixed();
-        await sys.run(world);
+        sys.run(world);
         expect(world.get<Transform2D>(entity.entity)!.translation.x, 4.0);
 
-        await sys.run(world);
+        sys.run(world);
         expect(world.get<Transform2D>(entity.entity)!.translation.x, 8.0);
       },
     );
@@ -33,7 +33,7 @@ void main() {
         ..insert(Velocity(4, 0));
 
       const sys = VelocityIntegrationSystem.fixed();
-      await sys.run(world);
+      sys.run(world);
       expect(
         world.get<Transform2D>(entity.entity)!.translation.x,
         closeTo(8.0, 0.01),
@@ -50,7 +50,7 @@ void main() {
         ..insert(Velocity(4, 0));
 
       const sys = VelocityIntegrationSystem.fixed();
-      await sys.run(world);
+      sys.run(world);
       expect(
         world.get<Transform2D>(entity.entity)!.translation.x,
         closeTo(2.0, 0.01),
@@ -65,7 +65,7 @@ void main() {
         ..insert(Velocity(4, 0));
 
       const sys = VelocityIntegrationSystem();
-      await sys.run(world);
+      sys.run(world);
       expect(
         world.get<Transform2D>(entity.entity)!.translation.x,
         closeTo(4.0, 0.001),
@@ -79,7 +79,7 @@ void main() {
         ..insert(Velocity(0, 0));
 
       const sys = VelocityIntegrationSystem.fixed();
-      await sys.run(world);
+      sys.run(world);
       final t = world.get<Transform2D>(entity.entity)!;
       expect(t.translation.x, 10.0);
       expect(t.translation.y, 10.0);
@@ -93,7 +93,7 @@ void main() {
         ..insert(Velocity(4, 4));
 
       const sys = VelocityIntegrationSystem.fixed();
-      await sys.run(world);
+      sys.run(world);
       final t = world.get<Transform2D>(entity.entity)!;
       expect(t.translation.x, 4.0);
       expect(t.translation.y, 4.0);
@@ -121,7 +121,7 @@ void main() {
         ..insert(Velocity(4, 0));
 
       const sys = CollisionResolutionSystem.fixed();
-      await sys.run(world);
+      sys.run(world);
 
       // 4 px movement would land player's right edge at 14, overlapping
       // wall from 10..20. Full move blocked, no valid axis slide → both
@@ -152,7 +152,7 @@ void main() {
         ..insert(Velocity(4, 4));
 
       const sys = CollisionResolutionSystem.fixed();
-      await sys.run(world);
+      sys.run(world);
 
       final v = world.get<Velocity>(player.entity)!;
       expect(v.x, 4.0);

@@ -30,12 +30,10 @@ class InputPollingSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     // Update frame boundaries for button state tracking
     world.getResource<KeyboardState>()?.beginFrame();
     world.getResource<MouseState>()?.beginFrame();
     world.getResource<GamepadState>()?.beginFrame();
-
-    return Future.value();
   }
 }

@@ -78,7 +78,7 @@ class MovementSystem implements System {
   );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final dt = world.getResource<WallTime>()?.delta ?? 0.016;
     final screen = world.getResource<ScreenSize>()!;
 
@@ -103,8 +103,8 @@ class MovementSystem implements System {
 ```
 
 The `SystemMeta` declares what data this system reads and writes. Fledge uses this for:
-- Automatic parallel execution (non-conflicting systems run together)
-- Error detection (catches data races at runtime)
+- Ordering: systems that touch the same data always run in the same order
+- Error detection: `checkScheduleOrdering()` reports conflicting systems nothing orders
 
 ## Step 3: Create Resources
 

@@ -71,9 +71,8 @@ class FrameStartSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     world.getResource<FrameTime>()?.startFrame();
-    return Future.value();
   }
 }
 

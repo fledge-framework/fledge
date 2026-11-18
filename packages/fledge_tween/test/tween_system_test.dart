@@ -22,9 +22,8 @@ class _FixedDeltaSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     world.getResource<WallTime>()!.delta = deltaSeconds;
-    return Future.value();
   }
 }
 
@@ -197,7 +196,7 @@ void main() {
       final system = TweenSystem(schedule: TweenSchedule.fixed);
       // Three fixed steps in one frame → 300ms elapsed.
       for (var i = 0; i < 3; i++) {
-        await system.run(world);
+        system.run(world);
       }
       expect(samples, [
         closeTo(10, 1e-9),

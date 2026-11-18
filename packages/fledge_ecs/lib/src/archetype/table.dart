@@ -35,6 +35,11 @@ class Table {
   final Map<ComponentId, List<ComponentTicks>> _ticks = {};
 
   /// Creates a table for the given [archetypeId].
+  /// Bumped by every change to any table's rows (add, remove, clear), in
+  /// every world: a query iterating a snapshot reads rows directly only
+  /// while this hasn't moved since the snapshot.
+  static int structureVersion = 0;
+
   Table(this.archetypeId) {
     // Initialize empty columns and tick tracking for each component type
     for (final componentId in archetypeId.components) {
@@ -79,6 +84,7 @@ class Table {
       'Missing components for archetype',
     );
 
+    structureVersion++;
     final row = _entities.length;
     _entities.add(entity);
 
@@ -104,6 +110,7 @@ class Table {
   Entity? swapRemove(int row) {
     assert(row >= 0 && row < length, 'Row $row out of bounds');
 
+    structureVersion++;
     final lastRow = length - 1;
 
     if (row == lastRow) {
@@ -207,6 +214,7 @@ class Table {
 
   /// Clears all entities from this table.
   void clear() {
+    structureVersion++;
     _entities.clear();
     for (final column in _columns.values) {
       column.clear();

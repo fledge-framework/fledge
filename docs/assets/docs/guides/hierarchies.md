@@ -141,7 +141,7 @@ class TransformPropagationSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     // Process entities with parents
     for (final (entity, localPos, parent) in
         world.query2<LocalPosition, Parent>().iter()) {

@@ -29,14 +29,12 @@ class ContextUpdateSystem<S extends Enum> implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     final state = world.getResource<State<S>>();
     final registry = world.getResource<InputContextRegistry>();
 
     if (state != null && registry != null) {
       registry.updateFromState(state.current);
     }
-
-    return Future.value();
   }
 }

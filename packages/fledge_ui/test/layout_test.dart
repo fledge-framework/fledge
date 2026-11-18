@@ -36,7 +36,7 @@ void main() {
           offset: const UiOffset(x: 10, y: 20),
         );
 
-        await system.run(world);
+        system.run(world);
 
         final rect = world.get<UiComputedRect>(entity)!.rect;
         expect(rect.left, 10);
@@ -52,7 +52,7 @@ void main() {
         size: const UiSize(width: 200, height: 100),
       );
 
-      await system.run(world);
+      system.run(world);
 
       final rect = world.get<UiComputedRect>(entity)!.rect;
       // Viewport is 800×600; rect is 200×100 centred → (300, 250).
@@ -68,7 +68,7 @@ void main() {
           size: const UiSize(width: 120, height: 60),
         );
 
-        await system.run(world);
+        system.run(world);
 
         final rect = world.get<UiComputedRect>(entity)!.rect;
         // 800 - 120 = 680; 600 - 60 = 540.
@@ -84,7 +84,7 @@ void main() {
         offset: const UiOffset(x: -8, y: 4),
       );
 
-      await system.run(world);
+      system.run(world);
 
       final rect = world.get<UiComputedRect>(entity)!.rect;
       // topRight base: 800-50 = 750, 0. Offset (-8, 4) → (742, 4).
@@ -129,7 +129,7 @@ void main() {
         world.setParent(a, container);
         world.setParent(b, container);
 
-        await system.run(world);
+        system.run(world);
 
         final rectA = world.get<UiComputedRect>(a)!.rect;
         final rectB = world.get<UiComputedRect>(b)!.rect;
@@ -165,7 +165,7 @@ void main() {
       world.setParent(a, container);
       world.setParent(b, container);
 
-      await system.run(world);
+      system.run(world);
 
       expect(world.get<UiComputedRect>(a)!.rect.top, 0);
       expect(world.get<UiComputedRect>(b)!.rect.top, 20 + 5);
@@ -190,7 +190,7 @@ void main() {
                 .entity;
         world.setParent(child, container);
 
-        await system.run(world);
+        system.run(world);
 
         final rect = world.get<UiComputedRect>(child)!.rect;
         // Container starts at (0,0), padded interior = (10,10) to (190,90).
@@ -213,9 +213,9 @@ void main() {
             .entity;
 
     final system = LayoutSystem();
-    await system.run(world);
+    system.run(world);
     final first = world.get<UiComputedRect>(entity)!.rect;
-    await system.run(world);
+    system.run(world);
     final second = world.get<UiComputedRect>(entity)!.rect;
 
     expect(first, second);

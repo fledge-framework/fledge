@@ -40,10 +40,10 @@ class ScheduleOrderingReportSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     final reader = world.eventReader<RefreshScheduleOrderingReportRequested>();
     final hasRequest = reader.isNotEmpty;
-    if (!hasRequest && _initialReportBuilt) return Future.value();
+    if (!hasRequest && _initialReportBuilt) return;
     // Drain any pending requests.
     for (final _ in reader.read()) {}
     _initialReportBuilt = true;
@@ -52,6 +52,5 @@ class ScheduleOrderingReportSystem implements System {
         .map((a) => '${a.stage}: ${a.systemA} <-> ${a.systemB}')
         .toList(growable: false);
     world.insertResource(ScheduleOrderingReport(List.unmodifiable(items)));
-    return Future.value();
   }
 }

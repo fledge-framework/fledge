@@ -164,9 +164,16 @@ abstract class System {
 
   /// Runs the system logic.
   ///
-  /// Returns a [Future] to support async operations. For synchronous
-  /// systems, return `Future.value()` or use [SyncSystem].
-  Future<void> run(World world);
+  /// A synchronous system declares `void run(World world)` and just
+  /// returns: the scheduler runs the next system at once (and code that
+  /// runs one directly, a test say, calls it without `await`). One that must wait returns
+  /// a [Future], and the scheduler awaits it before the next system starts.
+  /// Prefer synchronous systems: an `async` method always returns a Future
+  /// that completes later, which costs a turn of the event loop even when
+  /// nothing is awaited, and systems inside a tick must never await
+  /// platform calls (start them in the background and apply the result on
+  /// a later frame).
+  FutureOr<void> run(World world);
 
   /// Returns true if this system should run, based on its [runCondition].
   bool shouldRun(World world) => runCondition?.call(world) ?? true;
@@ -177,10 +184,7 @@ abstract class System {
 /// Extend this class for simple systems that don't perform I/O.
 abstract class SyncSystem implements System {
   @override
-  Future<void> run(World world) {
-    runSync(world);
-    return Future.value();
-  }
+  void run(World world) => runSync(world);
 
   /// Runs the system logic synchronously.
   void runSync(World world);
@@ -254,10 +258,7 @@ class FunctionSystem implements System {
        _run = run;
 
   @override
-  Future<void> run(World world) {
-    _run(world);
-    return Future.value();
-  }
+  void run(World world) => _run(world);
 }
 
 /// An async system created from a function.

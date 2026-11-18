@@ -60,10 +60,10 @@ double tilePreciseSubOrder({required int row, required int layerIndex}) =>
 ///
 /// - The sprite is anchored at (0.5, 0.5) with the tile's world
 ///   position placed at the tile's centre.
-/// - Flip flags become a rotation about the centre when they encode
-///   one of the four cardinal orientations (0°, 90° cw, 180°, 90° ccw).
-///   Pure mirrors (H alone, V alone, D alone, H+V+D) cannot be
-///   expressed by `RSTransform` and are drawn unflipped.
+/// - Flip flags become a rotation about the centre, plus a horizontal
+///   mirror (`ExtractedSprite.flipX`, applied in the tile's own space)
+///   for the four combinations that mirror (H alone, V alone, D alone,
+///   H+V+D), so all eight of Tiled's orientations draw as in Tiled.
 ///
 /// [preciseSubOrder] becomes `ExtractedSprite.preciseSubOrder`: the
 /// unclamped tie-breaker for equal [sortKey]s (see
@@ -86,7 +86,7 @@ ExtractedSprite tileToSprite({
   final centerX = tileTopLeft.dx + tileWidth / 2;
   final centerY = tileTopLeft.dy + tileHeight / 2;
 
-  final rotation = _flipsToRotation(flipFlags) ?? 0.0;
+  final (:rotation, :mirror) = _flipsToOrientation(flipFlags);
   final cos = math.cos(rotation);
   final sin = math.sin(rotation);
   // Column-major 3x3 affine: [a, b, 0, c, d, 0, tx, ty, 1].
@@ -108,31 +108,29 @@ ExtractedSprite tileToSprite({
     layer: layer,
     layerSubOrder: sortKey % DrawLayerExtension.layerMultiplier,
     preciseSubOrder: preciseSubOrder,
+    flipFlags: ExtractedSprite.computeFlipFlags(mirror, false),
     anchor: Vector2(0.5, 0.5),
     size: Vector2(tileWidth, tileHeight),
   );
 }
 
-/// Return the rotation (radians, clockwise) that maps a tile's flip
-/// flags to a pure rotation, or `null` if the flags encode a mirror
-/// that `RSTransform` cannot express.
+/// The rotation (radians, clockwise) and whether to mirror the tile
+/// horizontally first, for a tile's Tiled flip flags.
 ///
-/// Tiled encoding:
-/// - none        → 0
-/// - H + V       → π (180°)
-/// - D + H       → π/2 (90° cw)
-/// - D + V       → -π/2 (90° ccw)
-///
-/// H alone, V alone, D alone, and H+V+D are mirrors and return null.
-double? _flipsToRotation(int flags) {
+/// Tiled applies D (swap x and y) first, then H (negate x), then V
+/// (negate y). That linear map is written as a rotation after an optional
+/// horizontal mirror: a mirror exactly when the map's determinant is
+/// negative (H alone, V alone, D alone, H+V+D).
+({double rotation, bool mirror}) _flipsToOrientation(int flags) {
   final h = (flags & TileFlipFlags.horizontal) != 0;
   final v = (flags & TileFlipFlags.vertical) != 0;
   final d = (flags & TileFlipFlags.diagonal) != 0;
-  if (!d) {
-    if (h == v) return h ? math.pi : 0;
-    return null; // H alone or V alone.
-  }
-  // d == true
-  if (h != v) return h ? math.pi / 2 : -math.pi / 2;
-  return null; // D alone or H+V+D.
+  // Columns of the map: where the x and y axes go.
+  var (ax, ay, bx, by) = d ? (0, 1, 1, 0) : (1, 0, 0, 1);
+  if (h) (ax, bx) = (-ax, -bx);
+  if (v) (ay, by) = (-ay, -by);
+  final mirror = ax * by - bx * ay < 0;
+  // Undo the mirror (negate the x column) to leave a pure rotation.
+  if (mirror) (ax, ay) = (-ax, -ay);
+  return (rotation: math.atan2(ay.toDouble(), ax.toDouble()), mirror: mirror);
 }

@@ -60,6 +60,11 @@ class AudioState {
   /// Live sound voices (effects and spatial sources), with their keys.
   final Map<AudioVoice, String> sounds = {};
 
+  /// The voices `AudioSource`s are playing (also in [sounds]), so the
+  /// voices of despawned entities or removed sources can be found and
+  /// stopped. Managed by `SpatialAudioSystem`.
+  final Set<AudioVoice> sourceVoices = {};
+
   /// Whether a music track is playing (or paused) now.
   bool get isMusicPlaying =>
       currentMusicVoice != null && backend.isPlaying(currentMusicVoice!);

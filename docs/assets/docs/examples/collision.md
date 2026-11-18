@@ -61,7 +61,7 @@ import 'package:fledge_render_2d/fledge_render_2d.dart' show Transform2D;
 part 'systems.g.dart';
 
 @system
-Future<void> collisionDetectionSystem(World world) async {
+void collisionDetectionSystem(World world) {
   final entities = world.query2<Transform2D, CircleCollider>().iter().toList();
 
   // Check all pairs
@@ -85,7 +85,7 @@ Future<void> collisionDetectionSystem(World world) async {
 }
 
 @system
-Future<void> handleCollisionsSystem(World world) async {
+void handleCollisionsSystem(World world) {
   final toRemove = <Entity>[];
 
   for (final (entity, event) in world.query1<CollisionEvent>().iter()) {
@@ -113,7 +113,7 @@ class CollisionDetectionSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final entities = world.query2<Transform2D, CircleCollider>().iter().toList();
 
     // Check all pairs
@@ -145,7 +145,7 @@ class HandleCollisionsSystem implements System {
       );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final toRemove = <Entity>[];
 
     for (final (entity, event) in world.query1<CollisionEvent>().iter()) {

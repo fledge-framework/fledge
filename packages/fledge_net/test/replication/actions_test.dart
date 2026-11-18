@@ -66,9 +66,9 @@ class GardenSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     final session = world.getResource<NetworkSession>()!;
-    if (!session.isHost) return Future.value();
+    if (!session.isHost) return;
     final actions = world.getResource<NetActions<Plant>>()!;
     final garden = world.getResource<Garden>()!;
     final log = world.getResource<ActionLog>()!;
@@ -85,7 +85,6 @@ class GardenSystem implements System {
         ..version += 1;
       session.resolveAction(a, accepted: true);
     }
-    return Future.value();
   }
 }
 
@@ -103,11 +102,10 @@ class ResolvedRecorderSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     world.getResource<ActionLog>()!.resolved.addAll(
       world.eventReader<NetActionResolved<Plant>>().read(),
     );
-    return Future.value();
   }
 }
 

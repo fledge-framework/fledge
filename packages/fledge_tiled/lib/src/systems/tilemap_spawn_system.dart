@@ -130,7 +130,7 @@ class TilemapSpawnSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final reader = world.eventReader<SpawnTilemapEvent>();
     final writer = world.eventWriter<TilemapSpawnedEvent>();
     final modernAssets = world.getResource<Assets<TilemapAsset>>();

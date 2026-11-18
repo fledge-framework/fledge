@@ -33,7 +33,7 @@ void main() {
         final a = _spawnDynamic(world, 0, 0, vx: 4);
         _spawnDynamic(world, 6, 0);
 
-        await const CollisionResolutionSystem.fixed().run(world);
+        const CollisionResolutionSystem.fixed().run(world);
 
         // No blocking → A's velocity untouched.
         final v = world.get<Velocity>(a.entity)!;
@@ -48,7 +48,7 @@ void main() {
       final a = _spawnDynamic(world, 0, 0, vx: 4, config: cfg);
       _spawnDynamic(world, 6, 0, config: cfg);
 
-      await const CollisionResolutionSystem.fixed().run(world);
+      const CollisionResolutionSystem.fixed().run(world);
 
       // 4 px right would put A's right edge at 8, overlapping B at 6..10.
       // No axis-slide is possible on a 1D scenario → both x and y stay 0.
@@ -69,7 +69,7 @@ void main() {
         final a = _spawnDynamic(world, 0, 0, vx: 4, config: cfgA);
         _spawnDynamic(world, 6, 0); // No config → not in blocker pool.
 
-        await const CollisionResolutionSystem.fixed().run(world);
+        const CollisionResolutionSystem.fixed().run(world);
         expect(world.get<Velocity>(a.entity)!.x, 4.0);
       },
     );
@@ -93,7 +93,7 @@ void main() {
         final a = _spawnDynamic(world, 0, 0, vx: 4, config: cfgA);
         _spawnDynamic(world, 6, 0, config: cfgB);
 
-        await const CollisionResolutionSystem.fixed().run(world);
+        const CollisionResolutionSystem.fixed().run(world);
         expect(world.get<Velocity>(a.entity)!.x, 4.0);
       },
     );
@@ -106,7 +106,7 @@ void main() {
         final a = _spawnDynamic(world, 0, 0, vx: 4, config: cfg);
         final b = _spawnDynamic(world, 6, 0, vx: -4, config: cfg);
 
-        await const CollisionResolutionSystem.fixed().run(world);
+        const CollisionResolutionSystem.fixed().run(world);
 
         // Both bodies want to move into each other; both get blocked.
         // Neither is pushed.
@@ -134,7 +134,7 @@ void main() {
         // Mover heads SE; should slide along Y (x blocked, y free).
         final mover = _spawnDynamic(world, 0, 0, vx: 4, vy: 4, config: cfg);
 
-        await const CollisionResolutionSystem.fixed().run(world);
+        const CollisionResolutionSystem.fixed().run(world);
 
         final v = world.get<Velocity>(mover.entity)!;
         expect(v.x, 0.0);
@@ -157,7 +157,7 @@ void main() {
           );
         final mover = _spawnDynamic(world, 0, 0, vx: 4, config: cfg);
 
-        await const CollisionResolutionSystem.fixed().run(world);
+        const CollisionResolutionSystem.fixed().run(world);
         expect(world.get<Velocity>(mover.entity)!.x, 0.0);
       },
     );

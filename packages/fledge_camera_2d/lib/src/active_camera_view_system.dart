@@ -59,7 +59,7 @@ class ActiveCameraViewSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     Camera2D? best;
     GlobalTransform2D? bestTransform;
     var bestOrder = double.maxFinite.toInt();
@@ -73,7 +73,7 @@ class ActiveCameraViewSystem implements System {
         bestTransform = transform;
       }
     }
-    if (best == null || bestTransform == null) return Future.value();
+    if (best == null || bestTransform == null) return;
 
     final camera = best;
     var view = world.getResource<ActiveCameraView>();
@@ -93,6 +93,5 @@ class ActiveCameraViewSystem implements System {
               devicePixelRatio: active.devicePixelRatio,
             )
           : null;
-    return Future.value();
   }
 }

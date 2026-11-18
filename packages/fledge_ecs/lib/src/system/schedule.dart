@@ -47,6 +47,34 @@ class SystemNode {
 ///    (see [SystemMeta.conflictsWith]) that is *not* already ordered —
 ///    directly or transitively — the earlier-registered system runs
 ///    first. These edges never contradict the explicit ones.
+/// Times one system run, reported to a [Scheduler.systemTimer].
+///
+/// [syncMicros] is the time spent inside `System.run` before it returned
+/// its future: the system's own work for a system that doesn't await (most
+/// do none). [totalMicros] runs until that future completed, so it also
+/// counts anything that ran meanwhile (systems interleaved with an
+/// awaiting one).
+class SystemTiming {
+  const SystemTiming(
+    this.stage,
+    this.system,
+    this.syncMicros,
+    this.totalMicros,
+  );
+
+  /// The stage (schedule) name.
+  final String stage;
+
+  /// The system's `SystemMeta.name`.
+  final String system;
+
+  final int syncMicros;
+  final int totalMicros;
+}
+
+/// Receives a [SystemTiming] for every system a [Scheduler] runs.
+typedef SystemTimer = void Function(SystemTiming timing);
+
 class SystemStage {
   final String name;
   final List<SystemNode> _systems = [];
@@ -90,6 +118,32 @@ class SystemStage {
         ..addAll(graph.dependencies[i]);
     }
     _explicitReach = graph.explicitReach;
+    _order = _executionOrder();
+  }
+
+  /// The order [run] runs the systems in: waves of every system whose
+  /// dependencies ran in earlier waves, each wave in registration order.
+  /// The same order the systems used to run in when they were started as
+  /// soon as they were ready, without a scan of the stage per system.
+  List<SystemNode> _order = const [];
+
+  List<SystemNode> _executionOrder() {
+    final n = _systems.length;
+    final placed = List<bool>.filled(n, false);
+    final order = <SystemNode>[];
+    while (order.length < n) {
+      final wave = <int>[
+        for (var i = 0; i < n; i++)
+          if (!placed[i] && _systems[i].dependencies.every((d) => placed[d])) i,
+      ];
+      // Cycles are refused by addSystem/configureSet before a commit.
+      if (wave.isEmpty) throw StateError('Deadlock detected in stage $name');
+      for (final i in wave) {
+        placed[i] = true;
+        order.add(_systems[i]);
+      }
+    }
+    return order;
   }
 
   /// Builds the full dependency graph for the current systems, using
@@ -301,57 +355,26 @@ class SystemStage {
     );
   }
 
-  /// Runs all systems in this stage, parallelizing where possible.
-  Future<void> run(World world) async {
-    if (_systems.isEmpty) return;
-
-    // Reset completion state
-    for (final node in _systems) {
-      node.completed = false;
-    }
-
-    // Track running futures
-    final running = <int, Future<void>>{};
-    final completed = <int>{};
-
-    while (completed.length < _systems.length) {
-      // Find systems ready to run (all dependencies completed)
-      final ready = <int>[];
-      for (int i = 0; i < _systems.length; i++) {
-        if (completed.contains(i)) continue;
-        if (running.containsKey(i)) continue;
-
-        final node = _systems[i];
-        if (node.dependencies.every((dep) => completed.contains(dep))) {
-          ready.add(i);
-        }
-      }
-
-      if (ready.isEmpty && running.isEmpty) {
-        // Shouldn't happen unless there's a cycle
-        throw StateError('Deadlock detected in stage $name');
-      }
-
-      // Start ready systems
-      for (final index in ready) {
-        final system = _systems[index].system;
-
-        // Check run condition before running
-        if (!system.shouldRun(world)) {
-          // Skip this system, mark as completed
-          completed.add(index);
-          continue;
-        }
-
-        running[index] = system.run(world).then((_) {
-          completed.add(index);
-          running.remove(index);
-        });
-      }
-
-      // Wait for at least one to complete
-      if (running.isNotEmpty) {
-        await Future.any(running.values);
+  /// Runs the systems in this stage one after another, in an order that
+  /// respects every dependency (see [_order]). A system that returns a
+  /// `Future` is awaited before the next starts; Dart runs one isolate, so
+  /// running them "in parallel" only added overhead. With a [timer], each
+  /// system's run is timed and reported to it.
+  Future<void> run(World world, {SystemTimer? timer}) async {
+    for (final node in _order) {
+      final system = node.system;
+      if (!system.shouldRun(world)) continue;
+      if (timer == null) {
+        final result = system.run(world);
+        if (result is Future) await result;
+      } else {
+        final clock = Stopwatch()..start();
+        final result = system.run(world);
+        final sync = clock.elapsedMicroseconds;
+        if (result is Future) await result;
+        timer(
+          SystemTiming(name, system.meta.name, sync, clock.elapsedMicroseconds),
+        );
       }
     }
   }
@@ -365,6 +388,7 @@ class SystemStage {
   /// Clears all systems from this stage.
   void clear() {
     _systems.clear();
+    _order = const [];
     _explicitReach = const [];
   }
 
@@ -522,6 +546,10 @@ class Scheduler {
   ///
   /// Survives [clear].
   final SystemSetRegistry sets = SystemSetRegistry();
+
+  /// Times every system run, when set (a profiler, `fledge_debug`'s
+  /// system stats). Null costs nothing.
+  SystemTimer? systemTimer;
 
   /// Non-fixed per-frame schedules in the order [run] iterates them.
   ///
@@ -706,7 +734,7 @@ class Scheduler {
     for (final schedule in _perFrameSchedules) {
       final index = _stageIndex[schedule.name];
       if (index == null) continue;
-      await _stages[index].run(world);
+      await _stages[index].run(world, timer: systemTimer);
     }
   }
 
@@ -718,7 +746,7 @@ class Scheduler {
   Future<void> runSchedule(Schedule schedule, World world) async {
     final index = _stageIndex[schedule.name];
     if (index == null) return;
-    await _stages[index].run(world);
+    await _stages[index].run(world, timer: systemTimer);
   }
 
   /// Advances the fixed-timestep accumulator by [frameDeltaSeconds] and
@@ -744,7 +772,7 @@ class Scheduler {
       for (final schedule in _fixedSchedules) {
         final index = _stageIndex[schedule.name];
         if (index == null) continue;
-        await _stages[index].run(world);
+        await _stages[index].run(world, timer: systemTimer);
       }
       timestep.consumeStep();
       world.advanceTick();

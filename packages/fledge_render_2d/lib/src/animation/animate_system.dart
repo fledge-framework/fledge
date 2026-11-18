@@ -39,7 +39,7 @@ class AnimateSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     // Update all animation players
     for (final (entity, player) in world.query1<AnimationPlayer>().iter()) {
       player.update(deltaTime);
@@ -97,7 +97,7 @@ class AnimateSystemWithResource implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final time = world.getResource<AnimationTime>();
     if (time == null) return;
 

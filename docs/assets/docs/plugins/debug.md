@@ -117,7 +117,7 @@ class DebugToggleSystem implements System {
   SystemMeta get meta => const SystemMeta(name: 'debug_toggle');
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final actions = world.getResource<ActionState>()!;
     if (actions.justPressed(ActionId('toggleDebug'))) {
       final cfg = world.getResource<DebugConfig>()!;

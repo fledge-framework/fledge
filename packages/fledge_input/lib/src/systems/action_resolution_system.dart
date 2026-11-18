@@ -43,17 +43,17 @@ class ActionResolutionSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     final keyboard = world.getResource<KeyboardState>();
     final mouse = world.getResource<MouseState>();
     final gamepad = world.getResource<GamepadState>();
     final contextRegistry = world.getResource<InputContextRegistry>();
     final actionState = world.getResource<ActionState>();
 
-    if (actionState == null || contextRegistry == null) return Future.value();
+    if (actionState == null || contextRegistry == null) return;
 
     final inputMap = contextRegistry.activeMap;
-    if (inputMap == null) return Future.value();
+    if (inputMap == null) return;
 
     // Clear previous frame's values
     actionState.clear();
@@ -167,8 +167,6 @@ class ActionResolutionSystem implements System {
           actionState.set(action, Vector2Value(x, y));
       }
     }
-
-    return Future.value();
   }
 
   void _processKeyboardBinding(

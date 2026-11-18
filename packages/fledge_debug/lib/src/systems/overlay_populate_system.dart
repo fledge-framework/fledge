@@ -70,9 +70,9 @@ class OverlayPopulateSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     final config = world.getResource<DebugConfig>();
-    if (config == null) return Future.value();
+    if (config == null) return;
 
     final desired = _buildDesiredLines(world, config);
 
@@ -128,7 +128,6 @@ class OverlayPopulateSystem implements System {
     for (final stale in existing.values) {
       world.despawn(stale);
     }
-    return Future.value();
   }
 
   void _spawnLine(

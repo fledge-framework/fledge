@@ -71,9 +71,9 @@ class PlacementSystem implements System {
   bool shouldRun(World world) => _shouldRun(world);
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     final state = world.getResource<PlacementState>();
-    if (state == null) return Future.value();
+    if (state == null) return;
 
     // 1. Cancel.
     if (world.eventReader<PlacementCancelRequested>().isNotEmpty &&
@@ -91,7 +91,7 @@ class PlacementSystem implements System {
         world.eventWriter<PlacementEntered>().send(PlacementEntered(key));
       }
     }
-    if (!state.isPlacing) return Future.value();
+    if (!state.isPlacing) return;
     final key = state.placeableKey!;
 
     // 3. Preview: the requested tile (the last one), else the current one,
@@ -123,7 +123,6 @@ class PlacementSystem implements System {
         PlacementConfirmed(key, placed),
       );
     }
-    return Future.value();
   }
 
   static void _cancel(World world, PlacementState state) {

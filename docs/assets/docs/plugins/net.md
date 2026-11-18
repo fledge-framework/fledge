@@ -115,7 +115,7 @@ final vehicle = world.spawn()
 class SpawnAvatars implements System {
   // meta: name, schedule Schedules.update ...
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     for (final e in world.eventReader<NetPeerConnected>().read()) {
       final avatar = world.spawn()
         ..insert(Replicated(owner: e.peerId)) // the joining peer controls it

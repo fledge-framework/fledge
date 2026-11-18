@@ -45,7 +45,7 @@ class AudioFocusSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final focus = world.getResource<AudioFocus>();
     final state = world.getResource<AudioState>();
     final config = world.getResource<AudioConfig>();

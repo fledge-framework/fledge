@@ -128,6 +128,24 @@ class World {
     return entity;
   }
 
+  /// Spawns an entity with the one [component], stored as [T] (its static
+  /// type, as `spawn().insert<T>` does). The cheap path for many small
+  /// short-lived entities, such as a render world's extracted items: it
+  /// goes straight into its table, with no move from the empty archetype
+  /// and no observers.
+  Entity spawnOne<T>(T component) {
+    final entity = entities.spawn();
+    final id = ComponentId.of<T>();
+    final archetypeIndex = archetypes.getOrCreate(
+      ArchetypeId.empty().withComponent(id),
+    );
+    final row = archetypes.tableAt(archetypeIndex).add(entity, {
+      id: component,
+    }, currentTick: currentTick);
+    entities.setLocation(entity, EntityLocation(archetypeIndex, row));
+    return entity;
+  }
+
   /// Despawns an entity, removing it and all its components.
   ///
   /// Returns true if the entity was alive, false otherwise.
@@ -495,9 +513,39 @@ class World {
   /// for (final (entity, pos) in world.query1<Position>().iter()) {
   ///   print('Entity $entity at ${pos.x}, ${pos.y}');
   /// }
+  /// Query states by shape (component types and filter), reused by every
+  /// query of that shape, so its archetype match is computed once and
+  /// updated only when an archetype is added. Queries with `Added`/
+  /// `Changed` filters get a fresh state each time (their last-seen tick
+  /// is per state).
+  final Map<Object, QueryState> _queryStates = {};
+
+  QueryState _queryState(
+    Object shape,
+    QueryFilter? filter,
+    QueryState Function() create,
+  ) {
+    if (filter != null && _tracksChanges(filter)) return create();
+    return _queryStates[shape] ??= create();
+  }
+
+  static bool _tracksChanges(QueryFilter filter) => switch (filter) {
+    Added() || Changed() => true,
+    And(:final filters) => filters.any(_tracksChanges),
+    _ => false,
+  };
+
   /// ```
   Query1<T1> query1<T1>({QueryFilter? filter}) {
-    return Query1<T1>(archetypes, entities, filter: filter);
+    return Query1<T1>.withState(
+      archetypes,
+      entities,
+      _queryState(
+        (T1, filter),
+        filter,
+        () => QueryState.of1<T1>(filter: filter),
+      ),
+    );
   }
 
   /// Creates a query for entities with components [T1] and [T2].
@@ -509,17 +557,41 @@ class World {
   /// }
   /// ```
   Query2<T1, T2> query2<T1, T2>({QueryFilter? filter}) {
-    return Query2<T1, T2>(archetypes, entities, filter: filter);
+    return Query2<T1, T2>.withState(
+      archetypes,
+      entities,
+      _queryState(
+        (T1, T2, filter),
+        filter,
+        () => QueryState.of2<T1, T2>(filter: filter),
+      ),
+    );
   }
 
   /// Creates a query for entities with components [T1], [T2], and [T3].
   Query3<T1, T2, T3> query3<T1, T2, T3>({QueryFilter? filter}) {
-    return Query3<T1, T2, T3>(archetypes, entities, filter: filter);
+    return Query3<T1, T2, T3>.withState(
+      archetypes,
+      entities,
+      _queryState(
+        (T1, T2, T3, filter),
+        filter,
+        () => QueryState.of3<T1, T2, T3>(filter: filter),
+      ),
+    );
   }
 
   /// Creates a query for entities with components [T1], [T2], [T3], and [T4].
   Query4<T1, T2, T3, T4> query4<T1, T2, T3, T4>({QueryFilter? filter}) {
-    return Query4<T1, T2, T3, T4>(archetypes, entities, filter: filter);
+    return Query4<T1, T2, T3, T4>.withState(
+      archetypes,
+      entities,
+      _queryState(
+        (T1, T2, T3, T4, filter),
+        filter,
+        () => QueryState.of4<T1, T2, T3, T4>(filter: filter),
+      ),
+    );
   }
 
   // ===== Mutable Query Factories =====

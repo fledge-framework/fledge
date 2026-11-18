@@ -64,6 +64,18 @@ class DialogueCursorMoved {
   String toString() => 'DialogueCursorMoved($delta)';
 }
 
+/// Moves the highlight to the pending choice at [index] (a pointer
+/// hovering over it). Ignored unless a choice is pending and [index] is in
+/// range.
+class DialogueCursorSet {
+  final int index;
+
+  const DialogueCursorSet(this.index);
+
+  @override
+  String toString() => 'DialogueCursorSet($index)';
+}
+
 /// Fast-forwards the dialogue: every remaining line is passed over and
 /// every command (including `<<set>>`) runs, until the next choice (which
 /// is then shown) or the end. Does nothing while a choice is pending.

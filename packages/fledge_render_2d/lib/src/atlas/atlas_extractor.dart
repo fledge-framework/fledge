@@ -46,7 +46,7 @@ class AtlasSpriteExtractor extends Extractor {
           : atlasSprite.layerSubOrder;
       final sortKey = atlasSprite.layer.sortKey(subOrder: sub);
 
-      renderWorld.spawn().insert(
+      renderWorld.add(
         ExtractedSprite(
           entity: entity,
           texture: atlasSprite.texture,

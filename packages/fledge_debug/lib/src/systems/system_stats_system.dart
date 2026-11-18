@@ -45,9 +45,9 @@ class SystemStatsStartSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     final stats = world.getResource<SystemStats>();
-    if (stats == null) return Future.value();
+    if (stats == null) return;
     stats.frameStartMicros = _clock.elapsedMicroseconds;
 
     // Refresh the per-schedule counts. `Scheduler.getStage` returns
@@ -57,7 +57,6 @@ class SystemStatsStartSystem implements System {
     stats.scheduleSystemCounts
       ..clear()
       ..addAll(_countSchedules(scheduler));
-    return Future.value();
   }
 
   Map<String, int> _countSchedules(Scheduler scheduler) {
@@ -90,10 +89,9 @@ class SystemStatsEndSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     final stats = world.getResource<SystemStats>();
-    if (stats == null) return Future.value();
+    if (stats == null) return;
     stats.frameEndMicros = _clock.elapsedMicroseconds;
-    return Future.value();
   }
 }

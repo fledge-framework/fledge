@@ -2,6 +2,7 @@ import 'dart:ui' as ui show Image;
 
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart';
+import 'package:flutter/rendering.dart' show RenderCustomPaint;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -68,6 +69,35 @@ Future<void> _paintOnce(
 
 void main() {
   group('FledgeRenderView', () {
+    testWidgets('a repaint listenable repaints the view without a rebuild', (
+      tester,
+    ) async {
+      final app = _buildTestApp();
+      final frames = ValueNotifier<int>(0);
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox(
+            width: 100,
+            height: 100,
+            child: FledgeRenderView(app: app, repaint: frames),
+          ),
+        ),
+      );
+      await tester.pump();
+      final paint = tester.renderObject<RenderCustomPaint>(
+        find.descendant(
+          of: find.byType(FledgeRenderView),
+          matching: find.byType(CustomPaint),
+        ),
+      );
+      expect(paint.debugNeedsPaint, isFalse);
+      frames.value++;
+      expect(paint.debugNeedsPaint, isTrue, reason: 'a tick asks for a paint');
+      await tester.pump();
+      expect(paint.debugNeedsPaint, isFalse);
+    });
+
     testWidgets('paints sprite pipeline into a recorded canvas', (
       tester,
     ) async {
