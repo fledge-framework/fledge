@@ -274,7 +274,7 @@ SpawnTilemapEvent(
 
 This automatically:
 1. Scans all tiles in each tile layer for collision shapes defined in their tileset
-2. Converts shapes to world-space coordinates
+2. Flips each tile's rectangles with the tile when it's placed flipped (horizontally, vertically or diagonally, in Tiled's order; `TileCollider.flipShapes`), then converts them to world-space coordinates
 3. Merges adjacent rectangles into larger shapes (reduces collision checks)
 4. Spawns a `Collider` entity as a child of each layer
 

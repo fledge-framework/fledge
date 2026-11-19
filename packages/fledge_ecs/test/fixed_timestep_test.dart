@@ -268,8 +268,8 @@ void main() {
   test(
     'the fixed step runs on the same frame time as per-frame systems',
     () async {
-      // A display-driven clock with an early frame (vsync wobble): that
-      // frame counts no time, the next one a whole refresh.
+      // A display-driven clock with an early frame (vsync wobble): it still
+      // counts a whole refresh, as every frame does.
       var nowUs = 0;
       final time = WallTime()
         ..useClock(
@@ -297,7 +297,7 @@ void main() {
       for (final (i, (delta, steps)) in frames.indexed.skip(1)) {
         expect(steps, (delta / step).round(), reason: 'frame $i');
       }
-      expect(frames[3], (0.0, 0), reason: 'the early frame counts nothing');
+      expect(frames[3], (16667 / 1e6, 1), reason: 'the early frame counts one');
     },
   );
 }

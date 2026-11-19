@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import '../app.dart';
 import '../plugin.dart';
 import '../system/run_condition.dart';
@@ -78,10 +80,11 @@ class WallTime {
   /// the real interval from the clock (the median of recent frame gaps,
   /// rounded to a standard rate by [frameIntervalFor]) and switches to it.
   ///
-  /// A frame that arrives less than half an interval after the last one
-  /// (Windows sometimes starts an extra frame between refreshes) adds no
-  /// time; its time carries over to the next frame. So [delta] can be 0,
-  /// and game time keeps pace with the display instead of running ahead.
+  /// Every frame on an advancing clock counts at least one refresh, even
+  /// one that arrives early: Windows sometimes starts a frame a few
+  /// milliseconds after the last, then keeps that new phase, and that frame
+  /// is presented for a refresh of its own. Counting it as no time showed
+  /// the same picture twice, a visible hitch.
   void useClock(Duration Function() now, {Duration? frameInterval}) {
     _clock = now;
     _clockBase = now();
@@ -89,7 +92,6 @@ class WallTime {
         ? null
         : frameInterval.inMicroseconds / 1000000.0;
     _gaps.clear();
-    _carry = 0.0;
     _lastTime = 0.0;
     delta = 0.0;
     elapsed = 0.0;
@@ -107,9 +109,6 @@ class WallTime {
   /// before the measurement replaces the given interval.
   static const _gapWindow = 60;
   static const _gapsNeeded = 20;
-
-  /// Time from frames too early to count, carried to the next frame.
-  double _carry = 0.0;
 
   /// Measures the refresh interval from the recent frame gaps.
   void _measure(double gap) {
@@ -184,18 +183,11 @@ class WallTime {
     } else {
       _measure(raw);
       final measured = _frameInterval!;
-      // Whole refreshes. An early frame counts none and hands its time to
-      // the next; otherwise the remainder (vsync wobble) is dropped, so
+      // Whole refreshes, at least one for a frame the clock moved for (it's
+      // shown for a refresh); the remainder (vsync wobble) is dropped, so
       // game time stays locked to the refresh count.
-      final pending = raw + _carry;
-      final frames = (pending / measured).round();
-      if (frames <= 0) {
-        _carry = pending;
-        delta = 0.0;
-      } else {
-        _carry = 0.0;
-        delta = frames * measured;
-      }
+      final frames = raw <= 0 ? 0 : math.max(1, (raw / measured).round());
+      delta = frames * measured;
       elapsed += delta;
     }
     _lastTime = currentTime;
@@ -207,7 +199,6 @@ class WallTime {
     _stopwatch.reset();
     final clock = _clock;
     if (clock != null) _clockBase = clock();
-    _carry = 0.0;
     delta = 0.0;
     elapsed = 0.0;
     frameCount = 0;

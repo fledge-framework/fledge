@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart' show AssetBundle;
 import 'package:flutter_soloud/flutter_soloud.dart';
 
 import 'audio_backend.dart';
@@ -7,9 +8,17 @@ class SoLoudBackend implements AudioBackend {
   /// [soloud] defaults to `SoLoud.instance`, which is only reached when the
   /// engine starts: building an app (headless tests, schedule checks) never
   /// loads the native library.
-  SoLoudBackend([SoLoud? soloud]) : _injected = soloud;
+  ///
+  /// With [bundle], clips are read through it and handed to the engine from
+  /// memory (`loadMem`), so a game can serve its audio from its own bundle
+  /// (a packed or encrypted one) and no copy of it is written to disk.
+  /// Without, flutter_soloud's `loadAsset` reads the app's assets.
+  SoLoudBackend([SoLoud? soloud, this.bundle]) : _injected = soloud;
 
   final SoLoud? _injected;
+
+  /// Where clips are read from, if not the app's own assets.
+  final AssetBundle? bundle;
   SoLoud? _instance;
   bool _started = false;
 
@@ -34,8 +43,17 @@ class SoLoudBackend implements AudioBackend {
   }
 
   @override
-  Future<Object> load(String assetPath, {required bool stream}) => _soloud
-      .loadAsset(assetPath, mode: stream ? LoadMode.disk : LoadMode.memory);
+  Future<Object> load(String assetPath, {required bool stream}) async {
+    final mode = stream ? LoadMode.disk : LoadMode.memory;
+    final from = bundle;
+    if (from == null) return _soloud.loadAsset(assetPath, mode: mode);
+    final data = await from.load(assetPath);
+    return _soloud.loadMem(
+      assetPath,
+      data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+      mode: mode,
+    );
+  }
 
   @override
   void unload(Object source) {

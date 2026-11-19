@@ -54,6 +54,14 @@ Held buttons and axes are state, not edges, so `isPressed` and `getVector2` work
 
 `fixedPressCount` says how many presses the fixed step is getting, for actions that can be pressed several times before a step runs.
 
+## Pausing the world
+
+Key events reach the input states even while the world isn't ticking (a game paused behind a menu), and nothing clears them until a frame ends, so the first tick after resuming would see a key pressed on the menu as just pressed. Call `discardPendingInput(world)` when the world starts ticking again: presses and releases since the last frame are dropped, buttons still held stay held.
+
+```dart
+if (running && !wasRunning) discardPendingInput(app.world);
+```
+
 ## Scroll wheel
 
 `bindScroll` turns the wheel into a button: every wheel step is one press, and a fast spin that lands several steps in one frame counts them all.

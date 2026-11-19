@@ -78,23 +78,22 @@ void main() {
     WallTime clocked(Duration Function() now, {double hz = 60}) =>
         WallTime()..useClock(now, frameInterval: WallTime.frameIntervalFor(hz));
 
-    test('an early frame adds no time and hands it to the next', () {
+    test('an early frame still counts a refresh: it is shown for one', () {
       var now = Duration.zero;
       final time = clocked(() => now);
       final deltas = <double>[];
-      // 16.7 ms frames with an extra one 7 ms after a refresh, then the
-      // next 16 ms after that.
-      for (final step in [16700, 16700, 7000, 16000, 16700, 16700]) {
+      // 16.7 ms frames, one 5 ms after a refresh, and the rest keeping that
+      // new phase (as a Windows capture showed, 2026-11-18): six frames
+      // shown, six refreshes counted, none of them a repeat.
+      for (final step in [16700, 16700, 5100, 16700, 16700, 16700]) {
         now += Duration(microseconds: step);
         time.update();
         deltas.add(time.delta);
       }
-      expect(deltas[2], 0);
-      for (final i in [0, 1, 3, 4, 5]) {
-        expect(deltas[i], closeTo(1 / 60, 1e-6));
+      for (final delta in deltas) {
+        expect(delta, closeTo(1 / 60, 1e-6));
       }
-      // Five refreshes' worth, not six.
-      expect(time.elapsed, closeTo(5 / 60, 1e-5));
+      expect(time.elapsed, closeTo(6 / 60, 1e-5));
     });
 
     test('the interval is measured from the clock, whatever was reported', () {

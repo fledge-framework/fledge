@@ -67,6 +67,39 @@ class TileCollider {
     return tileShapes.map((shape) => shape.translate(worldX, worldY)).toList();
   }
 
+  /// [shapes] (in a tile's local space, [tileWidth] x [tileHeight]) as they
+  /// lie on a tile placed flipped: diagonally ([diagonal], a transpose of
+  /// x and y), then horizontally, then vertically, in Tiled's order.
+  ///
+  /// Unrotated rectangles are transformed; other shapes are returned as
+  /// they are (their collision on a flipped tile isn't supported yet).
+  static List<CollisionShape> flipShapes(
+    List<CollisionShape> shapes, {
+    required double tileWidth,
+    required double tileHeight,
+    bool horizontal = false,
+    bool vertical = false,
+    bool diagonal = false,
+  }) {
+    if (!horizontal && !vertical && !diagonal) return shapes;
+    // After a transpose the tile's extents swap too.
+    final extentX = diagonal ? tileHeight : tileWidth;
+    final extentY = diagonal ? tileWidth : tileHeight;
+    return [
+      for (final shape in shapes)
+        if (shape is RectangleShape && shape.rotation == 0)
+          () {
+            var (x, y, w, h) = (shape.x, shape.y, shape.width, shape.height);
+            if (diagonal) (x, y, w, h) = (y, x, h, w);
+            if (horizontal) x = extentX - x - w;
+            if (vertical) y = extentY - y - h;
+            return RectangleShape(x: x, y: y, width: w, height: h);
+          }()
+        else
+          shape,
+    ];
+  }
+
   /// Generates collision shapes for all tiles with collision in a layer.
   ///
   /// This is useful for generating static collision for an entire tile layer.

@@ -310,7 +310,19 @@ class TilemapSpawnSystem implements System {
       if (shapes.isEmpty) continue;
 
       collisionData.add(
-        TileCollisionData(gridX: tile.x, gridY: tile.y, shapes: shapes),
+        TileCollisionData(
+          gridX: tile.x,
+          gridY: tile.y,
+          // A flipped tile's collision is flipped with it.
+          shapes: TileCollider.flipShapes(
+            shapes,
+            tileWidth: tileset.tileWidth.toDouble(),
+            tileHeight: tileset.tileHeight.toDouble(),
+            horizontal: tile.flipHorizontal,
+            vertical: tile.flipVertical,
+            diagonal: tile.flipDiagonal,
+          ),
+        ),
       );
     }
 

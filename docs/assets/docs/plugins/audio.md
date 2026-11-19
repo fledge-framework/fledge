@@ -238,6 +238,8 @@ final app = App()
 
 `SoLoudBackend` (the default) only loads the native library when the engine starts, so an app with `AudioPlugin` can be built, and its schedule checked, without one. If the engine can't start, audio stays off and `world.audioState!.initError` says why.
 
+To serve audio from your own `AssetBundle` (a packed or encrypted one), pass it to the backend: `AudioPlugin(backend: SoLoudBackend(null, myBundle))`. Clips are then read through the bundle and handed to the engine from memory, so no copy is written to disk.
+
 ## Responding to audio events
 
 ```dart
