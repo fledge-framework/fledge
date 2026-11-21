@@ -213,6 +213,44 @@ void main() {
       }
       expect(controller.offset, greaterThan(20));
     });
+
+    testWidgets('a scroll view that cannot move passes the stick out to the '
+        'one round it', (tester) async {
+      final outer = ScrollController();
+      final inner = ScrollController();
+      addTearDown(outer.dispose);
+      addTearDown(inner.dispose);
+      await pumpBridge(
+        tester,
+        // The focus is in a short horizontal strip inside a tall page:
+        // pushed down, the strip can't, so the page does.
+        wrap: (items) => Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            height: 100,
+            child: SingleChildScrollView(
+              controller: outer,
+              child: Column(
+                children: [
+                  SingleChildScrollView(
+                    controller: inner,
+                    scrollDirection: Axis.horizontal,
+                    child: items,
+                  ),
+                  const SizedBox(height: 400),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      pad.setAxisValue('right_stick_y', 1);
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(_frame);
+      }
+      expect(outer.offset, greaterThan(20));
+      expect(inner.offset, 0);
+    });
   });
 
   group('the virtual pointer', () {

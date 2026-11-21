@@ -298,16 +298,28 @@ class _GamepadFocusBridgeState extends State<GamepadFocusBridge>
       Actions.invoke(target, intent);
       return;
     }
-    final scrollable = Scrollable.maybeOf(target);
-    if (scrollable == null) return;
-    final position = scrollable.position;
-    final along = position.axis == Axis.vertical ? delta.dy : delta.dx;
-    position.jumpTo(
-      (position.pixels + along).clamp(
-        position.minScrollExtent,
-        position.maxScrollExtent,
-      ),
-    );
+    // The nearest scroll view round the focus that can move the way the
+    // stick pushes: one that can't (along the other axis, already at its
+    // end, or nothing to scroll) passes it out to the one round it, so a
+    // short list inside a long page still lets the page scroll.
+    var scrollable = Scrollable.maybeOf(target);
+    while (scrollable != null) {
+      final position = scrollable.position;
+      final along = position.axis == Axis.vertical ? delta.dy : delta.dx;
+      final room = along > 0
+          ? position.maxScrollExtent - position.pixels
+          : position.pixels - position.minScrollExtent;
+      if (along != 0 && room > 0) {
+        position.jumpTo(
+          (position.pixels + along).clamp(
+            position.minScrollExtent,
+            position.maxScrollExtent,
+          ),
+        );
+        return;
+      }
+      scrollable = Scrollable.maybeOf(scrollable.context);
+    }
   }
 
   void _send(Intent intent) {
