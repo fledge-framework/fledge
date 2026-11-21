@@ -107,7 +107,7 @@ void main() {
     }
     SpriteExtractor().extract(world, renderWorld);
     final byPrecise = {
-      for (final (_, s) in renderWorld.query1<ExtractedSprite>().iter())
+      for (final s in renderWorld.extractedSprites)
         s.preciseSubOrder!: s.sortKey,
     };
     expect(byPrecise[120000], c.sortKey(subOrder: 99999));
@@ -130,7 +130,7 @@ void main() {
       )
       ..insert(GlobalTransform2D()..translation = Vector2(0, 50000));
     SpriteExtractor().extract(world, renderWorld);
-    final (_, s) = renderWorld.query1<ExtractedSprite>().iter().single;
+    final s = renderWorld.extractedSprites.single;
     expect(s.preciseSubOrder, isNull);
     expect(s.effectiveSubOrder, 42);
     expect(s.sortKey, c.sortKey(subOrder: 42));

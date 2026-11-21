@@ -579,7 +579,7 @@ void main() {
 
       // Count extracted sprites
       var count = 0;
-      for (final _ in renderWorld.query1<ExtractedSprite>().iter()) {
+      for (final _ in renderWorld.extractedSprites) {
         count++;
       }
       expect(count, 1); // Only visible sprite was extracted
@@ -603,8 +603,7 @@ void main() {
       extractor.extract(world, renderWorld);
 
       var seen = 0;
-      for (final (_, extracted)
-          in renderWorld.query1<ExtractedSprite>().iter()) {
+      for (final extracted in renderWorld.extractedSprites) {
         // Default layer is characters (index 2); sub = 50 * 10 = 500.
         expect(
           extracted.sortKey,
@@ -640,8 +639,7 @@ void main() {
         SpriteExtractor().extract(world, renderWorld);
 
         final keys = <int>[];
-        for (final (_, extracted)
-            in renderWorld.query1<ExtractedSprite>().iter()) {
+        for (final extracted in renderWorld.extractedSprites) {
           keys.add(extracted.sortKey);
         }
         keys.sort();

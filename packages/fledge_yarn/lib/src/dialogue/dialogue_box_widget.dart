@@ -15,6 +15,13 @@ typedef DialoguePortraitBuilder = Widget? Function(
   DialogueLine line,
 );
 
+/// Draws the continue [hint] in [style] (e.g. with a button's icon inline).
+typedef DialogueHintBuilder = Widget Function(
+  BuildContext context,
+  String hint,
+  TextStyle style,
+);
+
 /// Look of [DialogueBoxWidget] / [DialogueChoiceList].
 class DialogueBoxTheme {
   /// Padding inside the frame. Ignored by a custom [frameBuilder] (which
@@ -45,6 +52,10 @@ class DialogueBoxTheme {
   final String? continueHint;
   final TextStyle continueHintStyle;
 
+  /// Draws [continueHint] instead of a plain `Text` (null: a `Text`), for
+  /// hints that carry more than text, such as a controller button's icon.
+  final DialogueHintBuilder? continueHintBuilder;
+
   const DialogueBoxTheme({
     this.contentPadding = const EdgeInsets.all(12),
     this.backgroundColor = const Color(0xE6202028),
@@ -72,6 +83,7 @@ class DialogueBoxTheme {
     this.choiceCursorColor = Colors.white,
     this.continueHint = 'Continue',
     this.continueHintStyle = const TextStyle(fontSize: 10, color: Colors.grey),
+    this.continueHintBuilder,
   });
 
   Widget frame(BuildContext context, Widget child) {
@@ -186,7 +198,12 @@ class DialogueBoxWidget extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Text(theme.continueHint!, style: theme.continueHintStyle),
+                theme.continueHintBuilder?.call(
+                      context,
+                      theme.continueHint!,
+                      theme.continueHintStyle,
+                    ) ??
+                    Text(theme.continueHint!, style: theme.continueHintStyle),
                 const SizedBox(width: 4),
                 Icon(
                   Icons.arrow_forward,

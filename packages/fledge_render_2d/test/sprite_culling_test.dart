@@ -21,7 +21,7 @@ World _world(List<(double, double)> at) {
 int _extracted(World world) {
   final renderWorld = RenderWorld();
   SpriteExtractor().extract(world, renderWorld);
-  return renderWorld.query1<ExtractedSprite>().iter().length;
+  return renderWorld.extractedSpriteCount;
 }
 
 void main() {

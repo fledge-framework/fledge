@@ -62,4 +62,19 @@ class KeyboardState {
   void clear() {
     _keys.clear();
   }
+
+  /// Brings the state in line with the keys actually [down] now (from
+  /// `HardwareKeyboard.instance.logicalKeysPressed`), after a time when key
+  /// events went elsewhere (another widget had focus): a key let go
+  /// meanwhile is released (a release edge), and one pressed meanwhile is
+  /// held without a press, so nothing pressed in a menu fires in the game.
+  void sync(Set<LogicalKeyboardKey> down) {
+    for (final MapEntry(:key, :value) in _keys.entries) {
+      if (value.pressed && !down.contains(key)) value.release();
+    }
+    for (final key in down) {
+      final state = _getKey(key);
+      if (!state.pressed) state.holdQuietly();
+    }
+  }
 }

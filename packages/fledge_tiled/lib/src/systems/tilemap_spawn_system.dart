@@ -5,7 +5,7 @@ import 'package:fledge_assets/fledge_assets.dart'
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_physics/fledge_physics.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart'
-    show Transform2D, GlobalTransform2D;
+    show Transform2D, GlobalTransform2D, StaticTransform;
 import 'package:tiled/tiled.dart' as tiled;
 
 import '../collision/tile_collider.dart';
@@ -189,6 +189,7 @@ class TilemapSpawnSystem implements System {
       ..insert(Tilemap.fromTiledMap(loaded.map, asset: asset))
       ..insert(Transform2D.from(position.dx, position.dy))
       ..insert(GlobalTransform2D());
+    if (config.staticTransforms) mapEntity.insert(const StaticTransform());
 
     // Add animator if there are animated tiles
     if (loaded.animations.isNotEmpty) {

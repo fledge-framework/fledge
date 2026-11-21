@@ -1,3 +1,6 @@
+import 'device/active_input_device.dart';
+import 'device/gamepad_rumble.dart';
+
 import 'package:fledge_ecs/fledge_ecs.dart';
 
 import 'action/action_state.dart';
@@ -100,12 +103,15 @@ class InputPlugin<S extends Enum> implements Plugin {
   @override
   void build(App app) {
     // Insert raw input resources
+    final device = ActiveInputDevice();
     app
         .insertResource(KeyboardState())
         .insertResource(MouseState())
         .insertResource(GamepadState())
         .insertResource(ActionState())
-        .insertResource(CursorState());
+        .insertResource(CursorState())
+        .insertResource(device)
+        .insertResource(GamepadRumble(device: device));
 
     // Set up context registry
     final registry = InputContextRegistry();

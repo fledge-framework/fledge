@@ -11,8 +11,12 @@ import '../context/context_registry.dart';
 import '../cursor/cursor_mode.dart';
 import '../cursor/cursor_state.dart';
 import '../cursor/pointer_lock_delegate.dart';
+import '../device/active_input_device.dart';
+import '../device/gamepad_family.dart';
+import '../device/gamepad_rumble.dart';
 import '../raw/keyboard_state.dart';
 import '../raw/mouse_state.dart';
+import '../raw/gamepad_source.dart';
 import '../raw/gamepad_state.dart';
 
 /// A widget that captures all input for a Fledge game.
@@ -59,6 +63,24 @@ class InputWidget extends StatefulWidget {
   /// When omitted, the widget creates and disposes its own node.
   final FocusNode? focusNode;
 
+  /// Where gamepad input comes from: the `gamepads` plugin when omitted, or
+  /// a fake in tests. Read once, when the widget mounts; the widget owns it
+  /// and disposes it.
+  final GamepadSource? gamepadSource;
+
+  /// Whether the widget takes keyboard focus: on mount ([autofocus]), when
+  /// the mouse enters ([focusOnHover]) and on every press inside it. False
+  /// leaves focus to an overlay over the game (a menu with its own focus
+  /// navigation); the game then hears no keys. Turning it back to true
+  /// takes focus again and catches the keyboard up
+  /// ([KeyboardState.sync]), so a key let go in the menu isn't stuck down.
+  final bool claimFocus;
+
+  /// Whether to drop controller input while the app isn't the active one
+  /// (alt-tabbed away): some platforms keep reading pads in the background.
+  /// What a pad held when the app went inactive is let go.
+  final bool ignoreGamepadWhenInactive;
+
   const InputWidget({
     super.key,
     required this.world,
@@ -68,6 +90,9 @@ class InputWidget extends StatefulWidget {
     this.focusOnHover = true,
     this.pointerLockDelegate,
     this.focusNode,
+    this.gamepadSource,
+    this.claimFocus = true,
+    this.ignoreGamepadWhenInactive = false,
   });
 
   @override
@@ -78,6 +103,8 @@ class _InputWidgetState extends State<InputWidget> {
   late final FocusNode _focusNode = widget.focusNode ?? FocusNode();
   late final bool _ownsFocusNode = widget.focusNode == null;
   StreamSubscription<GamepadEvent>? _gamepadSubscription;
+  StreamSubscription<GamepadConnectionEvent>? _connectionSubscription;
+  GamepadSource? _gamepadSource;
 
   /// Maps raw platform keys to standard button and axis names.
   final GamepadNormalizer _normalizer = GamepadNormalizer();
@@ -85,7 +112,19 @@ class _InputWidgetState extends State<InputWidget> {
   /// Pointer lock stream subscription for FPS-style mouse capture.
   StreamSubscription<PointerLockDelta>? _pointerLockSubscription;
 
+  /// The app is the active one (for [InputWidget.ignoreGamepadWhenInactive]).
+  bool _appActive = true;
+  AppLifecycleListener? _lifecycle;
+
+  /// Mouse movement since the device in use was last something else: a
+  /// mouse nudged by a desk doesn't take over from a controller.
+  double _mouseTravel = 0;
+  static const _mouseSwitchDistance = 8.0;
+
   KeyboardState? get _keyboard => widget.world.getResource<KeyboardState>();
+  ActiveInputDevice? get _device =>
+      widget.world.getResource<ActiveInputDevice>();
+  GamepadRumble? get _rumble => widget.world.getResource<GamepadRumble>();
   MouseState? get _mouse => widget.world.getResource<MouseState>();
   GamepadState? get _gamepad => widget.world.getResource<GamepadState>();
   CursorState? get _cursor => widget.world.getResource<CursorState>();
@@ -100,6 +139,79 @@ class _InputWidgetState extends State<InputWidget> {
     super.initState();
     _initializeGamepads();
     _initializeCursor();
+    _focusNode.addListener(_onFocusChange);
+    HardwareKeyboard.instance.addHandler(_noteKeyboard);
+    GestureBinding.instance.pointerRouter.addGlobalRoute(_notePointer);
+    _lifecycle = AppLifecycleListener(onStateChange: _onLifecycle);
+  }
+
+  @override
+  void didUpdateWidget(InputWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.claimFocus && !oldWidget.claimFocus && !_focusNode.hasFocus) {
+      _focusNode.requestFocus();
+    }
+  }
+
+  /// Back in focus: the keyboard as it is now, since key events went
+  /// elsewhere meanwhile.
+  void _onFocusChange() {
+    if (_focusNode.hasFocus) {
+      _keyboard?.sync(HardwareKeyboard.instance.logicalKeysPressed);
+    }
+  }
+
+  /// Notes the keyboard as the device in use; never consumes the event.
+  bool _noteKeyboard(KeyEvent event) {
+    if (event is KeyDownEvent) _noteDevice(InputDeviceKind.keyboard);
+    return false;
+  }
+
+  /// Notes the mouse as the device in use: a click, a scroll, or a real
+  /// move (not a virtual pointer driven by a controller).
+  void _notePointer(PointerEvent event) {
+    if (event.kind != PointerDeviceKind.mouse) return;
+    final device = _device;
+    if (device == null || device.gamepadPointerDevices.contains(event.device)) {
+      return;
+    }
+    if (event is PointerDownEvent || event is PointerSignalEvent) {
+      _noteDevice(InputDeviceKind.mouse);
+    } else if (event is PointerHoverEvent || event is PointerMoveEvent) {
+      if (device.kind == InputDeviceKind.mouse) return;
+      _mouseTravel += event.delta.distance;
+      if (_mouseTravel >= _mouseSwitchDistance) {
+        _noteDevice(InputDeviceKind.mouse);
+      }
+    }
+  }
+
+  void _noteDevice(InputDeviceKind kind, {String? gamepadId}) {
+    final device = _device;
+    if (device == null) return;
+    if (kind != InputDeviceKind.mouse) _mouseTravel = 0;
+    GamepadFamily? family;
+    if (gamepadId != null) {
+      final pad = _gamepad?.get(gamepadId);
+      family = detectGamepadFamily(
+        pad?.name ?? '',
+        vendorId: pad?.vendorId,
+        productId: pad?.productId,
+      );
+    }
+    device.note(kind, gamepadId: gamepadId, family: family);
+  }
+
+  void _onLifecycle(AppLifecycleState state) {
+    final active = state == AppLifecycleState.resumed;
+    if (active == _appActive) return;
+    _appActive = active;
+    if (!active && widget.ignoreGamepadWhenInactive) {
+      // Nothing a pad held stays held while we're away.
+      for (final pad in _gamepad?.gamepads.values ?? <SingleGamepadState>[]) {
+        pad.releaseAll();
+      }
+    }
   }
 
   void _initializeCursor() {
@@ -172,23 +284,87 @@ class _InputWidgetState extends State<InputWidget> {
 
   void _initializeGamepads() {
     if (!widget.enableGamepad) return;
+    final source = _gamepadSource =
+        widget.gamepadSource ?? PluginGamepadSource();
 
-    // Listen for gamepad events
-    _gamepadSubscription = Gamepads.events.listen(_handleGamepadEvent);
+    // Input as it happens, and pads coming and going.
+    _gamepadSubscription = source.events.listen(_handleGamepadEvent);
+    _connectionSubscription = source.connections.listen(_handleConnection);
 
-    // Query initial gamepads
-    Gamepads.list().then((gamepads) {
-      final gamepadState = _gamepad;
-      if (gamepadState == null) return;
+    // Rumble goes to the pad, fire and forget.
+    final rumble = _rumble;
+    if (rumble != null) {
+      rumble.handler = (effect, id) {
+        unawaited(
+          source.rumble(
+            id,
+            low: effect.low,
+            high: effect.high,
+            duration: effect.duration,
+          ),
+        );
+      };
+      rumble.stopHandler = (id) => unawaited(source.stopRumble(id));
+    }
 
-      for (final gamepad in gamepads) {
-        gamepadState.getOrCreate(gamepad.id, gamepad.name);
-      }
-    });
+    // The pads connected already, by name.
+    _listGamepads();
+  }
+
+  /// Names every connected pad (and its USB ids) from the source. Run at
+  /// mount and on every connect, so a pad first seen through an event, or
+  /// plugged in later, is named rather than left as its opaque id.
+  Future<void> _listGamepads() async {
+    final source = _gamepadSource;
+    if (source == null) return;
+    final List<GamepadInfo> gamepads;
+    try {
+      gamepads = await source.list();
+    } catch (e) {
+      debugPrint('Gamepads unavailable: $e');
+      return;
+    }
+    if (!mounted) return;
+    final state = _gamepad;
+    if (state == null) return;
+    for (final gamepad in gamepads) {
+      state.connect(
+        gamepad.id,
+        name: gamepad.name,
+        vendorId: gamepad.vendorId,
+        productId: gamepad.productId,
+      );
+    }
+    // The pad in use may have just been named: its family with it.
+    final device = _device;
+    final active = device?.gamepadId;
+    if (device != null && device.isGamepad && active != null) {
+      _noteDevice(InputDeviceKind.gamepad, gamepadId: active);
+    }
   }
 
   void _handleGamepadEvent(GamepadEvent event) {
+    if (widget.ignoreGamepadWhenInactive && !_appActive) return;
     _gamepad?.applyEvent(event, _normalizer);
+    // A press, or a stick or trigger pushed well over: the controller is in
+    // use (resting drift doesn't count).
+    if (event.value.abs() >= 0.5) {
+      _noteDevice(InputDeviceKind.gamepad, gamepadId: event.gamepadId);
+    }
+  }
+
+  void _handleConnection(GamepadConnectionEvent event) {
+    final state = _gamepad;
+    if (state == null) return;
+    switch (event.type) {
+      case GamepadConnectionEventType.connected:
+        state.connect(event.gamepadId, name: event.name);
+        _listGamepads();
+      case GamepadConnectionEventType.disconnected:
+        // Nothing it held stays held.
+        state.disconnect(event.gamepadId);
+        _normalizer.removeDevice(event.gamepadId);
+    }
   }
 
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
@@ -242,8 +418,9 @@ class _InputWidgetState extends State<InputWidget> {
     // Reclaim focus on every pointer-down. A no-op if we already have
     // focus; otherwise it pulls focus back from anything up the tree
     // that tried to steal it on this click (e.g. a `SelectableRegion`
-    // that wants to start tracking text selection).
-    if (!_focusNode.hasFocus) {
+    // that wants to start tracking text selection). Not while an overlay
+    // has the focus on purpose ([InputWidget.claimFocus]).
+    if (widget.claimFocus && !_focusNode.hasFocus) {
       _focusNode.requestFocus();
     }
 
@@ -292,8 +469,20 @@ class _InputWidgetState extends State<InputWidget> {
 
   @override
   void dispose() {
+    _focusNode.removeListener(_onFocusChange);
     if (_ownsFocusNode) _focusNode.dispose();
+    HardwareKeyboard.instance.removeHandler(_noteKeyboard);
+    GestureBinding.instance.pointerRouter.removeGlobalRoute(_notePointer);
+    _lifecycle?.dispose();
     _gamepadSubscription?.cancel();
+    _connectionSubscription?.cancel();
+    final rumble = _rumble;
+    if (rumble != null) {
+      rumble
+        ..handler = null
+        ..stopHandler = null;
+    }
+    _gamepadSource?.dispose();
     _stopPointerLock();
     final cursor = _cursor;
     if (cursor != null) {
@@ -341,7 +530,9 @@ class _InputWidgetState extends State<InputWidget> {
     // Add mouse region for hover focus and cursor control
     child = MouseRegion(
       cursor: _getCursor(),
-      onEnter: widget.focusOnHover ? (_) => _focusNode.requestFocus() : null,
+      onEnter: widget.focusOnHover && widget.claimFocus
+          ? (_) => _focusNode.requestFocus()
+          : null,
       onExit: _handlePointerExit,
       child: child,
     );
@@ -358,7 +549,9 @@ class _InputWidgetState extends State<InputWidget> {
       behavior: HitTestBehavior.translucent,
       onTap: _noopTap,
       onTapDown: (_) {
-        if (!_focusNode.hasFocus) _focusNode.requestFocus();
+        if (widget.claimFocus && !_focusNode.hasFocus) {
+          _focusNode.requestFocus();
+        }
       },
       child: child,
     );
@@ -366,7 +559,7 @@ class _InputWidgetState extends State<InputWidget> {
     // Wrap with keyboard focus
     child = Focus(
       focusNode: _focusNode,
-      autofocus: widget.autofocus,
+      autofocus: widget.autofocus && widget.claimFocus,
       onKeyEvent: _handleKeyEvent,
       child: child,
     );

@@ -19,8 +19,13 @@ class SingleGamepadState {
   /// The gamepad ID from the gamepads package.
   final String id;
 
-  /// Human-readable name.
-  final String name;
+  /// Human-readable name ("Xbox Wireless Controller"); the id until the
+  /// source has named it ([GamepadState.connect]).
+  String name;
+
+  /// The USB vendor and product ids, where the platform reports them.
+  int? vendorId;
+  int? productId;
 
   /// Button states keyed by button ID string.
   final Map<String, ButtonInputState> buttons = {};
@@ -68,6 +73,19 @@ class SingleGamepadState {
     return axes[key] ?? 0.0;
   }
 
+  /// How many times [key] has been pressed on this pad, ever.
+  int pressCount(String key) => buttons[key]?.presses ?? 0;
+
+  /// Lets go of everything: each held button is released (a release edge,
+  /// so actions see `justReleased`) and every axis returns to rest. For a
+  /// pad that's gone, so nothing stays held or deflected.
+  void releaseAll() {
+    for (final button in buttons.values) {
+      button.release();
+    }
+    axes.updateAll((_, _) => 0.0);
+  }
+
   /// Called at the start of each frame.
   void beginFrame() {
     for (final state in buttons.values) {
@@ -88,25 +106,59 @@ class GamepadState {
   /// All connected gamepads by ID.
   final Map<String, SingleGamepadState> gamepads = {};
 
+  /// Bumps whenever a pad connects, disconnects or is renamed, so a reader
+  /// can notice without diffing the map (a session log, prompts).
+  int version = 0;
+
   /// Get or create a gamepad state.
   SingleGamepadState getOrCreate(String id, String name) {
-    return gamepads.putIfAbsent(id, () => SingleGamepadState(id, name));
+    return gamepads.putIfAbsent(id, () {
+      version++;
+      return SingleGamepadState(id, name);
+    });
   }
 
   /// Get a gamepad by ID.
   SingleGamepadState? get(String id) => gamepads[id];
 
-  /// Mark a gamepad as disconnected.
+  /// Records pad [id] as connected, named by its source where it says
+  /// ([name], [vendorId], [productId]; a pad first seen through an event is
+  /// named by its id until then).
+  SingleGamepadState connect(
+    String id, {
+    String? name,
+    int? vendorId,
+    int? productId,
+  }) {
+    final gamepad = getOrCreate(id, name ?? id);
+    if (!gamepad.connected) {
+      gamepad.connected = true;
+      version++;
+    }
+    if (name != null && name.isNotEmpty && name != gamepad.name) {
+      gamepad.name = name;
+      version++;
+    }
+    gamepad.vendorId = vendorId ?? gamepad.vendorId;
+    gamepad.productId = productId ?? gamepad.productId;
+    return gamepad;
+  }
+
+  /// Marks a gamepad as disconnected, letting go of everything it held
+  /// ([SingleGamepadState.releaseAll]): a pad unplugged mid-press or with
+  /// its stick deflected leaves nothing pressed behind.
   void disconnect(String id) {
     final gamepad = gamepads[id];
-    if (gamepad != null) {
+    if (gamepad != null && gamepad.connected) {
+      gamepad.releaseAll();
       gamepad.connected = false;
+      version++;
     }
   }
 
   /// Remove a disconnected gamepad.
   void remove(String id) {
-    gamepads.remove(id);
+    if (gamepads.remove(id) != null) version++;
   }
 
   /// Get the first connected gamepad, or null.
@@ -143,6 +195,23 @@ class GamepadState {
     return ButtonPhase.up;
   }
 
+  /// How many times [key] has been pressed, summed over every pad seen
+  /// (disconnected ones too, so the count never goes down), or on
+  /// [gamepadId] only. Diff it to count presses between two looks.
+  int pressCount(String key, {String? gamepadId}) {
+    if (gamepadId != null) return gamepads[gamepadId]?.pressCount(key) ?? 0;
+    var total = 0;
+    for (final gamepad in gamepads.values) {
+      total += gamepad.pressCount(key);
+    }
+    return total;
+  }
+
+  /// Every button key any pad has reported.
+  Iterable<String> get buttonKeys => {
+    for (final gamepad in gamepads.values) ...gamepad.buttons.keys,
+  };
+
   /// Get an axis value from any gamepad.
   double getAxis(String key, {String? gamepadId}) {
     if (gamepadId != null) {
@@ -167,6 +236,11 @@ class GamepadState {
   /// flipped to +1 down, matching screen coordinates.
   void applyEvent(GamepadEvent event, GamepadNormalizer? normalizer) {
     final gamepad = getOrCreate(event.gamepadId, event.gamepadId);
+    // Input from a pad marked gone means it's back.
+    if (!gamepad.connected) {
+      gamepad.connected = true;
+      version++;
+    }
     if (event.type == KeyType.button) {
       gamepad.setButtonPressed(event.key, event.value > 0.5);
     } else {

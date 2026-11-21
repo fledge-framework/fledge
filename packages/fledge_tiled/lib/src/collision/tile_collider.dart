@@ -122,7 +122,9 @@ class TileCollider {
     return shapes;
   }
 
-  /// Merges adjacent rectangle shapes into larger rectangles.
+  /// Merges adjacent rectangle shapes into larger rectangles: runs along a
+  /// row first, then rows of the same span stacked one under another (a
+  /// wall's column of tiles becomes one rectangle).
   ///
   /// Useful for optimizing tile-based collision where many tiles
   /// form continuous walls or platforms.
@@ -165,7 +167,41 @@ class TileCollider {
       merged.add(current);
     }
 
-    return merged;
+    return _mergeVertically(merged, tolerance);
+  }
+
+  /// Joins rectangles of the same x and width that touch top to bottom.
+  static List<RectangleShape> _mergeVertically(
+    List<RectangleShape> rows,
+    double tolerance,
+  ) {
+    final byColumn = List<RectangleShape>.from(rows)
+      ..sort((a, b) {
+        final x = a.x.compareTo(b.x);
+        if (x != 0) return x;
+        final w = a.width.compareTo(b.width);
+        return w != 0 ? w : a.y.compareTo(b.y);
+      });
+    final out = <RectangleShape>[];
+    for (final next in byColumn) {
+      final last = out.isEmpty ? null : out.last;
+      if (last != null &&
+          last.rotation == 0 &&
+          next.rotation == 0 &&
+          (last.x - next.x).abs() <= tolerance &&
+          (last.width - next.width).abs() <= tolerance &&
+          (last.y + last.height - next.y).abs() <= tolerance) {
+        out[out.length - 1] = RectangleShape(
+          x: last.x,
+          y: last.y,
+          width: last.width,
+          height: last.height + next.height,
+        );
+      } else {
+        out.add(next);
+      }
+    }
+    return out;
   }
 
   static bool _canMergeHorizontally(

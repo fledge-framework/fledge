@@ -111,9 +111,17 @@ class TilemapSpawnConfig {
   /// Called for each tile layer and object layer spawned.
   final void Function(EntityCommands entity, String layerName)? onLayerSpawn;
 
+  /// Whether the map is scenery that never moves: its root gets
+  /// `StaticTransform`, so the map and everything spawned under it (layers,
+  /// objects) are computed once and then skipped by transform propagation
+  /// and sprite culling. Leave it off if anything under the map is moved
+  /// after spawning (debug builds fail an assert if a frozen entity moves).
+  final bool staticTransforms;
+
   const TilemapSpawnConfig({
     this.tileConfig = const TileLayerConfig(),
     this.objectTypes,
     this.onLayerSpawn,
+    this.staticTransforms = false,
   });
 }

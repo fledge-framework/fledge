@@ -42,6 +42,10 @@ The follow-up to the 2026-11-15 performance review of Fledge and Tharsis Plateau
   - [ ] 6.1 Measure on a real GPU (the user runs the game; F3 panel / F4 capture), with and without `subpixelScroll`
   - [ ] 6.2 Decide with the user, from 6.1, among the options below; implement
   - [ ] 6.3 Measure, record
+- [x] **7. Static scenery: per-frame cost of the whole loaded world** (fledge_render_2d, fledge_tiled, Tharsis)
+- [x] **8. Prediction obstacles rebuilt every replayed step** (Tharsis `player/`)
+- [x] **9. Tilemap extraction** (fledge_tiled)
+- [x] **10. Render-world sprite list** (fledge_render_2d, fledge_tiled, fledge_particles, fledge_debug)
 
 Work order: 1 → 2 → 3 → 5 → 4 → 6. (1-3 are framework and benefit everything; 5 removes the worst spikes; 4 is UI; 6 needs the user at a real machine.)
 
@@ -173,6 +177,49 @@ Baseline (after the review's fixes, 2026-11-15; town at 16:30): tick p50 3.4 ms,
 **Results.**
 
 ---
+
+## 7. Static scenery (2026-11-19)
+
+**Evidence.** Every map loads at boot into one world (about 6,600 entities, 4,600 sprites). `transform_propagate` still visited every entity to confirm nothing moved, and `SpriteExtractor` walked every sprite to cull it: the top two costs in every scenario, growing with each map. No change detection to lean on (item 3).
+
+**Design as built.** `StaticTransform` (fledge_render_2d): an entity whose transform and place in the hierarchy never change (a root takes its subtree). Propagation computes a static root and subtree once, marks them `TransformFrozen`, bumps `StaticTransforms.generation`, and never visits them again (the other root passes exclude `StaticTransform`); a debug-only check every 120 runs fails if a frozen entity's local changed. `SpriteExtractor` walks `Without<TransformFrozen>` as before, and frozen sprites through a 256 px grid rebuilt when the generation changes (visiting only buckets near the view, checking liveness and the marker; the per-sprite logic shared). fledge_tiled: `TilemapSpawnConfig.staticTransforms`. Tharsis marks every map, prop and clutter drop shadows, prop and door lights, farm tile sprites, terraform loam, machines and their shadows, and clutter sprites (their hit shake now nudges the sprite's anchor, not the transform).
+
+**Results** (`game/tool/profile_test.dart`, headless debug, 1080p view):
+- `transform_propagate`: 460-535 us -> **25-37 us** (about -93%).
+- `SpriteExtractor`: town 365-393 -> 170-194 us, frontier 361 -> 79 us, plot 408 -> 227 us, storm 432 -> 264 us (what's left is moving sprites: characters, storm motes, rime).
+- Tick p50: town 16:30 1714 -> 1043 us, frontier 1613 -> 880 us, plot 1910 -> 1245 us.
+- `extract.renderExtraction` as a whole fell about 25% (735 -> 529 us town); most of what's left is `TilemapExtractor` (~300 us for ~960 visible tiles), which already culls to the view and wasn't part of this item.
+- Tests: `fledge_render_2d/test/static_transform_test.dart`, a fledge_tiled opt-in case, `game/test/clutter_shake_test.dart`.
+
+## 8. Prediction obstacles (2026-11-19)
+
+**Evidence.** `stepCharacter` called `solidsIn(world)` for every predicted step; a client's reconciliation replays 6-12 steps at 100-200 ms round trips.
+
+**Design as built.** `_solidsFor` (Tharsis `player/player.dart`): an `Expando` on the world keeps the last replay batch's obstacles; reused while replaying the same entity at a later tick (the replay loop steps one entity through consecutive ticks over a world that doesn't change), built afresh on a normal step and at each batch's start. Test: `player_test.dart` (a wall added mid-batch is unseen by the rest of the batch, seen by the next normal step).
+
+## 9. Tilemap extraction (2026-11-19)
+
+**Evidence.** After item 7, `TilemapExtractor` was the largest extractor (~300 us town, ~960 visible tiles). Per frame it visited every layer of every loaded map (~130), allocating a corner list each, and built every visible tile's `ExtractedSprite` afresh (trig, a `Matrix3`, two `Vector2`s, the sprite) before adding it to the render world.
+
+**Design as built.** Each tile's sprite is built once and kept in the layer's index (nothing downstream changes an extracted sprite: verified, the only matrix write is interpolation's own copy); kept sprites are dropped when the map's transform (identity, version and matrix, so hand-set transforms count), the layer's colour, offset or parallax change; animated tiles are built every frame. A finite map without parallax or rotation whose area (padded by its layers' offsets) misses the view is skipped before its layers. The view's corners are inlined (no list per layer).
+
+**Results** (profile, headless debug): `TilemapExtractor` town 304 -> 228 us, plot 272 -> 194 us, frontier 232 -> 160 us; town 16:30 tick p50 1043 -> 961 us. Tests: `fledge_tiled/test/tile_culling_test.dart` (the same sprite drawn every frame and equal to a fresh build; moved map and faded layer rebuild; a far map draws nothing).
+
+**What's left.** Most of the remaining cost was `RenderWorld.add`, one entity per visible tile: item 10.
+
+## 10. Render-world sprite list (2026-11-19)
+
+**Evidence.** After item 9, most of `TilemapExtractor` (and a share of `SpriteExtractor`) was `RenderWorld.add`: an entity spawned per visible tile and sprite every frame, only to be queried once and sorted. Nothing used the render-world entity ids.
+
+**Design as built.** `RenderWorld.addSprite` appends to a plain list (cleared with the world); `extractedSprites` yields the list, then any `ExtractedSprite` entities added the old way (still drawn); `extractedSpriteCount`. Readers (`SpriteBatchNode`, `renderSpritesToDrawer`, the debug panel) use `extractedSprites`; writers (`SpriteExtractor`, `AtlasSpriteExtractor`, `TilemapExtractor`, `ParticleExtractor`, and `ComponentExtractor` when it makes a sprite) use `addSprite`. Lights and UI stay entities. Draw order is unchanged (`sortByDrawOrder` after collection; ties keep insertion order). 11 test files moved to `extractedSprites`; new `fledge_render_2d/test/render_world_sprites_test.dart`. The Tharsis profiler counts listed sprites too.
+
+**Results** (profile, headless debug):
+- `TilemapExtractor`: town 228 -> **25 us**, plot 194 -> 25 us, frontier 160 -> 17 us.
+- `SpriteExtractor`: town 176 -> 136 us, plot 208 -> 151 us.
+- `extract.renderExtraction`: town 459 -> **211 us**, frontier 337 -> 129 us, plot 468 -> 234 us.
+- Tick p50: town 16:30 961 -> **727 us**, frontier 809 -> 596 us, plot 1173 -> 915 us.
+
+Since item 7 began (all of 7, 9, 10): town 16:30 tick p50 1714 -> 727 us (-58%), frontier 1613 -> 596 us (-63%).
 
 ## Not in scope here (reported by the review, to verify separately)
 

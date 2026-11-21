@@ -106,10 +106,16 @@ export 'src/cursor/cursor_mode.dart';
 export 'src/cursor/cursor_state.dart';
 export 'src/cursor/pointer_lock_delegate.dart';
 
+// Devices: which is in use, controller families and labels, rumble
+export 'src/device/active_input_device.dart';
+export 'src/device/gamepad_family.dart';
+export 'src/device/gamepad_rumble.dart';
 // Raw input
 export 'src/raw/keyboard_state.dart';
 export 'src/raw/mouse_state.dart';
+export 'src/raw/gamepad_source.dart';
 export 'src/raw/gamepad_state.dart';
+export 'src/raw/gamepad_watcher.dart';
 export 'src/raw/raw_input.dart';
 
 // Systems
@@ -120,4 +126,7 @@ export 'src/systems/input_frame_end_system.dart';
 export 'src/systems/input_fixed_latch_system.dart';
 
 // Widget
+export 'src/widget/gamepad_focus_bridge.dart';
+export 'src/widget/gamepad_intents.dart';
 export 'src/widget/input_widget.dart';
+export 'src/widget/virtual_pointer.dart';

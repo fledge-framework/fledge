@@ -353,7 +353,7 @@ void main() {
       AtlasSpriteExtractor().extract(world, renderWorld);
 
       var seen = 0;
-      for (final (_, s) in renderWorld.query1<ExtractedSprite>().iter()) {
+      for (final s in renderWorld.extractedSprites) {
         expect(s.anchor.x, 0.5);
         expect(s.anchor.y, 1.0);
         seen++;

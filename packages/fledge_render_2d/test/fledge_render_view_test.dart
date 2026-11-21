@@ -125,9 +125,7 @@ void main() {
 
       final extractedCount = app.world
           .getResource<RenderWorld>()!
-          .query1<ExtractedSprite>()
-          .iter()
-          .length;
+          .extractedSpriteCount;
       expect(
         extractedCount,
         1,

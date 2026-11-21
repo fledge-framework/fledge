@@ -21,11 +21,17 @@ class InputMap {
   /// Deadzone settings per action.
   final Map<ActionId, double> deadzones;
 
+  /// Vector2 actions left unclamped: every other vector2 action is clamped
+  /// to length 1, so a keyboard diagonal reads (0.707, 0.707) and keys plus
+  /// a stick together never go past full tilt.
+  final Set<ActionId> unclampedVector2;
+
   const InputMap({
     this.bindings = const [],
     this.compositeBindings = const [],
     this.actionTypes = const {},
     this.deadzones = const {},
+    this.unclampedVector2 = const {},
   });
 
   /// Builder for fluent API.
@@ -41,6 +47,7 @@ class InputMapBuilder {
   final List<CompositeVector2Binding> _compositeBindings = [];
   final Map<ActionId, ActionType> _actionTypes = {};
   final Map<ActionId, double> _deadzones = {};
+  final Set<ActionId> _unclamped = {};
 
   /// Bind a keyboard key to a button action.
   InputMapBuilder bindKey(LogicalKeyboardKey key, ActionId action) {
@@ -49,11 +56,51 @@ class InputMapBuilder {
     return this;
   }
 
-  /// Bind any [source] to a button action, e.g. one read back from a saved
-  /// rebind ([BindingSource.fromJson]).
-  InputMapBuilder bind(BindingSource source, ActionId action) {
-    _bindings.add(InputBinding(action: action, source: source));
-    _actionTypes[action] ??= ActionType.button;
+  /// Bind any [source] to [action], e.g. one read back from a saved rebind
+  /// ([BindingSource.fromJson]). An action seen for the first time takes
+  /// its type from the source: a stick makes a vector2 action, an axis an
+  /// axis action, anything else a button. An axis bound to an action that's
+  /// already a button presses it past [pressPoint] (see
+  /// [bindGamepadAxisAsButton]).
+  InputMapBuilder bind(
+    BindingSource source,
+    ActionId action, {
+    double deadzone = 0.1,
+    double pressPoint = 0.5,
+  }) {
+    _bindings.add(
+      InputBinding(
+        action: action,
+        source: source,
+        deadzone: deadzone,
+        pressPoint: pressPoint,
+      ),
+    );
+    _actionTypes[action] ??= switch (source) {
+      GamepadStickBinding() => ActionType.vector2,
+      GamepadAxisBinding() || MouseAxisBinding() => ActionType.axis,
+      _ => ActionType.button,
+    };
+    return this;
+  }
+
+  /// Bind a gamepad axis to a button action, pressed once the axis passes
+  /// [pressPoint] (and let go a little below it). For triggers, which some
+  /// platforms (Windows) report only as axes.
+  InputMapBuilder bindGamepadAxisAsButton(
+    String axisKey,
+    ActionId action, {
+    String? gamepadId,
+    double pressPoint = 0.5,
+  }) {
+    _bindings.add(
+      InputBinding(
+        action: action,
+        source: GamepadAxisBinding(axisKey, gamepadId: gamepadId),
+        pressPoint: pressPoint,
+      ),
+    );
+    _actionTypes[action] = ActionType.button;
     return this;
   }
 
@@ -201,48 +248,31 @@ class InputMapBuilder {
     return this;
   }
 
-  /// Bind left analog stick to a Vector2 action.
+  /// Bind the left analog stick to a Vector2 action (a [GamepadStickBinding]
+  /// with a radial [deadzone]).
   InputMapBuilder bindLeftStick(
     ActionId action, {
     double deadzone = 0.1,
     String? gamepadId,
-  }) {
-    _bindings.add(
-      InputBinding(
-        action: action,
-        source: GamepadAxisBinding('left_stick_x', gamepadId: gamepadId),
-        deadzone: deadzone,
-      ),
-    );
-    _bindings.add(
-      InputBinding(
-        action: action,
-        source: GamepadAxisBinding('left_stick_y', gamepadId: gamepadId),
-        deadzone: deadzone,
-      ),
-    );
-    _actionTypes[action] = ActionType.vector2;
-    _deadzones[action] = deadzone;
-    return this;
-  }
+  }) => _bindStick(GamepadStick.left, action, deadzone, gamepadId);
 
-  /// Bind right analog stick to a Vector2 action.
+  /// Bind the right analog stick to a Vector2 action.
   InputMapBuilder bindRightStick(
     ActionId action, {
     double deadzone = 0.1,
     String? gamepadId,
-  }) {
+  }) => _bindStick(GamepadStick.right, action, deadzone, gamepadId);
+
+  InputMapBuilder _bindStick(
+    GamepadStick stick,
+    ActionId action,
+    double deadzone,
+    String? gamepadId,
+  ) {
     _bindings.add(
       InputBinding(
         action: action,
-        source: GamepadAxisBinding('right_stick_x', gamepadId: gamepadId),
-        deadzone: deadzone,
-      ),
-    );
-    _bindings.add(
-      InputBinding(
-        action: action,
-        source: GamepadAxisBinding('right_stick_y', gamepadId: gamepadId),
+        source: GamepadStickBinding(stick, gamepadId: gamepadId),
         deadzone: deadzone,
       ),
     );
@@ -278,11 +308,20 @@ class InputMapBuilder {
     return this;
   }
 
+  /// Leaves vector2 [action] unclamped: its bindings' values are summed as
+  /// they are, so a keyboard diagonal reads (1, 1) (every other vector2
+  /// action is clamped to length 1).
+  InputMapBuilder withUnclampedVector2(ActionId action) {
+    _unclamped.add(action);
+    return this;
+  }
+
   /// Build the InputMap.
   InputMap build() => InputMap(
     bindings: List.unmodifiable(_bindings),
     compositeBindings: List.unmodifiable(_compositeBindings),
     actionTypes: Map.unmodifiable(_actionTypes),
     deadzones: Map.unmodifiable(_deadzones),
+    unclampedVector2: Set.unmodifiable(_unclamped),
   );
 }

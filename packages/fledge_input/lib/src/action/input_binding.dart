@@ -40,6 +40,11 @@ sealed class BindingSource {
           gamepadId: json['gamepad'] as String?,
           inverted: json['inverted'] == true,
         );
+      case {'type': 'gamepad_stick', 'stick': final String name}:
+        final stick = GamepadStick.values.asNameMap()[name];
+        return stick == null
+            ? null
+            : GamepadStickBinding(stick, gamepadId: json['gamepad'] as String?);
     }
     return null;
   }
@@ -288,6 +293,55 @@ class GamepadAxisBinding extends BindingSource {
   String toString() => 'GamepadAxisBinding($axisKey)';
 }
 
+/// One of a gamepad's two analog sticks.
+enum GamepadStick {
+  left,
+  right;
+
+  /// The standard axis keys of this stick (`left_stick_x`, `left_stick_y`).
+  String get xKey => '${name}_stick_x';
+  String get yKey => '${name}_stick_y';
+}
+
+/// A whole analog stick, read as one 2D value for a vector2 action: +x
+/// right, +y **down** (like the screen and the keyboard composites).
+///
+/// Its deadzone ([InputBinding.deadzone]) is radial and rescaled: a stick
+/// resting a little off centre reads exactly zero, and past the deadzone
+/// the value grows smoothly from 0 to full tilt, the same in every
+/// direction (unlike two separate axis bindings, whose deadzones make a
+/// square and jump at its edge).
+class GamepadStickBinding extends BindingSource {
+  const GamepadStickBinding(this.stick, {this.gamepadId});
+
+  final GamepadStick stick;
+
+  /// Optional: one pad only. If null, any pad.
+  final String? gamepadId;
+
+  static const left = GamepadStickBinding(GamepadStick.left);
+  static const right = GamepadStickBinding(GamepadStick.right);
+
+  @override
+  Map<String, Object?> toJson() => {
+    'type': 'gamepad_stick',
+    'stick': stick.name,
+    if (gamepadId != null) 'gamepad': gamepadId,
+  };
+
+  @override
+  bool operator ==(Object other) =>
+      other is GamepadStickBinding &&
+      other.stick == stick &&
+      other.gamepadId == gamepadId;
+
+  @override
+  int get hashCode => Object.hash(stick, gamepadId);
+
+  @override
+  String toString() => 'GamepadStickBinding(${stick.name})';
+}
+
 /// A complete binding from a source to an action with configuration.
 class InputBinding {
   /// The action this binding contributes to.
@@ -305,12 +359,18 @@ class InputBinding {
   /// Multiplier applied to the input value.
   final double scale;
 
+  /// For an axis source on a button action (a trigger as a button): how far
+  /// the axis must go to press it. It lets go a little below, at
+  /// [pressPoint] - 0.1, so a trigger resting near the line doesn't chatter.
+  final double pressPoint;
+
   const InputBinding({
     required this.action,
     required this.source,
     this.buttonAxisValue = 1.0,
     this.deadzone = 0.1,
     this.scale = 1.0,
+    this.pressPoint = 0.5,
   });
 
   @override
@@ -319,7 +379,10 @@ class InputBinding {
 
 /// Composite binding that combines multiple sources into a Vector2.
 ///
-/// Used for WASD-style movement where 4 buttons map to one 2D action.
+/// Used for WASD-style movement where 4 buttons map to one 2D action. A
+/// direction can also be half of an analog axis (a [GamepadAxisBinding]
+/// read from 0 to 1, its negative half ignored; `inverted` picks the other
+/// half), which then counts by how far it's pushed, past [deadzone].
 class CompositeVector2Binding {
   final ActionId action;
   final BindingSource up;
@@ -327,12 +390,16 @@ class CompositeVector2Binding {
   final BindingSource left;
   final BindingSource right;
 
+  /// For analog directions: values below it read as zero.
+  final double deadzone;
+
   const CompositeVector2Binding({
     required this.action,
     required this.up,
     required this.down,
     required this.left,
     required this.right,
+    this.deadzone = 0.1,
   });
 
   @override

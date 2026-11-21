@@ -104,7 +104,30 @@ class ParticleExtractor extends Extractor {
 }
 ```
 
-For simple one-component extractions, `ComponentExtractor` is more concise:
+Sprites are the exception: add them with `renderWorld.addSprite(ExtractedSprite(...))`. The render world keeps extracted sprites in a plain list rather than as entities, since there can be thousands a frame (every visible tile and sprite) and the renderer only collects and sorts them. Read them back with `renderWorld.extractedSprites` (or `extractedSpriteCount`). A sprite added the old way, `renderWorld.add(ExtractedSprite(...))`, still draws, just slower.
+
+```dart
+class GlowExtractor extends Extractor {
+  @override
+  void extract(World mainWorld, RenderWorld renderWorld) {
+    for (final (entity, glow, at) in
+        mainWorld.query2<Glow, GlobalTransform2D>().iter()) {
+      renderWorld.addSprite(ExtractedSprite(
+        entity: entity,
+        texture: glow.texture,
+        sourceRect: glow.rect,
+        transform: at.matrix,
+        color: glow.color,
+        sortKey: DrawLayer.foreground.sortKey(),
+        anchor: Vector2(0.5, 0.5),
+        size: glow.size,
+      ));
+    }
+  }
+}
+```
+
+For simple one-component extractions, `ComponentExtractor` is more concise (an `ExtractedSprite` it makes goes in the sprite list):
 
 ```dart
 extractors.register(ComponentExtractor<Sprite, ExtractedSprite>(
@@ -218,6 +241,19 @@ final matrix = global.matrix;
 ```
 
 Add `TransformPropagateSystem` to your app to automatically compute global transforms from the parent-child hierarchy.
+
+### Static scenery
+
+Scenery that never moves can carry `StaticTransform`. `TransformPropagateSystem` computes it once (a root with children takes its whole subtree with it), marks it `TransformFrozen` and never visits it again, and `SpriteExtractor` keeps frozen sprites in a spatial grid, so a frame only looks at the ones near the view. A world full of props then costs per frame what's on screen, not what's loaded.
+
+```dart
+world.spawn()
+  ..insert(const StaticTransform())
+  ..insert(Transform2D(translation: Vector2(x, y)))
+  ..insert(Sprite(texture: rock));
+```
+
+The contract: its `Transform2D` and place in the hierarchy don't change after spawning. Its `Sprite` (texture, colour, source rect, anchor, flips) and `Visibility` may. Debug builds check now and then that frozen entities haven't moved and fail an assert naming the one that did; give anything that moves, even a little, no `StaticTransform` (nudge a frozen sprite's `anchor` for a shake instead). A Tiled map opts in whole with `TilemapSpawnConfig(staticTransforms: true)`.
 
 ## Sprites
 

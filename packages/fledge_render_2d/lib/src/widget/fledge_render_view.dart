@@ -164,10 +164,10 @@ void renderSpritesToDrawer(
   SpriteDrawer drawer, {
   bool Function(ExtractedSprite sprite)? where,
 }) {
-  final sprites = <ExtractedSprite>[];
-  for (final (_, sprite) in renderWorld.query1<ExtractedSprite>().iter()) {
-    if (where == null || where(sprite)) sprites.add(sprite);
-  }
+  final sprites = [
+    for (final sprite in renderWorld.extractedSprites)
+      if (where == null || where(sprite)) sprite,
+  ];
   if (sprites.isEmpty) return;
   ExtractedSprite.sortByDrawOrder(sprites);
 

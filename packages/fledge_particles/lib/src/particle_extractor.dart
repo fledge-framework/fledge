@@ -49,7 +49,7 @@ class ParticleExtractor extends Extractor {
         final sub = ySorted ? DrawLayerExtension.ySortSubOrder(y) : explicitSub;
         final sortKey = layer.sortKey(subOrder: sub);
 
-        renderWorld.add(
+        renderWorld.addSprite(
           ExtractedSprite(
             entity: entity,
             texture: texture,

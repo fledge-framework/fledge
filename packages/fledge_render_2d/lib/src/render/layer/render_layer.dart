@@ -32,12 +32,10 @@ import '../world/render_world.dart';
 /// class SpriteLayer extends RenderLayer {
 ///   @override
 ///   void paint(Canvas canvas, Size size, RenderWorld renderWorld) {
-///     final sprites = renderWorld.query1<ExtractedSprite>()
-///       .iter()
-///       .toList()
-///       ..sort((a, b) => a.$2.sortKey.compareTo(b.$2.sortKey));
+///     final sprites = [...renderWorld.extractedSprites]
+///       ..sort((a, b) => a.sortKey.compareTo(b.sortKey));
 ///
-///     for (final (_, sprite) in sprites) {
+///     for (final sprite in sprites) {
 ///       // Draw sprite...
 ///     }
 ///   }

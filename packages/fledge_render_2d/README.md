@@ -49,6 +49,8 @@ world.spawn()
   ..insert(Sprite(texture: tex, anchor: Vector2(0.5, 1), flipY: true, color: shade));
 ```
 
+Scenery that never moves can carry `StaticTransform`: it's computed once, then skipped by transform propagation and culled through a spatial grid, so per-frame cost follows what's on screen, not what's loaded. Its transform must not change after spawning (debug builds assert); its sprite and visibility may. See the docs' render page.
+
 ## Directional sprites
 
 `Orientation` tracks one of four cardinal `Direction`s. For 8-, 16- or N-view sprites, `Facing` holds a continuous angle (radians, `0` = +x, clockwise on screen like `Transform2D.rotation`) and picks the view:

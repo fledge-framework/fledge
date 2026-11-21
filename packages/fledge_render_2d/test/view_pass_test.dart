@@ -61,7 +61,7 @@ void main() {
       ..insert(Sprite(texture: kSolidColorTexture, emissive: true));
     final render = RenderWorld();
     SpriteExtractor().extract(world, render);
-    expect(render.query1<ExtractedSprite>().iter().single.$2.emissive, isTrue);
+    expect(render.extractedSprites.single.emissive, isTrue);
   });
 
   testWidgets(

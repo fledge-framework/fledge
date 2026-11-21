@@ -58,7 +58,7 @@ World _world() {
 int _sprites(World world) {
   final renderWorld = RenderWorld();
   TilemapExtractor().extract(world, renderWorld);
-  return renderWorld.query1<ExtractedSprite>().iter().length;
+  return renderWorld.extractedSpriteCount;
 }
 
 void main() {
@@ -82,5 +82,79 @@ void main() {
     const down = (160 + 2 * TilemapExtractor.defaultCullMargin) / _tile + 1;
     expect(count, lessThanOrEqualTo((across + 1) * (down + 1)));
     expect(count, greaterThan(across * down * 0.8));
+  });
+
+  group('kept sprites', () {
+    List<ExtractedSprite> extract(World world, TilemapExtractor extractor) {
+      final renderWorld = RenderWorld();
+      extractor.extract(world, renderWorld);
+      return [for (final s in renderWorld.extractedSprites) s];
+    }
+
+    World viewed() => _world()
+      ..insertResource(
+        ActiveCameraView(x: 800, y: 800)..viewportSize = const Size(320, 160),
+      );
+
+    test('a tile is built once and the same sprite drawn every frame', () {
+      final world = viewed();
+      final extractor = TilemapExtractor();
+      final first = extract(world, extractor);
+      final second = extract(world, extractor);
+      expect(second.length, first.length);
+      for (var i = 0; i < first.length; i++) {
+        expect(identical(first[i], second[i]), isTrue);
+      }
+      // The same as a fresh extractor builds.
+      final fresh = extract(world, TilemapExtractor());
+      for (var i = 0; i < first.length; i++) {
+        expect(fresh[i].transform.storage, first[i].transform.storage);
+        expect(fresh[i].sourceRect, first[i].sourceRect);
+        expect(fresh[i].sortKey, first[i].sortKey);
+      }
+    });
+
+    test('moving the map or changing the layer rebuilds them', () {
+      final world = viewed();
+      final extractor = TilemapExtractor();
+      final before = extract(world, extractor);
+      final mapEntity = world.query1<Tilemap>().iter().first.$1;
+      // Moved by hand (no version bump): caught by the matrix compare.
+      world.get<GlobalTransform2D>(mapEntity)!.matrix.storage[6] = 16;
+      final moved = extract(world, extractor);
+      expect(identical(moved.first, before.first), isFalse);
+      final layer = world.query1<TileLayer>().iter().first.$2;
+      final dimmed = world.query1<TileLayer>().iter().first.$1;
+      world.insert(
+        dimmed,
+        TileLayer(
+          name: layer.name,
+          layerIndex: layer.layerIndex,
+          tiledLayer: layer.tiledLayer,
+          tiles: layer.tiles,
+          opacity: 0.5,
+        ),
+      );
+      final faded = extract(world, extractor);
+      expect(faded.first.color, isNot(moved.first.color));
+    });
+
+    test(
+      'a map nowhere near the view draws nothing (and is skipped whole)',
+      () {
+        final world = World()
+          ..insertResource(
+            ActiveCameraView(x: 50000, y: 50000)
+              ..viewportSize = const Size(320, 160),
+          );
+        final near = _world();
+        // Move the test map far from the view: nothing comes out.
+        for (final (e, _) in near.query1<Tilemap>().iter()) {
+          near.get<GlobalTransform2D>(e)!.matrix.storage[6] = 0;
+        }
+        near.insertResource(world.getResource<ActiveCameraView>()!);
+        expect(extract(near, TilemapExtractor()), isEmpty);
+      },
+    );
   });
 }

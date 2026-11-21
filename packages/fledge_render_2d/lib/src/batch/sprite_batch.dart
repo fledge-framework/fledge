@@ -119,10 +119,7 @@ class SpriteBatchSystem implements RenderSystem {
     final batches = <SpriteBatch>[];
 
     // Collect and sort sprites
-    final sprites = <ExtractedSprite>[];
-    for (final (_, sprite) in renderWorld.query1<ExtractedSprite>().iter()) {
-      sprites.add(sprite);
-    }
+    final sprites = [...renderWorld.extractedSprites];
 
     // Sort into draw order: sort key, then the unclamped precise
     // sub-order (Y-sorting for typical 2D), stable for full ties.

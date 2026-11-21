@@ -27,7 +27,7 @@ ExtractedSprite _extractAt({
   SpriteExtractor().extract(world, renderWorld);
 
   final results = <ExtractedSprite>[];
-  for (final (_, es) in renderWorld.query1<ExtractedSprite>().iter()) {
+  for (final es in renderWorld.extractedSprites) {
     results.add(es);
   }
   expect(results, hasLength(1));

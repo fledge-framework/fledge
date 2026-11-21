@@ -1,8 +1,7 @@
 import 'dart:ui' show FramePhase, FrameTiming;
 
 import 'package:fledge_ecs/fledge_ecs.dart' show App;
-import 'package:fledge_render_2d/fledge_render_2d.dart'
-    show ExtractedSprite, RenderWorld;
+import 'package:fledge_render_2d/fledge_render_2d.dart' show RenderWorld;
 import 'package:flutter/scheduler.dart' show SchedulerBinding, Ticker;
 import 'package:flutter/widgets.dart';
 
@@ -138,11 +137,7 @@ class _DebugPerfPanelState extends State<DebugPerfPanel>
         )
         ..add('late frames $missed/$n');
     }
-    final sprites = world
-        .getResource<RenderWorld>()
-        ?.query1<ExtractedSprite>()
-        .iter()
-        .length;
+    final sprites = world.getResource<RenderWorld>()?.extractedSpriteCount;
     lines.add(
       'entities ${world.entityCount}'
       '${sprites == null ? '' : '  sprites $sprites'}',

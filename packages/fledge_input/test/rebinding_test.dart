@@ -14,6 +14,8 @@ void main() {
       GamepadButtonBinding.leftBumper,
       GamepadButtonBinding('a', gamepadId: 'pad-2'),
       GamepadAxisBinding('left_stick_y', inverted: true),
+      GamepadStickBinding.left,
+      GamepadStickBinding(GamepadStick.right, gamepadId: 'pad-2'),
     ];
 
     test('every source round-trips', () {
@@ -27,6 +29,10 @@ void main() {
       expect(BindingSource.fromJson({'type': 'key'}), isNull);
       expect(
         BindingSource.fromJson({'type': 'scroll', 'direction': 'inward'}),
+        isNull,
+      );
+      expect(
+        BindingSource.fromJson({'type': 'gamepad_stick', 'stick': 'middle'}),
         isNull,
       );
     });

@@ -314,6 +314,7 @@ TilemapSpawnConfig(
 | `tileConfig` | `TileLayerConfig` | `TileLayerConfig()` | Configuration for tile layer colliders |
 | `objectTypes` | `Map<String, ObjectTypeConfig>?` | `null` | Object spawning configuration by type |
 | `onLayerSpawn` | `Function?` | `null` | Callback for custom layer entity setup |
+| `staticTransforms` | `bool` | `false` | The map is scenery that never moves: its root gets `StaticTransform`, so the map and everything under it are computed once and culled through the frozen grid |
 
 #### TileLayerConfig Options
 

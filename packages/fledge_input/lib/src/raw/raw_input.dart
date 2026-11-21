@@ -18,12 +18,26 @@ class ButtonInputState {
   /// Whether the button was released during this frame (set by release, cleared by beginFrame).
   bool _releasedThisFrame = false;
 
+  /// How many times the button has been pressed, ever: a monotonic count
+  /// that readers outside the frame loop (a widget polling while the world
+  /// is paused) can diff, so a press and release between two looks is never
+  /// missed (`GamepadButtonWatcher`).
+  int presses = 0;
+
   /// Called when the button is pressed.
   void press() {
     if (!pressed) {
       pressed = true;
       _pressedThisFrame = true;
+      presses++;
     }
+  }
+
+  /// Marks the button held without a press: for a key found down that was
+  /// pressed while nobody was listening (no `justPressed`, no count).
+  void holdQuietly() {
+    pressed = true;
+    previouslyPressed = true;
   }
 
   /// Called when the button is released.

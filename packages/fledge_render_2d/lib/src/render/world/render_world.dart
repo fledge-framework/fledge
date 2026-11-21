@@ -1,5 +1,7 @@
 import 'package:fledge_ecs/fledge_ecs.dart';
 
+import '../../sprite/extracted_sprite.dart';
+
 /// Separate world for render-specific data.
 ///
 /// Unlike the main world, the render world is rebuilt each frame from
@@ -18,11 +20,10 @@ import 'package:fledge_ecs/fledge_ecs.dart';
 /// // At start of frame, clear previous data
 /// renderWorld.clear();
 ///
-/// // Extract entities from main world
-/// for (final (entity, sprite, transform) in mainWorld.query2().iter()) {
-///   renderWorld.spawn()
-///     ..insert(ExtractedSprite(sprite, transform));
-/// }
+/// // Extract from the main world: sprites go in the sprite list, other
+/// // render data (lights, UI) as entities.
+/// renderWorld.addSprite(ExtractedSprite(...));
+/// renderWorld.add(ExtractedLight(...));
 ///
 /// // Run render systems on render world
 /// renderSchedule.run(renderWorld);
@@ -42,14 +43,37 @@ class RenderWorld {
   /// Resources are preserved across frames.
   void clear() {
     _world.clear();
+    _sprites.clear();
   }
+
+  final List<ExtractedSprite> _sprites = [];
+
+  /// Adds an extracted sprite for this frame. Sprites are kept in a plain
+  /// list, not as entities: there can be thousands a frame (every visible
+  /// tile and sprite), and all the renderer does with them is collect and
+  /// sort them, so an entity each was pure overhead.
+  void addSprite(ExtractedSprite sprite) => _sprites.add(sprite);
+
+  /// Every sprite extracted this frame: those added with [addSprite], then
+  /// any added the old way as entities (`add(ExtractedSprite(...))`, still
+  /// drawn). What renderers read.
+  Iterable<ExtractedSprite> get extractedSprites sync* {
+    yield* _sprites;
+    for (final (_, sprite) in _world.query1<ExtractedSprite>().iter()) {
+      yield sprite;
+    }
+  }
+
+  /// How many sprites were extracted this frame.
+  int get extractedSpriteCount =>
+      _sprites.length + _world.query1<ExtractedSprite>().iter().length;
 
   /// Spawn an entity in the render world.
   EntityCommands spawn() => _world.spawn();
 
-  /// Adds one extracted item (an `ExtractedSprite`, a light, ...) as its
-  /// own entity, stored as [T]: what extractors call for each item each
-  /// frame, cheaper than `spawn().insert(item)`.
+  /// Adds one extracted item (a light, a UI element, ...) as its own
+  /// entity, stored as [T], cheaper than `spawn().insert(item)`. Sprites go
+  /// through [addSprite] instead (one added here still draws, slower).
   Entity add<T extends Object>(T item) => _world.spawnOne<T>(item);
 
   /// Get a resource from the render world.

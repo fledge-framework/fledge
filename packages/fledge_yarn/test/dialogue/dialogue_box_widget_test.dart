@@ -26,6 +26,7 @@ void main() {
     String? Function(String)? speakerLabel,
     Widget? headerTrailing,
     DialoguePortraitBuilder? portraitBuilder,
+    DialogueBoxTheme theme = const DialogueBoxTheme(),
   }) => tester.pumpWidget(
     MaterialApp(
       home: Scaffold(
@@ -34,6 +35,7 @@ void main() {
             width: 600,
             child: DialogueBoxWidget(
               state: h.state,
+              theme: theme,
               speakerLabel: speakerLabel,
               headerTrailing: headerTrailing,
               portraitBuilder: portraitBuilder,
@@ -93,6 +95,22 @@ Guide: After the beat.
     await pumpBox(tester);
     expect(find.text('Hello there!'), findsOneWidget);
     expect(find.text('Continue'), findsOneWidget);
+  });
+
+  testWidgets('continueHintBuilder draws the hint itself', (tester) async {
+    await h.start('intro');
+    await h.tick(1);
+    await pumpBox(
+      tester,
+      theme: DialogueBoxTheme(
+        continueHint: 'A: continue',
+        continueHintBuilder: (context, hint, style) =>
+            Text('[$hint]', key: const ValueKey('custom-hint'), style: style),
+      ),
+    );
+    expect(find.byKey(const ValueKey('custom-hint')), findsOneWidget);
+    expect(find.text('[A: continue]'), findsOneWidget);
+    expect(find.text('A: continue'), findsNothing);
   });
 
   testWidgets('speakerLabel resolves the display name; narration has no '

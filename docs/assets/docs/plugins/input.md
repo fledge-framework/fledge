@@ -149,7 +149,7 @@ InputMap.builder()
   .bindGamepadButton('x', ActionId('attack'))
   .bindGamepadButton('start', ActionId('pause'))
 
-  // Analog sticks to Vector2
+  // Analog sticks to Vector2 (radial deadzone)
   .bindLeftStick(ActionId('move'), deadzone: 0.15)
   .bindRightStick(ActionId('look'), deadzone: 0.1)
 
@@ -159,8 +159,17 @@ InputMap.builder()
   // Individual axes
   .bindGamepadAxis('left_trigger', ActionId('brake'))
   .bindGamepadAxis('right_trigger', ActionId('accelerate'))
+
+  // A trigger as a button (pressed past 0.5, let go a little below)
+  .bindGamepadAxisAsButton('right_trigger', ActionId('fire'))
   .build()
 ```
+
+A stick binding reads both axes together through a **radial, rescaled deadzone**: a stick resting slightly off centre reads exactly zero, and past the deadzone the value grows smoothly to 1 at full tilt, the same in every direction. **Every vector2 action is clamped to length 1** (a keyboard diagonal reads (0.707, 0.707); keys plus a stick never pass full tilt); opt out with `withUnclampedVector2(action)`.
+
+Windows reports triggers only as axes, so bind them as buttons with `bindGamepadAxisAsButton` rather than `bindGamepadButton('right_trigger', ...)`. A direction of `bindComposite` can be half of an axis (`GamepadAxisBinding('left_stick_y', inverted: true)` for up), read by how far it's pushed.
+
+`InputWidget` follows pads being connected and disconnected: each pad gets its platform name and USB ids (`SingleGamepadState.name`, `vendorId`, `productId`), and a pad unplugged mid-press releases everything it held, so nothing stays pressed. `GamepadState.version` bumps on every connect, disconnect or rename.
 
 ### Multiple Bindings
 
@@ -285,11 +294,16 @@ The `InputWidget` is a Flutter widget that captures all input and injects it int
 InputWidget(
   world: app.world,
   autofocus: true,           // Focus on mount
-  enableGamepad: true,       // Poll gamepads
+  enableGamepad: true,       // Read gamepads
   focusOnHover: true,        // Focus when mouse enters
+  gamepadSource: null,       // Where pads come from: the `gamepads` plugin by default; a fake in tests
+  claimFocus: true,          // false: leave keyboard focus to an overlay (a menu)
+  ignoreGamepadWhenInactive: false, // true: drop pad input while alt-tabbed away
   child: GameWidget(app: app),
 )
 ```
+
+With `claimFocus: false` the widget takes no keyboard focus (not on mount, hover or clicks), so a Flutter menu over the game keeps it and handles its own keys. Whenever the widget gets focus back it catches the keyboard up (`KeyboardState.sync`), so a key let go while the menu had focus isn't stuck down.
 
 Place it at the root of your game widget tree to ensure all input is captured.
 
@@ -424,6 +438,36 @@ if (primary != null) {
 }
 ```
 
+Reading pads from Flutter rather than a system (a widget's ticker while the world is paused behind a menu, when `ActionState` isn't updated): use a `GamepadButtonWatcher`. It diffs monotonic press counts, so a press and release between two looks counts once, and `rebase()` forgets every earlier press (call it as a menu opens, so the press that opened it isn't read again).
+
+```dart
+final watcher = GamepadButtonWatcher(() => world.getResource<GamepadState>());
+// each Flutter frame:
+if (watcher.takePresses('back') > 0) closeMenu();
+```
+
+### The device in use, button names and rumble
+
+`ActiveInputDevice` (a resource and a `ChangeNotifier`) says which device the player used last: the keyboard, the mouse or a controller (with its id and family). `InputWidget` keeps it current from raw events, so it follows the player even while the world is paused; a stick resting slightly off centre or a mouse nudged by the desk doesn't switch it. Use it to show the right prompt:
+
+```dart
+final device = world.getResource<ActiveInputDevice>()!;
+final use = device.isGamepad
+    ? gamepadButtonLabel('a', device.family) // "A", "Cross", or "B" on a Switch pad
+    : 'E';
+```
+
+`detectGamepadFamily(name, vendorId:)` tells Xbox, PlayStation and Nintendo pads apart, by USB vendor id first, then name. Nintendo labels follow position (the bottom face button, standard key `a`, is labelled "B"). Under Steam Input every pad reports as an Xbox pad, so offer players an override if prompts matter.
+
+`GamepadRumble` vibrates the controller in use, fire and forget:
+
+```dart
+world.getResource<GamepadRumble>()!
+  .play(const RumbleEffect(low: 0.6, high: 0.2, duration: Duration(milliseconds: 150)));
+```
+
+It does nothing while `enabled` is false (a player setting) or, by default (`onlyWhenActive`), while the keyboard or mouse is in use. `recent` keeps the last effects played, for tests.
+
 ### Buttons in the fixed step
 
 `justPressed` and `justReleased` describe the current frame. A frame can run the fixed-timestep chain zero times, missing the press, or several times, seeing it twice. Systems in the fixed schedules use `fixedJustPressed` and `fixedJustReleased` instead: a press is held until a fixed step has run, then cleared by `InputFixedLatchSystem` in `Schedules.fixedLast`, so exactly one fixed step sees each press.
@@ -445,6 +489,8 @@ Held buttons and axes are state rather than edges, so `isPressed` and `getVector
 | `KeyboardState` | Raw keyboard key states |
 | `MouseState` | Mouse position, buttons, scroll |
 | `GamepadState` | All connected gamepads |
+| `ActiveInputDevice` | The device used last (keyboard, mouse or a controller, with its family) |
+| `GamepadRumble` | Controller vibration |
 | `InputContextRegistry` | Manages input contexts |
 | `CursorState` | Cursor visibility and lock mode |
 
@@ -459,6 +505,26 @@ Held buttons and axes are state rather than edges, so `isPressed` and `getVector
 | `InputFixedLatchSystem` | fixedLast | Clears the presses held for the fixed step (`fixedJustPressed`) |
 
 The `FirstSets.input` phase runs after window / audio platform systems and before content spawning (tilemaps, hot reload) — see [Standard Phases of `first`](/docs/guides/scheduling#standard-phases-of-first). To read resolved actions in `first`, add `after: [ActionResolutionSystem.systemName]` (or `after: [FirstSets.input]`); systems in `preUpdate` or later need no ordering.
+
+## Menus on a Controller
+
+`GamepadFocusBridge` lets a controller drive Flutter menus over a game, through Flutter's own focus and intents, so a menu built from focusable widgets works on a pad with no per-widget code:
+
+```dart
+GamepadFocusBridge(
+  gamepads: () => world.getResource<GamepadState>(),
+  enabled: menuOpen,          // off while gameplay has the pad
+  pointer: pointerController, // optional: a virtual pointer on the right stick's click
+  child: VirtualPointer(controller: pointerController, child: menu),
+)
+```
+
+- **Directions** (the d-pad and left stick, with auto-repeat) are offered to the focused widget first as a `GamepadDirectionIntent` (a value row or slider can take left and right), then move focus (`DirectionalFocusIntent`, which scrolls the newly focused widget into view).
+- **Buttons** become intents at the focused widget (`buttons`, by default): A `ActivateIntent`, B `DismissIntent`, LB/RB `GamepadTabIntent(-1/+1)`, LT/RT `GamepadPageIntent` (triggers work as buttons even where the platform reports only an axis), X/Y/Menu/View `GamepadButtonIntent`. Handle them with `Actions`.
+- **The right stick** sends `GamepadScrollIntent`; unhandled, it scrolls the focused widget's nearest `Scrollable`.
+- It reads the pads every Flutter frame, so it works while the world is paused behind the menu. **When it becomes enabled, everything pressed before is forgotten** and a held direction must be let go first: the A that opened a screen, or a B held to run, never acts inside it.
+
+**The virtual pointer** reaches what focus order doesn't (or deliberately leaves out). Clicking the right stick shows it; the right stick moves it, A clicks (and drags while held), X right-clicks, and B, the right stick's click, the d-pad or the left stick put it away. `VirtualPointer` sends its moves and presses as real mouse events from device `VirtualPointer.device`, so `MouseRegion`, `GestureDetector` and drags answer it exactly as they would a mouse; add that device to `ActiveInputDevice.gamepadPointerDevices` so it never counts as the mouse.
 
 ## UI Input Architecture
 

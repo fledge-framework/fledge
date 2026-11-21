@@ -1,5 +1,6 @@
 import 'package:fledge_ecs/fledge_ecs.dart';
 
+import '../../sprite/extracted_sprite.dart';
 import '../world/render_world.dart';
 
 /// Base class for component extractors.
@@ -63,7 +64,13 @@ class ComponentExtractor<TSource, TExtracted> extends Extractor {
     for (final (entity, component)
         in mainWorld.query1<TSource>(filter: _filter).iter()) {
       final extracted = _extractFn(mainWorld, entity, component);
-      renderWorld.world.spawnOne<TExtracted>(extracted);
+      // Sprites go in the render world's sprite list; anything else is an
+      // entity.
+      if (extracted is ExtractedSprite) {
+        renderWorld.addSprite(extracted);
+      } else {
+        renderWorld.world.spawnOne<TExtracted>(extracted);
+      }
     }
   }
 }

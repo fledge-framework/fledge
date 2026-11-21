@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:fledge_ecs/fledge_ecs.dart';
 
 import 'global_transform.dart';
+import 'static_transform.dart';
 import 'transform2d.dart';
 
 /// System that computes [GlobalTransform2D] from [Transform2D] down the
@@ -15,8 +16,19 @@ import 'transform2d.dart';
 /// entity that has a [GlobalTransform2D] but no [Transform2D] (one whose
 /// global is set by hand) are recomputed every run, since that matrix
 /// can't be tracked.
+///
+/// A [StaticTransform] root and its subtree are computed once, then marked
+/// [TransformFrozen] and never visited again, so scenery that never moves
+/// costs nothing per frame (bumping [StaticTransforms.generation]). Debug
+/// builds check every [frozenCheckInterval] runs that frozen entities
+/// haven't moved.
 class TransformPropagateSystem implements System {
   static const String systemName = 'transform_propagate';
+
+  /// Runs between debug checks that frozen entities kept their transforms.
+  static const frozenCheckInterval = 120;
+
+  int _runs = 0;
 
   @override
   SystemMeta get meta => SystemMeta(
@@ -50,13 +62,22 @@ class TransformPropagateSystem implements System {
       world.insert(entity, GlobalTransform2D());
     }
     // Roots without children (most of a scene: props, tiles' owners).
+    // Static roots are done once, below.
     for (final (_, transform, global)
         in world
             .query2<Transform2D, GlobalTransform2D>(
-              filter: const And<(Without<Parent>, Without<Children>)>([
-                Without<Parent>(),
-                Without<Children>(),
-              ]),
+              filter:
+                  const And<
+                    (
+                      Without<Parent>,
+                      Without<Children>,
+                      Without<StaticTransform>,
+                    )
+                  >([
+                    Without<Parent>(),
+                    Without<Children>(),
+                    Without<StaticTransform>(),
+                  ]),
             )
             .iter()) {
       _computeRoot(global, transform);
@@ -65,12 +86,55 @@ class TransformPropagateSystem implements System {
     for (final (_, transform, global, children)
         in world
             .query3<Transform2D, GlobalTransform2D, Children>(
-              filter: const Without<Parent>(),
+              filter: const And<(Without<Parent>, Without<StaticTransform>)>([
+                Without<Parent>(),
+                Without<StaticTransform>(),
+              ]),
             )
             .iter()) {
       _computeRoot(global, transform);
       _propagate(world, global, children, force: false);
     }
+    // Static roots not frozen yet: computed with their subtrees once, then
+    // frozen (skipped from now on).
+    List<Entity>? freeze;
+    for (final (entity, transform, global)
+        in world
+            .query2<Transform2D, GlobalTransform2D>(
+              filter:
+                  const And<
+                    (
+                      With<StaticTransform>,
+                      Without<Parent>,
+                      Without<TransformFrozen>,
+                    )
+                  >([
+                    With<StaticTransform>(),
+                    Without<Parent>(),
+                    Without<TransformFrozen>(),
+                  ]),
+            )
+            .iter()) {
+      _computeRoot(global, transform);
+      final children = world.get<Children>(entity);
+      if (children != null) _propagate(world, global, children, force: false);
+      (freeze ??= []).add(entity);
+    }
+    if (freeze != null) {
+      for (final root in freeze) {
+        _freeze(world, root);
+      }
+      var frozen = world.getResource<StaticTransforms>();
+      if (frozen == null) {
+        frozen = StaticTransforms();
+        world.insertResource(frozen);
+      }
+      frozen.generation++;
+    }
+    assert(() {
+      if (++_runs % frozenCheckInterval == 0) _checkFrozen(world);
+      return true;
+    }());
     // Roots whose global is set by hand: their children follow it.
     for (final (_, children, global)
         in world
@@ -82,6 +146,44 @@ class TransformPropagateSystem implements System {
             )
             .iter()) {
       _propagate(world, global, children, force: true);
+    }
+  }
+
+  /// Marks [entity] and everything below it [TransformFrozen].
+  static void _freeze(World world, Entity entity) {
+    if (!world.isAlive(entity)) return;
+    world.insert(entity, const TransformFrozen());
+    final children = world.get<Children>(entity);
+    if (children == null) return;
+    for (final child in [...children.children]) {
+      _freeze(world, child);
+    }
+  }
+
+  /// Debug only: fails if a frozen entity's local transform changed since
+  /// it was frozen (it broke [StaticTransform]'s contract and would be
+  /// drawn where it was).
+  static void _checkFrozen(World world) {
+    for (final (entity, t, g)
+        in world
+            .query2<Transform2D, GlobalTransform2D>(
+              filter: const With<TransformFrozen>(),
+            )
+            .iter()) {
+      final same =
+          g.sourceX == t.translation.x &&
+          g.sourceY == t.translation.y &&
+          g.sourceRotation == t.rotation &&
+          g.sourceScaleX == t.scale.x &&
+          g.sourceScaleY == t.scale.y &&
+          g.sourceSkew == t.skew;
+      if (!same) {
+        throw StateError(
+          'Entity $entity has StaticTransform (or is under a static root) '
+          'but its Transform2D changed after it was frozen. Scenery that '
+          'moves must not be marked StaticTransform.',
+        );
+      }
     }
   }
 

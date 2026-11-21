@@ -1,9 +1,15 @@
 import 'dart:math' as math;
-import 'dart:ui' show Offset, Rect;
+import 'dart:ui' show Color, Offset, Rect;
 
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart'
-    show ActiveCameraView, DrawLayer, Extractor, GlobalTransform2D, RenderWorld;
+    show
+        ActiveCameraView,
+        DrawLayer,
+        Extractor,
+        ExtractedSprite,
+        GlobalTransform2D,
+        RenderWorld;
 
 import '../components/tile_layer.dart';
 import '../components/tilemap.dart';
@@ -25,6 +31,12 @@ import 'tile_sprite_conversion.dart';
 /// on screen, not the size of the maps. The index is rebuilt when a layer's
 /// `tiles` list is replaced or changes length; edit tiles by replacing
 /// the list (or a `TileData` in it at the same index).
+///
+/// Each tile's `ExtractedSprite` is built once and kept with the index
+/// (nothing downstream changes an extracted sprite), and added again every
+/// frame it's in view; animated tiles are built afresh. The kept sprites are
+/// dropped when what they were built from changes: the map's transform, or
+/// the layer's colour, offset or parallax.
 class TilemapExtractor extends Extractor {
   /// Whether to skip invisible layers.
   final bool respectVisibility;
@@ -75,7 +87,14 @@ class TilemapExtractor extends Extractor {
       }
       if (loaded == null) continue;
 
-      for (final layerEntity in mainWorld.getChildren(mapEntity)) {
+      final layers = mainWorld.getChildren(mapEntity);
+      // A whole map nowhere near the view is skipped before its layers.
+      if (visible != null &&
+          _farFromView(mainWorld, tilemap, layers, mapTransform, visible)) {
+        continue;
+      }
+
+      for (final layerEntity in layers) {
         final layer = mainWorld.get<TileLayer>(layerEntity);
         if (layer == null) continue;
         if (respectVisibility &&
@@ -92,6 +111,37 @@ class TilemapExtractor extends Extractor {
         );
       }
     }
+  }
+
+  final Expando<_MapBounds> _bounds = Expando('tilemap bounds');
+
+  /// Whether [tilemap]'s whole area, in the world, misses [visible]. Only
+  /// for finite maps drawn without parallax and without rotation
+  /// (anything else is never skipped here); layer offsets widen the area.
+  bool _farFromView(
+    World world,
+    Tilemap tilemap,
+    Iterable<Entity> layers,
+    GlobalTransform2D mapTransform,
+    Rect visible,
+  ) {
+    // An infinite map's chunks reach outside its nominal size.
+    if (tilemap.infinite) return false;
+    final bounds = _bounds[tilemap] ??= _MapBounds.of(world, layers);
+    if (!bounds.plain) return false;
+    final m = mapTransform.matrix.storage;
+    if (m[1] != 0 || m[3] != 0) return false;
+    final w = tilemap.width * tilemap.tileWidth.toDouble();
+    final h = tilemap.height * tilemap.tileHeight.toDouble();
+    final x0 = m[6], x1 = m[6] + m[0] * w;
+    final y0 = m[7], y1 = m[7] + m[4] * h;
+    final area = Rect.fromLTRB(
+      math.min(x0, x1) - bounds.pad,
+      math.min(y0, y1) - bounds.pad,
+      math.max(x0, x1) + bounds.pad,
+      math.max(y0, y1) + bounds.pad,
+    );
+    return !area.overlaps(visible);
   }
 
   LoadedTilemap? _findLoadedTilemap(TilemapAssets assets, Tilemap tilemap) {
@@ -155,14 +205,12 @@ class TilemapExtractor extends Extractor {
     if (visible != null && det != 0 && px != 0 && py != 0) {
       var lowX = double.infinity, highX = double.negativeInfinity;
       var lowY = double.infinity, highY = double.negativeInfinity;
-      for (final corner in [
-        visible.topLeft,
-        visible.topRight,
-        visible.bottomLeft,
-        visible.bottomRight,
-      ]) {
+      // The view's four corners (no list: this runs for every layer).
+      for (var c = 0; c < 4; c++) {
+        final cx = c.isEven ? visible.left : visible.right;
+        final cy = c < 2 ? visible.top : visible.bottom;
         // Undo the map's transform, then the parallax and the offset.
-        final wx = corner.dx - s6, wy = corner.dy - s7;
+        final wx = cx - s6, wy = cy - s7;
         final x = (s4 * wx - s3 * wy) / det / px - ox;
         final y = (-s1 * wx + s0 * wy) / det / py - oy;
         lowX = math.min(lowX, x);
@@ -178,9 +226,19 @@ class TilemapExtractor extends Extractor {
       maxY = math.min(maxY, (highY / tileHeight).floor());
     }
 
+    // The kept sprites, unless what they were built from has changed.
+    index.keepFor(mapTransform, layerColor, ox, oy, px, py);
+
     for (var ty = minY; ty <= maxY; ty++) {
       for (var tx = minX; tx <= maxX; tx++) {
-        final tile = index.at(tx, ty);
+        final cell = index.cellOf(tx, ty);
+        if (cell < 0) continue;
+        final kept = index.sprites[cell];
+        if (kept != null) {
+          renderWorld.addSprite(kept);
+          continue;
+        }
+        final tile = index.tileAt(cell);
         if (tile == null || tile.gid == 0) continue;
         final tileset = loaded.tilesets.elementAtOrNull(tile.tilesetIndex);
         if (tileset == null) continue;
@@ -216,19 +274,20 @@ class TilemapExtractor extends Extractor {
           layerIndex: layer.layerIndex,
         );
 
-        renderWorld.add(
-          tileToSprite(
-            texture: tileset.atlas.texture,
-            sourceRect: sourceRect,
-            tileTopLeft: Offset(worldX, worldY),
-            tileWidth: tileWidth,
-            tileHeight: tileHeight,
-            color: layerColor,
-            sortKey: sortKey,
-            flipFlags: tile.flipFlags,
-            preciseSubOrder: preciseSubOrder,
-          ),
+        final sprite = tileToSprite(
+          texture: tileset.atlas.texture,
+          sourceRect: sourceRect,
+          tileTopLeft: Offset(worldX, worldY),
+          tileWidth: tileWidth,
+          tileHeight: tileHeight,
+          color: layerColor,
+          sortKey: sortKey,
+          flipFlags: tile.flipFlags,
+          preciseSubOrder: preciseSubOrder,
         );
+        // An animated tile's frame changes: built every time.
+        if (!tile.animated) index.sprites[cell] = sprite;
+        renderWorld.addSprite(sprite);
         if (emitLegacyTiles) {
           renderWorld.add(
             // ignore: deprecated_member_use_from_same_package
@@ -248,6 +307,30 @@ class TilemapExtractor extends Extractor {
       }
     }
   }
+}
+
+/// What decides whether a map can be skipped as a whole: no layer has
+/// parallax ([plain]), and how far its layers are offset ([pad]).
+class _MapBounds {
+  _MapBounds(this.plain, this.pad);
+
+  static _MapBounds of(World world, Iterable<Entity> layers) {
+    var plain = true;
+    var pad = 0.0;
+    for (final entity in layers) {
+      final layer = world.get<TileLayer>(entity);
+      if (layer == null) continue;
+      if (layer.parallax.dx != 1 || layer.parallax.dy != 1) plain = false;
+      pad = math.max(
+        pad,
+        math.max(layer.offset.dx.abs(), layer.offset.dy.abs()),
+      );
+    }
+    return _MapBounds(plain, pad);
+  }
+
+  final bool plain;
+  final double pad;
 }
 
 /// A layer's tiles by grid position: one cell per position over the
@@ -292,10 +375,66 @@ class _LayerIndex {
   final int minX, minY, maxX, maxY;
   final List<TileData?> _cells;
 
+  /// Each cell's sprite, once built (see [keepFor]).
+  late final List<ExtractedSprite?> sprites = List.filled(_cells.length, null);
+
   bool get isEmpty => maxX < minX;
 
+  /// The cell at grid position ([x], [y]), or -1 outside the layer.
+  int cellOf(int x, int y) {
+    if (x < minX || x > maxX || y < minY || y > maxY) return -1;
+    return (y - minY) * (maxX - minX + 1) + (x - minX);
+  }
+
+  TileData? tileAt(int cell) => _cells[cell];
+
   TileData? at(int x, int y) {
-    if (x < minX || x > maxX || y < minY || y > maxY) return null;
-    return _cells[(y - minY) * (maxX - minX + 1) + (x - minX)];
+    final cell = cellOf(x, y);
+    return cell < 0 ? null : _cells[cell];
+  }
+
+  // What the kept sprites were built from.
+  GlobalTransform2D? _transform;
+  int _transformVersion = -1;
+  final _matrix = List<double>.filled(9, double.nan);
+  Color? _color;
+  double _ox = double.nan, _oy = double.nan, _px = double.nan;
+  double _py = double.nan;
+
+  /// Drops the kept sprites if the map's transform or the layer's colour,
+  /// offset or parallax differ from what they were built from.
+  void keepFor(
+    GlobalTransform2D transform,
+    Color color,
+    double ox,
+    double oy,
+    double px,
+    double py,
+  ) {
+    final m = transform.matrix.storage;
+    var same =
+        identical(transform, _transform) &&
+        transform.version == _transformVersion &&
+        color == _color &&
+        ox == _ox &&
+        oy == _oy &&
+        px == _px &&
+        py == _py;
+    // A transform set by hand doesn't bump its version: compare the matrix.
+    for (var i = 0; same && i < 9; i++) {
+      same = m[i] == _matrix[i];
+    }
+    if (same) return;
+    sprites.fillRange(0, sprites.length, null);
+    _transform = transform;
+    _transformVersion = transform.version;
+    for (var i = 0; i < 9; i++) {
+      _matrix[i] = m[i];
+    }
+    _color = color;
+    _ox = ox;
+    _oy = oy;
+    _px = px;
+    _py = py;
   }
 }

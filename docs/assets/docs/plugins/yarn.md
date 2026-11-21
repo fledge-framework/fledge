@@ -432,6 +432,10 @@ DialogueBoxWidget(
 `DialogueCursorMoved(delta)` moves the highlight a step (keys);
 `DialogueCursorSet(index)` puts it on an option (a hovering pointer).
 
+The hint under a finished line is `DialogueBoxTheme.continueHint` (null
+hides it). To draw it yourself, for instance with a controller button's
+icon inline, give `continueHintBuilder: (context, hint, style) => ...`.
+
 ### Run conditions
 
 Gate gameplay systems while dialogue is up:

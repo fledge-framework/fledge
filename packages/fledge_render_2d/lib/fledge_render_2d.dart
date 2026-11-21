@@ -67,6 +67,7 @@ export 'src/transform/global_transform.dart';
 export 'src/transform/previous_transform.dart';
 export 'src/transform/propagate.dart';
 export 'src/transform/snapshot_previous_transform.dart';
+export 'src/transform/static_transform.dart';
 export 'src/transform/transform2d.dart';
 
 // Camera view data (owned by the render pipeline).

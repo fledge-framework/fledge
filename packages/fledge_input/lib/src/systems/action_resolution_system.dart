@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:fledge_ecs/fledge_ecs.dart';
 
 import '../action/action.dart';
@@ -35,6 +37,14 @@ class ActionResolutionSystem implements System {
     // actions from raw state.
     after: [InputPollingSystem.systemName],
   );
+
+  /// Axis sources driving button actions (a trigger as a button) that were
+  /// pressed last frame, for their hysteresis.
+  final Set<(ActionId, BindingSource)> _axisButtonsDown = {};
+
+  /// Where a stick reads full tilt: past it the value is 1, so a worn
+  /// stick that can't quite reach the rim still gets there.
+  static const stickOuter = 0.95;
 
   @override
   RunCondition? get runCondition => null;
@@ -127,7 +137,18 @@ class ActionResolutionSystem implements System {
             source,
             actionType,
             gamepad,
+            buttonPhases,
+            buttonPressed,
             axisValues,
+            vector2Values,
+          );
+
+        case GamepadStickBinding():
+          _processGamepadStickBinding(
+            binding,
+            source,
+            actionType,
+            gamepad,
             vector2Values,
           );
       }
@@ -163,7 +184,16 @@ class ActionResolutionSystem implements System {
           actionState.set(action, AxisValue(value, deadzone: deadzone));
 
         case ActionType.vector2:
-          final (x, y) = vector2Values[action] ?? (0.0, 0.0);
+          var (x, y) = vector2Values[action] ?? (0.0, 0.0);
+          // Clamped to length 1: a keyboard diagonal is (0.707, 0.707), and
+          // keys and a stick together never go past full tilt.
+          if (!inputMap.unclampedVector2.contains(action)) {
+            final length = math.sqrt(x * x + y * y);
+            if (length > 1) {
+              x /= length;
+              y /= length;
+            }
+          }
           actionState.set(action, Vector2Value(x, y));
       }
     }
@@ -326,6 +356,8 @@ class ActionResolutionSystem implements System {
     GamepadAxisBinding source,
     ActionType actionType,
     GamepadState? gamepad,
+    Map<ActionId, ButtonPhase> buttonPhases,
+    Set<ActionId> buttonPressed,
     Map<ActionId, double> axisValues,
     Map<ActionId, (double, double)> vector2Values,
   ) {
@@ -333,6 +365,33 @@ class ActionResolutionSystem implements System {
 
     var value = gamepad.getAxis(source.axisKey, gamepadId: source.gamepadId);
     if (source.inverted) value = -value;
+
+    if (actionType == ActionType.button) {
+      // A trigger as a button: pressed past the press point, let go a
+      // little below it.
+      final key = (binding.action, source as BindingSource);
+      final was = _axisButtonsDown.contains(key);
+      final down =
+          value >= (was ? binding.pressPoint - 0.1 : binding.pressPoint);
+      if (down) {
+        _axisButtonsDown.add(key);
+      } else {
+        _axisButtonsDown.remove(key);
+      }
+      final phase = switch ((was, down)) {
+        (false, true) => ButtonPhase.justPressed,
+        (true, true) => ButtonPhase.held,
+        (true, false) => ButtonPhase.justReleased,
+        (false, false) => ButtonPhase.up,
+      };
+      final current = buttonPhases[binding.action];
+      if (current == null || _phaseOrder(phase) > _phaseOrder(current)) {
+        buttonPhases[binding.action] = phase;
+      }
+      if (phase == ButtonPhase.justPressed) buttonPressed.add(binding.action);
+      return;
+    }
+
     if (value.abs() < binding.deadzone) value = 0.0;
     value *= binding.scale;
 
@@ -342,9 +401,13 @@ class ActionResolutionSystem implements System {
         axisValues[binding.action] = current + value;
 
       case ActionType.vector2:
-        // Determine if this is X or Y based on axis name
-        final isY =
-            source.axisKey.contains('y') || source.axisKey.contains('Y');
+        // Which half of the vector, from the axis key's suffix
+        // (`left_stick_y`, a raw `leftThumbstickY`); a key that names
+        // neither can't feed a vector (bind the whole stick instead).
+        final key = source.axisKey;
+        final isY = key.endsWith('_y') || key.endsWith('Y');
+        final isX = key.endsWith('_x') || key.endsWith('X');
+        if (!isX && !isY) return;
         final (cx, cy) = vector2Values[binding.action] ?? (0.0, 0.0);
         if (isY) {
           vector2Values[binding.action] = (cx, cy + value);
@@ -357,6 +420,37 @@ class ActionResolutionSystem implements System {
     }
   }
 
+  void _processGamepadStickBinding(
+    InputBinding binding,
+    GamepadStickBinding source,
+    ActionType actionType,
+    GamepadState? gamepad,
+    Map<ActionId, (double, double)> vector2Values,
+  ) {
+    if (gamepad == null || actionType != ActionType.vector2) return;
+    final x = gamepad.getAxis(source.stick.xKey, gamepadId: source.gamepadId);
+    final y = gamepad.getAxis(source.stick.yKey, gamepadId: source.gamepadId);
+    final (sx, sy) = radialDeadzone(x, y, binding.deadzone);
+    final (cx, cy) = vector2Values[binding.action] ?? (0.0, 0.0);
+    vector2Values[binding.action] = (
+      cx + sx * binding.scale,
+      cy + sy * binding.scale,
+    );
+  }
+
+  /// A stick's raw ([x], [y]) through a radial [deadzone], rescaled so the
+  /// value runs smoothly from 0 at the deadzone's edge to 1 at
+  /// [stickOuter] and beyond, the same in every direction.
+  static (double, double) radialDeadzone(double x, double y, double deadzone) {
+    final length = math.sqrt(x * x + y * y);
+    if (length <= deadzone || length == 0) return (0.0, 0.0);
+    final span = stickOuter - deadzone;
+    final scaled = span <= 0
+        ? 1.0
+        : ((math.min(length, stickOuter) - deadzone) / span).clamp(0.0, 1.0);
+    return (x / length * scaled, y / length * scaled);
+  }
+
   void _processCompositeBinding(
     CompositeVector2Binding composite,
     KeyboardState? keyboard,
@@ -364,38 +458,49 @@ class ActionResolutionSystem implements System {
     GamepadState? gamepad,
     Map<ActionId, (double, double)> vector2Values,
   ) {
-    double x = 0, y = 0;
-
-    if (_isSourcePressed(composite.right, keyboard, mouse, gamepad)) x += 1;
-    if (_isSourcePressed(composite.left, keyboard, mouse, gamepad)) x -= 1;
-    if (_isSourcePressed(composite.up, keyboard, mouse, gamepad)) {
-      y -= 1; // Screen Y is typically inverted (up = negative)
-    }
-    if (_isSourcePressed(composite.down, keyboard, mouse, gamepad)) y += 1;
+    double value(BindingSource source) =>
+        _sourceValue(source, composite.deadzone, keyboard, mouse, gamepad);
+    final x = value(composite.right) - value(composite.left);
+    // Screen Y is typically inverted (up = negative).
+    final y = value(composite.down) - value(composite.up);
 
     final (cx, cy) = vector2Values[composite.action] ?? (0.0, 0.0);
     vector2Values[composite.action] = (cx + x, cy + y);
   }
 
-  bool _isSourcePressed(
+  /// How far [source] is pushed, 0 to 1: a button is 0 or 1; an axis counts
+  /// its positive half (its `inverted` flag picks the other half) past
+  /// [deadzone].
+  double _sourceValue(
     BindingSource source,
+    double deadzone,
     KeyboardState? keyboard,
     MouseState? mouse,
     GamepadState? gamepad,
   ) {
     switch (source) {
       case KeyboardBinding():
-        return keyboard?.isPressed(source.key) ?? false;
+        return (keyboard?.isPressed(source.key) ?? false) ? 1 : 0;
       case MouseButtonBinding():
-        return mouse?.isButtonPressed(source.button) ?? false;
+        return (mouse?.isButtonPressed(source.button) ?? false) ? 1 : 0;
       case GamepadButtonBinding():
-        return gamepad?.isButtonPressed(
+        final pressed =
+            gamepad?.isButtonPressed(
               source.buttonKey,
               gamepadId: source.gamepadId,
             ) ??
             false;
+        return pressed ? 1 : 0;
+      case GamepadAxisBinding():
+        if (gamepad == null) return 0;
+        var value = gamepad.getAxis(
+          source.axisKey,
+          gamepadId: source.gamepadId,
+        );
+        if (source.inverted) value = -value;
+        return value < deadzone ? 0 : math.min(value, 1);
       default:
-        return false;
+        return 0;
     }
   }
 

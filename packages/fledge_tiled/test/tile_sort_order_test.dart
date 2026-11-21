@@ -111,9 +111,7 @@ void main() {
       setUp(() {
         final renderWorld = RenderWorld();
         extractor().extract(_world(), renderWorld);
-        sprites = [
-          for (final (_, s) in renderWorld.query1<ExtractedSprite>().iter()) s,
-        ];
+        sprites = [for (final s in renderWorld.extractedSprites) s];
         tiles = [
           for (final (_, t) in renderWorld.query1<ExtractedTile>().iter()) t,
         ];
@@ -215,10 +213,7 @@ void main() {
       },
     );
     TilemapExtractor().extract(_world(animator: animator), renderWorld);
-    final rects = {
-      for (final (_, s) in renderWorld.query1<ExtractedSprite>().iter())
-        s.sourceRect,
-    };
+    final rects = {for (final s in renderWorld.extractedSprites) s.sourceRect};
     expect(rects, {const Rect.fromLTWH(16, 0, 16, 16)});
   });
 

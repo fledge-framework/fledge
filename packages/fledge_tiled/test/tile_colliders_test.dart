@@ -1,6 +1,7 @@
 import 'package:fledge_assets/fledge_assets.dart';
 import 'package:fledge_ecs/fledge_ecs.dart';
-import 'package:fledge_render_2d/fledge_render_2d.dart' show TextureHandle;
+import 'package:fledge_render_2d/fledge_render_2d.dart'
+    show TextureHandle, TransformFrozen, propagateTransforms;
 import 'package:fledge_tiled/fledge_tiled.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -94,6 +95,52 @@ void main() {
         (96.0, 32.0, 20.0, 32.0),
       ]),
     );
+  });
+
+  test('mergeRectangles joins rows, then stacked rows of the same span', () {
+    RectangleShape r(double x, double y, double w, double h) =>
+        RectangleShape(x: x, y: y, width: w, height: h);
+    final merged = TileCollider.mergeRectangles([
+      // A 2x3 block of full tiles: one rectangle.
+      for (var y = 0.0; y < 96; y += 32)
+        for (var x = 0.0; x < 64; x += 32) r(x, y, 32, 32),
+      // A column of half-width pieces elsewhere: one rectangle.
+      r(200, 0, 16, 32),
+      r(200, 32, 16, 32),
+      // Not touching it: stays apart.
+      r(200, 100, 16, 32),
+    ]);
+    expect(
+      [for (final m in merged) (m.x, m.y, m.width, m.height)],
+      unorderedEquals([
+        (0.0, 0.0, 64.0, 96.0),
+        (200.0, 0.0, 16.0, 64.0),
+        (200.0, 100.0, 16.0, 32.0),
+      ]),
+    );
+  });
+
+  test('a map spawned with staticTransforms is frozen whole after it is '
+      'first propagated; without it nothing is', () async {
+    for (final frozen in [true, false]) {
+      final map = await _load();
+      final app = App()..addPlugin(TiledPlugin());
+      app.world.eventWriter<SpawnTilemapEvent>().send(
+        SpawnTilemapEvent.fromHandle(
+          app.world.getResource<Assets<TilemapAsset>>()!.add(map),
+          config: TilemapSpawnConfig(staticTransforms: frozen),
+        ),
+      );
+      await app.tick();
+      propagateTransforms(app.world);
+      final layers = [
+        for (final (entity, _) in app.world.query1<TileLayer>().iter()) entity,
+      ];
+      expect(layers, isNotEmpty);
+      for (final layer in layers) {
+        expect(app.world.has<TransformFrozen>(layer), frozen);
+      }
+    }
   });
 
   test('colliderLayers picks the layers that block', () async {

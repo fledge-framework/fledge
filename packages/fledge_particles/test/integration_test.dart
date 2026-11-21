@@ -102,11 +102,11 @@ void main() {
       }
 
       final rw = app.world.getResource<RenderWorld>()!;
-      final count = rw.query1<ExtractedSprite>().iter().length;
+      final count = rw.extractedSpriteCount;
       expect(count, greaterThan(0));
       // Every extracted particle should sit inside the DrawLayer.particles
       // sort range.
-      for (final (_, sprite) in rw.query1<ExtractedSprite>().iter()) {
+      for (final sprite in rw.extractedSprites) {
         expect(sprite.layer, DrawLayer.particles);
         // The quad is the particle's size; the transform doesn't scale it
         // again (the pipeline multiplies the two).
@@ -161,11 +161,7 @@ void main() {
       }
 
       final sprites = [
-        for (final (_, s)
-            in app.world
-                .getResource<RenderWorld>()!
-                .query1<ExtractedSprite>()
-                .iter())
+        for (final s in app.world.getResource<RenderWorld>()!.extractedSprites)
           s,
       ];
       expect(sprites, isNotEmpty);
@@ -205,7 +201,7 @@ void main() {
         );
       final rw = RenderWorld();
       ParticleExtractor().extract(world, rw);
-      return rw.query1<ExtractedSprite>().iter().single.$2;
+      return rw.extractedSprites.single;
     }
 
     ExtractedSprite extractSpriteAt(double y) {
@@ -215,7 +211,7 @@ void main() {
         ..insert(GlobalTransform2D(Matrix3.identity()..setEntry(1, 2, y)));
       final rw = RenderWorld();
       SpriteExtractor().extract(world, rw);
-      return rw.query1<ExtractedSprite>().iter().single.$2;
+      return rw.extractedSprites.single;
     }
 
     test('particle at y=100 sorts between sprites at y=99 and y=101', () {
