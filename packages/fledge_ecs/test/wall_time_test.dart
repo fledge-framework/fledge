@@ -26,6 +26,7 @@ void main() {
     test('delta and elapsed follow the clock, from zero', () {
       var now = const Duration(seconds: 100);
       final time = WallTime()..useClock(() => now);
+      time.update(); // The first reading is time zero.
 
       now += const Duration(microseconds: 16667);
       time.update();
@@ -36,7 +37,26 @@ void main() {
       time.update();
       expect(time.delta, closeTo(0.033333, 1e-9));
       expect(time.elapsed, closeTo(0.05, 1e-9));
-      expect(time.frameCount, 2);
+      expect(time.frameCount, 3);
+    });
+
+    test('the first reading counts no time: a clock installed before it '
+        'ticked (Flutter vsync reads zero until the first frame) never makes '
+        'an hours-long first delta', () {
+      var now = Duration.zero;
+      final time = WallTime()..useClock(() => now);
+      // The first frame's timestamp: the time since the system started.
+      now = const Duration(hours: 61, minutes: 42);
+      time.update();
+      expect(time.delta, 0);
+      expect(time.elapsed, 0);
+      now += const Duration(microseconds: 16667);
+      time.update();
+      expect(time.delta, closeTo(0.016667, 1e-9));
+      // The stopwatch as well.
+      final watch = WallTime()..start();
+      watch.update();
+      expect(watch.delta, 0);
     });
 
     test('a clock that stands still or steps back adds no time', () {
@@ -55,7 +75,8 @@ void main() {
         ..useClock(
           () => now,
           frameInterval: const Duration(microseconds: 16667),
-        );
+        )
+        ..update();
       // Wobbling timestamps: 15.1 and 18.3 ms apart, then a missed frame.
       for (final step in [15100, 18300, 33400, 16700]) {
         now += Duration(microseconds: step);
@@ -75,8 +96,10 @@ void main() {
       expect(time.delta, 0);
     });
 
-    WallTime clocked(Duration Function() now, {double hz = 60}) =>
-        WallTime()..useClock(now, frameInterval: WallTime.frameIntervalFor(hz));
+    WallTime clocked(Duration Function() now, {double hz = 60}) => WallTime()
+      ..useClock(now, frameInterval: WallTime.frameIntervalFor(hz))
+      // The first reading is time zero.
+      ..update();
 
     test('an early frame still counts a refresh: it is shown for one', () {
       var now = Duration.zero;
@@ -137,6 +160,7 @@ void main() {
       now = const Duration(seconds: 5);
       time.update();
       time.reset();
+      time.update(); // Time zero again.
       now += const Duration(milliseconds: 20);
       time.update();
       expect(time.delta, closeTo(0.02, 1e-9));

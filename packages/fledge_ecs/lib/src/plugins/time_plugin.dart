@@ -44,14 +44,24 @@ class WallTime {
   /// The time of the last frame.
   double _lastTime = 0.0;
 
+  /// Whether a reading has been taken since [start], [useClock] or
+  /// [reset]. The first one sets time zero and adds no time: a clock
+  /// installed before it ever ticked (Flutter's vsync timestamp reads zero
+  /// until the first frame, then the time since the system started) would
+  /// otherwise make the first [delta] hours long.
+  bool _primed = false;
+
   /// Starts the time tracking.
   void start() {
     _stopwatch.start();
     _lastTime = 0.0;
+    _primed = false;
   }
 
   /// Reads time from [now] instead of the internal stopwatch, starting
-  /// from zero at its current reading.
+  /// from zero at its first reading in [update] (a clock that hasn't ticked
+  /// yet when this is called, as Flutter's vsync timestamp before the first
+  /// frame, is fine).
   ///
   /// The stopwatch measures when [update] runs, which wanders by a few
   /// milliseconds from frame to frame. Anything moved by [delta] then
@@ -93,6 +103,7 @@ class WallTime {
         : frameInterval.inMicroseconds / 1000000.0;
     _gaps.clear();
     _lastTime = 0.0;
+    _primed = false;
     delta = 0.0;
     elapsed = 0.0;
   }
@@ -173,6 +184,16 @@ class WallTime {
 
   /// Updates the time for a new frame.
   void update() {
+    if (!_primed) {
+      // The first reading is time zero: no time has passed yet.
+      _primed = true;
+      final clock = _clock;
+      if (clock != null) _clockBase = clock();
+      _lastTime = _clock == null ? _now : 0.0;
+      delta = 0.0;
+      frameCount++;
+      return;
+    }
     final currentTime = _now;
     // A clock that hasn't advanced (or stepped back) adds no time.
     final raw = currentTime > _lastTime ? currentTime - _lastTime : 0.0;
@@ -203,6 +224,7 @@ class WallTime {
     elapsed = 0.0;
     frameCount = 0;
     _lastTime = 0.0;
+    _primed = false;
   }
 
   @override
