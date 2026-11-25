@@ -1,5 +1,5 @@
 name: fledge_lighting_2d
-description: 2D dynamic lighting for Fledge — point/directional/spot lights, ambient light, additive-blended radial gradients on top of the sprite pass.
+description: 2D dynamic lighting for Fledge — point/directional/spot lights, ambient light, composited through a light map over the sprite pass.
 version: 0.6.0
 repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_lighting_2d
 homepage: https://fledge-framework.dev

@@ -20,7 +20,6 @@ dependencies:
   fledge_camera_2d: ^0.6.0
   fledge_input: ^0.6.0
   fledge_physics: ^0.6.0
-  fledge_tiled: ^0.6.0
   fledge_save: ^0.6.0
   fledge_ui: ^0.6.0
   fledge_debug: ^0.6.0

@@ -4,6 +4,8 @@ import 'package:fledge_ui/fledge_ui.dart';
 import '../components.dart';
 import '../resources.dart';
 
+import 'pickup_collection_system.dart';
+
 /// Reads [RunScore] and [HighScore] each frame and mutates the HUD
 /// [UiText] entities that carry [ScoreLabel] / [HighScoreLabel]
 /// markers.
@@ -11,16 +13,19 @@ import '../resources.dart';
 /// The retained-mode contract: text is a `String` field on the
 /// `UiText` component; mutating it is enough — no despawn/respawn.
 class HudUpdateSystem implements System {
+  /// Name used in [SystemMeta] and for `before:`/`after:`.
+  static const String systemName = 'hud_update';
+
   @override
   SystemMeta get meta => SystemMeta(
-    name: 'hud_update',
+    name: systemName,
     reads: {ComponentId.of<ScoreLabel>(), ComponentId.of<HighScoreLabel>()},
     writes: {ComponentId.of<UiText>()},
     resourceReads: {RunScore, HighScore},
     // `PickupCollectionSystem` writes both scores in the same
     // schedule; declare the read explicitly so `checkScheduleOrdering`
     // sees the intent instead of falling back to registration order.
-    after: const ['PickupCollectionSystem'],
+    after: const [PickupCollectionSystem.systemName],
   );
 
   @override

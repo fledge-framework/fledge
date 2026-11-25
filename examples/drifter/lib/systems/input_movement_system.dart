@@ -22,6 +22,9 @@ import '../components.dart';
 /// input system's new velocity lands too late to be clamped — and the
 /// player walks through walls.
 class InputMovementSystem implements System {
+  /// Name used in [SystemMeta] and for `before:`/`after:`.
+  static const String systemName = 'InputMovementSystem';
+
   /// Player movement speed in pixels-per-frame-at-60fps. This matches
   /// the convention used by `fledge_physics.CollisionResolutionSystem`
   /// (`moveX = velocity.x * (time.delta / 0.01667)`), so we can feed
@@ -33,7 +36,7 @@ class InputMovementSystem implements System {
 
   @override
   SystemMeta get meta => SystemMeta(
-    name: 'InputMovementSystem',
+    name: systemName,
     reads: {ComponentId.of<Player>(), ComponentId.of<Transform2D>()},
     writes: {ComponentId.of<Velocity>()},
     resourceReads: {ActionState},

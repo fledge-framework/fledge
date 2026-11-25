@@ -10,11 +10,13 @@ This is the "does everything wire up cleanly?" example. In ~500 LOC across the `
 
 | Package | Integration point |
 |---|---|
-| `fledge_ecs` | App + World, resources, marker components, systems, stage ordering (`preUpdate` → `update` → `last`) |
-| `fledge_render_2d` | `Transform2D` positions, `TransformPropagateSystem` wired manually (there's no plugin), `Sprite` + `SpriteExtractor` + `FledgeRenderView` for canvas-backed sprite rendering |
+| `fledge_ecs` | App + World, resources, marker components, systems ordered with `systemName` constants (`preUpdate` → `update` → `last`) |
+| `fledge_render_2d` | `Transform2D` positions, `TransformPropagateSystem` registered in `preUpdate` (no plugin adds it), `Sprite` + `SpriteExtractor` + `FledgeRenderView` |
+| `fledge_camera_2d` | `CameraPlugin` and a `CameraFollow` camera that scrolls the arena at 1:1 |
 | `fledge_input` | `InputWidget` with a caller-owned `FocusNode`, arrow/WASD + action keys via `bindArrows`/`bindWasd`/`bindKey`, pause-on-blur |
-| `fledge_physics` | `Velocity` + `Collider` + `CollisionConfig` with game-defined layer bits; sensor pickups vs solid walls; `CollisionEvent` consumption |
-| `fledge_tiled` | Source of `Collider` / `RectangleShape` (yes — the shapes live here, not in `fledge_physics`) |
+| `fledge_physics` | `PhysicsPlugin` (velocity integration included), `Velocity` + `Collider` + `CollisionConfig` with game-defined layer bits; sensor pickups vs solid walls; `CollisionEvent` consumption |
+| `fledge_ui` | The score HUD as UI entities (`UiPlugin`, `UiText`) |
+| `fledge_debug` | `DebugPlugin` overlay |
 | `fledge_save` | `HighScore` as an auto-discovered `Saveable` world resource; no `registerSaveable` boilerplate |
 
 Intentionally **not** exercised: audio, networking, tilemaps, yarn, window. Add those when your game needs them; the point of this slice is a clean core loop.
@@ -27,7 +29,7 @@ From the workspace root:
 # macOS / Linux
 cd examples/drifter && flutter run -d macos        # or -d linux / -d windows
 
-# Web
+# Web (also embedded on the docs site at /demo/drifter)
 cd examples/drifter && flutter run -d chrome
 ```
 
@@ -54,21 +56,19 @@ lib/
 ├── actions.dart                       DrifterAction enum + InputMap builder
 └── systems/
     ├── input_movement_system.dart     ActionState → player Velocity
-    ├── velocity_apply_system.dart     Integrates Velocity into Transform2D (post collision resolution)
     ├── pickup_collection_system.dart  CollisionEvent on Player → despawn Pickup + score++
+    ├── hud_update_system.dart         RunScore / HighScore → HUD text
     └── save_load_system.dart          S/L/R action → flags that the Flutter layer drains
 ```
 
-## Integration notes (things that bit during the build)
+## Integration notes
 
-- **No `Transform2DPlugin`.** `fledge_render_2d` ships `TransformPropagateSystem` but no plugin; register it manually in `CoreStage.preUpdate` or `GlobalTransform2D` stays empty.
-- **Velocity units are per-frame at 60 fps**, not per-second. `CollisionResolutionSystem` scales velocity by `dt / 0.01667`, so `VelocityApplySystem` here does the same so the value resolution *clamped* is the value you integrate.
-- **`Collider` lives in `fledge_tiled`**, not `fledge_physics`. You need both packages to get physical shapes.
-- **`fledge_physics` doesn't integrate velocity for you** — it only clamps it against solids. The game owns the `transform.translation += velocity * dt` step (here: `VelocityApplySystem`).
-- **Movement systems must run before collision resolution, or the player walks through walls.** The scheduler serialises same-stage conflicts by registration order; `PhysicsPlugin` lands first, so anything that writes `Velocity` in `CoreStage.update` runs *after* `collision_resolution` and its clamping is discarded. Drifter puts `InputMovementSystem` in `CoreStage.preUpdate` to make this impossible. `test/schedule_ordering_test.dart` asserts the schedule has zero registration-order ambiguities — that test would have failed loudly on the buggy ordering, and it's a template you can copy into your own game.
+- **Register `TransformPropagateSystem` yourself.** `fledge_render_2d` has no plugin for it; drifter adds it in `Schedules.preUpdate`, or `GlobalTransform2D` stays empty.
+- **Velocity units are per-frame at 60 fps**, not per-second, and `PhysicsPlugin` integrates velocity into `Transform2D` itself (`VelocityIntegrationSystem`, after collision resolution).
+- **Movement systems must run before collision resolution, or the player walks through walls.** Drifter puts `InputMovementSystem` in `Schedules.preUpdate`. `test/schedule_ordering_test.dart` asserts `App.checkScheduleOrdering()` is empty: copy it into your own game.
+- **Order by `systemName` constants**, e.g. `after: [CollisionDetectionSystem.systemName]`, never string literals: a typo in a literal silently orders nothing.
 - **`SaveManager.save` is async** (path_provider). Fire-and-forget from the Flutter ticker listener is usually fine; await if you want to pause the game during I/O.
-- **`Saveable` resources are auto-discovered** as of `fledge_save` ≥ 0.1.13 — just `world.insertResource(HighScore())` and it's in the save set. No `registerSaveable` needed for world resources.
-- **System names referenced in `before:` / `after:` are the registered snake_case names**, not the Dart class names. `collision_resolution`, `collision_detection`, `collision_cleanup`, `inputPolling`, `actionResolution`, etc. A typo silently no-ops; verify with `App.checkScheduleOrdering()`.
+- **`Saveable` resources are auto-discovered**: `world.insertResource(HighScore())` puts it in the save set. `registerSaveable` is only for objects that aren't world resources.
 
 ## Tests
 
@@ -76,6 +76,8 @@ lib/
 cd examples/drifter && flutter test
 ```
 
+- `camera_follow_integration_test.dart` — the follow camera tracks the player through the real app.
+- `focus_retention_test.dart` — the game keeps keyboard focus across clicks.
 - `pickup_collection_test.dart` — drives the physics plugin directly, asserts pickups despawn and scores update on collision.
 - `wall_collision_test.dart` — regression for the "player clips through walls" bug: holds right-arrow for 120 simulated frames against a wall and verifies velocity is clamped to zero before the collider overruns the wall face.
 - `schedule_ordering_test.dart` — calls `app.checkScheduleOrdering()` on the built `App` and asserts the result is empty. Catches same-stage conflicts that would rely on registration order. Copy this pattern into your own game.

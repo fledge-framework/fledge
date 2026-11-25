@@ -19,9 +19,12 @@ import '../world/render_world.dart';
 /// all registered extractors. Render systems then run in
 /// [Schedules.render] against the freshly built render world.
 class RenderExtractionSystem implements System {
+  /// Name used in [SystemMeta] and for `before:`/`after:`.
+  static const String systemName = 'renderExtraction';
+
   @override
   SystemMeta get meta => const SystemMeta(
-    name: 'renderExtraction',
+    name: systemName,
     resourceReads: {Extractors},
     resourceWrites: {RenderWorld},
   );

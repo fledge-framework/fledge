@@ -11,21 +11,24 @@ import '../resources.dart';
 /// rather than a per-entity component, so archetype churn on collisions
 /// is zero and multiple collisions per frame all survive.
 ///
-/// Ordering: must run after `collision_detection` so we see the events
+/// Ordering: must run after [CollisionDetectionSystem] so we see the events
 /// it produced this frame — `SystemMeta.after` pins that explicitly.
 class PickupCollectionSystem implements System {
+  /// Name used in [SystemMeta] and for `before:`/`after:`.
+  static const String systemName = 'PickupCollectionSystem';
+
   @override
   SystemMeta get meta => SystemMeta(
-    name: 'PickupCollectionSystem',
+    name: systemName,
     reads: {ComponentId.of<Player>(), ComponentId.of<Pickup>()},
     eventReads: {CollisionEvent},
     resourceWrites: {RunScore, HighScore},
-    // The events we consume are produced by `collision_detection`
+    // The events we consume are produced by CollisionDetectionSystem
     // (last frame; the queue is double-buffered). Even though the
-    // read/write cross frames semantically, we still declare
-    // `after: ['collision_detection']` so the ordering intent is
-    // explicit and `checkScheduleOrdering()` sees no ambiguity.
-    after: const ['collision_detection'],
+    // read/write cross frames semantically, we still declare the order
+    // so the intent is explicit and `checkScheduleOrdering()` sees no
+    // ambiguity.
+    after: const [CollisionDetectionSystem.systemName],
   );
 
   @override

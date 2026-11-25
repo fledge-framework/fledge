@@ -30,7 +30,7 @@ class CollisionResponseSystem extends System {
     name: 'collision_response',
     reads: {ComponentId.of<Player>(), ComponentId.of<TriggerZone>()},
     // We consume events produced by `collision_detection` this frame.
-    after: const ['collision_detection'],
+    after: const [CollisionDetectionSystem.systemName],
   );
 
   @override

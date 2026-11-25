@@ -17,9 +17,12 @@ import '../resources.dart';
 ///   respawning entities cleanly requires knowing the play-field bounds
 ///   and rand seed that the widget owns.)
 class SaveLoadSystem implements System {
+  /// Name used in [SystemMeta] and for `before:`/`after:`.
+  static const String systemName = 'SaveLoadSystem';
+
   @override
   SystemMeta get meta => const SystemMeta(
-    name: 'SaveLoadSystem',
+    name: systemName,
     resourceReads: {ActionState},
     resourceWrites: {SaveManager, LoadRequested, ResetRequested},
   );
