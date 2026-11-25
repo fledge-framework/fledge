@@ -10,8 +10,8 @@ import 'systems/system_stats_system.dart';
 /// Installs the debug **stats** — FPS, per-schedule system counts,
 /// per-frame timing — without the overlay or gizmo machinery.
 ///
-/// Meant for games that ship their own perf HUD (Porios does — a
-/// Flutter panel driven by these resources) or that want to render
+/// Meant for games that ship their own perf HUD (e.g. a Flutter
+/// panel driven by these resources) or that want to render
 /// the debug data in world-space, away from `fledge_ui`'s screen-
 /// space overlay.
 ///

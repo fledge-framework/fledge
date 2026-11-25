@@ -43,12 +43,12 @@ class DebugPlugin implements Plugin {
   /// spawns fledge_ui entities for the FPS / entity-count / ambiguity
   /// readout).
   ///
-  /// - `true` (the default) — the pre-Batch-7 behaviour: the plugin
+  /// - `true` (the default): the plugin
   ///   installs the overlay populate system and games that also add
   ///   `UiPlugin` see the readout.
   /// - `false` — skip the overlay populate system entirely. Games
   ///   without `UiPlugin` (or those that draw their own perf HUD in
-  ///   Flutter, like Porios) install the plugin with `overlay: false`.
+  ///   Flutter) install the plugin with `overlay: false`.
   ///   The stats resources and gizmo config are still installed;
   ///   `DebugGizmosLayer` and any custom UI can consume them.
   final bool overlay;

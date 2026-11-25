@@ -151,6 +151,55 @@ void main() {
     );
     expect(find.byType(CustomPaint), findsOneWidget);
   });
+
+  group('camera frustum rect', () {
+    void spawnCamera(World world, double x, double y, Camera2D camera) {
+      world.spawn()
+        ..insert(GlobalTransform2D(Transform2D.from(x, y).toMatrix()))
+        ..insert(camera);
+    }
+
+    test('is what the widget shows of the lowest-order active camera', () {
+      final world = World();
+      // Listed first, but a higher order: not the one shown.
+      spawnCamera(world, 1000, 1000, Camera2D(order: 5));
+      spawnCamera(world, 9, 9, Camera2D(order: -1, isActive: false));
+      spawnCamera(world, 100, 50, Camera2D());
+      const ActiveCameraViewSystem().run(world);
+
+      final rect = debugCameraFrustumWorldRect(world, const Size(400, 300))!;
+      // 1:1 (no scaleWidgetView), not the projection's 10 x 10 units.
+      expect(rect.center.dx, closeTo(100, 1e-3));
+      expect(rect.center.dy, closeTo(50, 1e-3));
+      expect(rect.width, closeTo(400, 1e-3));
+      expect(rect.height, closeTo(300, 1e-3));
+      expect(rect, activeCameraVisibleWorldRect(world, const Size(400, 300)));
+    });
+
+    test('follows the widget zoom of a scaled camera', () {
+      final world = World();
+      spawnCamera(
+        world,
+        0,
+        0,
+        Camera2D(
+          scaleWidgetView: true,
+          projection: OrthographicProjection(viewportHeight: 150),
+        ),
+      );
+      const ActiveCameraViewSystem().run(world);
+      final rect = debugCameraFrustumWorldRect(world, const Size(400, 300))!;
+      expect(rect.height, closeTo(150, 1e-3));
+      expect(rect.width, closeTo(200, 1e-3));
+    });
+
+    test('without ActiveCameraView, uses the camera at its widget zoom', () {
+      final world = World();
+      spawnCamera(world, 20, 30, Camera2D());
+      final rect = debugCameraFrustumWorldRect(world, const Size(400, 300))!;
+      expect(rect, const Rect.fromLTWH(-180, -120, 400, 300));
+    });
+  });
 }
 
 class _MarkerChild extends StatelessWidget {

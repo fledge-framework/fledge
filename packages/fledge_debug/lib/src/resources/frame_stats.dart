@@ -36,8 +36,7 @@ class FrameStats {
   /// [avgFrameSeconds], [p99FrameSeconds], and [maxFrameSeconds]. 120
   /// covers roughly two seconds at 60Hz, which is enough context to
   /// notice a stutter without keeping a huge buffer around.
-  FrameStats({int historyCap = 120, this.smoothingFactor = 0.15})
-    : _historyCap = historyCap;
+  FrameStats({this._historyCap = 120, this.smoothingFactor = 0.15});
 
   /// The size of the rolling history buffer.
   int get historyCapacity => _historyCap;

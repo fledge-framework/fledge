@@ -1,9 +1,10 @@
 /// Marker: draw an axis-aligned bounding box gizmo for this entity.
 ///
 /// Reserved for a future "filter which entities show a gizmo" mode.
-/// The v0.2 MVP draws every collider when `DebugConfig.showAabbGizmos`
-/// is on, without looking at this marker — but exporting it now lets
-/// games place it up-front and avoid an API break later.
+/// `DebugGizmosLayer` currently draws every collider when
+/// `DebugConfig.showAabbGizmos` is on, without looking at this marker;
+/// it is exported so games can place it up front without an API break
+/// later.
 class DebugAabbGizmo {
   /// Creates a marker.
   const DebugAabbGizmo();

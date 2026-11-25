@@ -11,7 +11,7 @@ import '../resources/system_stats.dart';
 /// A top-level stopwatch is fine for a debug package — there is only
 /// one `App` per process for any realistic Fledge deployment. Games
 /// that run multiple apps in parallel can build their own scoped
-/// resource; the MVP does not.
+/// resource; this package does not.
 final Stopwatch _clock = Stopwatch()..start();
 
 /// Marks the start of the current frame's stats window.

@@ -13,7 +13,13 @@ import 'package:fledge_physics/fledge_physics.dart'
         PolylineShape,
         RectangleShape;
 import 'package:fledge_render_2d/fledge_render_2d.dart'
-    show GlobalTransform2D, RenderSize, withActiveCameraCanvas;
+    show
+        ActiveCameraView,
+        GlobalTransform2D,
+        activeCameraVisibleWorldRect,
+        activeCameraZoom,
+        withActiveCameraCanvas;
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/widgets.dart'
     show
         BuildContext,
@@ -45,15 +51,16 @@ import '../resources/debug_config.dart';
 /// the default), the widget skips inserting the `CustomPaint` and
 /// simply returns [child] — zero cost when gizmos are off.
 ///
-/// The current implementation assumes a **1:1 world → screen** mapping
-/// (which matches Drifter's setup and the default `fledge_render_2d`
-/// render view). A game that scales or translates the world through a
-/// camera view-projection will see gizmos drawn in world coordinates,
-/// not screen coordinates. Applying the active camera's projection is a
-/// follow-up — the hook is [_GizmoPainter._worldToScreen]; the
-/// signature already threads the canvas size through so it can grow
-/// into a full [Camera2D.worldToScreen] call without touching call
-/// sites.
+/// Gizmos are drawn in world space through the active camera, with the
+/// same translation and zoom `FledgeRenderView` uses (from the
+/// `ActiveCameraView` resource that `CameraPlugin` publishes), so they
+/// line up with the sprites underneath. Without that resource the world
+/// is drawn 1:1 (world = screen), as the render view does.
+///
+/// The camera-frustum gizmo outlines the world area the lowest-`order`
+/// active [Camera2D] shows in this widget (see
+/// [debugCameraFrustumWorldRect]). Under a full-screen camera that is the
+/// widget's own edge, drawn just inside it.
 class DebugGizmosLayer extends StatelessWidget {
   /// The Fledge app whose world holds the entities to visualise.
   final App app;
@@ -222,38 +229,19 @@ class _GizmoPainter extends CustomPainter {
   }
 
   void _paintCameraFrustum(World world, Canvas canvas, Size size) {
-    // Pick the first active camera. When there are several the
-    // first-listed wins — the same policy the render pipeline uses
-    // (it renders per-camera; the frustum overlay picks a single
-    // representative).
-    Camera2D? camera;
-    GlobalTransform2D? cameraTransform;
-    for (final (_, cam, transform)
-        in world.query2<Camera2D, GlobalTransform2D>().iter()) {
-      if (!cam.isActive) continue;
-      camera = cam;
-      cameraTransform = transform;
-      break;
-    }
-    if (camera == null || cameraTransform == null) return;
-
-    // Visible world rect: centred on the camera transform, extent
-    // taken from the projection at the current canvas size. Under a
-    // 1:1 world→screen mapping this outlines the same area the sprite
-    // pipeline draws through the camera.
-    final renderSize = RenderSize(size.width, size.height);
-    final halfW = camera.projection.visibleWidth(renderSize) / 2.0;
-    final halfH = camera.projection.visibleHeight(renderSize) / 2.0;
-    final cx = cameraTransform.x;
-    final cy = cameraTransform.y;
-
-    final worldRect = Rect.fromLTRB(
-      cx - halfW,
-      cy - halfH,
-      cx + halfW,
-      cy + halfH,
+    final worldRect = debugCameraFrustumWorldRect(world, size);
+    if (worldRect == null) return;
+    // Pull the outline in by half its stroke so a frustum on the widget's
+    // edge is still visible. The canvas is in world units at the camera's
+    // zoom, so convert the stroke from logical pixels.
+    final zoom = world.hasResource<ActiveCameraView>()
+        ? activeCameraZoom(world, size)
+        : 1.0;
+    final inset = _frustumPaint.strokeWidth / 2 / zoom;
+    canvas.drawRect(
+      _rectWorldToScreen(worldRect.deflate(inset), size),
+      _frustumPaint,
     );
-    canvas.drawRect(_rectWorldToScreen(worldRect, size), _frustumPaint);
   }
 
   /// Materialise (entity, transform, collider) triples into a list up
@@ -268,13 +256,9 @@ class _GizmoPainter extends CustomPainter {
     return out;
   }
 
-  /// Convert a world point to screen (canvas-local) coordinates.
-  ///
-  /// Currently a straight pass-through — see the class-level doc on
-  /// [DebugGizmosLayer] for the "camera transform is a follow-up"
-  /// note. The unused [size] parameter is retained so future work can
-  /// plug in `Camera2D.worldToScreen` without touching every call
-  /// site.
+  /// Convert a world point to coordinates on the gizmo canvas. The canvas
+  /// is already in world space (see [withActiveCameraCanvas]), so this is
+  /// the identity.
   Offset _worldToScreen(double x, double y, Size size) => Offset(x, y);
 
   Rect _rectWorldToScreen(Rect worldRect, Size size) {
@@ -285,4 +269,38 @@ class _GizmoPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _GizmoPainter oldDelegate) => true;
+}
+
+/// The world-space rectangle the camera-frustum gizmo outlines in a
+/// widget of [size], or `null` when there is no active camera.
+///
+/// The camera is the lowest-`order` active [Camera2D], the one
+/// `ActiveCameraViewSystem` publishes. With an `ActiveCameraView` resource
+/// the rect is exactly what the widget render path shows
+/// ([activeCameraVisibleWorldRect], shake and zoom included). Without one
+/// it is the area that camera would show: centred on its
+/// `GlobalTransform2D`, [size] divided by [Camera2D.widgetZoom].
+@visibleForTesting
+Rect? debugCameraFrustumWorldRect(World world, Size size) {
+  Camera2D? camera;
+  GlobalTransform2D? cameraTransform;
+  for (final (_, cam, transform)
+      in world.query2<Camera2D, GlobalTransform2D>().iter()) {
+    if (!cam.isActive) continue;
+    if (camera == null || cam.order < camera.order) {
+      camera = cam;
+      cameraTransform = transform;
+    }
+  }
+  if (camera == null || cameraTransform == null) return null;
+
+  if (world.hasResource<ActiveCameraView>()) {
+    return activeCameraVisibleWorldRect(world, size);
+  }
+  final zoom = camera.widgetZoom(size);
+  return Rect.fromCenter(
+    center: Offset(cameraTransform.x, cameraTransform.y),
+    width: size.width / zoom,
+    height: size.height / zoom,
+  );
 }

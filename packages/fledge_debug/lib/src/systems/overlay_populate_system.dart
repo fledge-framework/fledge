@@ -35,7 +35,7 @@ import '../resources/system_stats.dart';
 /// overlay anchors to a bottom edge) using a fixed `fontSize * 1.35`
 /// row height. The overlay does not use a `UiContainer` because that
 /// would require managing hierarchy each frame; standalone anchored
-/// texts are cheaper and give the same visual result for the MVP.
+/// texts are cheaper and give the same visual result.
 class OverlayPopulateSystem implements System {
   /// Horizontal padding from the anchor edge, in logical pixels.
   static const double kHorizontalPad = 8.0;

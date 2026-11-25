@@ -48,7 +48,7 @@ class SystemStats {
   /// Optional per-system timing store. Populated by games that plug in
   /// their own [SystemProfilerHook] decorators. Keys are
   /// `"$scheduleName.$systemName"`; values are the most recent sample's
-  /// duration in microseconds. Empty in MVP builds.
+  /// duration in microseconds. Empty unless a game installs such a hook.
   final Map<String, int> timings = <String, int>{};
 
   /// Reset every counter — useful after a scene reset so the readout
