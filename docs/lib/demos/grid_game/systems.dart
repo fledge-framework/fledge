@@ -20,16 +20,18 @@ enum GridActions { move }
 /// and clamps to grid bounds. Supports continuous movement while
 /// direction keys are held.
 class MovementSystem extends System {
+  static const String systemName = 'movement';
+
   @override
   SystemMeta get meta => SystemMeta(
-    name: 'movement',
+    name: systemName,
     writes: {ComponentId.of<GridPosition>()},
     reads: {ComponentId.of<Player>()},
     resourceReads: {ActionState, MoveTimer, GridConfig, WallTime},
   );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final actions = world.getResource<ActionState>();
     final moveTimer = world.getResource<MoveTimer>();
     final config = world.getResource<GridConfig>();
@@ -74,11 +76,15 @@ class MovementSystem extends System {
 /// Uses the SpawnTimer resource to control spawn rate.
 /// Spawns items at random empty tiles.
 class SpawnSystem extends System {
+  static const String systemName = 'spawn';
+
   final Random _random = Random();
 
   @override
   SystemMeta get meta => SystemMeta(
-    name: 'spawn',
+    name: systemName,
+    // Spawn on the tiles the player isn't on after this frame's move.
+    after: [MovementSystem.systemName],
     reads: {
       ComponentId.of<GridPosition>(),
       ComponentId.of<Player>(),
@@ -88,7 +94,7 @@ class SpawnSystem extends System {
   );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final timer = world.getResource<SpawnTimer>();
     final time = world.getResource<WallTime>();
     final config = world.getResource<GridConfig>();
@@ -130,9 +136,13 @@ class SpawnSystem extends System {
 /// - Despawns the collectible
 /// - Increments the score
 class CollectionSystem extends System {
+  static const String systemName = 'collection';
+
   @override
   SystemMeta get meta => SystemMeta(
-    name: 'collection',
+    name: systemName,
+    // Collect at the player's position after this frame's move.
+    after: [MovementSystem.systemName],
     reads: {
       ComponentId.of<GridPosition>(),
       ComponentId.of<Player>(),
@@ -142,7 +152,7 @@ class CollectionSystem extends System {
   );
 
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final score = world.getResource<GameScore>();
     if (score == null) return;
 
@@ -214,7 +224,8 @@ class GridGamePlugin implements Plugin {
         .insertResource(MoveTimer())
         .insertResource(SpawnTimer(2.0));
 
-    // Add systems in execution order
+    // Order is declared in each system's meta (spawn and collection run
+    // after movement), not taken from registration order.
     app
         .addSystem(MovementSystem(), schedule: Schedules.update)
         .addSystem(SpawnSystem(), schedule: Schedules.update)

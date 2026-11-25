@@ -132,6 +132,12 @@ melos:
       packageFilters:
         dependsOn: build_runner
 
+    docs:check:
+      description: |
+        Analyze every ```dart snippet in docs/assets/docs and check that all
+        fledge_* version pins in the docs and READMEs match the workspace.
+      run: cd docs && dart run tool/check_snippets.dart
+
     clean:
       description: Clean all packages
       run: melos exec -- dart pub cache clean

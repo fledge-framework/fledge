@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../app/router.dart';
 import '../app/theme.dart';
@@ -38,17 +39,45 @@ class DocSidebar extends StatelessWidget {
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              children: DocNavigation.sections.map((section) {
-                return _SectionItem(
-                  section: section,
-                  isCurrentSection: section.path == currentSection,
-                  currentPage: currentPage,
-                  onClose: onClose,
-                );
-              }).toList(),
+              children: [
+                for (final (i, section) in DocNavigation.sections.indexed) ...[
+                  if (i == 0 ||
+                      DocNavigation.sections[i - 1].group != section.group)
+                    _GroupHeading(section.group, first: i == 0),
+                  _SectionItem(
+                    section: section,
+                    isCurrentSection: section.path == currentSection,
+                    currentPage: currentPage,
+                    onClose: onClose,
+                  ),
+                ],
+              ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _GroupHeading extends StatelessWidget {
+  final String label;
+  final bool first;
+
+  const _GroupHeading(this.label, {required this.first});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(8, first ? 4 : 16, 8, 4),
+      child: Text(
+        label.toUpperCase(),
+        style: theme.textTheme.labelSmall?.copyWith(
+          letterSpacing: 1.2,
+          fontWeight: FontWeight.w700,
+          color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.55),
+        ),
       ),
     );
   }
@@ -140,7 +169,7 @@ class _SectionItemState extends State<_SectionItem> {
 
                 return _PageItem(
                   page: page,
-                  sectionPath: widget.section.path,
+                  section: widget.section,
                   isActive: isActive,
                   onClose: widget.onClose,
                 );
@@ -155,13 +184,13 @@ class _SectionItemState extends State<_SectionItem> {
 
 class _PageItem extends StatelessWidget {
   final NavPage page;
-  final String sectionPath;
+  final NavSection section;
   final bool isActive;
   final VoidCallback? onClose;
 
   const _PageItem({
     required this.page,
-    required this.sectionPath,
+    required this.section,
     required this.isActive,
     this.onClose,
   });
@@ -172,11 +201,11 @@ class _PageItem extends StatelessWidget {
 
     return InkWell(
       onTap: () {
-        // Handle demos section with special path
-        if (sectionPath == 'demos') {
-          context.go('/demo/${page.path}');
+        final external = page.externalUrl;
+        if (external != null) {
+          launchUrl(Uri.parse(external), webOnlyWindowName: '_blank');
         } else {
-          context.go('/docs/$sectionPath/${page.path}');
+          context.go(section.locationOf(page)!);
         }
         onClose?.call();
       },
@@ -195,14 +224,30 @@ class _PageItem extends StatelessWidget {
                 )
               : null,
         ),
-        child: Text(
-          page.title,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: isActive
-                ? FledgeTheme.primaryColor
-                : theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.8),
-            fontWeight: isActive ? FontWeight.w500 : FontWeight.normal,
-          ),
+        child: Row(
+          children: [
+            Flexible(
+              child: Text(
+                page.title,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: isActive
+                      ? FledgeTheme.primaryColor
+                      : theme.textTheme.bodyMedium?.color?.withValues(
+                          alpha: 0.8,
+                        ),
+                  fontWeight: isActive ? FontWeight.w500 : FontWeight.normal,
+                ),
+              ),
+            ),
+            if (page.externalUrl != null) ...[
+              const SizedBox(width: 4),
+              Icon(
+                Icons.open_in_new_rounded,
+                size: 12,
+                color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5),
+              ),
+            ],
+          ],
         ),
       ),
     );

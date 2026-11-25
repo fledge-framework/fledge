@@ -16,7 +16,7 @@ import 'grid_game_painter.dart';
 /// a docs site, not a standalone game. In a real game, you would:
 /// 1. Create the App once in `main()`
 /// 2. Pass it to your game widget via constructor
-/// See the "Desktop App" code example on the demo page for the recommended pattern.
+/// The docs page "Your First App" shows that pattern.
 ///
 /// This widget demonstrates the separation of game logic from rendering:
 ///

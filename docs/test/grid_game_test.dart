@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:fledge_docs/demos/grid_game/grid_game_widget.dart';
 import 'package:fledge_docs/demos/grid_game/components.dart';
+import 'package:fledge_docs/demos/grid_game/systems.dart';
 import 'package:fledge_ecs/fledge_ecs.dart' hide State;
 import 'package:fledge_input/fledge_input.dart';
 
@@ -156,4 +157,12 @@ void main() {
       );
     },
   );
+
+  test('the grid game declares its system order', () {
+    final app = App()
+      ..addPlugin(const WallTimePlugin())
+      ..addPlugin(GridGamePlugin());
+    final issues = app.checkScheduleOrdering();
+    expect(issues, isEmpty, reason: issues.join('\n'));
+  });
 }

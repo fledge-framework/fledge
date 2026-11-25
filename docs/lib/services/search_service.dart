@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 
 import '../app/router.dart';
+import '../widgets/markdown_content.dart' show stripHtmlComments;
 
 /// A search result from the documentation.
 class SearchResult {
@@ -82,11 +83,8 @@ class SearchService {
     _isLoading = true;
 
     try {
-      for (final section in DocNavigation.sections) {
-        // Skip demos section
-        if (section.path == 'demos') continue;
-
-        for (final page in section.pages) {
+      for (final (section, page) in DocNavigation.markdownPages) {
+        {
           try {
             final assetPath = 'assets/docs/${section.path}/${page.path}.md';
             final content = await rootBundle.loadString(assetPath);
@@ -194,7 +192,7 @@ class SearchService {
 
   /// Strip markdown formatting for plain text search.
   String _stripMarkdown(String markdown) {
-    return markdown
+    return stripHtmlComments(markdown)
         // Remove code blocks
         .replaceAll(RegExp(r'```[\s\S]*?```'), ' ')
         // Remove inline code

@@ -9,7 +9,9 @@
 // RELEASE_DRY_RUN=1 for a dry run through melos.
 //
 // Bumps every packages/fledge_* package (and in-workspace constraints) to
-// the version, writes per-package and workspace CHANGELOG entries, and
+// the version, rewrites the `fledge_*: ^X.Y.Z` pins in the docs and READMEs
+// and the docs site's kFledgeVersion, writes per-package and workspace
+// CHANGELOG entries, and
 // creates the `chore(release): vX.Y.Z` commit that ci.yml's `tag-release`
 // job matches. Does not push — review, then `git push origin main`.
 //
@@ -84,7 +86,9 @@ Future<void> main(List<String> args) async {
 
   stdout.writeln('Releasing ${names.length} packages at $version.');
   if (dryRun) {
+    final pinned = _updateDocVersions(version, write: false);
     stdout
+      ..writeln('[dry run] update version pins in ${pinned.length} files')
       ..writeln('[dry run] melos ${melosArgs.join(' ')}')
       ..writeln('[dry run] git add -A')
       ..writeln('[dry run] git commit -m "$commitMessage"');
@@ -92,11 +96,59 @@ Future<void> main(List<String> args) async {
   }
 
   await _run('melos', melosArgs);
+  final pinned = _updateDocVersions(version, write: true);
+  stdout.writeln('Updated version pins in ${pinned.length} files.');
   await _run('git', ['add', '-A']);
   await _run('git', ['commit', '-m', commitMessage]);
   stdout.writeln(
     'Created "$commitMessage". Review it, then `git push origin main`.',
   );
+}
+
+/// Rewrites `fledge_*: ^X.Y.Z` in the docs pages and READMEs, and
+/// `kFledgeVersion` in the docs site, to [version]. Returns the files that
+/// change (and writes them when [write]). docs/tool/check_snippets.dart
+/// fails CI if any pin is left behind.
+List<String> _updateDocVersions(String version, {required bool write}) {
+  final pin = RegExp(r'\b(fledge_\w+):(\s*)\^\d+\.\d+\.\d+\S*');
+  final files = <File>[
+    File('README.md'),
+    ...Directory('packages')
+        .listSync()
+        .whereType<Directory>()
+        .map((d) => File('${d.path}/README.md')),
+    ...Directory('docs/assets/docs')
+        .listSync(recursive: true)
+        .whereType<File>()
+        .where((f) => f.path.endsWith('.md')),
+  ].where((f) => f.existsSync());
+
+  final changed = <String>[];
+  for (final file in files) {
+    final before = file.readAsStringSync();
+    final after = before.replaceAllMapped(
+      pin,
+      (m) => '${m.group(1)}:${m.group(2)}^$version',
+    );
+    if (after != before) {
+      changed.add(file.path);
+      if (write) file.writeAsStringSync(after);
+    }
+  }
+
+  final versionFile = File('docs/lib/app/version.dart');
+  if (versionFile.existsSync()) {
+    final before = versionFile.readAsStringSync();
+    final after = before.replaceAll(
+      RegExp(r"kFledgeVersion = '[^']*'"),
+      "kFledgeVersion = '$version'",
+    );
+    if (after != before) {
+      changed.add(versionFile.path);
+      if (write) versionFile.writeAsStringSync(after);
+    }
+  }
+  return changed;
 }
 
 Future<void> _run(String executable, List<String> args) async {

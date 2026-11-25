@@ -49,15 +49,41 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
+  # Every package the docs show code for, so tool/check_snippets.dart can
+  # analyze the snippets.
+  fledge_assets: ^0.6.0
+  fledge_audio: ^0.6.0
+  fledge_calendar: ^0.6.0
+  fledge_camera_2d: ^0.6.0
+  fledge_debug: ^0.6.0
+  fledge_ecs_annotations: ^0.6.0
+  fledge_lighting_2d: ^0.6.0
+  fledge_net: ^0.6.0
+  fledge_net_steam: ^0.6.0
+  fledge_particles: ^0.6.0
+  fledge_physics: ^0.6.0
+  fledge_save: ^0.6.0
+  fledge_tiled: ^0.6.0
+  fledge_tween: ^0.6.0
+  fledge_ui: ^0.6.0
+  fledge_window: ^0.6.0
+  fledge_yarn: ^0.6.0
   flutter_lints: ^6.0.0
 
 flutter:
   uses-material-design: true
 
   assets:
-    - assets/docs/
     - assets/docs/getting-started/
-    - assets/docs/api/
-    - assets/docs/guides/
-    - assets/docs/plugins/
+    - assets/docs/ecs/
+    - assets/docs/scheduling/
+    - assets/docs/app/
+    - assets/docs/rendering/
+    - assets/docs/ui/
+    - assets/docs/platform/
+    - assets/docs/gameplay/
+    - assets/docs/networking/
     - assets/docs/examples/
+    - lib/samples/
+    - lib/demos/grid_game/

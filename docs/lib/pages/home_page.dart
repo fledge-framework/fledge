@@ -1,8 +1,10 @@
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../app/theme.dart';
+import '../app/version.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -30,6 +32,7 @@ class HomePage extends StatelessWidget {
               _buildHeader(context, theme, isDark),
               _buildExternalLinks(context, theme, isDark),
               _buildFeatures(context, theme),
+              _buildPackages(context, theme),
               _buildQuickStart(context, theme),
               _buildCallToAction(context, theme, isDark),
               _buildFooter(context, theme, isDark),
@@ -67,7 +70,7 @@ class HomePage extends StatelessWidget {
               border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
             ),
             child: Text(
-              'v0.1.11 - Early Preview',
+              'v$kFledgeVersion',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: Colors.white.withValues(alpha: 0.9),
                 fontWeight: FontWeight.w500,
@@ -209,14 +212,14 @@ class HomePage extends StatelessWidget {
                 description: 'Clean separation of data and logic with archetype-based storage for excellent cache locality.',
               ),
               _FeatureCard(
-                icon: Icons.code_rounded,
-                title: 'Code Generation',
-                description: 'Minimal boilerplate with annotation-based code generation. Define components and systems with simple decorators.',
+                icon: Icons.schedule_rounded,
+                title: 'Deterministic Scheduling',
+                description: 'Systems declare what they read and write; the scheduler orders them and reports any order left to chance. Physics and simulation run on a fixed timestep.',
               ),
               _FeatureCard(
-                icon: Icons.speed_rounded,
-                title: 'Parallel Execution',
-                description: 'Automatic parallel system execution based on dependency analysis. Get concurrency without the complexity.',
+                icon: Icons.layers_rounded,
+                title: 'Two-World Rendering',
+                description: 'Game state stays in the main world; each frame is extracted into a render world and drawn with layer-sorted, camera-culled sprites.',
               ),
               _FeatureCard(
                 icon: Icons.extension_rounded,
@@ -224,15 +227,98 @@ class HomePage extends StatelessWidget {
                 description: 'Compose your game from reusable plugins. Add only what you need, extend with your own modules.',
               ),
               _FeatureCard(
-                icon: Icons.check_circle_rounded,
-                title: 'Type Safe',
-                description: 'Full type safety with compile-time checks. Catch errors before runtime with Dart\'s strong typing.',
+                icon: Icons.code_rounded,
+                title: 'Optional Code Generation',
+                description: 'Write systems as plain functions with @system and let the generator infer their reads and writes from the parameter types.',
               ),
               _FeatureCard(
                 icon: Icons.desktop_windows_rounded,
                 title: 'Desktop First',
                 description: 'Optimized for Windows, macOS, and Linux. Build performant desktop games with Flutter.',
               ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// The sample shown under "Quick Example"; a real file, analyzed with
+  /// the app, so it can't drift from the API.
+  static final Future<String> _homeExample = rootBundle.loadString(
+    'lib/samples/home_example.dart',
+  );
+
+  Widget _buildPackages(BuildContext context, ThemeData theme) {
+    const areas = [
+      (
+        Icons.brush_rounded,
+        'Rendering',
+        'Sprites, animation, cameras, pixel-art snapping, 2D lighting, '
+            'particles and tweens.',
+        '/docs/rendering/overview',
+      ),
+      (
+        Icons.sports_esports_rounded,
+        'Input & Platform',
+        'Action-based input for keyboard, mouse and gamepads, controller '
+            'menus, window modes and SoLoud audio.',
+        '/docs/platform/input',
+      ),
+      (
+        Icons.terrain_rounded,
+        'Physics & Maps',
+        'Layered collision, weighted A* pathfinding, and Tiled maps with '
+            'collision, y-sorting and infinite chunks.',
+        '/docs/gameplay/physics',
+      ),
+      (
+        Icons.forum_rounded,
+        'Dialogue, Save & Time',
+        'Yarn Spinner dialogue, versioned save files with migrations, and '
+            'an in-game calendar.',
+        '/docs/gameplay/dialogue',
+      ),
+      (
+        Icons.public_rounded,
+        'Multiplayer',
+        'Encrypted host/client replication with prediction and '
+            'interpolation, plus Steam lobbies and relays.',
+        '/docs/networking/overview',
+      ),
+      (
+        Icons.dashboard_customize_rounded,
+        'UI & Debugging',
+        'An ECS HUD, tile placement, and overlays for frame stats, '
+            'gizmos and schedule ordering.',
+        '/docs/ui/hud',
+      ),
+    ];
+    return Container(
+      padding: const EdgeInsets.only(bottom: 64, left: 24, right: 24),
+      child: Column(
+        children: [
+          Text('Batteries Included', style: theme.textTheme.displaySmall),
+          const SizedBox(height: 16),
+          Text(
+            '21 packages on pub.dev, versioned together. Use the core alone '
+            'or add the plugins you need.',
+            style: theme.textTheme.bodyLarge,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 48),
+          Wrap(
+            spacing: 32,
+            runSpacing: 32,
+            alignment: WrapAlignment.center,
+            children: [
+              for (final (icon, title, description, location) in areas)
+                _FeatureCard(
+                  icon: icon,
+                  title: title,
+                  description: description,
+                  onTap: () => context.go(location),
+                ),
             ],
           ),
         ],
@@ -263,46 +349,13 @@ class HomePage extends StatelessWidget {
               ),
             ),
             padding: const EdgeInsets.all(24),
-            child: SelectableText(
-              '''// Define components
-@component
-class Position {
-  double x, y;
-  Position(this.x, this.y);
-}
-
-@component
-class Velocity {
-  double dx, dy;
-  Velocity(this.dx, this.dy);
-}
-
-// Define systems
-@system
-void movementSystem(Query2<Position, Velocity> query) {
-  for (final (entity, pos, vel) in query.iter()) {
-    pos.x += vel.dx;
-    pos.y += vel.dy;
-  }
-}
-
-// Run the game
-void main() {
-  final world = World();
-
-  // Spawn entities
-  world.spawn()
-    ..insert(Position(0, 0))
-    ..insert(Velocity(1, 1));
-
-  // Run systems
-  final schedule = Schedule()
-    ..addSystem(FunctionSystem(movementSystem));
-
-  schedule.run(world);
-}''',
-              style: FledgeTheme.codeStyle.copyWith(
-                color: theme.textTheme.bodyMedium?.color,
+            child: FutureBuilder<String>(
+              future: _homeExample,
+              builder: (context, snapshot) => SelectableText(
+                snapshot.data ?? '',
+                style: FledgeTheme.codeStyle.copyWith(
+                  color: theme.textTheme.bodyMedium?.color,
+                ),
               ),
             ),
           ),
@@ -508,18 +561,20 @@ class _FeatureCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String description;
+  final VoidCallback? onTap;
 
   const _FeatureCard({
     required this.icon,
     required this.title,
     required this.description,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Container(
+    final card = Container(
       width: 320,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -537,6 +592,11 @@ class _FeatureCard extends StatelessWidget {
           Text(description, style: theme.textTheme.bodyMedium),
         ],
       ),
+    );
+    if (onTap == null) return card;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(onTap: onTap, child: card),
     );
   }
 }

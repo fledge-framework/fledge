@@ -20,6 +20,11 @@ String generateAnchorId(String text) {
       .replaceAll(RegExp(r'^-|-$'), ''); // Trim leading/trailing hyphens
 }
 
+/// Removes `<!-- ... -->` comments, which hold authoring notes and the
+/// `snippet-setup` code that tool/check_snippets.dart reads.
+String stripHtmlComments(String markdown) =>
+    markdown.replaceAll(RegExp(r'<!--[\s\S]*?-->\n?'), '');
+
 class MarkdownContent extends StatelessWidget {
   final String content;
 
@@ -27,7 +32,15 @@ class MarkdownContent extends StatelessWidget {
   /// If provided, headings will be wrapped with these keys.
   final Map<String, GlobalKey>? headingKeys;
 
-  const MarkdownContent({super.key, required this.content, this.headingKeys});
+  /// Called with the anchor id when an in-page `#anchor` link is tapped.
+  final void Function(String anchorId)? onAnchorTap;
+
+  const MarkdownContent({
+    super.key,
+    required this.content,
+    this.headingKeys,
+    this.onAnchorTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +51,7 @@ class MarkdownContent extends StatelessWidget {
     final sharedAnchorCounts = <String, int>{};
 
     return MarkdownBody(
-      data: content,
+      data: stripHtmlComments(content),
       selectable: true,
       styleSheet: _buildStyleSheet(theme, isDark),
       builders: {
@@ -63,8 +76,10 @@ class MarkdownContent extends StatelessWidget {
   }
 
   void _handleLink(BuildContext context, String href) {
-    // Check if this is an internal link
-    if (href.startsWith('/docs/') || href.startsWith('/demo/')) {
+    if (href.startsWith('#')) {
+      // In-page anchor: scroll, don't navigate.
+      onAnchorTap?.call(href.substring(1));
+    } else if (href.startsWith('/docs/') || href.startsWith('/demo/')) {
       // Use GoRouter for internal navigation
       context.go(href);
     } else if (href.startsWith('/')) {

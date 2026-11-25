@@ -9,7 +9,7 @@ Fledge is a Bevy-inspired ECS game framework for Dart/Flutter, organized as a Me
 Package tiers (see `CONTRIBUTING.md` for exact dependency order):
 - **Core**: `fledge_ecs`, `fledge_ecs_annotations`, `fledge_ecs_generator`, `fledge_assets`
 - **Render**: `fledge_render_2d` (2D infra + components), `fledge_camera_2d`, `fledge_lighting_2d`, `fledge_ui`, `fledge_debug`
-- **Plugins**: `fledge_audio`, `fledge_input`, `fledge_window`, `fledge_tiled`, `fledge_physics`, `fledge_yarn`, `fledge_save`, `fledge_calendar`, `fledge_tween`, `fledge_particles`, `fledge_net`
+- **Plugins**: `fledge_audio`, `fledge_input`, `fledge_window`, `fledge_tiled`, `fledge_physics`, `fledge_yarn`, `fledge_save`, `fledge_calendar`, `fledge_tween`, `fledge_particles`, `fledge_net`, `fledge_net_steam`
 
 `projects/` (gitignored) holds games built on Fledge. Each one is its own git repo with its own `CLAUDE.md`, e.g. `projects/rafting`. Framework packages must never depend on or reference anything under `projects/`. Framework changes made while working on a game are committed in *this* repo.
 
@@ -81,7 +81,13 @@ Packages that don't depend on each other can't reference each other's constants.
 `App` (`packages/fledge_ecs/lib/src/app.dart`) is the fluent builder: `addPlugin`, `insertResource`, `addEvent`, `addSystem(system, schedule:)`, `run()`/`tick()`. `App` auto-inserts a default `FixedTimestep()` resource; override via `insertResource(FixedTimestep(stepDuration: …, maxCatchupSteps: …))` before `run()`. Plugins call `app.addSystem(...)` inside `build(App)` — plugin order still matters for the registration-order fallback above.
 
 ### Documentation vs this file
-User-facing docs live in `docs/assets/docs/{section}/{page}.md` and are wired into `docs/lib/app/router.dart`. Do **not** move user docs into `CLAUDE.md`, and do not add package README content here — the READMEs are the source of truth for public API examples.
+User-facing docs live in `docs/assets/docs/{section}/{page}.md`, organised by topic rather than by package (`getting-started`, `ecs`, `scheduling`, `app`, `rendering`, `ui`, `platform`, `gameplay`, `networking`, `examples`), and are wired into `DocNavigation` in `docs/lib/app/router.dart`. Exhaustive API signatures are left to the pub.dev dartdoc the sidebar links to. `docs/README.md` has the authoring rules. In short:
+- Every ```` ```dart ```` block is analyzed by `docs/tool/check_snippets.dart` in CI (`melos run docs:check`); partial code is marked ```` ```dart fragment ````.
+- Version pins must equal the workspace version; `scripts/release.dart` rewrites them.
+- A moved or deleted page needs an entry in `legacyRedirects` (published READMEs link to the site).
+- `docs/test/navigation_test.dart` keeps the nav, the files and `web/sitemap.xml` in step.
+
+When a change alters behaviour a docs page describes, update the page in the same change. Do **not** move user docs into `CLAUDE.md`, and do not add package README content here — the READMEs are the source of truth for public API examples.
 
 ## Conventions
 

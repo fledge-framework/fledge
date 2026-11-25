@@ -13,7 +13,16 @@ class DocsPage extends StatefulWidget {
   final String section;
   final String page;
 
-  const DocsPage({super.key, required this.section, required this.page});
+  /// Heading anchor to scroll to once the page loads (`#fragment` in the
+  /// URL).
+  final String? fragment;
+
+  const DocsPage({
+    super.key,
+    required this.section,
+    required this.page,
+    this.fragment,
+  });
 
   @override
   State<DocsPage> createState() => _DocsPageState();
@@ -81,6 +90,9 @@ class _DocsPageState extends State<DocsPage> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.section != widget.section || oldWidget.page != widget.page) {
       _loadContent();
+    } else if (widget.fragment != null &&
+        widget.fragment != oldWidget.fragment) {
+      _scrollToHeading(widget.fragment!);
     }
   }
 
@@ -94,7 +106,7 @@ class _DocsPageState extends State<DocsPage> {
 
     try {
       final assetPath = 'assets/docs/${widget.section}/${widget.page}.md';
-      final content = await rootBundle.loadString(assetPath);
+      final content = stripHtmlComments(await rootBundle.loadString(assetPath));
 
       // Create GlobalKeys for each heading with unique anchor IDs
       final headings = _extractHeadings(content);
@@ -109,6 +121,12 @@ class _DocsPageState extends State<DocsPage> {
           _activeHeadingId = headings.first.anchorId;
         }
       });
+      final fragment = widget.fragment;
+      if (fragment != null) {
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => _scrollToHeading(fragment),
+        );
+      }
     } catch (e) {
       setState(() {
         _error = 'Content not found: ${widget.section}/${widget.page}';
@@ -308,6 +326,7 @@ class _DocsPageState extends State<DocsPage> {
             MarkdownContent(
               content: _markdownContent!,
               headingKeys: _headingKeys,
+              onAnchorTap: _scrollToHeading,
             ),
             const SizedBox(height: 64),
             _buildNavigation(theme),
@@ -429,9 +448,8 @@ class _DocsPageState extends State<DocsPage> {
           Expanded(
             child: _NavButton(
               direction: _NavDirection.previous,
-              section: prevPage.$1,
-              page: prevPage.$2,
-              title: prevPage.$3,
+              location: prevPage.$1,
+              title: prevPage.$2,
             ),
           )
         else
@@ -441,9 +459,8 @@ class _DocsPageState extends State<DocsPage> {
           Expanded(
             child: _NavButton(
               direction: _NavDirection.next,
-              section: nextPage.$1,
-              page: nextPage.$2,
-              title: nextPage.$3,
+              location: nextPage.$1,
+              title: nextPage.$2,
             ),
           )
         else
@@ -452,17 +469,16 @@ class _DocsPageState extends State<DocsPage> {
     );
   }
 
-  ((String, String, String)?, (String, String, String)?) _findAdjacentPages() {
-    final allPages = <(String, String, String)>[];
-
-    for (final section in DocNavigation.sections) {
-      for (final page in section.pages) {
-        allPages.add((section.path, page.path, page.title));
-      }
-    }
+  /// (location, title) of the pages before and after this one, across
+  /// sections and into the demos; external links are skipped.
+  ((String, String)?, (String, String)?) _findAdjacentPages() {
+    final allPages = [
+      for (final (section, page) in DocNavigation.routedPages)
+        (section.locationOf(page)!, page.title),
+    ];
 
     final currentIndex = allPages.indexWhere(
-      (p) => p.$1 == widget.section && p.$2 == widget.page,
+      (p) => p.$1 == '/docs/${widget.section}/${widget.page}',
     );
 
     if (currentIndex == -1) return (null, null);
@@ -488,14 +504,12 @@ enum _NavDirection { previous, next }
 
 class _NavButton extends StatelessWidget {
   final _NavDirection direction;
-  final String section;
-  final String page;
+  final String location;
   final String title;
 
   const _NavButton({
     required this.direction,
-    required this.section,
-    required this.page,
+    required this.location,
     required this.title,
   });
 
@@ -505,7 +519,7 @@ class _NavButton extends StatelessWidget {
     final isPrevious = direction == _NavDirection.previous;
 
     return InkWell(
-      onTap: () => context.go('/docs/$section/$page'),
+      onTap: () => context.go(location),
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.all(16),

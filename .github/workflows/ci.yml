@@ -242,6 +242,12 @@ jobs:
         with:
           melos-version: '7.3.0'
 
+      # Every ```dart block in the docs must analyze against the current
+      # packages, and every fledge_* version pin must match the workspace.
+      - name: Check doc snippets and version pins
+        working-directory: docs
+        run: dart run tool/check_snippets.dart
+
       - name: Build docs
         working-directory: docs
         run: flutter build web

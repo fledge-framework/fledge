@@ -255,10 +255,11 @@ Use one of these patterns:
 
 ### User-Facing Documentation
 
-Add documentation to the docs app, not CLAUDE.md:
-- Location: `docs/assets/docs/{section}/{page}.md`
-- Format: Markdown files
-- Update navigation in `docs/lib/app/router.dart`
+Add documentation to the docs app, not CLAUDE.md. `docs/README.md` has the full authoring guide:
+- Location: `docs/assets/docs/{section}/{page}.md`, organised by topic (`ecs`, `rendering`, `gameplay`, ...)
+- Add the page to `DocNavigation` in `docs/lib/app/router.dart`; a moved or deleted page also needs an entry in `legacyRedirects`
+- Every ```` ```dart ```` block must analyze: run `melos run docs:check` (CI runs it). Mark partial code ```` ```dart fragment ````
+- Regenerate the sitemap with `UPDATE_SITEMAP=1 flutter test test/navigation_test.dart` (from `docs/`)
 
 ### API Documentation
 
