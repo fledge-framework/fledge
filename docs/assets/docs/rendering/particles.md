@@ -175,8 +175,11 @@ world.spawn()
 - Particles use the sprite convention for sort keys: y-sorted inside their
   layer unless `layerSubOrder` is set, so a particle and a sprite in the same
   layer interleave by y.
-- Every live particle is extracted each frame; particles aren't culled
-  against the camera.
+- Particles well outside the camera's view are skipped: each one is checked
+  against `ActiveCameraView.visibleWorldRect`, widened by
+  `ParticleExtractor.cullMargin` (64 world units, the same as sprites) plus
+  the particle's size. Without a camera view (headless, tests, before the
+  first paint) every live particle is extracted.
 - They can't be emissive, so a `LightingPlugin` light map darkens them like
   any other sprite.
 - Everything happens on the CPU. Particles sharing a texture and drawn

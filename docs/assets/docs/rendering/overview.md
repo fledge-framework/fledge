@@ -275,15 +275,16 @@ is drawn on its own.
 
 ## Culling
 
-`SpriteExtractor` skips sprites well outside the camera's view. It reads
-`ActiveCameraView.visibleWorldRect` (the area shown at the last paint, which
-`fledge_camera_2d` keeps up to date) and widens it by
+`SpriteExtractor` and `AtlasSpriteExtractor` skip sprites well outside the
+camera's view. They read `ActiveCameraView.visibleWorldRect` (the area shown
+at the last paint, which `fledge_camera_2d` keeps up to date) and widen it by
 `SpriteExtractor.cullMargin` (64 world units) plus each sprite's own size.
-Before the first paint, or without a camera, nothing is culled.
-`AtlasSpriteExtractor` and the particle extractor don't cull.
+`ParticleExtractor` culls each particle the same way, with the same margin
+plus the particle's size. Before the first paint, or without a camera, nothing
+is culled.
 
-Scenery that never moves can carry `StaticTransform`; the extractor keeps
-those sprites in a spatial grid and looks only at the cells near the view.
+Scenery that never moves can carry `StaticTransform`; both sprite extractors
+keep those sprites in a spatial grid and look only at the cells near the view.
 See [Static scenery](/docs/rendering/transforms#static-scenery).
 
 ## Backends

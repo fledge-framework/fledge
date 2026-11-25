@@ -165,19 +165,21 @@ final atlas = TextureAtlas(
 ### AtlasSprite
 
 `AtlasSprite` draws one frame of an atlas, chosen by `index`. It has its own
-`color`, `flipX`, `flipY`, `anchor`, `layer` and `layerSubOrder`, and
+`color`, `flipX`, `flipY`, `anchor`, `layer`, `layerSubOrder` and `emissive`, and
 `setByName(name)` for named frames. Swap `atlas` to change sheets (another
 outfit) while keeping the frame.
 
 There are two ways to draw it:
 
 - **`AtlasSprite` alone**, drawn by `AtlasSpriteExtractor`. Register it next
-  to `SpriteExtractor`. This extractor doesn't cull off-screen sprites, doesn't
-  use the `StaticTransform` grid, and has no `emissive` option.
+  to `SpriteExtractor`. It extracts exactly as `SpriteExtractor` does: it
+  culls off-screen sprites, uses the `StaticTransform` grid, skips hidden and
+  fully transparent sprites, interpolates `PreviousTransform2D` the same way,
+  and honours `emissive`. The quad is the current frame's size.
 - **`AtlasSprite` with a `Sprite`** on the same entity, drawn by
   `SpriteExtractor`. The animation systems copy the atlas frame's source rect
-  and flips into the `Sprite` each frame, so you keep culling and
-  `emissive`. Size the `Sprite` (`customSize`) or give it the first frame's
+  and flips into the `Sprite` each frame. Use this when you want the
+  `Sprite`'s `customSize`; size it, or give it the first frame's
   `sourceRect`.
 
 Don't register `AtlasSpriteExtractor` if your entities carry both

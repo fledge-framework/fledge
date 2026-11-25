@@ -217,9 +217,9 @@ world.spawn()
 
 `TransformPropagateSystem` computes a static root (and its whole subtree)
 once, then marks every entity in it `TransformFrozen` and never visits it
-again. `SpriteExtractor` keeps frozen sprites in a spatial grid and only looks
-at those near the view, so the per-frame cost follows what's on screen rather
-than what's loaded.
+again. `SpriteExtractor` and `AtlasSpriteExtractor` keep frozen sprites in a
+spatial grid and only look at those near the view, so the per-frame cost
+follows what's on screen rather than what's loaded.
 
 The contract: once spawned, the entity's `Transform2D` and its place in the
 hierarchy never change. Its `Sprite` (texture, colour, source rect, flips)
