@@ -1,74 +1,69 @@
-import 'dart:ui' show Rect;
+import 'dart:ui' show Color;
 
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:vector_math/vector_math.dart';
 
 import '../render/extract/draw_layer.dart';
-import '../render/extract/extract.dart';
-import '../render/world/render_world.dart';
+import '../sprite/culled_sprite_extractor.dart';
 import '../sprite/extracted_sprite.dart';
-import '../sprite/sprite.dart';
-import '../transform/global_transform.dart';
 import 'texture_atlas.dart';
 
 /// Extractor for atlas sprite components.
 ///
 /// Extracts [AtlasSprite] components to the render world as [ExtractedSprite].
 /// Works with [AnimationPlayer] to animate sprites.
-class AtlasSpriteExtractor extends Extractor {
+///
+/// Behaves exactly like `SpriteExtractor`: sprites further than
+/// [cullMargin] world units outside the camera's last view
+/// (`ActiveCameraView.visibleWorldRect`) are skipped (nothing is culled
+/// without a view), `StaticTransform` scenery is looked up through a
+/// spatial grid, hidden (`Visibility`) and fully transparent sprites are
+/// skipped, `PreviousTransform2D` translation is interpolated by
+/// `FixedTimestep.alpha`, and [AtlasSprite.emissive] is carried through so
+/// the sprite draws after the view passes.
+class AtlasSpriteExtractor extends CulledSpriteExtractor<AtlasSprite> {
+  /// World units beyond the camera's last view that are still extracted.
+  static const double cullMargin = CulledSpriteExtractor.cullMargin;
+
   @override
-  void extract(World mainWorld, RenderWorld renderWorld) {
-    final ft = mainWorld.getResource<FixedTimestep>();
-    final alpha = ft?.alpha ?? 1.0;
-
-    for (final (entity, atlasSprite, globalTransform)
-        in mainWorld.query2<AtlasSprite, GlobalTransform2D>().iter()) {
-      // Check visibility
-      final visibility = mainWorld.get<Visibility>(entity);
-      if (visibility != null && !visibility.isVisible) continue;
-
-      // Get the source rect for current sprite index
-      final sourceRect = atlasSprite.sourceRect;
-
-      final renderMatrix = interpolatedRenderMatrix(
-        mainWorld,
-        entity,
-        globalTransform,
-        alpha,
-      );
-
-      // Compute sort key: explicit layerSubOrder wins; otherwise derive
-      // from y-position, clamped inside the layer's range.
-      final ySorted = atlasSprite.layerSubOrder == 0;
-      final y = renderMatrix.storage[7];
-      final sub = ySorted
-          ? DrawLayerExtension.ySortSubOrder(y)
-          : atlasSprite.layerSubOrder;
-      final sortKey = atlasSprite.layer.sortKey(subOrder: sub);
-
-      renderWorld.addSprite(
-        ExtractedSprite(
-          entity: entity,
-          texture: atlasSprite.texture,
-          sourceRect: sourceRect,
-          transform: renderMatrix,
-          color: atlasSprite.color,
-          sortKey: sortKey,
-          layer: atlasSprite.layer,
-          layerSubOrder: atlasSprite.layerSubOrder,
-          preciseSubOrder: ySorted ? y * DrawLayerExtension.ySortScale : null,
-          flipFlags: ExtractedSprite.computeFlipFlags(
-            atlasSprite.flipX,
-            atlasSprite.flipY,
-          ),
-          anchor: atlasSprite.anchor.clone(),
-          size: _sizeFromRect(sourceRect),
-        ),
-      );
-    }
-  }
-
-  static Vector2 _sizeFromRect(Rect rect) {
+  Vector2 sizeOf(AtlasSprite component) {
+    final rect = component.sourceRect;
     return Vector2(rect.width, rect.height);
   }
+
+  @override
+  Color colorOf(AtlasSprite component) => component.color;
+
+  @override
+  DrawLayer layerOf(AtlasSprite component) => component.layer;
+
+  @override
+  int layerSubOrderOf(AtlasSprite component) => component.layerSubOrder;
+
+  @override
+  ExtractedSprite build(
+    AtlasSprite component, {
+    required Entity entity,
+    required Matrix3 transform,
+    required Vector2 size,
+    required int sortKey,
+    required double? preciseSubOrder,
+  }) => ExtractedSprite(
+    entity: entity,
+    texture: component.texture,
+    sourceRect: component.sourceRect,
+    transform: transform,
+    color: component.color,
+    sortKey: sortKey,
+    layer: component.layer,
+    layerSubOrder: component.layerSubOrder,
+    preciseSubOrder: preciseSubOrder,
+    flipFlags: ExtractedSprite.computeFlipFlags(
+      component.flipX,
+      component.flipY,
+    ),
+    anchor: component.anchor.clone(),
+    size: size,
+    emissive: component.emissive,
+  );
 }

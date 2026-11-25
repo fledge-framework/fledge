@@ -162,6 +162,11 @@ class AtlasSprite {
   /// to the entity position.
   Vector2 anchor;
 
+  /// Whether the sprite gives off its own light, as `Sprite.emissive`:
+  /// `FledgeRenderView` draws it after the `ViewPass.paintOver` passes, so
+  /// a lighting pass that darkens the scene leaves it at full brightness.
+  bool emissive;
+
   /// Creates an atlas sprite.
   AtlasSprite({
     required this.atlas,
@@ -172,6 +177,7 @@ class AtlasSprite {
     this.layer = DrawLayer.characters,
     this.layerSubOrder = 0,
     Vector2? anchor,
+    this.emissive = false,
   }) : anchor = anchor ?? Vector2(0.5, 0.5);
 
   /// Get the current source rectangle.

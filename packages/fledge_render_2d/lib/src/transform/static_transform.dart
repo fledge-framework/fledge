@@ -7,8 +7,8 @@
 ///
 /// [TransformPropagateSystem] computes a static root (and its subtree) once,
 /// then marks every entity in it [TransformFrozen] and never visits them
-/// again; [SpriteExtractor] keeps frozen sprites in a spatial grid and only
-/// looks at the ones near the view. In debug builds propagation checks now
+/// again; `SpriteExtractor` and `AtlasSpriteExtractor` keep frozen sprites in
+/// a spatial grid and only look at the ones near the view. In debug builds propagation checks now
 /// and then that frozen entities really haven't moved, and fails an assert
 /// naming the one that did: give anything that moves (even a little, like a
 /// shake) no [StaticTransform].
