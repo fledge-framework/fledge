@@ -454,5 +454,37 @@ void main() {
 
       expect(world.get<Position>(entity)?.x, equals(10.0));
     });
+
+    test('entityFromJson fires onAdd observers', () {
+      final added = <double>[];
+      world.observers.register(
+        Observer<Position>.onAdd((w, e, p) => added.add(p.x)),
+      );
+
+      final entity = world.entityFromJson({
+        'entity': {'id': 0, 'generation': 0},
+        'components': {
+          'Position': {'x': 10.0, 'y': 20.0},
+        },
+      });
+
+      expect(added, [10.0]);
+      expect(world.get<Position>(entity)?.x, equals(10.0));
+    });
+
+    test('insertDynamic fires onAdd, then onChange on replace', () {
+      final log = <String>[];
+      world.observers
+        ..register(Observer<Position>.onAdd((w, e, p) => log.add('add ${p.x}')))
+        ..register(
+          Observer<Position>.onChange((w, e, p) => log.add('change ${p.x}')),
+        );
+      final entity = world.spawn().entity;
+
+      world.insertDynamic(entity, Position, Position(1, 0));
+      world.insertDynamic(entity, Position, Position(2, 0));
+
+      expect(log, ['add 1.0', 'change 2.0']);
+    });
   });
 }

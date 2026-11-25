@@ -28,7 +28,82 @@ class _NoopSystem implements System {
   void run(World world) {}
 }
 
+class ClampSystem implements System {
+  static const String systemName = 'clamp';
+
+  @override
+  SystemMeta get meta =>
+      SystemMeta(name: systemName, writes: {ComponentId.of<_Velocity>()});
+  @override
+  RunCondition? get runCondition => null;
+  @override
+  bool shouldRun(World world) => true;
+  @override
+  void run(World world) {}
+}
+
+class SteerSystem implements System {
+  static const String systemName = 'steer';
+
+  @override
+  SystemMeta get meta =>
+      SystemMeta(name: systemName, writes: {ComponentId.of<_Velocity>()});
+  @override
+  RunCondition? get runCondition => null;
+  @override
+  bool shouldRun(World world) => true;
+  @override
+  void run(World world) {}
+}
+
 void main() {
+  group('OrderingAmbiguity suggestion', () {
+    test('names the systemName constants of class-based systems', () {
+      final schedule = Scheduler()
+        ..addSystem(SteerSystem())
+        ..addSystem(ClampSystem());
+
+      final issue = schedule.checkOrderingAmbiguities().single;
+      expect(issue.systemAClass, 'SteerSystem');
+      expect(issue.systemBClass, 'ClampSystem');
+      expect(issue.suggestion, contains('before: [ClampSystem.systemName]'));
+      expect(issue.suggestion, contains('after: [SteerSystem.systemName]'));
+      expect(issue.toString(), isNot(contains("'clamp'")));
+    });
+
+    test('looks through set wrappers', () {
+      final app = App()
+        ..addSystem(SteerSystem())
+        ..addSystemToSet(ClampSystem(), 'limits');
+
+      final issue = app.checkScheduleOrdering().single;
+      expect(issue.suggestion, contains('before: [ClampSystem.systemName]'));
+    });
+
+    test('describes the constant when the class is not known', () {
+      final schedule = Scheduler()
+        ..addSystem(
+          FunctionSystem(
+            'steer',
+            writes: {ComponentId.of<_Velocity>()},
+            run: (_) {},
+          ),
+        )
+        ..addSystem(
+          FunctionSystem(
+            'clamp',
+            writes: {ComponentId.of<_Velocity>()},
+            run: (_) {},
+          ),
+        );
+
+      final issue = schedule.checkOrderingAmbiguities().single;
+      expect(issue.systemBClass, isNull);
+      expect(issue.suggestion, contains("before: [<clamp's systemName>]"));
+      expect(issue.toString(), isNot(contains("['clamp']")));
+    });
+  });
+
   group('Schedule.checkOrderingAmbiguities', () {
     test('no conflicts → no ambiguities', () {
       final schedule = Scheduler();

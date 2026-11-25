@@ -57,6 +57,12 @@ class App {
   /// Whether the app is currently running.
   bool _running = false;
 
+  /// Set by [dispose]; the app can't tick or run afterwards.
+  bool _disposed = false;
+
+  /// True while [resetToSessionCheckpoint] rebuilds the session plugins.
+  bool _rebuilding = false;
+
   /// True once [Schedules.startup] has been dispatched. Startup runs
   /// exactly once, on the first call to [tick] or [runStartup] —
   /// whichever comes first.
@@ -98,10 +104,16 @@ class App {
   /// Plugins are built in order and can configure resources, events,
   /// and systems.
   ///
+  /// A plugin that adds another plugin from its own `build` works too.
+  /// When [resetToSessionCheckpoint] rebuilds the session plugins, adding a
+  /// plugin instance that is already installed is a no-op, since it is
+  /// being rebuilt anyway.
+  ///
   /// ```dart
   /// app.addPlugin(PhysicsPlugin());
   /// ```
   App addPlugin(Plugin plugin) {
+    if (_rebuilding && _plugins.any((p) => identical(p, plugin))) return this;
     plugin.build(this);
     _plugins.add(plugin);
     return this;
@@ -353,27 +365,62 @@ class App {
 
   /// Runs the app's game loop.
   ///
-  /// The loop runs until [stop] is called. Each iteration:
-  /// 1. Updates event queues
-  /// 2. Runs all scheduled systems
-  /// 3. Calls the tick callback if set
+  /// The loop runs until [stop] (or [dispose]) is called. Each iteration
+  /// runs one [tick] and then yields to the event loop, so timers, I/O and
+  /// other event-loop work get a turn every frame even when every system
+  /// is synchronous. When the loop ends it calls the `onStop` callback and
+  /// then [dispose], which cleans up the plugins.
+  ///
+  /// Throws a [StateError] if the app has been disposed.
   ///
   /// ```dart
   /// await app.run();
   /// ```
   Future<void> run() async {
+    _checkNotDisposed('run');
     _running = true;
     _onStart?.call(this);
 
     while (_running) {
       await tick();
+      await _yieldToEventLoop();
     }
 
     _onStop?.call(this);
+    dispose();
+  }
 
-    // Cleanup plugins
-    for (final plugin in _plugins.reversed) {
+  /// Gives timers, I/O callbacks and other event-loop work a turn. Awaiting
+  /// a future that completes synchronously only runs microtasks, so a loop
+  /// of synchronous systems would otherwise starve the event loop.
+  static Future<void> _yieldToEventLoop() =>
+      Future<void>.delayed(Duration.zero);
+
+  /// Shuts the app down: stops the loop if it is running and calls
+  /// [Plugin.cleanup] on every installed plugin, once each, in reverse
+  /// registration order.
+  ///
+  /// [run] calls this when its loop ends. An app that drives [tick] itself
+  /// (a Flutter widget's ticker, say) should call it when it is done with
+  /// the app, e.g. from the widget's `dispose`.
+  ///
+  /// Idempotent: later calls do nothing. Afterwards [tick], [run] and
+  /// [resetToSessionCheckpoint] throw a [StateError].
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    _running = false;
+    for (final plugin in _plugins.reversed.toList()) {
       plugin.cleanup();
+    }
+  }
+
+  /// True once [dispose] has been called (directly or by [run] ending).
+  bool get isDisposed => _disposed;
+
+  void _checkNotDisposed(String method) {
+    if (_disposed) {
+      throw StateError('App.$method() called after the app was disposed.');
     }
   }
 
@@ -391,12 +438,16 @@ class App {
   /// 7. `onTick` callback, per-frame change-detection tick, pending
   ///    state transitions.
   ///
-  /// Useful for testing or manual control of the game loop.
+  /// Useful for testing or manual control of the game loop. Unlike [run],
+  /// it does not yield to the event loop when every system is synchronous.
+  ///
+  /// Throws a [StateError] if the app has been disposed.
   ///
   /// ```dart
   /// await app.tick();
   /// ```
   Future<void> tick() async {
+    _checkNotDisposed('tick');
     // Update event queues (swap buffers)
     world.updateEvents();
 
@@ -557,6 +608,8 @@ class App {
   ///
   /// Call this when returning to the main menu or starting a new game.
   void resetToSessionCheckpoint() {
+    _checkNotDisposed('resetToSessionCheckpoint');
+
     // 1. Cleanup game plugins in reverse order
     while (_plugins.length > _sessionPluginCount) {
       final plugin = _plugins.removeLast();
@@ -567,10 +620,17 @@ class App {
     scheduler.clear();
 
     // 3. Rebuild systems from session plugins
-    // Copy the list to avoid concurrent modification if build() adds plugins
+    // Copy the list to avoid concurrent modification if build() adds
+    // plugins. A session plugin that adds an already-installed plugin from
+    // its build() is skipped by addPlugin, so each is built once.
     final sessionPlugins = _plugins.toList();
-    for (final plugin in sessionPlugins) {
-      plugin.build(this);
+    _rebuilding = true;
+    try {
+      for (final plugin in sessionPlugins) {
+        plugin.build(this);
+      }
+    } finally {
+      _rebuilding = false;
     }
 
     // 4. Reset world game state
@@ -665,8 +725,11 @@ class AppRunner {
 
   /// Runs the app with frame timing.
   ///
-  /// Attempts to maintain the target frame rate by delaying between frames.
+  /// Attempts to maintain the target frame rate by delaying between frames
+  /// (yielding to the event loop even when a frame overruns), then calls
+  /// `onStop` and [App.dispose] when the loop ends.
   Future<void> run() async {
+    app._checkNotDisposed('run');
     final stopwatch = Stopwatch();
 
     app._running = true;
@@ -682,15 +745,14 @@ class AppRunner {
       final elapsed = stopwatch.elapsed;
 
       if (elapsed < targetFrameTime) {
-        await Future.delayed(targetFrameTime - elapsed);
+        await Future<void>.delayed(targetFrameTime - elapsed);
+      } else {
+        await App._yieldToEventLoop();
       }
     }
 
     app._onStop?.call(app);
-
-    for (final plugin in app._plugins.reversed) {
-      plugin.cleanup();
-    }
+    app.dispose();
   }
 
   /// Runs the app for a fixed number of frames.

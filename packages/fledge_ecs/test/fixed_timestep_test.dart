@@ -293,7 +293,7 @@ void main() {
       }
       // Whatever time a frame counts, its fixed steps match it, in that very
       // frame: no step a frame early or late against the per-frame time.
-      final step = 16667 / 1e6;
+      const step = 16667 / 1e6;
       for (final (i, (delta, steps)) in frames.indexed.skip(1)) {
         expect(steps, (delta / step).round(), reason: 'frame $i');
       }

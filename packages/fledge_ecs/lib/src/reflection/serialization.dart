@@ -53,6 +53,8 @@ class EntitySerializer {
   ///
   /// Creates a new entity and populates it with the serialized components.
   /// Only components registered in [TypeRegistry] will be deserialized.
+  /// Each component fires its `onAdd` observers as it is inserted, as
+  /// with [World.insert].
   static Entity fromJson(World world, Map<String, dynamic> json) {
     final entity = world.spawn().entity;
 
@@ -114,7 +116,9 @@ extension WorldSerializationExtension on World {
   /// Inserts a component using its runtime type.
   ///
   /// This is used internally for deserialization when the static type
-  /// is not known at compile time.
+  /// is not known at compile time. Observers fire as they do for
+  /// [World.insert]: `onAdd` when the entity gains the component,
+  /// `onChange` when it replaces an existing one.
   void insertDynamic(Entity entity, Type type, dynamic component) {
     final componentId = ComponentId.ofType(type);
     final location = entities.getLocation(entity);
@@ -133,6 +137,7 @@ extension WorldSerializationExtension on World {
         component,
         currentTick: changeTick,
       );
+      observers.triggerOnChangeDynamic(this, entity, componentId, component);
       return;
     }
 
@@ -162,6 +167,8 @@ extension WorldSerializationExtension on World {
       existingTicks: existingTicks,
     );
     entities.setLocation(entity, EntityLocation(targetIndex, newRow));
+
+    observers.triggerOnAddDynamic(this, entity, componentId, component);
   }
 
   /// Gets a component by its ComponentId.

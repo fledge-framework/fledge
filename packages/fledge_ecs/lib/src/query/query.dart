@@ -67,14 +67,11 @@ class Query1<T1> implements Query {
   Iterable<(Entity, T1)> iter() =>
       QueryIter1<T1>(_archetypes, _entities, state);
 
-  /// Returns the first matching entity, or null if none match.
-  (Entity, T1)? single() {
-    final iterator = iter().iterator;
-    if (iterator.moveNext()) {
-      return iterator.current;
-    }
-    return null;
-  }
+  /// Returns the only matching entity, or null if none match.
+  ///
+  /// Throws a [StateError] if more than one entity matches. For "any one
+  /// match" use `iter().firstOrNull` instead.
+  (Entity, T1)? single() => _single(iter());
 
   /// Returns the number of matching entities.
   ///
@@ -118,14 +115,11 @@ class Query2<T1, T2> implements Query {
   Iterable<(Entity, T1, T2)> iter() =>
       QueryIter2<T1, T2>(_archetypes, _entities, state);
 
-  /// Returns the first matching entity, or null if none match.
-  (Entity, T1, T2)? single() {
-    final iterator = iter().iterator;
-    if (iterator.moveNext()) {
-      return iterator.current;
-    }
-    return null;
-  }
+  /// Returns the only matching entity, or null if none match.
+  ///
+  /// Throws a [StateError] if more than one entity matches. For "any one
+  /// match" use `iter().firstOrNull` instead.
+  (Entity, T1, T2)? single() => _single(iter());
 
   /// Returns the number of matching entities.
   int count() {
@@ -165,14 +159,11 @@ class Query3<T1, T2, T3> implements Query {
   Iterable<(Entity, T1, T2, T3)> iter() =>
       QueryIter3<T1, T2, T3>(_archetypes, _entities, state);
 
-  /// Returns the first matching entity, or null if none match.
-  (Entity, T1, T2, T3)? single() {
-    final iterator = iter().iterator;
-    if (iterator.moveNext()) {
-      return iterator.current;
-    }
-    return null;
-  }
+  /// Returns the only matching entity, or null if none match.
+  ///
+  /// Throws a [StateError] if more than one entity matches. For "any one
+  /// match" use `iter().firstOrNull` instead.
+  (Entity, T1, T2, T3)? single() => _single(iter());
 
   /// Returns the number of matching entities.
   int count() {
@@ -212,14 +203,11 @@ class Query4<T1, T2, T3, T4> implements Query {
   Iterable<(Entity, T1, T2, T3, T4)> iter() =>
       QueryIter4<T1, T2, T3, T4>(_archetypes, _entities, state);
 
-  /// Returns the first matching entity, or null if none match.
-  (Entity, T1, T2, T3, T4)? single() {
-    final iterator = iter().iterator;
-    if (iterator.moveNext()) {
-      return iterator.current;
-    }
-    return null;
-  }
+  /// Returns the only matching entity, or null if none match.
+  ///
+  /// Throws a [StateError] if more than one entity matches. For "any one
+  /// match" use `iter().firstOrNull` instead.
+  (Entity, T1, T2, T3, T4)? single() => _single(iter());
 
   /// Returns the number of matching entities.
   int count() {
@@ -279,14 +267,11 @@ class QueryMut1<T1> implements Query {
   Iterable<(Entity, T1)> iter() =>
       QueryIter1<T1>(_archetypes, _entities, state);
 
-  /// Returns the first matching entity, or null if none match.
-  (Entity, T1)? single() {
-    final iterator = iter().iterator;
-    if (iterator.moveNext()) {
-      return iterator.current;
-    }
-    return null;
-  }
+  /// Returns the only matching entity, or null if none match.
+  ///
+  /// Throws a [StateError] if more than one entity matches. For "any one
+  /// match" use `iter().firstOrNull` instead.
+  (Entity, T1)? single() => _single(iter());
 
   /// Returns the number of matching entities.
   int count() {
@@ -326,14 +311,11 @@ class QueryMut2<T1, T2> implements Query {
   Iterable<(Entity, T1, T2)> iter() =>
       QueryIter2<T1, T2>(_archetypes, _entities, state);
 
-  /// Returns the first matching entity, or null if none match.
-  (Entity, T1, T2)? single() {
-    final iterator = iter().iterator;
-    if (iterator.moveNext()) {
-      return iterator.current;
-    }
-    return null;
-  }
+  /// Returns the only matching entity, or null if none match.
+  ///
+  /// Throws a [StateError] if more than one entity matches. For "any one
+  /// match" use `iter().firstOrNull` instead.
+  (Entity, T1, T2)? single() => _single(iter());
 
   /// Returns the number of matching entities.
   int count() {
@@ -373,14 +355,11 @@ class QueryMut3<T1, T2, T3> implements Query {
   Iterable<(Entity, T1, T2, T3)> iter() =>
       QueryIter3<T1, T2, T3>(_archetypes, _entities, state);
 
-  /// Returns the first matching entity, or null if none match.
-  (Entity, T1, T2, T3)? single() {
-    final iterator = iter().iterator;
-    if (iterator.moveNext()) {
-      return iterator.current;
-    }
-    return null;
-  }
+  /// Returns the only matching entity, or null if none match.
+  ///
+  /// Throws a [StateError] if more than one entity matches. For "any one
+  /// match" use `iter().firstOrNull` instead.
+  (Entity, T1, T2, T3)? single() => _single(iter());
 
   /// Returns the number of matching entities.
   int count() {
@@ -420,14 +399,11 @@ class QueryMut4<T1, T2, T3, T4> implements Query {
   Iterable<(Entity, T1, T2, T3, T4)> iter() =>
       QueryIter4<T1, T2, T3, T4>(_archetypes, _entities, state);
 
-  /// Returns the first matching entity, or null if none match.
-  (Entity, T1, T2, T3, T4)? single() {
-    final iterator = iter().iterator;
-    if (iterator.moveNext()) {
-      return iterator.current;
-    }
-    return null;
-  }
+  /// Returns the only matching entity, or null if none match.
+  ///
+  /// Throws a [StateError] if more than one entity matches. For "any one
+  /// match" use `iter().firstOrNull` instead.
+  (Entity, T1, T2, T3, T4)? single() => _single(iter());
 
   /// Returns the number of matching entities.
   int count() {
@@ -448,4 +424,19 @@ class QueryMut4<T1, T2, T3, T4> implements Query {
 
   /// Returns true if no entities match.
   bool get isEmpty => count() == 0;
+}
+
+/// Shared body of the `single()` methods: the only element of [matches],
+/// null when there is none, and a [StateError] when there are several.
+R? _single<R>(Iterable<R> matches) {
+  final iterator = matches.iterator;
+  if (!iterator.moveNext()) return null;
+  final first = iterator.current;
+  if (iterator.moveNext()) {
+    throw StateError(
+      'single() found more than one matching entity. Narrow the query with '
+      'a filter, or use iter().firstOrNull for any one match.',
+    );
+  }
+  return first;
 }

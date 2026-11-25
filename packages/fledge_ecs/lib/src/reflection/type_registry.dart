@@ -86,7 +86,7 @@ class ComponentTypeInfo<T> {
 /// A registry for component type metadata.
 ///
 /// The [TypeRegistry] is a singleton that stores runtime type information
-/// for components marked with `@reflectable`. This enables:
+/// for components registered with it. This enables:
 ///
 /// - Dynamic serialization without code generation
 /// - Editor tooling like property inspectors
@@ -94,12 +94,13 @@ class ComponentTypeInfo<T> {
 ///
 /// ## Registration
 ///
-/// Components are registered either:
-/// 1. Automatically via the `@reflectable` annotation (requires build_runner)
-/// 2. Manually via [registerComponent]
+/// Components are registered by hand with [registerComponent], passing a
+/// [ComponentTypeInfo] with the type's name, fields and JSON conversion
+/// functions. Nothing is registered automatically (there is no annotation
+/// or code generation for reflection), so register each type before
+/// serializing or deserializing it, typically in a plugin's `build`.
 ///
 /// ```dart
-/// // Manual registration
 /// TypeRegistry.instance.registerComponent(ComponentTypeInfo<Position>(
 ///   type: Position,
 ///   name: 'Position',

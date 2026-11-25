@@ -1,7 +1,10 @@
 /// Reflection and serialization support for the Fledge ECS.
 ///
 /// This module provides runtime type information and serialization
-/// utilities for components marked with `@reflectable`.
+/// utilities for components registered with the [TypeRegistry]. There is
+/// no annotation or code generation for this: each component type is
+/// registered by hand with [TypeRegistry.registerComponent], supplying its
+/// name, fields and JSON conversion functions.
 ///
 /// ## Type Registry
 ///

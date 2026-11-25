@@ -422,6 +422,7 @@ class SystemStage {
       final a = _systems[i].system.meta;
       for (var j = i + 1; j < _systems.length; j++) {
         final b = _systems[j].system.meta;
+        final bSystem = _systems[j].system;
         if (!a.conflictsWith(b)) continue;
         if (_hasBit(_explicitReach[i], j) || _hasBit(_explicitReach[j], i)) {
           continue;
@@ -432,6 +433,8 @@ class SystemStage {
             systemA: a.name,
             systemB: b.name,
             reasons: _describeMetaConflict(a, b),
+            systemAClass: _systemClassName(_systems[i].system),
+            systemBClass: _systemClassName(bSystem),
           ),
         );
       }
@@ -869,6 +872,21 @@ class Scheduler {
   }
 }
 
+/// The class a diagnostic can name for [system] when suggesting its
+/// `systemName` constant: its runtime type, looking through
+/// [SetConfiguredSystem]. Null for function systems and private or generic
+/// classes, which have no constant to point at by name.
+String? _systemClassName(System system) {
+  var inner = system;
+  while (inner is SetConfiguredSystem) {
+    inner = inner.inner;
+  }
+  if (inner is FunctionSystem || inner is AsyncFunctionSystem) return null;
+  final name = inner.runtimeType.toString();
+  if (name.startsWith('_') || name.contains('<')) return null;
+  return name;
+}
+
 /// One pair of systems in the same stage whose relative order is only
 /// defined by registration order. See [Scheduler.checkOrderingAmbiguities].
 class OrderingAmbiguity {
@@ -892,18 +910,39 @@ class OrderingAmbiguity {
   /// "both write Velocity", "conflict on resource WallTime").
   final List<String> reasons;
 
+  /// Class name of [systemA] when the scheduler could tell it (a public,
+  /// non-generic class-based system), else null. Used to suggest its
+  /// `systemName` constant in [suggestion].
+  final String? systemAClass;
+
+  /// Class name of [systemB]; see [systemAClass].
+  final String? systemBClass;
+
   const OrderingAmbiguity({
     required this.stage,
     required this.systemA,
     required this.systemB,
     required this.reasons,
+    this.systemAClass,
+    this.systemBClass,
   });
+
+  /// The suggested fix: order the pair explicitly by referencing the other
+  /// system's `systemName` constant (never a string literal), e.g.
+  /// `before: [ClampSystem.systemName]`.
+  String get suggestion {
+    String ref(String? cls, String name) =>
+        cls != null ? '$cls.systemName' : "<$name's systemName>";
+    return 'Add `before: [${ref(systemBClass, systemB)}]` to $systemA, or '
+        '`after: [${ref(systemAClass, systemA)}]` to $systemB, to make the '
+        'intent explicit (reference the static systemName constant, not a '
+        'string literal), or move one to a different stage.';
+  }
 
   @override
   String toString() =>
       'OrderingAmbiguity(stage=$stage): '
       '$systemA runs before $systemB by registration order only. '
       'Reasons: ${reasons.join('; ')}. '
-      'Add `before: [\'$systemB\']` to $systemA (or the reverse) to make '
-      'the intent explicit, or move one to a different stage.';
+      '$suggestion';
 }

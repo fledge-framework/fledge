@@ -49,15 +49,32 @@ void main() {
       expect(results, isEmpty);
     });
 
-    test('single() returns first match', () {
+    test('single() returns the only match', () {
       final world = World();
       world.spawnWith([Position(1, 0)]);
-      world.spawnWith([Position(2, 0)]);
+      world.spawnWith([Velocity(2, 0)]);
 
       final result = world.query1<Position>().single();
 
       expect(result, isNotNull);
-      expect(result!.$2.x, anyOf(equals(1), equals(2)));
+      expect(result!.$2.x, equals(1));
+    });
+
+    test('single() throws when more than one entity matches', () {
+      final world = World();
+      world.spawnWith([Position(1, 0), Velocity(1, 1)]);
+      world.spawnWith([Position(2, 0), Velocity(2, 2)]);
+
+      expect(() => world.query1<Position>().single(), throwsStateError);
+      expect(() => world.queryMut1<Position>().single(), throwsStateError);
+      expect(
+        () => world.query2<Position, Velocity>().single(),
+        throwsStateError,
+      );
+      expect(
+        () => world.queryMut2<Position, Velocity>().single(),
+        throwsStateError,
+      );
     });
 
     test('single() returns null for no matches', () {

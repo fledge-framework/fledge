@@ -31,6 +31,9 @@ abstract class Plugin {
   void build(App app);
 
   /// Optional cleanup when the app is disposed.
+  ///
+  /// Called once, when [App.run] ends, on [App.dispose], or when
+  /// [App.resetToSessionCheckpoint] removes a game-level plugin.
   void cleanup() {}
 }
 
@@ -48,20 +51,33 @@ abstract class Plugin {
 ///   ];
 /// }
 /// ```
+///
+/// The group is the one entry in the app's plugin list: [build] builds each
+/// child (in order) and [cleanup] cleans each child up (in reverse order),
+/// once each. [plugins] is read once, on the first [build], so a getter
+/// that creates fresh instances is fine: the same instances are rebuilt by
+/// [App.resetToSessionCheckpoint] and cleaned up later.
 abstract class PluginGroup implements Plugin {
   /// The plugins in this group.
   List<Plugin> get plugins;
 
+  /// The children [build] built, kept so [cleanup] reaches the same
+  /// instances.
+  List<Plugin>? _built;
+
   @override
   void build(App app) {
-    for (final plugin in plugins) {
-      app.addPlugin(plugin);
+    final children = _built ??= List.of(plugins);
+    for (final plugin in children) {
+      plugin.build(app);
     }
   }
 
   @override
   void cleanup() {
-    for (final plugin in plugins) {
+    final children = _built ?? plugins;
+    _built = null;
+    for (final plugin in children.reversed) {
       plugin.cleanup();
     }
   }

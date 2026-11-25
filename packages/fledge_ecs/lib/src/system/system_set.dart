@@ -141,6 +141,9 @@ class SetConfiguredSystem implements System {
   final SystemSet _set;
   final SystemMeta _meta;
 
+  /// The wrapped system.
+  System get inner => _inner;
+
   SetConfiguredSystem(this._inner, this._set)
     : _meta = SystemMeta(
         name: _inner.meta.name,
