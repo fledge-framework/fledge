@@ -131,6 +131,33 @@ void main() {
     await bed.dispose();
   });
 
+  test('a child of an owner-only parent stays private too', () async {
+    final bed = NetTestbed();
+    final host = await bed.startHost(vehicle: false);
+    final a = await bed.addClient();
+    final b = await bed.addClient();
+    final aId = NetTestbed.session(a).localPeerId!;
+    final chest =
+        (host.world.spawn()
+              ..insert(Replicated(owner: aId, ownerOnly: true))
+              ..insert(const Health(1)))
+            .entity;
+    final item =
+        (host.world.spawn()
+              ..insert(Replicated())
+              ..insert(const Health(2)))
+            .entity;
+    host.world.setParent(item, chest);
+    await bed.frames(20);
+    // The owner sees both; another player sees neither: the item doesn't
+    // drag its private parent along.
+    expect(entityFor(a, netIdOf(host, chest)), isNotNull);
+    expect(entityFor(a, netIdOf(host, item)), isNotNull);
+    expect(entityFor(b, netIdOf(host, chest)), isNull);
+    expect(entityFor(b, netIdOf(host, item)), isNull);
+    await bed.dispose();
+  });
+
   test('an owner-only component reaches only the owner, and follows '
       'ownership', () async {
     final bed = NetTestbed(

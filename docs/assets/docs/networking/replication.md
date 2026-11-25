@@ -178,7 +178,7 @@ With `NetworkConfig.interestRadius` and an interest position (`ReplicationRegist
 
 - entities within `interestRadius` of the **global** position of the first positioned replicated entity it owns,
 - entities it owns, entities marked `Replicated(alwaysRelevant: true)`, and entities without a position,
-- and the ancestors of all of these (a child is useless without its parent).
+- and the ancestors of all of these (a child is useless without its parent), even when they're outside the radius.
 
 A client that owns no positioned entity receives everything. Positioned entities are bucketed in a grid of `interestRadius` cells, so the radius check looks at nearby cells only.
 
@@ -187,6 +187,7 @@ These rules apply with or without a radius:
 - `Replicated(ownerOnly: true)` sends an entity only to its owner (a private entity). It wins over `alwaysRelevant`.
 - `registry.component<T>(…, ownerOnly: true)` sends one component only to the entity's owner; other clients get the entity without it (a player's inventory on a shared player entity). It follows ownership changes.
 - `NetworkConfig.relevance`, `(world, entity, peerId) => bool`, hides entities from chosen clients. It isn't asked about entities the client owns, and it runs for every replicated entity and client once a fixed tick, so keep it cheap.
+- Hiding is inherited: an entity whose parent (or any ancestor) is hidden from a client, by `ownerOnly` or by `relevance`, is hidden from that client too. A private chest keeps its contents private; a relevant child never drags a hidden parent along.
 
 The relevant set is recomputed every tick: entities that enter it are spawned on the client, entities that leave it are despawned there.
 

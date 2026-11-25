@@ -1271,10 +1271,28 @@ class _HostSide {
         if (dx * dx + dy * dy <= r2) result.add(info.netId);
       }
     }
+    // Ancestors come along (a client can't spawn a child without its
+    // parent), even outside the interest radius. But the host's explicit
+    // rules win: a child whose ancestor is hidden from this peer (owner-
+    // only, refused by the custom relevance, or oversized) is hidden too,
+    // so a private parent never reaches other players through a child.
     for (final id in result.toList()) {
+      final chain = <int>[];
       var p = _entities[id]!.parent;
-      while (p != 0 && !(_entities[p]?.oversized ?? true) && result.add(p)) {
-        p = _entities[p]!.parent;
+      var hidden = false;
+      while (p != 0) {
+        final ancestor = _entities[p];
+        if (ancestor == null || !visible(ancestor)) {
+          hidden = true;
+          break;
+        }
+        chain.add(p);
+        p = ancestor.parent;
+      }
+      if (hidden) {
+        result.remove(id);
+      } else {
+        result.addAll(chain);
       }
     }
     return result;
