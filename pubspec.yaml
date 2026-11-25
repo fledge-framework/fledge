@@ -76,7 +76,13 @@ melos:
 
     test:dart:
       description: Run tests in pure Dart packages
-      run: melos exec -- dart test
+      # `-c 1`: one package at a time. In a pub workspace every member
+      # shares the root `.dart_tool`, where `dart test` caches its compiled
+      # runner (`.dart_tool/dartdev/bin/test/bin/test.dart.snapshot`).
+      # Parallel runs race to rebuild it and one can read a half-written
+      # snapshot as source, which crashes the compiler (seen on Windows CI
+      # as "Exhausted heap space ... test.dart.snapshot").
+      run: melos exec -c 1 -- dart test
       packageFilters:
         dirExists: test
         # Flutter packages need `flutter test`, not `dart test` (flutter_test
@@ -107,7 +113,11 @@ melos:
 
     test:flutter:
       description: Run tests in Flutter packages
-      run: melos exec -- flutter test
+      # `-c 1` for the same shared-`.dart_tool` reason as `test:dart`: here
+      # parallel runs contend for the native-assets build lock
+      # (`.dart_tool/hooks_runner/shared/<pkg>/.lock`, e.g. flutter_soloud)
+      # and time out after 5 minutes.
+      run: melos exec -c 1 -- flutter test
       packageFilters:
         dirExists: test
         dependsOn: flutter
