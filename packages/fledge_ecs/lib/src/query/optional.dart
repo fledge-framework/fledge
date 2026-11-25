@@ -18,6 +18,11 @@ import '../component.dart';
 ///
 /// Note: `Option<T>` is a compile-time marker. The actual query iteration
 /// handles the optional logic internally.
+@Deprecated(
+  'Not implemented: a query with Option<T> matches no entities. Query the '
+  'required components and read the optional one with world.get<T>(entity). '
+  'Will be removed.',
+)
 abstract class Option<T> {
   const Option._();
 
@@ -27,4 +32,5 @@ abstract class Option<T> {
 
 /// Type alias for clarity in query results.
 /// When a component is optional, it may be null.
+@Deprecated('Belongs to the unimplemented Option<T>. Will be removed.')
 typedef OptionalComponent<T> = T?;

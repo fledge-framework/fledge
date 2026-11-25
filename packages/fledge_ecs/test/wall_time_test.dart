@@ -167,4 +167,17 @@ void main() {
       expect(time.elapsed, closeTo(0.02, 1e-9));
     });
   });
+
+  test(
+    'elapsed with the stopwatch excludes time before the first reading',
+    () async {
+      final time = WallTime()..start();
+      await Future<void>.delayed(const Duration(milliseconds: 60));
+      time.update(); // first reading: time zero
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      time.update();
+      expect(time.elapsed, closeTo(time.delta, 1e-9));
+      expect(time.elapsed, lessThan(0.05));
+    },
+  );
 }

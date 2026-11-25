@@ -8,7 +8,7 @@ A Bevy-inspired Entity Component System (ECS) for Dart and Flutter game developm
 
 ```yaml
 dependencies:
-  fledge_ecs: ^0.2.1
+  fledge_ecs: ^0.6.0
 ```
 
 ## Quick Start
@@ -73,7 +73,7 @@ app.world.getResource<WallTime>()!.useClock(
 );
 ```
 
-`frameIntervalFor` counts a rate just off a standard one as that rate (a 59.94 Hz display reports 59). The reported rate is only a first guess: `WallTime` measures the real interval from the vsync clock and follows it, so a wrong report or a move to another monitor doesn't matter. A frame that arrives less than half an interval after the last adds no time (`delta` is 0), so extra frames don't make game time run ahead.
+`frameIntervalFor` counts a rate just off a standard one as that rate (a 59.94 Hz display reports 59). The reported rate is only a first guess: `WallTime` measures the real interval from the vsync clock and follows it, so a wrong report or a move to another monitor doesn't matter. `delta` is always a whole number of refreshes: every frame on which the clock advanced counts at least one (an early frame is still shown for a refresh of its own), and a frame on which the clock didn't move adds no time.
 
 ## Documentation
 

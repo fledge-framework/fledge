@@ -363,7 +363,7 @@ class SystemStage {
   Future<void> run(World world, {SystemTimer? timer}) async {
     for (final node in _order) {
       final system = node.system;
-      if (!system.shouldRun(world)) continue;
+      if (!system.shouldRun(world) || !_setsAllow(system, world)) continue;
       world.beginSystemRun(system);
       try {
         if (timer == null) {
@@ -387,6 +387,16 @@ class SystemStage {
         world.endSystemRun(system);
       }
     }
+  }
+
+  /// Whether every set [system] joins through [SystemMeta.sets] lets it
+  /// run: a set's `runIf` gates all its members, however they joined.
+  bool _setsAllow(System system, World world) {
+    for (final name in system.meta.sets) {
+      final condition = _sets.get(name)?.runCondition;
+      if (condition != null && !condition(world)) return false;
+    }
+    return true;
   }
 
   /// The number of systems in this stage.

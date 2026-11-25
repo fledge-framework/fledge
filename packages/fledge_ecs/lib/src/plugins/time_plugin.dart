@@ -200,7 +200,9 @@ class WallTime {
     final interval = _clock == null ? null : _frameInterval;
     if (interval == null) {
       delta = raw;
-      elapsed = currentTime;
+      // Summed, not read from the clock, so time before the first reading
+      // (which adds no delta) is not counted either.
+      elapsed += delta;
     } else {
       _measure(raw);
       final measured = _frameInterval!;

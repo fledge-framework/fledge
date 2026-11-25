@@ -364,6 +364,27 @@ void main() {
     });
   });
 
+  group('Mutable queries', () {
+    test('queryMut honours the per-system baseline', () async {
+      final counts = <int>[];
+      final app = App()
+        ..addSystem(
+          FunctionSystem(
+            'probe',
+            run: (world) => counts.add(
+              world
+                  .queryMut1<Position>(filter: const Changed<Position>())
+                  .count(),
+            ),
+          ),
+        );
+      app.world.spawnWith([Position(0, 0)]);
+      await app.tick();
+      await app.tick();
+      expect(counts, [1, 0]);
+    });
+  });
+
   group('App tick integration', () {
     test('app advances tick each frame', () async {
       final app = App();

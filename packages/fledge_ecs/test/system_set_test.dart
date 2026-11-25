@@ -616,6 +616,24 @@ void main() {
       expect(set.beforeList, equals(['b']));
     });
   });
+
+  test(
+    "a set's runIf gates systems that join through SystemMeta.sets",
+    () async {
+      var paused = true;
+      var ran = 0;
+      final app = App()
+        ..configureSet('gameplay', (s) => s.runIf((_) => !paused))
+        ..addSystem(
+          FunctionSystem('member', sets: const ['gameplay'], run: (_) => ran++),
+        );
+      await app.tick();
+      expect(ran, 0);
+      paused = false;
+      await app.tick();
+      expect(ran, 1);
+    },
+  );
 }
 
 class _Res {}
