@@ -150,29 +150,34 @@ void main() {
       expect(condition(world), isTrue);
     });
 
-    test('OnExitState returns true when exiting', () {
+    test('OnExitState fires on the frame a state is left', () {
       final world = World();
       final state = State<GameState>(GameState.menu);
       world.insertResource(state);
 
-      final condition = const OnExitState<GameState>(GameState.menu).condition;
-      expect(condition(world), isFalse);
-
-      // Transition to playing - during transition, menu was exited
-      state.set(GameState.playing);
-      state.applyTransition();
-
-      // Now we're in playing, but the exit flag is for "any state"
-      // The condition checks for menu specifically
-      expect(condition(world), isFalse); // We're no longer in menu
-
-      // Check that playing's exit condition would be true if we exit playing
+      final menuExit = const OnExitState<GameState>(GameState.menu).condition;
       final playingExit = const OnExitState<GameState>(
         GameState.playing,
       ).condition;
+      expect(menuExit(world), isFalse);
+
+      // Leaving menu: menu's exit fires, playing's (just entered) does not.
+      state.set(GameState.playing);
+      state.applyTransition();
+      expect(menuExit(world), isTrue);
+      expect(playingExit(world), isFalse);
+      expect(state.previous, GameState.menu);
+
+      // Next frame with no transition: nothing has been exited.
+      state.applyTransition();
+      expect(menuExit(world), isFalse);
+      expect(state.previous, isNull);
+
+      // Leaving playing.
       state.set(GameState.menu);
       state.applyTransition();
-      expect(playingExit(world), isFalse); // We're now in menu, not playing
+      expect(playingExit(world), isTrue);
+      expect(menuExit(world), isFalse);
     });
 
     test('StateConditions.inAny matches any state', () {

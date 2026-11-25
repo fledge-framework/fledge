@@ -217,7 +217,8 @@ void main() async {
   // Resume
   print('\nTransitioning back to PLAYING...');
   app.world.getResource<State<GameState>>()?.set(GameState.playing);
-  await app.tick();
+  await app.tick(); // the transition is applied at the end of this tick
+  await app.tick(); // OnExitState(paused) runs during the next one
 
   print('');
 

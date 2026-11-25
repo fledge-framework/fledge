@@ -25,6 +25,9 @@ class State<S extends Enum> {
   /// The next state to transition to, if any.
   S? _next;
 
+  /// The state left by the most recent transition, while [justExited] is set.
+  S? _previous;
+
   /// True if the current state was just entered this frame.
   bool _justEntered = true;
 
@@ -48,16 +51,21 @@ class State<S extends Enum> {
   /// This is useful for one-time initialization when entering a state.
   bool get justEntered => _justEntered;
 
-  /// Returns true if the current state is about to exit.
+  /// Returns true if a state was left by the transition applied this frame.
   ///
-  /// This is useful for cleanup before leaving a state.
+  /// [previous] names the state that was left. This is useful for cleanup
+  /// after leaving a state.
   bool get justExited => _justExited;
+
+  /// The state left by the transition applied this frame, or null when no
+  /// transition happened this frame.
+  S? get previous => _justExited ? _previous : null;
 
   /// Returns true if the state was just entered AND it matches the given state.
   bool justEnteredState(S state) => _justEntered && _current == state;
 
-  /// Returns true if the state is about to exit AND it matches the given state.
-  bool justExitedState(S state) => _justExited && _current == state;
+  /// Returns true if the transition applied this frame left [state].
+  bool justExitedState(S state) => _justExited && _previous == state;
 
   /// Requests a transition to a new state.
   ///
@@ -89,6 +97,7 @@ class State<S extends Enum> {
     // Apply pending transition
     if (_next != null) {
       _justExited = true;
+      _previous = _current;
       _current = _next!;
       _next = null;
       _justEntered = true;
