@@ -29,10 +29,16 @@
 /// );
 ///
 /// // Use in your app
-/// await App()
-///   .addPlugin(inputPlugin)
-///   .addSystem(FunctionSystem('player', run: playerSystem))
-///   .run();
+/// final app = App()
+///   ..addPlugin(inputPlugin)
+///   ..addSystem(
+///     FunctionSystem(
+///       'player',
+///       resourceReads: {ActionState},
+///       run: playerSystem,
+///     ),
+///     schedule: Schedules.update,
+///   );
 ///
 /// // Wrap your game widget with InputWidget
 /// InputWidget(
@@ -88,6 +94,7 @@
 library fledge_input;
 
 // Plugin
+export 'src/input_settings.dart';
 export 'src/plugin.dart';
 
 // Actions

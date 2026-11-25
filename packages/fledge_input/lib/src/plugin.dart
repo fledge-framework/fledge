@@ -7,6 +7,7 @@ import 'action/action_state.dart';
 import 'context/context_registry.dart';
 import 'context/input_context.dart';
 import 'cursor/cursor_state.dart';
+import 'input_settings.dart';
 import 'raw/keyboard_state.dart';
 import 'raw/mouse_state.dart';
 import 'raw/gamepad_state.dart';
@@ -73,6 +74,10 @@ class InputPlugin<S extends Enum> implements Plugin {
   final String? defaultContext;
 
   /// Whether to enable gamepad support.
+  ///
+  /// Inserted as the [InputSettings] resource; false stops every
+  /// `InputWidget` on this world polling gamepads, whatever its own
+  /// `enableGamepad` says.
   final bool enableGamepad;
 
   /// Plugin configuration.
@@ -109,7 +114,7 @@ class InputPlugin<S extends Enum> implements Plugin {
         .insertResource(MouseState())
         .insertResource(GamepadState())
         .insertResource(ActionState())
-        .insertResource(CursorState())
+        .insertResource(InputSettings(enableGamepad: enableGamepad))
         .insertResource(device)
         .insertResource(GamepadRumble(device: device));
 
@@ -136,7 +141,16 @@ class InputPlugin<S extends Enum> implements Plugin {
       registry.setDefault(defaultContext!);
     }
 
-    app.insertResource(registry);
+    // The cursor follows the active context's mode, whenever it changes.
+    final cursor = CursorState();
+    void syncCursor(InputContext? context) {
+      if (context != null) cursor.updateFromContext(context.cursorMode);
+    }
+
+    syncCursor(registry.activeContext);
+    registry.addListener(syncCursor);
+
+    app.insertResource(cursor).insertResource(registry);
 
     // Add systems
     app.addSystem(InputPollingSystem(), schedule: Schedules.first);

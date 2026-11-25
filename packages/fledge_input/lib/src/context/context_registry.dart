@@ -15,8 +15,24 @@ class InputContextRegistry {
   /// Currently active context name.
   String? _activeContextName;
 
+  /// The context active when nothing is pushed: the default, the current
+  /// state's context, or the last [setActive].
+  String? _baseContextName;
+
   /// Manually activated contexts (stack).
   final List<String> _manualStack = [];
+
+  final List<void Function(InputContext? context)> _listeners = [];
+
+  /// Calls [listener] with the new active context whenever it changes
+  /// (`InputPlugin` uses this to keep `CursorState` in step with the
+  /// active context's cursor mode).
+  void addListener(void Function(InputContext? context) listener) =>
+      _listeners.add(listener);
+
+  /// Stops calling [listener].
+  void removeListener(void Function(InputContext? context) listener) =>
+      _listeners.remove(listener);
 
   /// Register a context.
   void register(InputContext context) {
@@ -66,6 +82,10 @@ class InputContextRegistry {
   String? get activeContextName => _activeContextName;
 
   /// Manually activate a context (pushes to stack).
+  ///
+  /// The pushed context becomes active unless a context below it (another
+  /// pushed one, or the base context) has a higher
+  /// [InputContext.priority].
   void push(String contextName) {
     if (_contexts.containsKey(contextName)) {
       _manualStack.add(contextName);
@@ -74,6 +94,9 @@ class InputContextRegistry {
   }
 
   /// Pop the top manual context.
+  ///
+  /// Popping the last one falls back to the base context: the current
+  /// state's context, the default, or the last [setActive].
   void pop() {
     if (_manualStack.isNotEmpty) {
       _manualStack.removeLast();
@@ -88,32 +111,60 @@ class InputContextRegistry {
   }
 
   /// Update active context based on a game state.
+  ///
+  /// A state with a bound context makes it the base context; a state with
+  /// none keeps the current one.
   void updateFromState<S extends Enum>(S state) {
     final contextName = _stateContexts[_StateKey(S, state.index)];
-    if (contextName != null && _manualStack.isEmpty) {
-      _activeContextName = contextName;
-    } else if (_manualStack.isEmpty && contextName == null) {
-      // State has no binding, keep current or use default
+    if (contextName != null && contextName != _baseContextName) {
+      _baseContextName = contextName;
+      _updateActive();
     }
   }
 
+  /// Picks the active context among the base context and the pushed ones:
+  /// the highest [InputContext.priority] wins, and among equals the most
+  /// recently pushed (the base context counts as the oldest).
   void _updateActive() {
-    if (_manualStack.isNotEmpty) {
-      _activeContextName = _manualStack.last;
+    String? best;
+    var bestPriority = 0;
+    void consider(String? name) {
+      if (name == null) return;
+      final priority = _contexts[name]?.priority ?? 0;
+      if (best == null || priority >= bestPriority) {
+        best = name;
+        bestPriority = priority;
+      }
+    }
+
+    consider(_baseContextName);
+    _manualStack.forEach(consider);
+    _setActiveName(best);
+  }
+
+  void _setActiveName(String? name) {
+    if (name == _activeContextName) return;
+    _activeContextName = name;
+    final context = activeContext;
+    for (final listener in List.of(_listeners)) {
+      listener(context);
     }
   }
 
   /// Set a default context when no state-specific context matches.
   void setDefault(String contextName) {
-    if (_contexts.containsKey(contextName) && _activeContextName == null) {
-      _activeContextName = contextName;
+    if (_contexts.containsKey(contextName) && _baseContextName == null) {
+      _baseContextName = contextName;
+      _updateActive();
     }
   }
 
-  /// Force set the active context (bypasses state binding).
+  /// Make [contextName] the base context (bypasses state binding until the
+  /// state's context changes) and activate it now, over anything pushed.
   void setActive(String contextName) {
     if (_contexts.containsKey(contextName)) {
-      _activeContextName = contextName;
+      _baseContextName = contextName;
+      _setActiveName(contextName);
     }
   }
 

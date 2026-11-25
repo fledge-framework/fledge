@@ -14,6 +14,7 @@ import '../cursor/pointer_lock_delegate.dart';
 import '../device/active_input_device.dart';
 import '../device/gamepad_family.dart';
 import '../device/gamepad_rumble.dart';
+import '../input_settings.dart';
 import '../raw/keyboard_state.dart';
 import '../raw/mouse_state.dart';
 import '../raw/gamepad_source.dart';
@@ -30,7 +31,7 @@ import '../raw/gamepad_state.dart';
 /// ```dart
 /// InputWidget(
 ///   world: app.world,
-///   child: GameWidget(app: app),
+///   child: FledgeRenderView(app: app),
 /// )
 /// ```
 class InputWidget extends StatefulWidget {
@@ -44,6 +45,10 @@ class InputWidget extends StatefulWidget {
   final bool autofocus;
 
   /// Whether to enable gamepad polling.
+  ///
+  /// Gamepads are polled only when this and the plugin's
+  /// `InputPlugin.enableGamepad` (held in the [InputSettings] resource) are
+  /// both true. Read once, when the widget mounts.
   final bool enableGamepad;
 
   /// Whether to request focus when mouse enters the widget.
@@ -134,6 +139,19 @@ class _InputWidgetState extends State<InputWidget> {
   CursorMode _currentCursorMode = CursorMode.visible;
   String? _lastContextName;
 
+  /// The [MouseState] buttons each pointer holds down, by pointer id, so a
+  /// release lets go of exactly those.
+  final Map<int, Set<int>> _pointerButtons = {};
+
+  /// Flutter's button bits and the [MouseState] index each maps to.
+  static const _buttonIndices = [
+    (kPrimaryButton, 0),
+    (kMiddleMouseButton, 1),
+    (kSecondaryButton, 2),
+    (kBackMouseButton, 3),
+    (kForwardMouseButton, 4),
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -219,6 +237,7 @@ class _InputWidgetState extends State<InputWidget> {
     if (cursor != null) {
       cursor.onModeChanged = _onCursorModeChanged;
       _currentCursorMode = cursor.mode;
+      if (_currentCursorMode == CursorMode.locked) _startPointerLock();
     }
   }
 
@@ -284,6 +303,8 @@ class _InputWidgetState extends State<InputWidget> {
 
   void _initializeGamepads() {
     if (!widget.enableGamepad) return;
+    final settings = widget.world.getResource<InputSettings>();
+    if (settings != null && !settings.enableGamepad) return;
     final source = _gamepadSource =
         widget.gamepadSource ?? PluginGamepadSource();
 
@@ -411,7 +432,12 @@ class _InputWidgetState extends State<InputWidget> {
   }
 
   void _handlePointerMove(PointerMoveEvent event) {
-    _mouse?.onMove(event.localPosition.dx, event.localPosition.dy);
+    final mouse = _mouse;
+    if (mouse == null) return;
+    mouse.onMove(event.localPosition.dx, event.localPosition.dy);
+    if (_pointerButtons.containsKey(event.pointer) || event.buttons != 0) {
+      _syncPointerButtons(mouse, event.pointer, event.buttons);
+    }
   }
 
   void _handlePointerDown(PointerDownEvent event) {
@@ -432,28 +458,48 @@ class _InputWidgetState extends State<InputWidget> {
     // preceding hover/move, so the last known position would be stale.
     mouse.onMove(event.localPosition.dx, event.localPosition.dy);
 
-    // Decode which button was pressed
-    if (event.buttons & kPrimaryButton != 0) mouse.buttonDown(0);
-    if (event.buttons & kSecondaryButton != 0) mouse.buttonDown(2);
-    if (event.buttons & kMiddleMouseButton != 0) mouse.buttonDown(1);
-    if (event.buttons & kBackMouseButton != 0) mouse.buttonDown(3);
-    if (event.buttons & kForwardMouseButton != 0) mouse.buttonDown(4);
+    _syncPointerButtons(mouse, event.pointer, event.buttons);
   }
 
-  void _handlePointerUp(PointerUpEvent event) {
+  /// Presses the buttons newly down in [buttons] for [pointer] and lets go
+  /// of the ones it held that no longer are. A second button pressed while
+  /// one is held arrives as a move with more [buttons], not a new down.
+  void _syncPointerButtons(MouseState mouse, int pointer, int buttons) {
+    final held = _pointerButtons.putIfAbsent(pointer, () => <int>{});
+    for (final (bit, index) in _buttonIndices) {
+      final down = buttons & bit != 0;
+      if (down && !held.contains(index)) {
+        if (!_heldElsewhere(index)) mouse.buttonDown(index);
+        held.add(index);
+      } else if (!down && held.remove(index)) {
+        if (!_heldElsewhere(index)) mouse.buttonUp(index);
+      }
+    }
+    if (held.isEmpty) _pointerButtons.remove(pointer);
+  }
+
+  /// Lets go of every button [pointer] held.
+  void _releasePointer(int pointer) {
+    final held = _pointerButtons.remove(pointer);
     final mouse = _mouse;
-    if (mouse == null) return;
-    mouse.onMove(event.localPosition.dx, event.localPosition.dy);
+    if (held == null || mouse == null) return;
+    for (final index in held) {
+      if (!_heldElsewhere(index)) mouse.buttonUp(index);
+    }
+  }
 
-    // On pointer up, the button field is the button that was released
-    mouse.buttonUp(event.pointer);
+  /// Whether any pointer holds the [MouseState] button [index] (two
+  /// fingers both count as button 0).
+  bool _heldElsewhere(int index) =>
+      _pointerButtons.values.any((held) => held.contains(index));
 
-    // More reliable: check which buttons are no longer pressed
-    // Since buttons field is 0 on up, we need to track differently
-    // For now, release all buttons that might have been pressed
-    if (!(event.buttons & kPrimaryButton != 0)) mouse.buttonUp(0);
-    if (!(event.buttons & kSecondaryButton != 0)) mouse.buttonUp(2);
-    if (!(event.buttons & kMiddleMouseButton != 0)) mouse.buttonUp(1);
+  void _handlePointerUp(PointerUpEvent event) {
+    _mouse?.onMove(event.localPosition.dx, event.localPosition.dy);
+    _releasePointer(event.pointer);
+  }
+
+  void _handlePointerCancel(PointerCancelEvent event) {
+    _releasePointer(event.pointer);
   }
 
   void _handlePointerSignal(PointerSignalEvent event) {
@@ -509,7 +555,8 @@ class _InputWidgetState extends State<InputWidget> {
 
   @override
   Widget build(BuildContext context) {
-    // Check for context changes and update cursor mode
+    // InputPlugin keeps CursorState in step with the active context as it
+    // changes; this also covers a registry inserted without the plugin.
     _updateCursorFromContext();
 
     // Games don't want text-selection semantics. Opt the entire input
@@ -523,6 +570,7 @@ class _InputWidgetState extends State<InputWidget> {
       onPointerMove: _handlePointerMove,
       onPointerDown: _handlePointerDown,
       onPointerUp: _handlePointerUp,
+      onPointerCancel: _handlePointerCancel,
       onPointerSignal: _handlePointerSignal,
       child: child,
     );

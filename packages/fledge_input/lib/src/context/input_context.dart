@@ -12,7 +12,11 @@ class InputContext {
   /// The input map for this context.
   final InputMap map;
 
-  /// Priority when multiple contexts are active (higher = preferred).
+  /// Priority among the contexts that could be active: the base context
+  /// (default, state-bound or set with `setActive`) and every pushed one.
+  /// The highest wins; among equals, the most recently pushed. A
+  /// high-priority context (a cutscene, say) stays active when a
+  /// lower-priority one is pushed over it.
   final int priority;
 
   /// Cursor mode when this context is active.
