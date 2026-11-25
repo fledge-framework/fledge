@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:fledge_ecs/fledge_ecs.dart';
@@ -19,7 +20,8 @@ import 'window_os_event_system.dart';
 /// 3. Applies the initial window configuration
 /// 4. Shows and focuses the window
 ///
-/// Runs once on the first frame. Every native call is guarded — on failure
+/// Runs once on the first frame; later frames return immediately and
+/// synchronously. Every native call is guarded — on failure
 /// a [WindowOperationFailed] event is emitted. Non-fatal failures (setting
 /// a title, min/max size, always-on-top) are reported but initialization
 /// continues; if the critical setup steps (`ensureInitialized`, display
@@ -60,11 +62,18 @@ class WindowInitSystem implements System {
   @override
   bool shouldRun(World world) => runCondition?.call(world) ?? true;
 
+  /// Initializes the window on the first call. The setup awaits
+  /// `window_manager` and `screen_retriever`, so that one call returns a
+  /// `Future`; every later call returns synchronously (no `Future`, no
+  /// event-loop turn), so frames after the first don't pay for this system.
   @override
-  Future<void> run(World world) async {
-    if (_initialized) return;
+  FutureOr<void> run(World world) {
+    if (_initialized) return null;
     _initialized = true;
+    return _initialize(world);
+  }
 
+  Future<void> _initialize(World world) async {
     // Critical step 1: backend initialization.
     if (!await _tryNative(
       world,
@@ -284,7 +293,8 @@ class WindowInitSystem implements System {
             d.visibleSize?.height ?? d.size.height,
           ),
           scaleFactor: (d.scaleFactor ?? 1.0).toDouble(),
-          refreshRate: 60.0,
+          // screen_retriever 0.2.x doesn't report refresh rates.
+          refreshRate: Display.unknownRefreshRate,
           isPrimary: isPrimary,
         ),
       );

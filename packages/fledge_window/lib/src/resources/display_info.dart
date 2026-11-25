@@ -22,7 +22,17 @@ class Display {
   final double scaleFactor;
 
   /// Refresh rate in Hz.
+  ///
+  /// **Placeholder:** the `screen_retriever` 0.2.x backend this plugin uses
+  /// doesn't report refresh rates, so displays enumerated by `WindowPlugin`
+  /// always carry [unknownRefreshRate] (60.0). For the real rate of the
+  /// display a Flutter view is on, read `View.of(context).display.refreshRate`
+  /// (from `dart:ui`'s `FlutterView.display`).
   final double refreshRate;
+
+  /// The [refreshRate] reported for displays whose real rate the backend
+  /// can't query: 60.0.
+  static const double unknownRefreshRate = 60.0;
 
   /// Whether this is the primary display.
   final bool isPrimary;

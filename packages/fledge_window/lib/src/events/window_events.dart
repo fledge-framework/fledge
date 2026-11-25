@@ -5,7 +5,7 @@ import '../window_mode.dart';
 /// Event fired when the window mode changes.
 ///
 /// ```dart
-/// for (final event in world.readEvents<WindowModeChanged>()) {
+/// for (final event in world.eventReader<WindowModeChanged>().read()) {
 ///   print('Mode changed: ${event.previousMode} -> ${event.newMode}');
 /// }
 /// ```
@@ -26,7 +26,7 @@ class WindowModeChanged {
 /// Event fired when the window is resized.
 ///
 /// ```dart
-/// for (final event in world.readEvents<WindowResized>()) {
+/// for (final event in world.eventReader<WindowResized>().read()) {
 ///   print('Resized: ${event.previousSize} -> ${event.newSize}');
 ///   // Update camera viewport, UI layout, etc.
 /// }
@@ -50,7 +50,7 @@ class WindowResized {
 /// Event fired when window focus changes.
 ///
 /// ```dart
-/// for (final event in world.readEvents<WindowFocusChanged>()) {
+/// for (final event in world.eventReader<WindowFocusChanged>().read()) {
 ///   if (!event.isFocused) {
 ///     // Pause game when losing focus
 ///     world.setNextState(GameState.paused);
@@ -125,7 +125,9 @@ class WindowOperationFailed {
 ///
 /// Send this event to change the window mode:
 /// ```dart
-/// world.sendEvent(SetWindowModeRequest(WindowMode.fullscreen));
+/// world
+///     .eventWriter<SetWindowModeRequest>()
+///     .send(const SetWindowModeRequest(WindowMode.fullscreen));
 /// ```
 ///
 /// Or use the convenience methods:
@@ -148,7 +150,9 @@ class SetWindowModeRequest {
 ///
 /// Send this event to resize the window:
 /// ```dart
-/// world.sendEvent(SetWindowSizeRequest(Size(1920, 1080)));
+/// world
+///     .eventWriter<SetWindowSizeRequest>()
+///     .send(const SetWindowSizeRequest(Size(1920, 1080)));
 /// ```
 ///
 /// Or use the convenience method:

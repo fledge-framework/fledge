@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:ui';
 
 import 'package:fledge_ecs/fledge_ecs.dart';
@@ -15,10 +16,20 @@ import 'window_init_system.dart';
 /// Handles [SetWindowModeRequest], [SetWindowSizeRequest], and
 /// [SetWindowPositionRequest] events and applies the changes.
 ///
+/// The system is synchronous and never awaits `window_manager` inside a
+/// tick. A frame with no pending requests costs nothing beyond reading the
+/// (empty) request queues. When there is work, the native calls for one
+/// request start in the background; on the first frame after they finish,
+/// the result is applied: [WindowState] is updated and the success event
+/// ([WindowModeChanged], [WindowResized], [WindowMoved]) is sent, and the
+/// next queued request starts. Requests are applied in arrival order (per
+/// frame: mode, then size, then position requests), one at a time, so each
+/// one is planned against the state its predecessors left behind.
+///
 /// Every native call is guarded: if the OS/backend rejects the operation
-/// or the call throws, a [WindowOperationFailed] event is emitted and the
-/// [WindowState] is left unchanged. Success events fire only after the
-/// native call returns cleanly.
+/// or the call throws, a [WindowOperationFailed] event is emitted (on the
+/// frame the result is applied) and the [WindowState] is left unchanged.
+/// Success events fire only after the native call returns cleanly.
 ///
 /// Runs in the [FirstSets.platform] phase of `Schedules.first`, after
 /// [WindowInitSystem] and [DisplaySyncSystem], so requests are applied
@@ -55,91 +66,118 @@ class WindowEventSystem implements System {
   @override
   bool shouldRun(World world) => runCondition?.call(world) ?? true;
 
+  /// Requests read from the event queues but not yet started.
+  final Queue<Object> _pending = Queue<Object>();
+
+  /// Whether a request's native calls are running in the background.
+  bool _inFlight = false;
+
+  /// A finished request, waiting for the next frame to apply it.
+  _Outcome? _finished;
+
   @override
-  Future<void> run(World world) async {
+  void run(World world) {
     final windowState = world.getResource<WindowState>();
     final displayInfo = world.getResource<DisplayInfo>();
 
     if (windowState == null || displayInfo == null) return;
 
-    final modeReader = world.eventReader<SetWindowModeRequest>();
-    for (final request in modeReader.read()) {
-      await _handleModeChange(world, request, windowState, displayInfo);
+    _pending
+      ..addAll(world.eventReader<SetWindowModeRequest>().read())
+      ..addAll(world.eventReader<SetWindowSizeRequest>().read())
+      ..addAll(world.eventReader<SetWindowPositionRequest>().read());
+
+    final finished = _finished;
+    if (finished != null) {
+      _finished = null;
+      finished.apply(world, windowState);
     }
 
-    final sizeReader = world.eventReader<SetWindowSizeRequest>();
-    for (final request in sizeReader.read()) {
-      await _handleSizeChange(world, request, windowState);
-    }
-
-    final positionReader = world.eventReader<SetWindowPositionRequest>();
-    for (final request in positionReader.read()) {
-      await _handlePositionChange(world, request, windowState);
+    if (_inFlight) return;
+    while (_pending.isNotEmpty) {
+      final op = _plan(world, _pending.removeFirst(), windowState, displayInfo);
+      if (op == null) continue;
+      _start(op);
+      break;
     }
   }
 
-  Future<void> _handleModeChange(
+  /// Starts [op]'s native calls without awaiting them. The outcome is
+  /// stored and applied by the next [run].
+  void _start(_Op op) {
+    _inFlight = true;
+    Future<void> native;
+    try {
+      native = op.native();
+    } catch (e) {
+      native = Future<void>.error(e);
+    }
+    native.then(
+      (_) {
+        _finished = _Outcome(op, null);
+        _inFlight = false;
+      },
+      onError: (Object e) {
+        _finished = _Outcome(op, e);
+        _inFlight = false;
+      },
+    );
+  }
+
+  /// Turns [request] into the native work plus the state change to apply
+  /// on success, or `null` if the request is a no-op against [state].
+  _Op? _plan(
+    World world,
+    Object request,
+    WindowState state,
+    DisplayInfo displayInfo,
+  ) {
+    return switch (request) {
+      SetWindowModeRequest() => _planMode(world, request, state, displayInfo),
+      SetWindowSizeRequest() => _planSize(request, state),
+      SetWindowPositionRequest() => _planPosition(request, state),
+      _ => null,
+    };
+  }
+
+  _Op? _planMode(
     World world,
     SetWindowModeRequest request,
     WindowState state,
     DisplayInfo displayInfo,
-  ) async {
+  ) {
     final previousMode = state.mode;
-    if (previousMode == request.mode) return;
+    final mode = request.mode;
+    if (previousMode == mode) return null;
 
-    // Save windowed state before switching away, so the user can return to it.
-    final Size? previousWindowedSize;
-    final Offset? previousWindowedPosition;
-    if (previousMode == WindowMode.windowed) {
-      previousWindowedSize = state.savedWindowedSize;
-      previousWindowedPosition = state.savedWindowedPosition;
-      state.savedWindowedSize = state.size;
-      state.savedWindowedPosition = state.position;
-    } else {
-      previousWindowedSize = null;
-      previousWindowedPosition = null;
+    if (!displayInfo.isInitialized) {
+      world.eventWriter<WindowOperationFailed>().send(
+        WindowOperationFailed(
+          operation: 'setMode',
+          reason: 'no display information available yet',
+          attemptedMode: mode,
+        ),
+      );
+      return null;
     }
 
     final targetIndex = request.targetDisplay ?? state.displayIndex;
     final display = displayInfo.getDisplay(targetIndex) ?? displayInfo.primary;
 
-    final applied = await _applyMode(world, request.mode, display, state);
-    if (!applied) {
-      // Roll back the saved-windowed bookkeeping on failure.
-      if (previousMode == WindowMode.windowed) {
-        state.savedWindowedSize = previousWindowedSize;
-        state.savedWindowedPosition = previousWindowedPosition;
-      }
-      return;
-    }
+    // Remember the windowed bounds when switching away, so the user can
+    // return to them. Captured now; written only on success.
+    final wasWindowed = previousMode == WindowMode.windowed;
+    final leavingSize = state.size;
+    final leavingPosition = state.position;
 
-    world.eventWriter<WindowModeChanged>().send(
-      WindowModeChanged(previousMode: previousMode, newMode: request.mode),
-    );
-  }
-
-  /// Apply [mode] to the window. Returns `true` on success, `false` if any
-  /// native call failed (in which case `state` is left untouched and a
-  /// `WindowOperationFailed` event has already been emitted).
-  Future<bool> _applyMode(
-    World world,
-    WindowMode mode,
-    Display display,
-    WindowState state,
-  ) async {
+    final Future<void> Function() native;
+    final Size newSize;
+    final Offset newPosition;
     switch (mode) {
       case WindowMode.fullscreen:
-        if (!await _tryNative(
-          world,
-          'setMode',
-          () => windowManager.setFullScreen(true),
-          attemptedMode: mode,
-        )) {
-          return false;
-        }
-        state.mode = WindowMode.fullscreen;
-        state.size = display.size;
-        state.position = display.bounds.topLeft;
+        native = () => windowManager.setFullScreen(true);
+        newSize = display.size;
+        newPosition = display.bounds.topLeft;
 
       case WindowMode.borderless:
         final displayOrigin = display.isPrimary
@@ -151,116 +189,95 @@ class WindowEventSystem implements System {
           display.size.width,
           display.size.height,
         );
-        final ok = await _tryNative(world, 'setMode', () async {
+        native = () async {
           await windowManager.setFullScreen(false);
           await windowManager.setAsFrameless();
           await windowManager.setHasShadow(false);
           await windowManager.setBounds(borderlessBounds);
-        }, attemptedMode: mode);
-        if (!ok) return false;
-        state.mode = WindowMode.borderless;
-        state.size = display.size;
-        state.position = displayOrigin;
+        };
+        newSize = display.size;
+        newPosition = displayOrigin;
 
       case WindowMode.windowed:
         final size = state.savedWindowedSize ?? const Size(1280, 720);
         final position =
             state.savedWindowedPosition ?? _centerOnDisplay(size, display);
-        final ok = await _tryNative(world, 'setMode', () async {
+        native = () async {
           await windowManager.setFullScreen(false);
           await windowManager.setTitleBarStyle(TitleBarStyle.normal);
           await windowManager.setAlwaysOnTop(false);
           await windowManager.setBounds(
             Rect.fromLTWH(position.dx, position.dy, size.width, size.height),
           );
-        }, attemptedMode: mode);
-        if (!ok) return false;
-        state.mode = WindowMode.windowed;
-        state.size = size;
-        state.position = position;
+        };
+        newSize = size;
+        newPosition = position;
     }
 
-    state.displayIndex = display.index;
-    return true;
+    return _Op(
+      operation: 'setMode',
+      attemptedMode: mode,
+      native: native,
+      onSuccess: (world, state) {
+        if (wasWindowed) {
+          state.savedWindowedSize = leavingSize;
+          state.savedWindowedPosition = leavingPosition;
+        }
+        state
+          ..mode = mode
+          ..size = newSize
+          ..position = newPosition
+          ..displayIndex = display.index;
+        world.eventWriter<WindowModeChanged>().send(
+          WindowModeChanged(previousMode: previousMode, newMode: mode),
+        );
+      },
+    );
   }
 
-  Future<void> _handleSizeChange(
-    World world,
-    SetWindowSizeRequest request,
-    WindowState state,
-  ) async {
-    if (state.mode != WindowMode.windowed) return;
+  _Op? _planSize(SetWindowSizeRequest request, WindowState state) {
+    if (state.mode != WindowMode.windowed) return null;
 
     final previousSize = state.size;
-    if (previousSize == request.size) return;
+    final size = request.size;
+    if (previousSize == size) return null;
 
-    if (!await _tryNative(
-      world,
-      'resize',
-      () => windowManager.setSize(request.size),
-    )) {
-      return;
-    }
-
-    state.size = request.size;
-    state.savedWindowedSize = request.size;
-
-    world.eventWriter<WindowResized>().send(
-      WindowResized(previousSize: previousSize, newSize: request.size),
+    return _Op(
+      operation: 'resize',
+      native: () => windowManager.setSize(size),
+      onSuccess: (world, state) {
+        state
+          ..size = size
+          ..savedWindowedSize = size;
+        world.eventWriter<WindowResized>().send(
+          WindowResized(previousSize: previousSize, newSize: size),
+        );
+      },
     );
   }
 
-  Future<void> _handlePositionChange(
-    World world,
-    SetWindowPositionRequest request,
-    WindowState state,
-  ) async {
-    if (state.mode != WindowMode.windowed) return;
+  _Op? _planPosition(SetWindowPositionRequest request, WindowState state) {
+    if (state.mode != WindowMode.windowed) return null;
 
     final previousPosition = state.position;
-    if (previousPosition == request.position) return;
+    final position = request.position;
+    if (previousPosition == position) return null;
 
-    if (!await _tryNative(
-      world,
-      'reposition',
-      () => windowManager.setPosition(request.position),
-    )) {
-      return;
-    }
-
-    state.position = request.position;
-    state.savedWindowedPosition = request.position;
-
-    world.eventWriter<WindowMoved>().send(
-      WindowMoved(
-        previousPosition: previousPosition,
-        newPosition: request.position,
-      ),
+    return _Op(
+      operation: 'reposition',
+      native: () => windowManager.setPosition(position),
+      onSuccess: (world, state) {
+        state
+          ..position = position
+          ..savedWindowedPosition = position;
+        world.eventWriter<WindowMoved>().send(
+          WindowMoved(
+            previousPosition: previousPosition,
+            newPosition: position,
+          ),
+        );
+      },
     );
-  }
-
-  /// Run [action]; on any exception, emit a [WindowOperationFailed] event
-  /// tagged with [operation] and swallow the error so the game loop stays
-  /// alive. Returns `true` if the action completed without throwing.
-  static Future<bool> _tryNative(
-    World world,
-    String operation,
-    Future<void> Function() action, {
-    WindowMode? attemptedMode,
-  }) async {
-    try {
-      await action();
-      return true;
-    } catch (e) {
-      world.eventWriter<WindowOperationFailed>().send(
-        WindowOperationFailed(
-          operation: operation,
-          reason: e.toString(),
-          attemptedMode: attemptedMode,
-        ),
-      );
-      return false;
-    }
   }
 
   /// Centre a window of [windowSize] on [display]. Exposed as static for
@@ -274,4 +291,42 @@ class WindowEventSystem implements System {
     displayBounds.left + (displayBounds.width - windowSize.width) / 2,
     displayBounds.top + (displayBounds.height - windowSize.height) / 2,
   );
+}
+
+/// One request's native work and the state change it makes on success.
+class _Op {
+  final String operation;
+  final WindowMode? attemptedMode;
+  final Future<void> Function() native;
+  final void Function(World world, WindowState state) onSuccess;
+
+  _Op({
+    required this.operation,
+    required this.native,
+    required this.onSuccess,
+    this.attemptedMode,
+  });
+}
+
+/// A finished [_Op]: [error] is `null` when the native calls succeeded.
+class _Outcome {
+  final _Op op;
+  final Object? error;
+
+  _Outcome(this.op, this.error);
+
+  void apply(World world, WindowState state) {
+    final error = this.error;
+    if (error == null) {
+      op.onSuccess(world, state);
+      return;
+    }
+    world.eventWriter<WindowOperationFailed>().send(
+      WindowOperationFailed(
+        operation: op.operation,
+        reason: error.toString(),
+        attemptedMode: op.attemptedMode,
+      ),
+    );
+  }
 }

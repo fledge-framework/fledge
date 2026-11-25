@@ -53,7 +53,7 @@ import 'window_config.dart';
 /// ## Listening to Window Events
 ///
 /// ```dart
-/// for (final event in world.readEvents<WindowModeChanged>()) {
+/// for (final event in world.eventReader<WindowModeChanged>().read()) {
 ///   print('Mode: ${event.previousMode} -> ${event.newMode}');
 /// }
 /// ```

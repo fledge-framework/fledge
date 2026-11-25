@@ -126,7 +126,8 @@ class DisplaySyncSystem implements System {
             d.visibleSize?.height ?? d.size.height,
           ),
           scaleFactor: (d.scaleFactor ?? 1.0).toDouble(),
-          refreshRate: 60.0,
+          // screen_retriever 0.2.x doesn't report refresh rates.
+          refreshRate: Display.unknownRefreshRate,
           isPrimary: isPrimary,
         ),
       );
