@@ -9,7 +9,7 @@
 /// - **Animated Tiles**: Automatic tile animation support
 /// - **Collision Shapes**: Generate collision from objects and tiles
 /// - **Custom Properties**: Type-safe access to Tiled properties
-/// - **Infinite Maps**: Chunk-based loading for large maps
+/// - **Infinite Maps**: Tiles and collision grids from the map's chunks
 ///
 /// ## Quick Start
 ///
@@ -22,19 +22,19 @@
 ///     .addPlugin(WallTimePlugin())
 ///     .addPlugin(TiledPlugin());
 ///
-///   // Load a tilemap
-///   final loader = AssetTilemapLoader(
-///     loadStringContent: (path) => rootBundle.loadString(path),
+///   // Load a tilemap through the asset pipeline
+///   final tmx = TmxLoader(
+///     tilemapLoader: AssetTilemapLoader(
+///       loadStringContent: (path) => rootBundle.loadString(path),
+///     ),
+///     textureLoader: (path, w, h) async => await loadTexture(path),
 ///   );
-///   final tilemap = await loader.load(
-///     'assets/maps/level1.tmx',
-///     (path, w, h) async => await loadTexture(path),
-///   );
+///   final tilemap = await tmx.load('assets/maps/level1.tmx');
+///   final handle = app.world.getResource<Assets<TilemapAsset>>()!.add(tilemap);
 ///
-///   // Store and spawn
-///   app.world.getResource<TilemapAssets>()!.put('level1', tilemap);
+///   // Spawn it
 ///   app.world.eventWriter<SpawnTilemapEvent>().send(
-///     SpawnTilemapEvent(assetKey: 'level1'),
+///     SpawnTilemapEvent.fromHandle(handle),
 ///   );
 ///
 ///   await app.run();
@@ -46,8 +46,8 @@
 /// Objects from Tiled can be spawned as entities with custom components:
 ///
 /// ```dart
-/// SpawnTilemapEvent(
-///   assetKey: 'level1',
+/// SpawnTilemapEvent.fromHandle(
+///   handle,
 ///   config: TilemapSpawnConfig(
 ///     tileConfig: TileLayerConfig(
 ///       generateColliders: true,

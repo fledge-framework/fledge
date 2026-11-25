@@ -7,7 +7,7 @@ TMX/TSX tilemap loading, rendering, animation, collision extraction, and walkabi
 
 ## Stats
 - Source: 21 files, ~3,620 LOC
-- Tests: 3 files (`tile_sprite_conversion_test.dart`, `tile_sort_order_test.dart`, `ordering_test.dart`)
+- Tests: run `ls test/` (sprite conversion, sort order, ordering, culling, colliders, objects, terrain, y-sort, infinite maps, oversized tiles, TSX loader)
 - TODOs in code: 1 (`TODO(next-major)`: drop the `fledge_physics` re-export from the barrel)
 
 ## What Works
@@ -20,12 +20,10 @@ TMX/TSX tilemap loading, rendering, animation, collision extraction, and walkabi
 - Spawn configuration for entity creation from map objects
 
 ## Gaps
-- **[P1]** Minimal test coverage (tile→sprite conversion, extraction sort order, schedule ordering)
 - **[P2]** Memory management — loaded tilemaps never explicitly disposed
 
 ## Action Items
-1. Add unit tests for TMX parsing, collision extraction, and grid extraction
-2. Add tilemap disposal/unloading support for level transitions
+1. Add tilemap disposal/unloading support for level transitions
 
 ## Architecture Notes
 - **Entry point**: `lib/fledge_tiled.dart` (barrel export; also re-exports `fledge_physics` for back-compat — deprecated, slated for removal next major)
@@ -35,12 +33,14 @@ TMX/TSX tilemap loading, rendering, animation, collision extraction, and walkabi
   - `TileLayer` (`lib/src/components/tile_layer.dart`): Individual layer within a tilemap (chunked via `TileChunk` / `ChunkKey`)
   - `ObjectLayer` (`lib/src/components/object_layer.dart`): Named objects (`TiledObject`) — spawn points, triggers
   - `TilemapAnimator` (`lib/src/components/tilemap_animator.dart`): Drives animated tile frames
-- **Loader** (`lib/src/loader/`): `TilemapLoader` (abstract) and `AssetTilemapLoader` (Flutter asset bundle). Parses TMX/TSX XML. Asset-pipeline loaders `TmxLoader` / `TsxLoader` live in `lib/src/resources/tiled_assets.dart` (`TilemapAsset` = `LoadedTilemap`, `TilesetAsset` = `LoadedTileset`).
+- **Loader** (`lib/src/loader/`): `TilemapLoader` (abstract) and `AssetTilemapLoader` (Flutter asset bundle). Parses TMX/TSX XML. Asset-pipeline loaders `TmxLoader` / `TsxLoader` (standalone `.tsx`, parsed by wrapping it in a one-tileset TMX for `AssetTilemapLoader.loadFromString`) live in `lib/src/resources/tiled_assets.dart` (`TilemapAsset` = `LoadedTilemap`, `TilesetAsset` = `LoadedTileset`).
 - **Extraction** (`lib/src/extraction/`): `TilemapExtractor` emits `ExtractedSprite`s into the RenderWorld (via `tile_sprite_conversion.dart`); `CulledTilemapExtractor` adds viewport culling. A deprecated `ExtractedTile` is still emitted alongside each sprite for the deprecation window — read `ExtractedSprite` in new code. Draw order: `tileSortKey` (sub-order `row * 100 + layerIndex`, clamped into the `DrawLayer` range) plus `tilePreciseSubOrder` (unclamped) as `preciseSubOrder` on both outputs; order with `ExtractedSprite.sortByDrawOrder` / `ExtractedTile.compareDrawOrder`.
 - **Pathfinding** (`lib/src/pathfinding/collision_extractor.dart`): `extractCollisionGrid(...)` builds a `CollisionGrid` from tile collision data; run `Pathfinder` (from `fledge_physics`) on it.
 - **Collision** (`lib/src/collision/tile_collider.dart`): `TileCollider` converts Tiled objects/tiles to `fledge_physics` collision shapes in local space.
 - **SpawnConfig** (`lib/src/config/spawn_config.dart`): `TilemapSpawnConfig` maps Tiled object types to entity spawn functions via `ObjectTypeConfig`; `TileLayerConfig` per layer.
 - **Two-stage spawn**: Load asset → `SpawnTilemapEvent` triggers `TilemapSpawnSystem` → `TilemapSpawnedEvent` emitted.
-- **System names**: `TilemapSpawnSystem.systemName` (`'tilemap_spawn'`); `TileAnimationSystem` uses the literal `'tile_animation'` (no constant).
-- **Infinite map support**: Chunk-based loading with configurable chunk size and max chunks.
+- **System names**: `TilemapSpawnSystem.systemName` (`'tilemap_spawn'`); `TileAnimationSystem.systemName` (`'tile_animation'`).
+- **Infinite maps**: `TilemapSpawnSystem` reads `tiled.TileLayer.chunks` into `TileLayer.tiles` (tile coords, can be negative) plus `TileLayer.chunks`; every chunk is loaded at once (`TiledPluginConfig.chunkSize`/`maxLoadedChunks` are deprecated, never read). `extractCollisionGrid` covers the collision layers' chunk bounds; `collisionGridOrigin` gives the tile at cell (0, 0).
+- **Tile size**: `tileToSprite` draws a tile at its `sourceRect` size anchored at the cell's bottom-left (Tiled semantics), plus optional `drawOffset` (tileoffset). `TilemapExtractor` doesn't pass `drawOffset` yet.
+- **Known extractor gaps** (all in `extraction/tilemap_extractor.dart`): layer parallax scales positions instead of offsetting by the camera; image-collection tiles on tile layers draw from the placeholder atlas texture (id 0); in-place `tiles[i] = ...` edits aren't picked up though its class doc says they are.
 - **Tests**: Flutter package — run with `flutter test`.

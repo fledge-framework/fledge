@@ -22,18 +22,20 @@ import 'systems/tilemap_spawn_system.dart';
 ///   .addPlugin(RenderPlugin())    // For render extraction
 ///   .addPlugin(TiledPlugin());
 ///
-/// // Load a tilemap
-/// final loader = AssetTilemapLoader(
-///   loadStringContent: (path) => rootBundle.loadString(path),
+/// // Load a tilemap into Assets<TilemapAsset>
+/// final tmx = TmxLoader(
+///   tilemapLoader: AssetTilemapLoader(
+///     loadStringContent: (path) => rootBundle.loadString(path),
+///   ),
+///   textureLoader: textureLoader,
 /// );
-/// final tilemap = await loader.load('maps/level1.tmx', textureLoader);
-///
-/// // Store in assets
-/// app.world.getResource<TilemapAssets>()!.put('level1', tilemap);
+/// final handle = app.world
+///     .getResource<Assets<TilemapAsset>>()!
+///     .add(await tmx.load('maps/level1.tmx'));
 ///
 /// // Spawn the tilemap
-/// app.world.eventWriter<SpawnTilemapEvent>().send(SpawnTilemapEvent(
-///   assetKey: 'level1',
+/// app.world.eventWriter<SpawnTilemapEvent>().send(SpawnTilemapEvent.fromHandle(
+///   handle,
 ///   config: TilemapSpawnConfig(
 ///     tileConfig: TileLayerConfig(
 ///       generateColliders: true,

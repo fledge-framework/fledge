@@ -7,12 +7,17 @@ import '../components/tilemap_animator.dart';
 /// Uses the [WallTime] resource for delta time to advance
 /// all [TilemapAnimator] components each frame.
 ///
-/// This system should run in the update stage after WallTimePlugin
-/// has updated the WallTime resource.
+/// `TiledPlugin` adds it to `Schedules.update`; `WallTime` is advanced in
+/// `Schedules.first` by `WallTimePlugin`, which the app must add.
 class TileAnimationSystem implements System {
+  /// The `SystemMeta.name` of [TileAnimationSystem]. Games that order
+  /// their own systems relative to this one use it in `before:` /
+  /// `after:`.
+  static const String systemName = 'tile_animation';
+
   @override
   SystemMeta get meta => SystemMeta(
-    name: 'tile_animation',
+    name: systemName,
     writes: {ComponentId.of<TilemapAnimator>()},
     resourceReads: {WallTime},
   );

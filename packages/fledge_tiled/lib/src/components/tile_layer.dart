@@ -48,14 +48,21 @@ class TileLayer {
   /// - `"above"`: Layer renders above characters (foreground)
   final String? layerClass;
 
-  /// Pre-computed tile data for efficient rendering.
+  /// Pre-computed tile data for efficient rendering: every non-empty tile
+  /// of the layer, finite or infinite. On an infinite map the tiles come
+  /// from the layer's chunks, at their tile coordinates (which can be
+  /// negative).
   ///
-  /// Only populated for finite maps. For infinite maps, use [chunks].
+  /// This is what `TilemapExtractor` draws. It indexes the list and keeps
+  /// the result while the same list keeps the same length, so to change
+  /// tiles at runtime assign a new list (`layer.tiles = [...]`): replacing
+  /// an entry in place (`tiles[i] = ...`) is not picked up.
   List<TileData>? tiles;
 
-  /// Chunks for infinite maps.
+  /// The same tiles as [tiles], grouped by the TMX file's chunks, for an
+  /// infinite map; null for a finite one.
   ///
-  /// Only populated for infinite maps. For finite maps, use [tiles].
+  /// Read-only bookkeeping: the extractor draws [tiles], not these.
   Map<ChunkKey, TileChunk>? chunks;
 
   TileLayer({

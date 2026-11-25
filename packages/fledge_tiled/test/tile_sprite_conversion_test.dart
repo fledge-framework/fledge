@@ -179,4 +179,54 @@ void main() {
       expect(rotation, closeTo(math.pi / 2, 1e-9));
     });
   });
+
+  group('tileToSprite, tiles not the size of the grid', () {
+    ExtractedSprite tall({int flipFlags = 0, Offset offset = Offset.zero}) =>
+        tileToSprite(
+          texture: texture,
+          // A 32x48 tile on a 16x16 grid, in the cell at (0, 0).
+          sourceRect: const Rect.fromLTWH(0, 0, 32, 48),
+          tileTopLeft: Offset.zero,
+          tileWidth: 16,
+          tileHeight: 16,
+          color: const Color(0xFFFFFFFF),
+          sortKey: 0,
+          flipFlags: flipFlags,
+          drawOffset: offset,
+        );
+
+    test('is drawn at its own size, its bottom-left on the cell\'s', () {
+      final s = tall();
+      expect((s.size.x, s.size.y), (32.0, 48.0));
+      // Box from (0, 16 - 48) to (32, 16): centre (16, -8).
+      expect((s.transform.storage[6], s.transform.storage[7]), (16.0, -8.0));
+    });
+
+    test('moves by the tileset\'s tile offset', () {
+      final s = tall(offset: const Offset(2, 3));
+      expect((s.transform.storage[6], s.transform.storage[7]), (18.0, -5.0));
+    });
+
+    test('a diagonal flip swaps the box, still on the bottom-left', () {
+      final s = tall(flipFlags: TileFlipFlags.diagonal);
+      expect((s.size.x, s.size.y), (32.0, 48.0));
+      // Box 48 wide, 32 tall: from (0, -16) to (48, 16).
+      expect((s.transform.storage[6], s.transform.storage[7]), (24.0, 0.0));
+    });
+
+    test('an empty source rect falls back to the cell', () {
+      final s = tileToSprite(
+        texture: texture,
+        sourceRect: Rect.zero,
+        tileTopLeft: const Offset(32, 48),
+        tileWidth: 16,
+        tileHeight: 16,
+        color: const Color(0xFFFFFFFF),
+        sortKey: 0,
+        flipFlags: 0,
+      );
+      expect((s.size.x, s.size.y), (16.0, 16.0));
+      expect((s.transform.storage[6], s.transform.storage[7]), (40.0, 56.0));
+    });
+  });
 }

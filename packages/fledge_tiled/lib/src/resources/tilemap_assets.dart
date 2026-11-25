@@ -11,17 +11,8 @@ import 'tileset_registry.dart';
 /// Stores parsed TiledMap data and associated textures.
 /// Use this resource to access loaded tilemaps by key.
 ///
-/// Example:
-/// ```dart
-/// // During app setup
-/// final loader = AssetTilemapLoader();
-/// final tilemap = await loader.load('maps/level1.tmx', textureLoader);
-/// app.world.getResource<TilemapAssets>()!.put('level1', tilemap);
-///
-/// // Later, spawn the map
-/// final assets = world.getResource<TilemapAssets>()!;
-/// final loaded = assets.get('level1')!;
-/// ```
+/// New code loads into `Assets<TilemapAsset>` through `TmxLoader` and
+/// spawns with `SpawnTilemapEvent.fromHandle`; see the library docs.
 @Deprecated(
   'Prefer `Assets<Tilemap>` from fledge_assets. TilemapAssets stays as a '
   'thin key-based facade for one release.',

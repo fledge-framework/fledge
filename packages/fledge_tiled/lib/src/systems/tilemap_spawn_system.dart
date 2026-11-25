@@ -20,19 +20,27 @@ import '../resources/tilemap_assets.dart';
 
 /// Event to spawn a tilemap in the world.
 ///
-/// Sent to trigger tilemap creation. The tilemap must be loaded
-/// in [TilemapAssets] before spawning.
+/// Sent to trigger tilemap creation. The tilemap must already be loaded
+/// when [TilemapSpawnSystem] reads the event: an event whose handle isn't
+/// ready yet (an `Assets.load` still in flight, or one that failed; see
+/// `Handle.error`) is dropped. The legacy [assetKey] form looks the map up
+/// in `Assets<TilemapAsset>` by path, then in the deprecated
+/// [TilemapAssets].
 ///
 /// Example:
 /// ```dart
-/// // First load the map
-/// final loader = AssetTilemapLoader(...);
-/// final tilemap = await loader.load('level1.tmx', textureLoader);
-/// world.getResource<TilemapAssets>()!.put('level1', tilemap);
+/// // First load the map into Assets<TilemapAsset>
+/// final tmx = TmxLoader(
+///   tilemapLoader: AssetTilemapLoader(loadStringContent: loadString),
+///   textureLoader: textureLoader,
+/// );
+/// final handle = world
+///     .getResource<Assets<TilemapAsset>>()!
+///     .add(await tmx.load('level1.tmx'));
 ///
 /// // Then spawn it
-/// world.eventWriter<SpawnTilemapEvent>().send(SpawnTilemapEvent(
-///   assetKey: 'level1',
+/// world.eventWriter<SpawnTilemapEvent>().send(SpawnTilemapEvent.fromHandle(
+///   handle,
 ///   position: Offset(100, 200),
 ///   config: TilemapSpawnConfig(
 ///     tileConfig: TileLayerConfig(
@@ -253,7 +261,10 @@ class TilemapSpawnSystem implements System {
     LoadedTilemap loaded,
     TilemapSpawnConfig config,
   ) {
-    final tiles = _buildTileData(layer, loaded);
+    final chunks = layer.data == null && layer.chunks != null
+        ? <ChunkKey, TileChunk>{}
+        : null;
+    final tiles = _buildTileData(layer, loaded, chunks);
 
     final layerEntity = world.spawnChild(parent)
       ..insert(
@@ -268,6 +279,7 @@ class TilemapSpawnSystem implements System {
           tintColor: _parseColor(layer.tintColorHex),
           layerClass: layer.class_,
           tiles: tiles,
+          chunks: chunks,
         ),
       )
       ..insert(Transform2D())
@@ -368,41 +380,72 @@ class TilemapSpawnSystem implements System {
     tileConfig.onColliderSpawn?.call(colliderEntity, layerName, collider);
   }
 
-  List<TileData> _buildTileData(tiled.TileLayer layer, LoadedTilemap loaded) {
+  /// The layer's tiles: from its data on a finite map, or from its chunks
+  /// on an infinite one (at the chunks' tile coordinates, which can be
+  /// negative). For an infinite map the tiles are also grouped by chunk
+  /// into [chunks], when given.
+  List<TileData> _buildTileData(
+    tiled.TileLayer layer,
+    LoadedTilemap loaded, [
+    Map<ChunkKey, TileChunk>? chunks,
+  ]) {
     final tiles = <TileData>[];
-    final data = layer.data;
-    if (data == null) return tiles;
 
-    final width = layer.width;
+    void addRow(List<int> data, int width, int originX, int originY) {
+      if (width <= 0) return;
+      for (int i = 0; i < data.length; i++) {
+        final rawGid = data[i];
+        if (rawGid == 0) continue; // Empty tile
 
-    for (int i = 0; i < data.length; i++) {
-      final rawGid = data[i];
-      if (rawGid == 0) continue; // Empty tile
+        // Clear flip flags to get actual GID
+        final gid = rawGid & 0x1FFFFFFF;
 
-      final x = i % width;
-      final y = i ~/ width;
+        // Find tileset for this GID
+        final lookup = loaded.getTilesetForGid(gid);
+        if (lookup == null) continue;
 
-      // Clear flip flags to get actual GID
-      final gid = rawGid & 0x1FFFFFFF;
-
-      // Find tileset for this GID
-      final lookup = loaded.getTilesetForGid(gid);
-      if (lookup == null) continue;
-
-      final isAnimated = loaded.hasAnimation(gid);
-
-      tiles.add(
-        TileData.fromGid(
-          rawGid,
-          x,
-          y,
-          lookup.tilesetIndex,
-          lookup.tileset.firstGid,
-          animated: isAnimated,
-        ),
-      );
+        tiles.add(
+          TileData.fromGid(
+            rawGid,
+            originX + i % width,
+            originY + i ~/ width,
+            lookup.tilesetIndex,
+            lookup.tileset.firstGid,
+            animated: loaded.hasAnimation(gid),
+          ),
+        );
+      }
     }
 
+    final data = layer.data;
+    if (data != null) {
+      addRow(data, layer.width, 0, 0);
+      return tiles;
+    }
+
+    final layerChunks = layer.chunks;
+    if (layerChunks == null) return tiles;
+    final tileWidth = loaded.tileWidth.toDouble();
+    final tileHeight = loaded.tileHeight.toDouble();
+    for (final chunk in layerChunks) {
+      final start = tiles.length;
+      addRow(chunk.data, chunk.width, chunk.x, chunk.y);
+      if (chunks == null || chunk.width <= 0 || chunk.height <= 0) continue;
+      // Chunk coordinates in chunks; floor division keeps negative chunks
+      // (x = -16 with 16-wide chunks is chunk -1) apart from chunk 0.
+      final key = ChunkKey(
+        (chunk.x / chunk.width).floor(),
+        (chunk.y / chunk.height).floor(),
+      );
+      chunks[key] = TileChunk(
+        key: key,
+        width: chunk.width,
+        height: chunk.height,
+        tiles: tiles.sublist(start),
+        worldX: chunk.x * tileWidth,
+        worldY: chunk.y * tileHeight,
+      );
+    }
     return tiles;
   }
 

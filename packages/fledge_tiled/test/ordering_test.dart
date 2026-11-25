@@ -34,6 +34,11 @@ void main() {
     expect(issues, isEmpty, reason: issues.map((i) => ' - $i').join('\n'));
   });
 
+  test('TileAnimationSystem names itself with its systemName constant', () {
+    expect(TileAnimationSystem.systemName, 'tile_animation');
+    expect(TileAnimationSystem().meta.name, TileAnimationSystem.systemName);
+  });
+
   test('TilemapSpawnSystem joins FirstSets.content and stays exclusive', () {
     final meta = TilemapSpawnSystem().meta;
     expect(meta.sets, [FirstSets.content]);

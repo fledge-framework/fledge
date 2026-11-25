@@ -58,12 +58,20 @@ double tilePreciseSubOrder({required int row, required int layerIndex}) =>
 /// the shared render-widget pipeline (`FledgeRenderView` /
 /// `LitFledgeRenderView`).
 ///
-/// - The sprite is anchored at (0.5, 0.5) with the tile's world
-///   position placed at the tile's centre.
+/// - [tileTopLeft], [tileWidth] and [tileHeight] are the map cell the
+///   tile is painted in. The tile is drawn at its own size, its
+///   [sourceRect]'s (a tileset's tile can be bigger or smaller than the
+///   map's grid), with its bottom-left corner at the cell's bottom-left,
+///   then moved by [drawOffset] (the tileset's `<tileoffset>`), as Tiled
+///   draws it. A tile the size of the cell fills the cell exactly. An
+///   empty [sourceRect] falls back to the cell's size.
+/// - The sprite is anchored at (0.5, 0.5), at the centre of that box.
 /// - Flip flags become a rotation about the centre, plus a horizontal
 ///   mirror (`ExtractedSprite.flipX`, applied in the tile's own space)
 ///   for the four combinations that mirror (H alone, V alone, D alone,
-///   H+V+D), so all eight of Tiled's orientations draw as in Tiled.
+///   H+V+D), so all eight of Tiled's orientations draw as in Tiled. A
+///   diagonal flip swaps the box's width and height, so a non-square tile
+///   stays on the cell's bottom-left corner.
 ///
 /// [preciseSubOrder] becomes `ExtractedSprite.preciseSubOrder`: the
 /// unclamped tie-breaker for equal [sortKey]s (see
@@ -82,9 +90,16 @@ ExtractedSprite tileToSprite({
   required int sortKey,
   required int flipFlags,
   double? preciseSubOrder,
+  Offset drawOffset = Offset.zero,
 }) {
-  final centerX = tileTopLeft.dx + tileWidth / 2;
-  final centerY = tileTopLeft.dy + tileHeight / 2;
+  final width = sourceRect.width > 0 ? sourceRect.width : tileWidth;
+  final height = sourceRect.height > 0 ? sourceRect.height : tileHeight;
+  // The box the drawn tile covers, after a diagonal flip's swap.
+  final diagonal = (flipFlags & TileFlipFlags.diagonal) != 0;
+  final boxWidth = diagonal ? height : width;
+  final boxHeight = diagonal ? width : height;
+  final centerX = tileTopLeft.dx + drawOffset.dx + boxWidth / 2;
+  final centerY = tileTopLeft.dy + tileHeight + drawOffset.dy - boxHeight / 2;
 
   final (:rotation, :mirror) = _flipsToOrientation(flipFlags);
   final cos = math.cos(rotation);
@@ -110,7 +125,7 @@ ExtractedSprite tileToSprite({
     preciseSubOrder: preciseSubOrder,
     flipFlags: ExtractedSprite.computeFlipFlags(mirror, false),
     anchor: Vector2(0.5, 0.5),
-    size: Vector2(tileWidth, tileHeight),
+    size: Vector2(width, height),
   );
 }
 

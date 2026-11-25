@@ -11,13 +11,18 @@
 ///   print('Map has ${animator.animations.length} animated tiles');
 /// }
 ///
-/// // Get current frame for an animated tile during extraction
-/// final currentFrame = animator?.getCurrentFrame(tile.localId) ?? tile.localId;
+/// // The frame an animated tile shows now, as a local ID in its tileset.
+/// // Animations are keyed by the tile's global ID (GID).
+/// final gid = loaded.tilesets[tile.tilesetIndex].localIdToGid(tile.localId);
+/// final frame = animator != null && animator.hasAnimation(gid)
+///     ? animator.getCurrentFrame(gid)
+///     : tile.localId;
 /// ```
 class TilemapAnimator {
-  /// Map of tile local ID to animation data.
+  /// Map of a tile's global ID (GID, without flip flags) to its animation.
   ///
-  /// Only tiles with animations are included in this map.
+  /// Only tiles with animations are included in this map. The frames'
+  /// [TileAnimationFrame.tileId]s are local IDs in the tile's tileset.
   final Map<int, TileAnimation> animations;
 
   /// Current global animation time accumulator in seconds.
@@ -32,17 +37,20 @@ class TilemapAnimator {
     time += dt;
   }
 
-  /// Gets the current frame index for an animated tile.
+  /// The frame the tile with global ID [gid] shows now: a local tile ID
+  /// in the tile's tileset.
   ///
-  /// Returns the original [localId] if the tile is not animated.
-  int getCurrentFrame(int localId) {
-    final anim = animations[localId];
-    if (anim == null) return localId;
+  /// Returns [gid] unchanged if the tile is not animated (so check
+  /// [hasAnimation] first, or convert the result only for animated
+  /// tiles).
+  int getCurrentFrame(int gid) {
+    final anim = animations[gid];
+    if (anim == null) return gid;
     return anim.getFrameAtTime(time);
   }
 
-  /// Returns true if a tile has an animation.
-  bool hasAnimation(int localId) => animations.containsKey(localId);
+  /// Returns true if the tile with global ID [gid] has an animation.
+  bool hasAnimation(int gid) => animations.containsKey(gid);
 
   /// Resets all animation timers.
   void reset() {
