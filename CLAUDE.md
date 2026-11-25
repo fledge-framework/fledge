@@ -44,7 +44,7 @@ The workspace pubspec categorises which packages need `dart test` vs `flutter te
 
 ## Code generation
 
-`fledge_ecs_annotations` provides `@component` / `@system` etc., and `fledge_ecs_generator` produces the wrapper classes. Generated `.g.dart` files are gitignored, so run `melos run build_runner` before both analyze and test (CI does — generator golden tests need it), and again after touching any annotated class. The `basic_ecs` example also needs `dart run build_runner build --delete-conflicting-outputs` before it will compile.
+`fledge_ecs_annotations` provides `@component` / `@system` etc., and `fledge_ecs_generator` produces the wrapper classes. Generated `.g.dart` files are gitignored, so run `melos run build_runner` before both analyze and test (CI does — generator golden tests need it), and again after touching any annotated class. The `basic_ecs` example also needs `dart run build_runner build` before it will compile.
 
 ## Architecture
 

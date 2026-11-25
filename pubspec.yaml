@@ -128,7 +128,7 @@ melos:
 
     build_runner:
       description: Run build_runner in packages that need it
-      run: melos exec -- dart run build_runner build --delete-conflicting-outputs
+      run: melos exec -- dart run build_runner build
       packageFilters:
         dependsOn: build_runner
 

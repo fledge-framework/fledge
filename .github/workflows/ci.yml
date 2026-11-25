@@ -206,7 +206,7 @@ jobs:
 
       - name: Generate code for basic_ecs example
         working-directory: examples/basic_ecs
-        run: dart run build_runner build --delete-conflicting-outputs
+        run: dart run build_runner build
 
       - name: Build basic_ecs example
         working-directory: examples/basic_ecs
