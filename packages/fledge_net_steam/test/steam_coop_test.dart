@@ -151,6 +151,17 @@ void main() {
       expect(net.user(friendId).presence, isEmpty);
     });
 
+    test('a join that throws leaves the lobby again', () async {
+      final lobby = await coop(hostId).host(session(hostId));
+      final friend = coop(friendId);
+      // Hosting first makes the friend's join throw: one session at a time.
+      final busy = session(friendId);
+      await coop(friendId).host(busy);
+      await expectLater(friend.join(busy, lobby), throwsStateError);
+      expect(friend.lobby, isNull);
+      expect(net.lobbies[lobby]!.members, [hostId]);
+    });
+
     test('leaving stops advertising', () async {
       final host = coop(hostId);
       final lobby = await host.host(session(hostId));

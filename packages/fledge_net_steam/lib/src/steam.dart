@@ -238,6 +238,10 @@ class Steam implements SteamNetworking, SteamMatchmaking {
   /// Messages read per receive call.
   static const _inboxSize = 64;
 
+  /// Session requests kept for [takeSessionRequests]; older ones are
+  /// dropped, so a program that never drains them doesn't grow forever.
+  static const _maxPendingRequests = 256;
+
   @override
   late final int localSteamId;
 
@@ -255,6 +259,7 @@ class Steam implements SteamNetworking, SteamMatchmaking {
       switch (id) {
         case sessionRequestCallback:
           // The callback's only field is the requesting identity.
+          if (_requests.length >= _maxPendingRequests) _requests.removeAt(0);
           _requests.add(_api.identityGetSteamId64(param));
         case apiCallCompletedCallback:
           _completeCall(param);

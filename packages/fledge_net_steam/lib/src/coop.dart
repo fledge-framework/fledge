@@ -83,11 +83,19 @@ class SteamCoop {
     await lobbies.joinLobby(lobby);
     _lobby = lobby;
     final host = hostOf(lobby);
-    final joined = await session.join(
-      host,
-      0,
-      transport: transport ?? SteamTransport(networking),
-    );
+    final bool joined;
+    try {
+      joined = await session.join(
+        host,
+        0,
+        transport: transport ?? SteamTransport(networking),
+      );
+    } catch (_) {
+      // For example a session that is already running: don't stay in the
+      // lobby we just joined.
+      leave();
+      rethrow;
+    }
     if (!joined) {
       leave();
       return false;
