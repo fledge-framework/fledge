@@ -37,11 +37,14 @@
 /// }
 /// ```
 ///
-/// 3. Register saveables with the plugin:
+/// 3. Insert it as a world resource. Every [Saveable] resource in the
+/// world is discovered automatically at save and load time, so there is
+/// nothing to register:
 /// ```dart
-/// final savePlugin = app.getPlugin<SavePlugin>();
-/// savePlugin.registerSaveable(world.getResource<Inventory>()!);
+/// app.insertResource(Inventory());
 /// ```
+/// Only saveable objects that are *not* world resources need
+/// [SavePlugin.registerSaveable].
 ///
 /// 4. Request saves from ECS systems:
 /// ```dart
@@ -54,7 +57,7 @@
 /// if (saveManager.saveRequested) {
 ///   final metadata = saveManager.pendingMetadata;
 ///   saveManager.clearSaveRequest();
-///   await saveManager.save(world, metadata: metadata);
+///   await saveManager.save(world, slotName: 'slot1', metadata: metadata);
 /// }
 /// ```
 ///

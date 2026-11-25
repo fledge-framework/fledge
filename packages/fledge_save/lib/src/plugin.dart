@@ -92,8 +92,8 @@ class SaveManagerWithSaveables extends SaveManager {
 
   SaveManagerWithSaveables({
     required super.config,
-    required List<Saveable> Function() getSaveables,
-  }) : _getSaveables = getSaveables;
+    required this._getSaveables,
+  });
 
   @override
   Iterable<Saveable> getSaveableResources(World world) {

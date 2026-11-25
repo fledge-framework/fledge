@@ -39,8 +39,9 @@ const _tempSuffix = '.tmp';
 ///
 /// // In Flutter game loop (async)
 /// if (saveManager.saveRequested) {
+///   final metadata = saveManager.pendingMetadata;
 ///   saveManager.clearSaveRequest();
-///   await saveManager.save(world, 'slot1');
+///   await saveManager.save(world, slotName: 'slot1', metadata: metadata);
 /// }
 /// ```
 class SaveManager {
