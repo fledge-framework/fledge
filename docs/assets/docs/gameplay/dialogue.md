@@ -18,7 +18,7 @@ A ready-made `DialogueBoxWidget` draws the current line and choices.
 
 ```yaml
 dependencies:
-  fledge_yarn: ^0.6.0
+  fledge_yarn: ^0.7.0
 ```
 
 - Flutter 3.50+ (Dart `^3.14`): the package depends on Flutter for its

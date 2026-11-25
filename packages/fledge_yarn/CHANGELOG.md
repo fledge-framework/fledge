@@ -1,3 +1,25 @@
+## 0.7.0
+
+> Note: This release has breaking changes.
+
+ - **FIX**(fledge_yarn): log malformed conditions. ([a3ffb06b](https://github.com/fledge-framework/fledge/commit/a3ffb06bff6c1d5f14d0376b2f107c549c9a2b70))
+ - **FIX**(fledge_yarn): jump to a missing node no longer leaves the previous line up. ([33a6ac05](https://github.com/fledge-framework/fledge/commit/33a6ac054cab948839ec306e8a3363dd107e566d))
+ - **FIX**: bump versions to stable. ([13c9aa7f](https://github.com/fledge-framework/fledge/commit/13c9aa7f0d2702dabaa7088a8679c2113f8d295d))
+ - **FEAT**(fledge_render_2d): improve culling. ([966e8657](https://github.com/fledge-framework/fledge/commit/966e86576f4f886ad4afcd24958e607188e222f6))
+ - **FEAT**(fledge_core): performance enhancements. ([839f52da](https://github.com/fledge-framework/fledge/commit/839f52dacb8eab4c1c69d7610cafb52b3af7601f))
+ - **FEAT**(fledge_yarn): support for cinematics. ([1572d821](https://github.com/fledge-framework/fledge/commit/1572d8214899162164a8a5258bed8b713b8e4965))
+ - **FEAT**(fledge_audio): upgrade to leverage soloud. ([13964f36](https://github.com/fledge-framework/fledge/commit/13964f36394d8c39981071d5f03d9d8c153ce4c4))
+ - **FEAT**: update render graph. ([1a2aa4f7](https://github.com/fledge-framework/fledge/commit/1a2aa4f762ac933ac1aa9d8ebce431e8016908a8))
+ - **FEAT**(fledge_yarn): pausing command callbacks. ([8c117ce1](https://github.com/fledge-framework/fledge/commit/8c117ce153f3908816d22c3240c98e75b5a3af2d))
+ - **FEAT**: upgrade tiled version. ([306fdb67](https://github.com/fledge-framework/fledge/commit/306fdb6708c06ff8c29a1a745a9899677bf9ce27))
+ - **FEAT**: v0.2 engine restructure — 2D/2.5D desktop game engine. ([bf7c2b6c](https://github.com/fledge-framework/fledge/commit/bf7c2b6cc47837c998786f25bc87997f474c5b1d))
+ - **FEAT**(fledge_net): add network packet encryption. ([843c1c99](https://github.com/fledge-framework/fledge/commit/843c1c9911d82a997f8d52841267409d6cdceb4c))
+ - **FEAT**(fledge_yarn): create fledge_yarn for yarnspinner. ([9bbee221](https://github.com/fledge-framework/fledge/commit/9bbee2213966a290074b265ed60e57198d1047c0))
+ - **DOCS**(*): correct README quick starts and point links at the new docs. ([50d6e5da](https://github.com/fledge-framework/fledge/commit/50d6e5da2e8bf3eb220be3782b66e0b74438fd06))
+ - **DOCS**(fledge_yarn): tag grammar. ([6a4895fb](https://github.com/fledge-framework/fledge/commit/6a4895fbe48578d06d35c1afe446ba93f0411966))
+ - **BREAKING** **FIX**(fledge_yarn): keep quoted strings, end once, hold on pausing commands. ([3cd78442](https://github.com/fledge-framework/fledge/commit/3cd78442c0a76f41522d0562092d003ea514a020))
+ - **BREAKING** **FEAT**(fledge_yarn): event-driven dialogue layer. ([3f4be34d](https://github.com/fledge-framework/fledge/commit/3f4be34d8104c2cc2a56030dfe7012421304900b))
+
 ## 0.6.0
 
 > Note: This release has breaking changes.

@@ -8,7 +8,7 @@ Easing curves and value tweens for [Fledge](https://fledge-framework.dev) games.
 
 ```yaml
 dependencies:
-  fledge_tween: ^0.6.0
+  fledge_tween: ^0.7.0
 ```
 
 ## Quick Start

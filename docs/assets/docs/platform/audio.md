@@ -12,7 +12,7 @@ skipped (sound effects).
 
 ```yaml
 dependencies:
-  fledge_audio: ^0.6.0
+  fledge_audio: ^0.7.0
 ```
 
 - **Flutter 3.50+** (Dart 3.14+). flutter_soloud 5.3 builds its native library

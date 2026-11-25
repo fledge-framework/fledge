@@ -14,8 +14,8 @@ a confirm spawns.
 
 ```yaml
 dependencies:
-  fledge_ui: ^0.6.0
-  fledge_render_2d: ^0.6.0 # Sprite, Transform2D, RenderPlugin
+  fledge_ui: ^0.7.0
+  fledge_render_2d: ^0.7.0 # Sprite, Transform2D, RenderPlugin
 ```
 
 - Flutter 3.50+ (Dart `^3.14`). Desktop first (Windows, macOS, Linux); web

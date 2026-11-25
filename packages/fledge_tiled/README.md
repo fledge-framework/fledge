@@ -8,7 +8,7 @@
 
 ```yaml
 dependencies:
-  fledge_tiled: ^0.6.0
+  fledge_tiled: ^0.7.0
 ```
 
 Requires Flutter 3.50+ (Dart 3.14+). Desktop (Windows, macOS, Linux) is the supported target; web and mobile are best-effort. Orthogonal maps only; infinite maps spawn, draw and build collision grids from their chunks (all loaded at once).

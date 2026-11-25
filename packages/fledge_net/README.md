@@ -8,7 +8,7 @@ Multiplayer networking for [Fledge](https://fledge-framework.dev) games: host-au
 
 ```yaml
 dependencies:
-  fledge_net: ^0.6.0
+  fledge_net: ^0.7.0
 ```
 
 Desktop first (Windows, macOS, Linux). The UDP transport uses `dart:io` (IPv4), so the web isn't supported. For Steam relays, lobbies and identities, add [`fledge_net_steam`](https://pub.dev/packages/fledge_net_steam).

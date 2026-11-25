@@ -8,7 +8,7 @@
 
 ```yaml
 dependencies:
-  fledge_yarn: ^0.6.0
+  fledge_yarn: ^0.7.0
 ```
 
 ## Quick Start

@@ -1,3 +1,28 @@
+## 0.7.0
+
+ - **FIX**(fledge_input): release every mouse button, restore contexts, honour priority. ([176a8df3](https://github.com/fledge-framework/fledge/commit/176a8df36b5d0402356754c1b5b7521450909ff7))
+ - **FIX**: resolve incompatible apis. ([70d581c9](https://github.com/fledge-framework/fledge/commit/70d581c96c54d59d8ffc94ce791b8bb241194296))
+ - **FIX**: bump versions to stable. ([13c9aa7f](https://github.com/fledge-framework/fledge/commit/13c9aa7f0d2702dabaa7088a8679c2113f8d295d))
+ - **FIX**(fledge_render_2d): fix null safety error on private field. ([6378bb1e](https://github.com/fledge-framework/fledge/commit/6378bb1eb375413aebc469a49353bbcf126f615c))
+ - **FIX**(fledge): update dependencies, upgrade melos to v7. ([e513327a](https://github.com/fledge-framework/fledge/commit/e513327a9f77e28d2126f9140e146a9b322c7b94))
+ - **FIX**: update dependencies to latest stable versions. ([9e696757](https://github.com/fledge-framework/fledge/commit/9e696757bef8acc802da081690dc918e51f20b9d))
+ - **FIX**(fledge_input): persist input transition flags through the entire frame. ([f96f8ca2](https://github.com/fledge-framework/fledge/commit/f96f8ca2e5ae6f5cbf502d422014321d93ce4a1a))
+ - **FIX**(fledge_input): fix timing issue for action resolution. ([62356b0d](https://github.com/fledge-framework/fledge/commit/62356b0d81db96018025579a544517bf85499de5))
+ - **FEAT**(fledge_input): extend focus bridge. ([d70ab856](https://github.com/fledge-framework/fledge/commit/d70ab856af51a16f187da4c1bd7bf619e0c92f08))
+ - **FEAT**(fledge_render_2d): improve culling. ([966e8657](https://github.com/fledge-framework/fledge/commit/966e86576f4f886ad4afcd24958e607188e222f6))
+ - **FEAT**(fledge_tiled): extract collision from tilesets. ([a5db2352](https://github.com/fledge-framework/fledge/commit/a5db2352f66ec5d5f1d61a8541dbda9b3ff9b1a2))
+ - **FEAT**(fledge_core): performance enhancements. ([839f52da](https://github.com/fledge-framework/fledge/commit/839f52dacb8eab4c1c69d7610cafb52b3af7601f))
+ - **FEAT**(fledge_audio): upgrade to leverage soloud. ([13964f36](https://github.com/fledge-framework/fledge/commit/13964f36394d8c39981071d5f03d9d8c153ce4c4))
+ - **FEAT**: make vsync checks asyncronous to prevent frame skips. ([a1f5cc97](https://github.com/fledge-framework/fledge/commit/a1f5cc97cca011e8f9be638bc4473eeb97858718))
+ - **FEAT**: update render graph. ([1a2aa4f7](https://github.com/fledge-framework/fledge/commit/1a2aa4f762ac933ac1aa9d8ebce431e8016908a8))
+ - **FEAT**: upgrade tiled version. ([306fdb67](https://github.com/fledge-framework/fledge/commit/306fdb6708c06ff8c29a1a745a9899677bf9ce27))
+ - **FEAT**: v0.2 engine restructure — 2D/2.5D desktop game engine. ([bf7c2b6c](https://github.com/fledge-framework/fledge/commit/bf7c2b6cc47837c998786f25bc87997f474c5b1d))
+ - **FEAT**(examples): add new drifter game demo. ([c126a144](https://github.com/fledge-framework/fledge/commit/c126a144fe20402104b01a259d4ee36a00327d92))
+ - **FEAT**(fledge_net): add network packet encryption. ([843c1c99](https://github.com/fledge-framework/fledge/commit/843c1c9911d82a997f8d52841267409d6cdceb4c))
+ - **FEAT**(fledge_net): create net package. ([dfed40d6](https://github.com/fledge-framework/fledge/commit/dfed40d6773ee9371bca5cf432372e265bdc0bb0))
+ - **FEAT**: initial commit. ([0e057c5a](https://github.com/fledge-framework/fledge/commit/0e057c5a4646a51d2f7f4c6bd5ed552b745b1b7d))
+ - **DOCS**(*): correct README quick starts and point links at the new docs. ([50d6e5da](https://github.com/fledge-framework/fledge/commit/50d6e5da2e8bf3eb220be3782b66e0b74438fd06))
+
 ## 0.6.0
 
  - **FIX**: resolve incompatible apis. ([70d581c9](https://github.com/fledge-framework/fledge/commit/70d581c96c54d59d8ffc94ce791b8bb241194296))

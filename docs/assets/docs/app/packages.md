@@ -6,9 +6,9 @@ so pin them all to the same constraint:
 
 ```yaml
 dependencies:
-  fledge_ecs: ^0.6.0
-  fledge_render_2d: ^0.6.0
-  fledge_input: ^0.6.0
+  fledge_ecs: ^0.7.0
+  fledge_render_2d: ^0.7.0
+  fledge_input: ^0.7.0
 ```
 
 **Pure Dart** packages need Dart 3.11+ and run anywhere Dart does, including

@@ -6,7 +6,7 @@ sampled value to your callback.
 
 ```yaml
 dependencies:
-  fledge_tween: ^0.6.0
+  fledge_tween: ^0.7.0
 ```
 
 It depends on Flutter (for `Offset` and `Color` lerps), so it needs Flutter

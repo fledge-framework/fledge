@@ -1,3 +1,24 @@
+## 0.7.0
+
+ - **FIX**(fledge_audio): mix spatial audio in world space and report source endings. ([f78de16f](https://github.com/fledge-framework/fledge/commit/f78de16f9d9a2b5ba3f36e7b6a1d808c5fd5ccf0))
+ - **FIX**: resolve incompatible apis. ([70d581c9](https://github.com/fledge-framework/fledge/commit/70d581c96c54d59d8ffc94ce791b8bb241194296))
+ - **FIX**: bump lower bound of fledge_audio. ([1198dd84](https://github.com/fledge-framework/fledge/commit/1198dd8466d6d92b11ebc5b9127e6ce66c92edab))
+ - **FIX**: bump versions to stable. ([13c9aa7f](https://github.com/fledge-framework/fledge/commit/13c9aa7f0d2702dabaa7088a8679c2113f8d295d))
+ - **FIX**(fledge_render_2d): fix null safety error on private field. ([6378bb1e](https://github.com/fledge-framework/fledge/commit/6378bb1eb375413aebc469a49353bbcf126f615c))
+ - **FIX**(fledge): update dependencies, upgrade melos to v7. ([e513327a](https://github.com/fledge-framework/fledge/commit/e513327a9f77e28d2126f9140e146a9b322c7b94))
+ - **FIX**: update dependencies to latest stable versions. ([9e696757](https://github.com/fledge-framework/fledge/commit/9e696757bef8acc802da081690dc918e51f20b9d))
+ - **FEAT**(fledge_tiled): extract collision from tilesets. ([a5db2352](https://github.com/fledge-framework/fledge/commit/a5db2352f66ec5d5f1d61a8541dbda9b3ff9b1a2))
+ - **FEAT**(fledge_core): performance enhancements. ([839f52da](https://github.com/fledge-framework/fledge/commit/839f52dacb8eab4c1c69d7610cafb52b3af7601f))
+ - **FEAT**(fledge_audio): upgrade to leverage soloud. ([13964f36](https://github.com/fledge-framework/fledge/commit/13964f36394d8c39981071d5f03d9d8c153ce4c4))
+ - **FEAT**: update render graph. ([1a2aa4f7](https://github.com/fledge-framework/fledge/commit/1a2aa4f762ac933ac1aa9d8ebce431e8016908a8))
+ - **FEAT**(fledge_audio): expose systemName on AudioInitSystem and SpatialAudioSystem. ([d79dce3c](https://github.com/fledge-framework/fledge/commit/d79dce3c6c224120e5cf6b7b79454a681d6b5f14))
+ - **FEAT**: upgrade tiled version. ([306fdb67](https://github.com/fledge-framework/fledge/commit/306fdb6708c06ff8c29a1a745a9899677bf9ce27))
+ - **FEAT**: v0.2 engine restructure — 2D/2.5D desktop game engine. ([bf7c2b6c](https://github.com/fledge-framework/fledge/commit/bf7c2b6cc47837c998786f25bc87997f474c5b1d))
+ - **FEAT**(fledge_net): add network packet encryption. ([843c1c99](https://github.com/fledge-framework/fledge/commit/843c1c9911d82a997f8d52841267409d6cdceb4c))
+ - **FEAT**(fledge_tiled): refactor TilemapSpawnConfig API. ([35b12d1e](https://github.com/fledge-framework/fledge/commit/35b12d1eaa72f7e703f6820b4e0f8d69452f509e))
+ - **FEAT**: initial commit. ([0e057c5a](https://github.com/fledge-framework/fledge/commit/0e057c5a4646a51d2f7f4c6bd5ed552b745b1b7d))
+ - **DOCS**(*): correct README quick starts and point links at the new docs. ([50d6e5da](https://github.com/fledge-framework/fledge/commit/50d6e5da2e8bf3eb220be3782b66e0b74438fd06))
+
 ## 0.6.0
 
  - **FIX**: resolve incompatible apis. ([70d581c9](https://github.com/fledge-framework/fledge/commit/70d581c96c54d59d8ffc94ce791b8bb241194296))

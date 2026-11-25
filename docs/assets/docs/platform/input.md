@@ -10,7 +10,7 @@ different set of bindings from gameplay.
 
 ```yaml
 dependencies:
-  fledge_input: ^0.6.0
+  fledge_input: ^0.7.0
 ```
 
 - **Flutter** 3.50+ (Dart `^3.14`). Input comes from Flutter's focus and

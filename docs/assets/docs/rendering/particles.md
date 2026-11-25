@@ -7,8 +7,8 @@ Particles are drawn through the sprite pipeline, as `ExtractedSprite`s in the
 
 ```yaml
 dependencies:
-  fledge_render_2d: ^0.6.0
-  fledge_particles: ^0.6.0
+  fledge_render_2d: ^0.7.0
+  fledge_particles: ^0.7.0
 ```
 
 Flutter 3.50+ (Dart 3.14+); desktop first, web and mobile best-effort.

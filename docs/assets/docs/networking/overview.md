@@ -8,9 +8,9 @@ It's built for small sessions, such as 2 to 4 player co-op over a LAN, direct IP
 
 ```yaml
 dependencies:
-  fledge_net: ^0.6.0
+  fledge_net: ^0.7.0
   # Optional: play over Steam (relays, NAT traversal, Steam identities)
-  fledge_net_steam: ^0.6.0
+  fledge_net_steam: ^0.7.0
 ```
 
 - **Pure Dart** (Dart `^3.11`, no Flutter dependency), so it also runs in tests and headless servers. It doesn't know about `Transform2D`: you tell it how to encode your components (your transform included) with codecs.

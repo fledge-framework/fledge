@@ -9,7 +9,7 @@ monitor it's on. It also reports what the user and the OS do to the window
 
 ```yaml
 dependencies:
-  fledge_window: ^0.6.0
+  fledge_window: ^0.7.0
 ```
 
 - **Flutter 3.50+** (Dart 3.14+).

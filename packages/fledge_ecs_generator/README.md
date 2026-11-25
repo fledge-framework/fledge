@@ -8,11 +8,11 @@ Code generator for the [Fledge](https://fledge-framework.dev) ECS framework. Gen
 
 ```yaml
 dependencies:
-  fledge_ecs: ^0.6.0
+  fledge_ecs: ^0.7.0
 
 dev_dependencies:
   build_runner: ^2.10.4
-  fledge_ecs_generator: ^0.6.0
+  fledge_ecs_generator: ^0.7.0
 ```
 
 `fledge_ecs` re-exports the annotations from `fledge_ecs_annotations`.
