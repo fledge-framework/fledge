@@ -67,20 +67,43 @@ void main() {
       'bursts are not silently dropped when the socket would block',
       () async {
         const count = 300;
+        // Sent in batches, waiting for the receiver to catch up between
+        // them. Without that, the whole burst lands in the receiver's OS
+        // buffer before it reads anything (`send` completes synchronously)
+        // and the kernel drops the overflow on runners with small default
+        // buffers (Windows CI). That loss is ordinary UDP, outside the
+        // transport's control; this test is about the sender side.
+        const batch = 25;
         final seen = <int>{};
-        final done = Completer<void>();
         receiver.onReceive.listen((p) {
           seen.add(p.data[0] | (p.data[1] << 8));
-          if (seen.length == count && !done.isCompleted) done.complete();
         });
 
-        for (var i = 0; i < count; i++) {
-          await sender.send(
-            receiverAddress(),
-            Uint8List.fromList([i & 0xFF, i >> 8]),
-          );
+        Future<void> waitFor(bool Function() done) async {
+          final deadline = DateTime.now().add(const Duration(seconds: 5));
+          while (!done()) {
+            if (DateTime.now().isAfter(deadline)) {
+              fail('timed out: ${seen.length}/$count received');
+            }
+            await Future<void>.delayed(const Duration(milliseconds: 1));
+          }
         }
-        await done.future.timeout(const Duration(seconds: 5));
+
+        for (var start = 0; start < count; start += batch) {
+          final end = (start + batch).clamp(0, count);
+          for (var i = start; i < end; i++) {
+            await sender.send(
+              receiverAddress(),
+              Uint8List.fromList([i & 0xFF, i >> 8]),
+            );
+          }
+          await waitFor(() => seen.length >= end);
+        }
+
+        // Every datagram left the sender: queued would-block sends were
+        // flushed, none were discarded.
+        expect(sender.stats.packetsSent, count);
+        expect(sender.stats.packetsLost, 0);
         expect(seen, hasLength(count));
       },
     );
