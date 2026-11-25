@@ -1,5 +1,6 @@
 import 'package:fledge_ecs/fledge_ecs.dart';
 
+import 'assets.dart';
 import 'hot_reload.dart';
 
 /// Plugin that gates optional native hot reload for asset stores.
@@ -10,7 +11,8 @@ import 'hot_reload.dart';
 /// per-type store when it builds. `AssetPlugin` only exists to (a)
 /// register [HotReloadWatcher] as a resource so downstream code can
 /// call `.watch(...)` on it and (b) install [HotReloadPollSystem] in
-/// `Schedules.first` so queued reloads run early each tick.
+/// `Schedules.first`, which starts a reload early each tick for every
+/// entry marked dirty (by the watcher or by [Assets.markDirty]).
 ///
 /// ## Usage
 ///
@@ -23,9 +25,9 @@ import 'hot_reload.dart';
 /// ```
 ///
 /// Hot reload is a native-only convenience: on web the watcher's
-/// `watch(...)` calls become no-ops (the underlying `package:watcher`
-/// implementation is not available), which matches the framework's
-/// desktop-primary stance.
+/// `watch(...)` calls start no file watcher (`dart:io` file watching is
+/// not available there), so no reloads are triggered by file changes,
+/// which matches the framework's desktop-primary stance.
 class AssetPlugin implements Plugin {
   /// Whether to install [HotReloadWatcher] and [HotReloadPollSystem].
   ///

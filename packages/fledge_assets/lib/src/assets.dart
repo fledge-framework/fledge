@@ -1,4 +1,5 @@
 import 'handle.dart';
+import 'hot_reload.dart' show HotReloadPollSystem, HotReloadWatcher;
 import 'loader.dart';
 
 /// Internal storage for a single asset entry inside [Assets].
@@ -56,10 +57,13 @@ class Assets<T> {
   /// the same path returns a fresh [Handle] onto the existing entry.
   final Map<String, HandleId> _pathIndex = <String, HandleId>{};
 
-  /// Ids waiting for a hot-reload watcher tick. `null` unless
-  /// something registered a callback that touched this store; kept as
-  /// an internal set so the AssetPlugin's poll system can drain it.
+  /// Ids marked by [markDirty], waiting for [HotReloadPollSystem] to
+  /// drain them and start their reloads.
   final Set<HandleId> _dirtyReloads = <HandleId>{};
+
+  /// Per-entry count of loader runs started, so a run that finishes after
+  /// a newer one (overlapping reloads) doesn't overwrite its result.
+  final Map<HandleId, int> _loadSeq = <HandleId, int>{};
 
   /// Next available numeric id. Id 0 is reserved for callers that want
   /// a stable well-known entry (e.g. a 1x1 solid-color texture); use
@@ -137,11 +141,13 @@ class Assets<T> {
   }
 
   Future<void> _run(HandleId id, String path, Loader<T> loader) async {
+    final seq = _loadSeq[id] = (_loadSeq[id] ?? 0) + 1;
     try {
       final v = await loader.load(path);
-      // Entry may have been dropped while we were awaiting.
+      // Entry may have been dropped, or a newer load started, while we
+      // were awaiting.
       final current = _entries[id];
-      if (current != null) {
+      if (current != null && _loadSeq[id] == seq) {
         current
           ..value = v
           ..error = null
@@ -149,7 +155,7 @@ class Assets<T> {
       }
     } catch (e, st) {
       final current = _entries[id];
-      if (current != null) {
+      if (current != null && _loadSeq[id] == seq) {
         current
           ..error = e
           ..stackTrace = st;
@@ -199,14 +205,18 @@ class Assets<T> {
       _entries.remove(id);
       if (entry.path != null) _pathIndex.remove(entry.path);
       _dirtyReloads.remove(id);
+      _loadSeq.remove(id);
     }
   }
 
-  /// Reload the entry for [id] from its origin [Loader]. Invoked by
-  /// the hot-reload watcher; safe to call directly in tests.
+  /// Reload the entry for [id] from its origin [Loader]. Started by
+  /// [HotReloadPollSystem] for entries marked with [markDirty]; safe to
+  /// call directly.
   ///
   /// No-op if the entry does not exist, was created via [add] (no
-  /// path), or has no associated loader.
+  /// path), or has no associated loader. Never throws: a failure keeps
+  /// the previous value and is recorded like a failed [load]. If reloads
+  /// overlap, the most recently started one wins.
   Future<void> reload(HandleId id) async {
     final entry = _entries[id];
     if (entry == null) return;
@@ -225,9 +235,14 @@ class Assets<T> {
   /// back into a handle.
   HandleId? findByPath(String path) => _pathIndex[path];
 
-  /// Mark [id] as needing a reload. Called by the hot-reload watcher
-  /// when the file it points at changes. The poll system drains this
-  /// set via [drainDirtyReloads].
+  /// Mark [id] as needing a reload. Called by [HotReloadWatcher] when
+  /// the file it points at changes; game code may call it too. On the
+  /// next frame [HotReloadPollSystem] (installed by
+  /// `AssetPlugin(enableHotReload: true)`) drains the set via
+  /// [drainDirtyReloads] and starts a [reload] for each id, provided this
+  /// store is an `Assets` resource in the world or was passed to
+  /// [HotReloadWatcher.watch]. Marking an id twice before then reloads it
+  /// once. No-op for ids not in the store.
   void markDirty(HandleId id) {
     if (_entries.containsKey(id)) _dirtyReloads.add(id);
   }
