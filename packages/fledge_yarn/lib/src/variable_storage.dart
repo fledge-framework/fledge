@@ -1,6 +1,5 @@
-import 'dart:developer' as developer;
-
 import 'expression.dart';
+import 'yarn_log.dart';
 
 /// Storage for Yarn dialogue variables.
 ///
@@ -126,13 +125,19 @@ class VariableStorage {
   /// - Literals: numbers, strings, `true`, `false`, `null`
   /// - Parentheses for grouping
   ///
-  /// Malformed expressions return `false` rather than throwing, matching the
-  /// tolerant behaviour of the previous evaluator. Use [ExpressionEvaluator]
-  /// directly when you want hard failures.
+  /// A malformed expression returns `false` rather than throwing, so a
+  /// script typo doesn't crash a scene, and is logged as a warning (logger
+  /// `fledge_yarn.variables`), as [executeSet] does. Use
+  /// [ExpressionEvaluator] directly when you want hard failures.
   bool evaluateCondition(String expression) {
     try {
       return _evaluator.evaluateBool(expression);
-    } on FormatException {
+    } on FormatException catch (e) {
+      yarnLog(
+        'Treated malformed condition "$expression" as false: ${e.message}',
+        name: 'fledge_yarn.variables',
+        level: 900,
+      );
       return false;
     }
   }
@@ -187,7 +192,7 @@ class VariableStorage {
       });
       return true;
     } on FormatException catch (e) {
-      developer.log(
+      yarnLog(
         'Ignored malformed assignment "$expression": ${e.message}',
         name: 'fledge_yarn.variables',
         level: 900,

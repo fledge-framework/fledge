@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fledge_yarn/fledge_yarn.dart';
+import 'package:fledge_yarn/src/yarn_log.dart';
 
 void main() {
   late VariableStorage storage;
@@ -25,6 +26,23 @@ void main() {
       expect(storage.evaluateCondition('1 +'), false);
       expect(storage.evaluateCondition('(unclosed'), false);
     });
+
+    test('logs a warning for a malformed condition', () {
+      final logged = <(String, String, int)>[];
+      final original = yarnLog;
+      yarnLog = (message, {required name, required level}) =>
+          logged.add((message, name, level));
+      addTearDown(() => yarnLog = original);
+
+      expect(storage.evaluateCondition('(unclosed'), false);
+      expect(storage.evaluateCondition('1 < 2'), true);
+
+      expect(logged, hasLength(1));
+      final (message, name, level) = logged.single;
+      expect(name, 'fledge_yarn.variables');
+      expect(level, 900);
+      expect(message, contains('(unclosed'));
+    });
   });
 
   group('executeSet', () {
@@ -42,10 +60,16 @@ void main() {
       expect(storage.getNumber('hp'), 30);
     });
 
-    test('silently ignores malformed set commands', () {
+    test('ignores malformed set commands, logging a warning', () {
+      final logged = <String>[];
+      final original = yarnLog;
+      yarnLog = (message, {required name, required level}) => logged.add(name);
+      addTearDown(() => yarnLog = original);
+
       storage.setNumber('hp', 10);
       storage.executeSet('totally invalid');
       expect(storage.getNumber('hp'), 10);
+      expect(logged, ['fledge_yarn.variables']);
     });
   });
 
