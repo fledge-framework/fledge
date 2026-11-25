@@ -19,9 +19,11 @@ import 'systems.dart';
 /// existing sprite render path in the reserved `DrawLayer.particles`
 /// sort range.
 ///
-/// Requires `RenderPlugin` (from `fledge_render_2d`) to be added
-/// first — that plugin owns the [Extractors] resource. Add the two
-/// together:
+/// `RenderPlugin` (from `fledge_render_2d`) owns the [Extractors]
+/// resource. The plugins can be added in either order: if `RenderPlugin`
+/// isn't there yet, the extractor is registered on the first tick (in
+/// `Schedules.startup`). Without `RenderPlugin` at all (a headless
+/// simulation or test) the particle systems still run; nothing is drawn.
 ///
 /// ```dart
 /// final app = App()
@@ -32,6 +34,11 @@ class ParticlePlugin implements Plugin {
   /// Creates a particle plugin.
   const ParticlePlugin();
 
+  /// The `SystemMeta.name` of the one-shot startup system that registers
+  /// [ParticleExtractor] when `RenderPlugin` was added after this plugin.
+  static const String registerExtractorSystemName =
+      'particle_register_extractor';
+
   @override
   void build(App app) {
     app
@@ -39,11 +46,30 @@ class ParticlePlugin implements Plugin {
       ..addSystem(ParticleUpdateSystem(), schedule: Schedules.update)
       ..addSystem(ParticleReapSystem(), schedule: Schedules.postUpdate);
 
-    // Registering the extractor is optional — if the app doesn't use
-    // RenderPlugin (e.g. a headless test) the particle systems still
-    // run, they just don't feed the render world.
-    final extractors = app.world.getResource<Extractors>();
-    extractors?.register(ParticleExtractor());
+    // Register now if RenderPlugin is already in. Otherwise wait for the
+    // first tick, so the plugins can be added in either order; with no
+    // RenderPlugin even then (headless), the particles just aren't drawn.
+    if (!_registerExtractor(app.world)) {
+      app.addSystem(
+        FunctionSystem(
+          registerExtractorSystemName,
+          resourceWrites: {Extractors},
+          run: _registerExtractor,
+        ),
+        schedule: Schedules.startup,
+      );
+    }
+  }
+
+  /// Registers a [ParticleExtractor] unless one already is. Returns
+  /// whether the [Extractors] registry exists.
+  static bool _registerExtractor(World world) {
+    final extractors = world.getResource<Extractors>();
+    if (extractors == null) return false;
+    if (!extractors.all.any((e) => e is ParticleExtractor)) {
+      extractors.register(ParticleExtractor());
+    }
+    return true;
   }
 
   @override
