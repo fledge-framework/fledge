@@ -56,4 +56,14 @@ void main() {
       expect(wipe.isComplete, isTrue);
     });
   });
+  test('CameraTransitionSystem declares the components it advances', () {
+    final meta = CameraTransitionSystem().meta;
+    expect(
+      meta.writes,
+      containsAll([
+        ComponentId.of<CameraFadeTransition>(),
+        ComponentId.of<CameraWipeTransition>(),
+      ]),
+    );
+  });
 }

@@ -33,8 +33,13 @@ void main() {
               .entity;
     });
 
+    test('runs synchronously (no Future, so no event-loop turn)', () {
+      final Object? result = (CameraFollowSystem() as System).run(world);
+      expect(result, isNot(isA<Future<void>>()));
+    });
+
     test('lerps toward target with smoothing factor', () async {
-      await CameraFollowSystem().run(world);
+      CameraFollowSystem().run(world);
       final t = world.get<Transform2D>(cameraEntity)!;
       // 0.5 * (100 - 0) = 50
       expect(t.translation.x, closeTo(50, 1e-9));
@@ -44,7 +49,7 @@ void main() {
     test('converges to target within N frames', () async {
       final system = CameraFollowSystem();
       for (var i = 0; i < 40; i++) {
-        await system.run(world);
+        system.run(world);
       }
       final t = world.get<Transform2D>(cameraEntity)!;
       expect(t.translation.x, closeTo(100, 1e-3));
@@ -53,7 +58,7 @@ void main() {
 
     test('smoothing = 1.0 snaps in a single frame', () async {
       world.get<CameraFollow>(cameraEntity)!.smoothing = 1.0;
-      await CameraFollowSystem().run(world);
+      CameraFollowSystem().run(world);
       final t = world.get<Transform2D>(cameraEntity)!;
       expect(t.translation.x, 100);
       expect(t.translation.y, 200);
@@ -62,13 +67,13 @@ void main() {
     test('bounds keep the view inside the map', () async {
       // 200 units tall at 16:9 shows about 356 x 200 of the world.
       world.insertResource(ViewportSize(width: 1600, height: 900));
-      world.get<Camera2D>(cameraEntity)!.projection = OrthographicProjection(
-        viewportHeight: 200,
-      );
+      world.get<Camera2D>(cameraEntity)!
+        ..scaleWidgetView = true
+        ..projection = OrthographicProjection(viewportHeight: 200);
       world.get<CameraFollow>(cameraEntity)!
         ..smoothing = 1.0
         ..bounds = const Rect.fromLTRB(0, 0, 1000, 250);
-      await CameraFollowSystem().run(world);
+      CameraFollowSystem().run(world);
       final t = world.get<Transform2D>(cameraEntity)!;
       // x: the target at 100 is too near the left edge, so it stops at 178.
       expect(t.translation.x, closeTo(1600 / 900 * 200 / 2, 1));
@@ -78,23 +83,59 @@ void main() {
 
     test('bounds narrower than the view centre the camera', () async {
       world.insertResource(ViewportSize(width: 1600, height: 900));
-      world.get<Camera2D>(cameraEntity)!.projection = OrthographicProjection(
-        viewportHeight: 200,
-      );
+      world.get<Camera2D>(cameraEntity)!
+        ..scaleWidgetView = true
+        ..projection = OrthographicProjection(viewportHeight: 200);
       world.get<CameraFollow>(cameraEntity)!
         ..smoothing = 1.0
         ..bounds = const Rect.fromLTRB(0, 0, 120, 140);
-      await CameraFollowSystem().run(world);
+      CameraFollowSystem().run(world);
       final t = world.get<Transform2D>(cameraEntity)!;
       expect(t.translation.x, 60);
       expect(t.translation.y, 70);
+    });
+
+    test('without scaleWidgetView, bounds use the 1:1 size the widget '
+        'draws', () async {
+      // The projection (10 units tall by default) is not what the widget
+      // shows: it draws one world unit per logical pixel.
+      world.insertResource(
+        ActiveCameraView()..viewportSize = const Size(400, 300),
+      );
+      world.get<CameraFollow>(cameraEntity)!
+        ..smoothing = 1.0
+        ..bounds = const Rect.fromLTRB(0, 0, 2000, 2000);
+      CameraFollowSystem().run(world);
+      final t = world.get<Transform2D>(cameraEntity)!;
+      expect(t.translation.x, 200);
+      expect(t.translation.y, 200);
+
+      // Near the far corner the view stops half a widget from the edge.
+      world
+          .get<GlobalTransform2D>(target)!
+          .matrix
+          .setValues(1, 0, 0, 0, 1, 0, 1990, 1990, 1);
+      CameraFollowSystem().run(world);
+      expect(t.translation.x, 1800);
+      expect(t.translation.y, 1850);
+    });
+
+    test('before the first paint, bounds use ViewportSize at 1:1', () async {
+      world.insertResource(ViewportSize(width: 640, height: 360));
+      world.get<CameraFollow>(cameraEntity)!
+        ..smoothing = 1.0
+        ..bounds = const Rect.fromLTRB(0, 0, 2000, 2000);
+      CameraFollowSystem().run(world);
+      final t = world.get<Transform2D>(cameraEntity)!;
+      expect(t.translation.x, 320);
+      expect(t.translation.y, 200);
     });
 
     test('applies offset', () async {
       world.get<CameraFollow>(cameraEntity)!
         ..smoothing = 1.0
         ..offset = const Offset(10, -20);
-      await CameraFollowSystem().run(world);
+      CameraFollowSystem().run(world);
       final t = world.get<Transform2D>(cameraEntity)!;
       expect(t.translation.x, 110);
       expect(t.translation.y, 180);
@@ -103,11 +144,11 @@ void main() {
     test('missing target logs once and stops', () async {
       world.despawn(target);
       // First run — should log without throwing.
-      await CameraFollowSystem().run(world);
+      CameraFollowSystem().run(world);
       final follow = world.get<CameraFollow>(cameraEntity)!;
       expect(follow.warnedMissingTarget, isTrue);
       // Second run — should be a no-op (already warned).
-      await CameraFollowSystem().run(world);
+      CameraFollowSystem().run(world);
     });
 
     test('pixelPerfect: camera position is snapped to whole pixels', () async {
@@ -121,7 +162,7 @@ void main() {
       world.get<CameraFollow>(cameraEntity)!.smoothing = 1.0;
       world.get<Camera2D>(cameraEntity)!.pixelPerfect = true;
 
-      await CameraFollowSystem().run(world);
+      CameraFollowSystem().run(world);
 
       final t = world.get<Transform2D>(cameraEntity)!;
       expect(t.translation.x, 101);
@@ -136,7 +177,7 @@ void main() {
         // Give the camera a GlobalTransform2D at the old position so we
         // can detect it being updated.
         world.insert(cameraEntity, GlobalTransform2D.identity());
-        await CameraFollowSystem().run(world);
+        CameraFollowSystem().run(world);
         final g = world.get<GlobalTransform2D>(cameraEntity)!;
         // storage[6] = translationX, storage[7] = translationY.
         expect(g.matrix.storage[6], 100);
@@ -150,7 +191,7 @@ void main() {
         world.get<CameraFollow>(cameraEntity)!.smoothing = 1.0;
         // No GlobalTransform2D on the camera to start with.
         expect(world.get<GlobalTransform2D>(cameraEntity), isNull);
-        await CameraFollowSystem().run(world);
+        CameraFollowSystem().run(world);
         final g = world.get<GlobalTransform2D>(cameraEntity);
         expect(g, isNotNull);
         expect(g!.matrix.storage[6], 100);
@@ -175,7 +216,7 @@ void main() {
         ActiveCameraView()..viewportSize = const Size(1920, 1080),
       );
 
-      await CameraFollowSystem().run(world);
+      CameraFollowSystem().run(world);
 
       final t = world.get<Transform2D>(cameraEntity)!;
       expect(t.translation.x, 100.5);
@@ -196,7 +237,7 @@ void main() {
         ..smoothing = 1.0
         ..bounds = const Rect.fromLTRB(0, 0, 2000, 2000);
 
-      await CameraFollowSystem().run(world);
+      CameraFollowSystem().run(world);
 
       final t = world.get<Transform2D>(cameraEntity)!;
       expect(t.translation.x, 400);
@@ -221,7 +262,7 @@ void main() {
           ..smoothing = 1.0
           ..bounds = const Rect.fromLTRB(0, 0, 2000, 2000);
 
-        await CameraFollowSystem().run(world);
+        CameraFollowSystem().run(world);
 
         final t = world.get<Transform2D>(cameraEntity)!;
         expect(t.translation.x, closeTo(480, 1e-6));
@@ -238,7 +279,7 @@ void main() {
       world.get<CameraFollow>(cameraEntity)!.smoothing = 1.0;
       world.get<Camera2D>(cameraEntity)!.pixelPerfect = false;
 
-      await CameraFollowSystem().run(world);
+      CameraFollowSystem().run(world);
 
       final t = world.get<Transform2D>(cameraEntity)!;
       expect(t.translation.x, closeTo(100.6, 1e-4));
@@ -251,7 +292,7 @@ void main() {
       world.insertResource(time);
       final system = CameraFollowSystem();
       for (var i = 0; i < (seconds * hz).round(); i++) {
-        await system.run(world);
+        system.run(world);
       }
     }
 
@@ -268,11 +309,11 @@ void main() {
     test('pixelPerfect: the follow keeps its unrounded position', () async {
       world.get<Camera2D>(cameraEntity)!.pixelPerfect = true;
       world.get<CameraFollow>(cameraEntity)!.smoothing = 0.25;
-      await CameraFollowSystem().run(world);
+      CameraFollowSystem().run(world);
       final follow = world.get<CameraFollow>(cameraEntity)!;
       expect(follow.position!.dx, 25);
       // A second step works from 25, not the snapped value.
-      await CameraFollowSystem().run(world);
+      CameraFollowSystem().run(world);
       expect(follow.position!.dx, closeTo(25 + 75 * 0.25, 1e-9));
       expect(world.get<Transform2D>(cameraEntity)!.translation.x, 44);
     });
@@ -291,7 +332,7 @@ void main() {
 
     test('with a clock, a frame with no time passing does not move', () async {
       world.insertResource(WallTime());
-      await CameraFollowSystem().run(world);
+      CameraFollowSystem().run(world);
       expect(world.get<Transform2D>(cameraEntity)!.translation.x, 0);
     });
 
@@ -303,7 +344,7 @@ void main() {
       world.insertResource(time);
       final system = CameraFollowSystem();
       for (var i = 0; i < 90; i++) {
-        await system.run(world);
+        system.run(world);
         xs.add(world.get<Transform2D>(cameraEntity)!.translation.x);
       }
       for (var i = 1; i < xs.length; i++) {
@@ -350,7 +391,7 @@ void main() {
             .get<GlobalTransform2D>(target)!
             .matrix
             .setValues(1, 0, 0, 0, 1, 0, x, 200, 1);
-        await system.run(world);
+        system.run(world);
         final now = world.get<Transform2D>(cameraEntity)!.translation.x;
         steps.add(now - last);
         last = now;
@@ -370,7 +411,7 @@ void main() {
       world.get<Camera2D>(cameraEntity)!
         ..pixelPerfect = true
         ..subpixelScroll = true;
-      await CameraFollowSystem().run(world);
+      CameraFollowSystem().run(world);
       final t = world.get<Transform2D>(cameraEntity)!;
       expect(t.translation.x, closeTo(100.6, 1e-4));
       expect(t.translation.y, closeTo(200.4, 1e-4));
@@ -379,10 +420,10 @@ void main() {
     test('a camera moved by something else is followed from where it is '
         'now', () async {
       world.get<CameraFollow>(cameraEntity)!.smoothing = 0.5;
-      await CameraFollowSystem().run(world);
+      CameraFollowSystem().run(world);
       // A transition or teleport puts the camera elsewhere.
       world.get<Transform2D>(cameraEntity)!.translation.setValues(300, 400);
-      await CameraFollowSystem().run(world);
+      CameraFollowSystem().run(world);
       final t = world.get<Transform2D>(cameraEntity)!;
       expect(t.translation.x, 200);
       expect(t.translation.y, 300);
@@ -404,7 +445,7 @@ void main() {
       // First run — no marker anywhere. Camera stays put. In marker
       // mode the system stays silent because a target-less start-up
       // is the normal shape it exists for (Batch 6 item 27).
-      await CameraFollowSystem().run(world);
+      CameraFollowSystem().run(world);
       expect(world.get<Transform2D>(cameraEntity)!.translation.x, 0);
       expect(world.get<Transform2D>(cameraEntity)!.translation.y, 0);
       expect(
@@ -423,7 +464,7 @@ void main() {
       // spawned marker cleanly.
       world.get<CameraFollow>(cameraEntity)!.warnedMissingTarget = false;
 
-      await CameraFollowSystem().run(world);
+      CameraFollowSystem().run(world);
       expect(world.get<Transform2D>(cameraEntity)!.translation.x, 50);
       expect(world.get<Transform2D>(cameraEntity)!.translation.y, 75);
       // We used the marker entity — return-value is just to keep
@@ -457,7 +498,7 @@ void main() {
                   ))
                 .entity;
 
-        await CameraFollowSystem().run(world);
+        CameraFollowSystem().run(world);
         expect(world.get<Transform2D>(cameraEntity)!.translation.x, 10);
         expect(world.get<Transform2D>(cameraEntity)!.translation.y, 20);
       },

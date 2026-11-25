@@ -7,7 +7,6 @@ import 'package:fledge_render_2d/fledge_render_2d.dart'
         ActiveCameraView,
         GlobalTransform2D,
         PreviousTransform2D,
-        RenderSize,
         Transform2D,
         TransformPropagateSystem;
 
@@ -91,10 +90,16 @@ class CameraFollow {
 
   /// Optional world-space area the camera's view must stay inside.
   ///
-  /// The follow stops at the edges so nothing outside [bounds] shows,
-  /// using the visible size from the camera's projection and the
-  /// [ViewportSize] resource. On an axis where [bounds] is smaller than
-  /// the view, the camera centres on [bounds] instead.
+  /// The follow stops at the edges so nothing outside [bounds] shows. The
+  /// view's size is what the widget render path shows: the size of the
+  /// widget the camera last painted into (`ActiveCameraView.viewportSize`)
+  /// divided by `Camera2D.widgetZoom` (so one world unit per logical pixel
+  /// unless `Camera2D.scaleWidgetView` is on). Until the first paint, or
+  /// when nothing paints through `FledgeRenderView`, the [ViewportSize]
+  /// resource stands in for the widget's size; nothing updates it
+  /// automatically, so keep it in step with your view in that case. On an
+  /// axis where [bounds] is smaller than the view, the camera centres on
+  /// [bounds] instead.
   Rect? bounds;
 
   /// Internal: `true` once we've logged the "target despawned"
@@ -161,7 +166,7 @@ class CameraFollow {
 /// System that updates every camera with a [CameraFollow] component.
 ///
 /// Runs in `Schedules.postUpdate`. Declares `after:
-/// ['transform_propagate']` so it reads a fresh
+/// [TransformPropagateSystem.systemName]` so it reads a fresh
 /// `GlobalTransform2D` on the follow target.
 ///
 /// **Root-camera fast path.** When the camera entity has no [Parent]
@@ -174,8 +179,9 @@ class CameraFollow {
 /// pass. Hierarchical cameras still need propagation to run after
 /// this system.
 ///
-/// Also declares `before: [CameraShakeSystem.systemName]` so shake applies
-/// on top of a stable follow-updated camera.
+/// Also declares `before: [CameraShakeSystem.systemName]`. Shake is a
+/// render-time offset kept on the `CameraShake` component, so the follow
+/// never sees it as an external move of the camera.
 ///
 /// When `Camera2D.pixelPerfect` is set on the followed camera, the
 /// system snaps the resulting `Transform2D.translation` to whole
@@ -216,7 +222,7 @@ class CameraFollowSystem implements System {
   bool shouldRun(World world) => true;
 
   @override
-  Future<void> run(World world) {
+  void run(World world) {
     final ft = world.getResource<FixedTimestep>();
     final alpha = ft?.alpha ?? 1.0;
     final time = world.getResource<WallTime>();
@@ -345,38 +351,36 @@ class CameraFollowSystem implements System {
         );
       }
 
-      // A camera that scales the widget view is shown at the size of the
-      // widget it last painted into; other cameras use [ViewportSize].
-      final viewport = world.getResource<ViewportSize>() ?? ViewportSize();
-      final shown = camera.scaleWidgetView
-          ? world.getResource<ActiveCameraView>()
-          : null;
+      // The view is clamped at the size the widget render path shows it:
+      // the size of the widget it last painted into (recorded on
+      // ActiveCameraView), at the camera's widget zoom (1:1 unless
+      // scaleWidgetView). Before the first paint, or without a widget,
+      // the ViewportSize resource stands in for the widget's size.
+      final shown = world.getResource<ActiveCameraView>();
       final drawn = shown?.viewportSize;
+      final viewport = world.getResource<ViewportSize>() ?? ViewportSize();
+      final shownSize = drawn ?? viewport.size;
       // At the display scaling it was drawn at, as the view itself is: a
       // pixel-perfect zoom under 125 % or 150 % scaling differs from the
       // 1x one, and the bounds would clamp to the wrong visible size.
-      final widgetZoom = drawn == null
-          ? 1.0
-          : camera.widgetZoom(drawn, devicePixelRatio: shown!.devicePixelRatio);
+      final widgetZoom = camera.widgetZoom(
+        shownSize,
+        devicePixelRatio: drawn != null ? shown!.devicePixelRatio : 1,
+      );
 
       final bounds = follow.bounds;
       if (bounds != null) {
-        final screen = RenderSize(viewport.width, viewport.height);
         final x = _clampAxis(
           position.dx,
           bounds.left,
           bounds.right,
-          drawn != null
-              ? drawn.width / widgetZoom / 2
-              : camera.projection.visibleWidth(screen) / 2,
+          shownSize.width / widgetZoom / 2,
         );
         final y = _clampAxis(
           position.dy,
           bounds.top,
           bounds.bottom,
-          drawn != null
-              ? drawn.height / widgetZoom / 2
-              : camera.projection.visibleHeight(screen) / 2,
+          shownSize.height / widgetZoom / 2,
         );
         // Held at an edge, the spring doesn't keep winding up.
         follow.velocity = Offset(
@@ -426,7 +430,6 @@ class CameraFollowSystem implements System {
         }
       }
     }
-    return Future.value();
   }
 
   /// Keeps a view of half-size [half] centred at [value] inside

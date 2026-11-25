@@ -55,6 +55,7 @@ class ParallaxSystem implements System {
       ComponentId.of<Parallax>(),
       ComponentId.of<Transform2D>(),
       ComponentId.of<Camera2D>(),
+      ComponentId.of<CameraShake>(),
     },
     // Propagation (when a game re-runs it in postUpdate) writes the
     // GlobalTransform2D this system overrides on parallax entities, so
@@ -84,13 +85,16 @@ class ParallaxSystem implements System {
     double camY = 0;
     var found = false;
     var bestOrder = double.maxFinite.toInt();
-    for (final (_, camera, cameraTransform)
+    for (final (entity, camera, cameraTransform)
         in world.query2<Camera2D, Transform2D>().iter()) {
       if (!camera.isActive) continue;
       if (camera.order < bestOrder) {
         bestOrder = camera.order;
-        camX = cameraTransform.translation.x;
-        camY = cameraTransform.translation.y;
+        // The shown position, shake included, so a layer fixed to the
+        // camera (factor 0) stays fixed on screen while the world shakes.
+        final shake = world.get<CameraShake>(entity);
+        camX = cameraTransform.translation.x + (shake?.offsetX ?? 0);
+        camY = cameraTransform.translation.y + (shake?.offsetY ?? 0);
         found = true;
       }
     }

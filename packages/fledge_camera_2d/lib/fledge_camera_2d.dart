@@ -11,14 +11,18 @@
 ///   [IsometricProjection], [ObliqueProjection] — camera + projections.
 /// - [CameraDriverNode], [CameraDriverContext] — render-graph glue.
 /// - [CameraFollow] + [CameraFollowSystem] — smooth follow.
-/// - [CameraShake] + [CameraShakeSystem] — trauma-based shake.
+/// - [CameraShake] + [CameraShakeSystem] — trauma-based shake (a
+///   render-time offset).
 /// - [Parallax] + [ParallaxSystem] — parallax scrolling.
 /// - [CameraFadeTransition], [CameraWipeTransition] +
 ///   [CameraTransitionSystem] — fade / wipe.
 /// - [LetterboxConfig], [computeLetterbox], [computeGutter] —
 ///   letterbox helpers.
-/// - [ViewportSize] — viewport-size resource used by extractors.
+/// - [ViewportSize] — view-size resource used by follow bounds and UI
+///   layout.
 /// - [PixelPerfectVector2] — snap-to-pixel helpers.
+/// - [ActiveCameraViewSystem] — publishes the active camera to the
+///   widget render path.
 /// - [CameraPlugin] — wires the systems into an `App`.
 library;
 

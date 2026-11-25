@@ -122,12 +122,14 @@ class CameraTransitionSystem implements System {
   static const String systemName = 'CameraTransitionSystem';
 
   @override
-  SystemMeta get meta => const SystemMeta(
+  SystemMeta get meta => SystemMeta(
     name: systemName,
-    writes: {},
-    reads: {},
+    writes: {
+      ComponentId.of<CameraFadeTransition>(),
+      ComponentId.of<CameraWipeTransition>(),
+    },
     resourceReads: {WallTime},
-    after: [
+    after: const [
       CameraFollowSystem.systemName,
       CameraShakeSystem.systemName,
       ParallaxSystem.systemName,

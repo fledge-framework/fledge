@@ -1,26 +1,29 @@
 import 'dart:ui' show Size;
 
-/// Resource that stores the current viewport (screen) dimensions.
+/// Resource that stores the size of the game's view, in logical pixels.
 ///
-/// Used by extractors to determine what portion of the world is visible,
-/// enabling early culling during extraction rather than at render time.
+/// Read by:
+/// - `CameraFollow.bounds`, for the visible size until the camera's widget
+///   has painted once (after that it uses the painted size recorded on
+///   `ActiveCameraView`);
+/// - `fledge_ui`'s layout pass, which anchors UI nodes inside this rect.
 ///
-/// ## Usage
+/// Extractors don't read it: sprite culling uses
+/// `ActiveCameraView.visibleWorldRect`.
 ///
-/// Register as a resource in your game plugin (or add `CameraPlugin`,
-/// which does this automatically):
+/// Nothing updates it automatically. `CameraPlugin` (and `UiPlugin`)
+/// insert a 1280×720 default; keep it at the size of the widget you draw
+/// into, e.g. from a `LayoutBuilder`:
 ///
 /// ```dart
-/// app.insertResource(ViewportSize());
-/// ```
-///
-/// Update each frame before `tick()` runs (typically in your game loop):
-///
-/// ```dart
-/// void _gameLoop() {
-///   world.getResource<ViewportSize>()?.updateFromSize(screenSize);
-///   app.tick();
-/// }
+/// LayoutBuilder(
+///   builder: (context, constraints) {
+///     app.world.getResource<ViewportSize>()?.updateFromSize(
+///       constraints.biggest,
+///     );
+///     return FledgeUiOverlay(app: app, child: FledgeRenderView(app: app));
+///   },
+/// )
 /// ```
 class ViewportSize {
   /// The current viewport width in logical pixels.
@@ -31,8 +34,8 @@ class ViewportSize {
 
   /// Creates a viewport size resource.
   ///
-  /// Defaults to a reasonable window size (1280x720). Should be updated
-  /// each frame before extraction runs.
+  /// Defaults to a reasonable window size (1280x720). Update it whenever
+  /// the view's size changes.
   ViewportSize({this.width = 1280, this.height = 720});
 
   /// The viewport as a [Size] object.

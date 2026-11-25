@@ -9,13 +9,14 @@ import 'viewport_size.dart';
 
 /// Plugin that wires camera systems into an [App].
 ///
-/// Adds four systems to `Schedules.postUpdate` with explicit
+/// Adds five systems to `Schedules.postUpdate` with explicit
 /// ordering:
 ///
 /// 1. [CameraFollowSystem]     — sets the base camera position from the follow target.
-/// 2. [CameraShakeSystem]      — decays trauma, adds shake delta.
-/// 3. [ParallaxSystem]         — reads the final camera position, adjusts parallax entities.
+/// 2. [CameraShakeSystem]      — decays trauma, picks this frame's shake offset.
+/// 3. [ParallaxSystem]         — reads the shown camera position (shake included), adjusts parallax entities.
 /// 4. [CameraTransitionSystem] — advances fade / wipe overlays.
+/// 5. [ActiveCameraViewSystem] — publishes the camera position plus shake for the widget render path.
 ///
 /// Also inserts a [ViewportSize] resource (defaults to 1280×720)
 /// unless one is already registered.

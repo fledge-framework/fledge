@@ -143,46 +143,82 @@ class Camera2D {
     return proj * view;
   }
 
-  /// Convert screen coordinates to world coordinates.
+  /// Converts a point in the camera's viewport, in logical pixels from its
+  /// top-left corner (e.g. a pointer position in a full-screen
+  /// `FledgeRenderView`), to world coordinates.
+  ///
+  /// Uses the widget render path's mapping, so it agrees with what
+  /// `FledgeRenderView` draws: **y grows downward** in both screen and world
+  /// space, the camera's position ([transform]) sits at the centre of the
+  /// viewport, and one world unit spans [widgetZoom] logical pixels (1 unless
+  /// [scaleWidgetView] is on). With [pixelPerfect] (and not
+  /// [subpixelScroll]) the camera offset is rounded to whole pixels, as the
+  /// widget does. Camera rotation is ignored, as it is by the widget path.
+  ///
+  /// [screenSize] is the size of the whole render target; [viewport] picks
+  /// the camera's part of it. [devicePixelRatio] only matters for a
+  /// pixel-perfect [widgetZoom].
+  ///
+  /// [transform] is the camera's own transform, so screen shake (a
+  /// render-time offset, see `CameraShake`) isn't included. To map exactly
+  /// what was drawn this frame, shake included, use
+  /// `activeCameraScreenToWorld` from `fledge_render_2d`.
+  ///
+  /// The inverse of [worldToScreen].
   Vector2 screenToWorld(
     Vector2 screenPos,
     GlobalTransform2D transform,
-    RenderSize screenSize,
-  ) {
-    // Get inverse view-projection
-    final vp = viewProjectionMatrix(transform, screenSize);
-    final inv = Matrix4.zero();
-    vp.copyInverse(inv);
-
-    // Convert screen to normalized device coordinates (-1 to 1)
-    final viewportSize = viewport.toPixelSize(screenSize);
-    final ndcX = (screenPos.x / viewportSize.width) * 2 - 1;
-    final ndcY = (screenPos.y / viewportSize.height) * 2 - 1;
-
-    // Transform to world space
-    final world = Vector4(ndcX, -ndcY, 0, 1);
-    inv.transform(world);
-
-    return Vector2(world.x, world.y);
+    RenderSize screenSize, {
+    double devicePixelRatio = 1,
+  }) {
+    final (offsetX, offsetY, zoom) = _screenMapping(
+      transform,
+      screenSize,
+      devicePixelRatio,
+    );
+    return Vector2(
+      (screenPos.x - offsetX) / zoom,
+      (screenPos.y - offsetY) / zoom,
+    );
   }
 
-  /// Convert world coordinates to screen coordinates.
+  /// Converts world coordinates to a point in the camera's viewport, in
+  /// logical pixels from its top-left corner, with the same y-down mapping
+  /// as [screenToWorld] (and the widget render path).
+  ///
+  /// The inverse of [screenToWorld].
   Vector2 worldToScreen(
     Vector2 worldPos,
     GlobalTransform2D transform,
+    RenderSize screenSize, {
+    double devicePixelRatio = 1,
+  }) {
+    final (offsetX, offsetY, zoom) = _screenMapping(
+      transform,
+      screenSize,
+      devicePixelRatio,
+    );
+    return Vector2(worldPos.x * zoom + offsetX, worldPos.y * zoom + offsetY);
+  }
+
+  /// Where the world origin lands in the viewport, and the zoom: the same
+  /// numbers `activeCameraCanvasOffset` / `activeCameraZoom` produce.
+  (double, double, double) _screenMapping(
+    GlobalTransform2D transform,
     RenderSize screenSize,
+    double devicePixelRatio,
   ) {
-    final vp = viewProjectionMatrix(transform, screenSize);
-
-    // Transform to clip space
-    final clip = Vector4(worldPos.x, worldPos.y, 0, 1);
-    vp.transform(clip);
-
-    // Convert from NDC to screen
-    final viewportSize = viewport.toPixelSize(screenSize);
-    final screenX = (clip.x + 1) / 2 * viewportSize.width;
-    final screenY = (-clip.y + 1) / 2 * viewportSize.height;
-
-    return Vector2(screenX, screenY);
+    final size = viewport.toPixelSize(screenSize);
+    final zoom = widgetZoom(
+      Size(size.width, size.height),
+      devicePixelRatio: devicePixelRatio,
+    );
+    var offsetX = size.width / 2 - transform.x * zoom;
+    var offsetY = size.height / 2 - transform.y * zoom;
+    if (pixelPerfect && !subpixelScroll) {
+      offsetX = offsetX.roundToDouble();
+      offsetY = offsetY.roundToDouble();
+    }
+    return (offsetX, offsetY, zoom);
   }
 }

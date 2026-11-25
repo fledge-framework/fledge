@@ -43,7 +43,7 @@ void main() {
       expect(shake.trauma, closeTo(0.5, 1e-9));
     });
 
-    test('applies bounded delta scaled by trauma squared', () async {
+    test('picks a bounded offset scaled by trauma squared', () async {
       final world = World();
       world.spawn()
         ..insert(Transform2D.from(0, 0))
@@ -60,14 +60,33 @@ void main() {
         );
       final system = CameraShakeSystem(fixedDelta: 0);
       system.run(world);
-      final t = world.query1<Transform2D>().iter().first.$2;
+      final shake = world.query1<CameraShake>().iter().first.$2;
       // With trauma=1.0, intensity=1.0. Random in [-1,1] * 10 → |delta| ≤ 10.
-      expect(t.translation.x.abs(), lessThanOrEqualTo(10));
-      expect(t.translation.y.abs(), lessThanOrEqualTo(10));
-      expect(t.rotation.abs(), lessThanOrEqualTo(1.0));
+      expect(shake.offsetX.abs(), lessThanOrEqualTo(10));
+      expect(shake.offsetY.abs(), lessThanOrEqualTo(10));
+      expect(shake.rotationOffset.abs(), lessThanOrEqualTo(1.0));
+      expect(shake.offsetX, isNot(0));
     });
 
-    test('undoes previous delta before applying new one', () async {
+    test('never writes the camera transform', () async {
+      final world = World();
+      world.spawn()
+        ..insert(Transform2D.from(5, 7))
+        ..insert(Camera2D())
+        ..insert(
+          CameraShake(trauma: 1.0, traumaDecayPerSec: 0, rng: math.Random(1)),
+        );
+      final system = CameraShakeSystem(fixedDelta: 0.1);
+      for (var i = 0; i < 3; i++) {
+        system.run(world);
+      }
+      final t = world.query1<Transform2D>().iter().first.$2;
+      expect(t.translation.x, 5);
+      expect(t.translation.y, 7);
+      expect(t.rotation, 0);
+    });
+
+    test('offset returns to zero once trauma runs out', () async {
       final world = World();
       world.spawn()
         ..insert(Transform2D.from(0, 0))
@@ -81,13 +100,96 @@ void main() {
         );
       final system = CameraShakeSystem(fixedDelta: 0.1);
       system.run(world);
-      // After trauma hits 0, next run should undo any leftover
-      // shake, returning translation exactly to 0.
       system.run(world);
-      final t = world.query1<Transform2D>().iter().first.$2;
-      expect(t.translation.x, closeTo(0, 1e-9));
-      expect(t.translation.y, closeTo(0, 1e-9));
-      expect(t.rotation, closeTo(0, 1e-9));
+      final shake = world.query1<CameraShake>().iter().first.$2;
+      expect(shake.offsetX, 0);
+      expect(shake.offsetY, 0);
+      expect(shake.rotationOffset, 0);
+    });
+
+    test('ActiveCameraViewSystem adds the shake offset', () {
+      final world = World();
+      world.spawn()
+        ..insert(GlobalTransform2D(Transform2D.from(100, 50).toMatrix()))
+        ..insert(Camera2D())
+        ..insert(
+          CameraShake(trauma: 1.0, traumaDecayPerSec: 0, rng: math.Random(3)),
+        );
+      CameraShakeSystem(fixedDelta: 0).run(world);
+      const ActiveCameraViewSystem().run(world);
+      final shake = world.query1<CameraShake>().iter().first.$2;
+      final view = world.getResource<ActiveCameraView>()!;
+      expect(view.x, closeTo(100 + shake.offsetX, 1e-3));
+      expect(view.y, closeTo(50 + shake.offsetY, 1e-3));
+    });
+
+    test('a camera-fixed parallax layer moves with the shake', () {
+      final world = World();
+      world.spawn()
+        ..insert(Transform2D.from(100, 50))
+        ..insert(Camera2D())
+        ..insert(
+          CameraShake(trauma: 1.0, traumaDecayPerSec: 0, rng: math.Random(3)),
+        );
+      final layer = world.spawn()
+        ..insert(Transform2D.from(0, 0))
+        ..insert(GlobalTransform2D())
+        ..insert(const Parallax(0));
+      CameraShakeSystem(fixedDelta: 0).run(world);
+      ParallaxSystem().run(world);
+      final shake = world.query1<CameraShake>().iter().first.$2;
+      final global = world.get<GlobalTransform2D>(layer.entity)!;
+      expect(global.x, closeTo(100 + shake.offsetX, 1e-3));
+      expect(global.y, closeTo(50 + shake.offsetY, 1e-3));
+    });
+
+    test('with CameraFollow and CameraPlugin, the shake shows the same '
+        'frame and the follow does not drift', () async {
+      final app = App()
+        ..addPlugin(RenderPlugin())
+        ..addPlugin(const CameraPlugin());
+      final issues = app.checkScheduleOrdering();
+      expect(issues, isEmpty, reason: issues.join('\n'));
+
+      final world = app.world;
+      final target =
+          (world.spawn()
+                ..insert(Transform2D.from(300, 200))
+                ..insert(
+                  GlobalTransform2D(Transform2D.from(300, 200).toMatrix()),
+                ))
+              .entity;
+      final camera =
+          (world.spawn()
+                ..insert(Transform2D.from(300, 200))
+                ..insert(Camera2D())
+                ..insert(CameraFollow(target: target, smoothTime: 0.2))
+                ..insert(
+                  CameraShake(
+                    trauma: 1.0,
+                    traumaDecayPerSec: 0,
+                    rng: math.Random(7),
+                  ),
+                ))
+              .entity;
+      world.insertResource(WallTime()..delta = 1 / 60);
+
+      var shaken = 0;
+      for (var i = 0; i < 30; i++) {
+        await app.tick();
+        world.getResource<WallTime>()!.delta = 1 / 60;
+        final shake = world.get<CameraShake>(camera)!;
+        final view = world.getResource<ActiveCameraView>()!;
+        final transform = world.get<Transform2D>(camera)!;
+        // The follow keeps the camera on the (still) target...
+        expect(transform.translation.x, closeTo(300, 1e-3));
+        expect(transform.translation.y, closeTo(200, 1e-3));
+        // ...and the view shows it plus this frame's shake.
+        expect(view.x, closeTo(300 + shake.offsetX, 1e-3));
+        expect(view.y, closeTo(200 + shake.offsetY, 1e-3));
+        if (shake.offsetX != 0 || shake.offsetY != 0) shaken++;
+      }
+      expect(shaken, greaterThan(0));
     });
 
     test('addTrauma bumps back up after decay', () {

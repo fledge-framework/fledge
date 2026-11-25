@@ -14,7 +14,10 @@ import 'transitions.dart';
 /// `DebugGizmosLayer`) can translate the canvas to follow it.
 ///
 /// Runs in `Schedules.postUpdate` after `CameraFollowSystem` so it
-/// picks up the fresh camera position. Picks the lowest-order active
+/// picks up the fresh camera position, and after `CameraShakeSystem`:
+/// the published position is the camera's `GlobalTransform2D` plus the
+/// camera's current [CameraShake] offset, so shake is a render-time
+/// effect that never feeds back into the camera transform. Picks the lowest-order active
 /// `Camera2D` (matching the render-graph `CameraDriverNode`'s tie-
 /// breaker), and falls back to leaving the resource unchanged when no
 /// active camera exists — widgets then use their world = screen
@@ -33,7 +36,11 @@ class ActiveCameraViewSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
     name: systemName,
-    reads: {ComponentId.of<Camera2D>(), ComponentId.of<GlobalTransform2D>()},
+    reads: {
+      ComponentId.of<Camera2D>(),
+      ComponentId.of<GlobalTransform2D>(),
+      ComponentId.of<CameraShake>(),
+    },
     resourceWrites: {ActiveCameraView},
     after: const [
       CameraFollowSystem.systemName,
@@ -45,9 +52,9 @@ class ActiveCameraViewSystem implements System {
       // but the scheduler can't tell that.
       ParallaxSystem.systemName,
       // Also order against transform_propagate so games that re-run
-      // propagation in postUpdate (Batch 6 item 26) don't generate a
-      // fresh ambiguity — this system reads GlobalTransform2D, which
-      // the propagate pass writes.
+      // propagation in postUpdate don't generate a fresh ambiguity —
+      // this system reads GlobalTransform2D, which the propagate pass
+      // writes.
       TransformPropagateSystem.systemName,
     ],
   );
@@ -62,20 +69,23 @@ class ActiveCameraViewSystem implements System {
   void run(World world) {
     Camera2D? best;
     GlobalTransform2D? bestTransform;
+    Entity? bestEntity;
     var bestOrder = double.maxFinite.toInt();
 
-    for (final (_, camera, transform)
+    for (final (entity, camera, transform)
         in world.query2<Camera2D, GlobalTransform2D>().iter()) {
       if (!camera.isActive) continue;
       if (camera.order < bestOrder) {
         bestOrder = camera.order;
         best = camera;
         bestTransform = transform;
+        bestEntity = entity;
       }
     }
     if (best == null || bestTransform == null) return;
 
     final camera = best;
+    final shake = world.get<CameraShake>(bestEntity!);
     var view = world.getResource<ActiveCameraView>();
     if (view == null) {
       view = ActiveCameraView();
@@ -83,7 +93,10 @@ class ActiveCameraViewSystem implements System {
     }
     final active = view;
     active
-      ..set(bestTransform.x, bestTransform.y)
+      ..set(
+        bestTransform.x + (shake?.offsetX ?? 0),
+        bestTransform.y + (shake?.offsetY ?? 0),
+      )
       ..pixelPerfect = camera.pixelPerfect
       ..subpixelScroll = camera.subpixelScroll
       // At the display scaling of whatever widget paints the view.

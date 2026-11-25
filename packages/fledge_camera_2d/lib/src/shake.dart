@@ -1,9 +1,8 @@
 import 'dart:math' as math;
 
 import 'package:fledge_ecs/fledge_ecs.dart';
-import 'package:fledge_render_2d/fledge_render_2d.dart'
-    show Transform2D, TransformPropagateSystem;
 
+import 'active_camera_view_system.dart';
 import 'camera2d.dart';
 import 'follow.dart';
 import 'parallax.dart';
@@ -11,14 +10,22 @@ import 'transitions.dart';
 
 /// Trauma-based screen shake component.
 ///
-/// Attach to a camera entity alongside `Camera2D` + `Transform2D`.
-/// [CameraShakeSystem] decays [trauma] each frame and applies a
-/// per-frame offset + rotation scaled by `trauma²`. Use
-/// [addTrauma] to bump the shake amount from a game event:
+/// Attach to a camera entity alongside `Camera2D`. [CameraShakeSystem]
+/// decays [trauma] each frame and picks a random offset ([offsetX],
+/// [offsetY]) and [rotationOffset] scaled by `trauma²`. Use [addTrauma] to
+/// bump the shake amount from a game event:
 ///
 /// ```dart
 /// world.get<CameraShake>(cameraEntity)!.addTrauma(0.5);
 /// ```
+///
+/// The shake is a **render-time offset**: the camera's `Transform2D` is
+/// never touched. [ActiveCameraViewSystem] adds the offset to the position
+/// it publishes for the widget render path, and [ParallaxSystem] includes
+/// it so camera-fixed layers stay put. Camera follow, bounds, and anything
+/// else that reads or writes the camera transform see the steady position.
+/// The widget path doesn't rotate the view, so [rotationOffset] is only
+/// there for games that apply rotation themselves.
 ///
 /// The `trauma²` scaling (from Kasper Kamperman's / Squirrel Eiserloh's
 /// GDC talks) makes small hits feel light while big hits feel violent.
@@ -44,11 +51,19 @@ class CameraShake {
   /// sequence. Overridable for tests.
   math.Random rng;
 
-  // Internal: last applied delta so we can undo it before writing
-  // the new one. Keeps [Transform2D] free of accumulated drift.
-  double _lastOffsetX = 0;
-  double _lastOffsetY = 0;
-  double _lastRotation = 0;
+  double _offsetX = 0;
+  double _offsetY = 0;
+  double _rotation = 0;
+
+  /// This frame's horizontal shake offset in world units (0 when still).
+  double get offsetX => _offsetX;
+
+  /// This frame's vertical shake offset in world units (0 when still).
+  double get offsetY => _offsetY;
+
+  /// This frame's shake rotation in radians (0 when still). Not applied by
+  /// the widget render path.
+  double get rotationOffset => _rotation;
 
   /// Creates a camera shake component.
   CameraShake({
@@ -72,17 +87,14 @@ class CameraShake {
   double get intensity => trauma * trauma;
 }
 
-/// System that decays trauma and applies per-frame shake to camera
-/// [Transform2D]s.
+/// System that decays [CameraShake.trauma] and picks each frame's shake
+/// offset.
 ///
-/// Runs in `Schedules.postUpdate` **after** [CameraFollowSystem] so
-/// shake wobbles the followed-target position rather than fighting
-/// with it.
-///
-/// The system undoes the previous frame's shake before recomputing
-/// the new offset — this way `Transform2D.translation` stays the
-/// "true" camera position and other systems (follow, save/load) can
-/// read/write it without accounting for shake drift.
+/// Runs in `Schedules.postUpdate` after [CameraFollowSystem] and before
+/// [ParallaxSystem] and [ActiveCameraViewSystem], which apply the offset.
+/// It only writes the [CameraShake] component, never the camera's
+/// `Transform2D`, so the follow (and save/load, bounds, ...) always work
+/// with the steady camera position.
 class CameraShakeSystem implements System {
   /// The `SystemMeta.name` of [CameraShakeSystem]. Games that order
   /// their own systems relative to this one use it in `before:` /
@@ -99,21 +111,14 @@ class CameraShakeSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
     name: systemName,
-    writes: {ComponentId.of<Transform2D>()},
-    reads: {ComponentId.of<CameraShake>(), ComponentId.of<Camera2D>()},
+    writes: {ComponentId.of<CameraShake>()},
+    reads: {ComponentId.of<Camera2D>()},
     resourceReads: {WallTime},
-    // Propagation (when a game re-runs it in postUpdate) reads the
-    // Transform2D this system writes. CameraFollowSystem already runs
-    // after it; declaring it here too keeps registration order from
-    // adding a contradictory edge (and a cycle) when propagation is
-    // registered after CameraPlugin.
-    after: const [
-      TransformPropagateSystem.systemName,
-      CameraFollowSystem.systemName,
-    ],
+    after: const [CameraFollowSystem.systemName],
     before: const [
       ParallaxSystem.systemName,
       CameraTransitionSystem.systemName,
+      ActiveCameraViewSystem.systemName,
     ],
   );
 
@@ -129,13 +134,7 @@ class CameraShakeSystem implements System {
         ? _fixedDelta
         : (world.getResource<WallTime>()?.delta ?? 0.0);
 
-    for (final (_, shake, _, transform)
-        in world.query3<CameraShake, Camera2D, Transform2D>().iter()) {
-      // Undo last frame's delta first so we never accumulate.
-      transform.translation.x -= shake._lastOffsetX;
-      transform.translation.y -= shake._lastOffsetY;
-      transform.rotation -= shake._lastRotation;
-
+    for (final (_, shake, _) in world.query2<CameraShake, Camera2D>().iter()) {
       // Decay trauma. clamp to 0 in case the caller poked a negative.
       shake.trauma = (shake.trauma - shake.traumaDecayPerSec * delta).clamp(
         0.0,
@@ -143,31 +142,23 @@ class CameraShakeSystem implements System {
       );
 
       if (shake.trauma <= 0) {
-        shake._lastOffsetX = 0;
-        shake._lastOffsetY = 0;
-        shake._lastRotation = 0;
+        shake._offsetX = 0;
+        shake._offsetY = 0;
+        shake._rotation = 0;
         continue;
       }
 
       final intensity = shake.intensity;
       // Random offsets in [-1, 1] scaled by max*intensity. `nextDouble`
       // gives [0,1); mapped to [-1, 1) is close enough.
-      final ox =
+      shake._offsetX =
           shake.maxOffsetX * intensity * (shake.rng.nextDouble() * 2 - 1);
-      final oy =
+      shake._offsetY =
           shake.maxOffsetY * intensity * (shake.rng.nextDouble() * 2 - 1);
-      final orot =
+      shake._rotation =
           shake.maxRotationRadians *
           intensity *
           (shake.rng.nextDouble() * 2 - 1);
-
-      transform.translation.x += ox;
-      transform.translation.y += oy;
-      transform.rotation += orot;
-
-      shake._lastOffsetX = ox;
-      shake._lastOffsetY = oy;
-      shake._lastRotation = orot;
     }
   }
 }
