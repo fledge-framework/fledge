@@ -5,6 +5,14 @@ import 'package:fledge_ui/fledge_ui.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+/// UI elements of type [T] in [world], the way the overlay finds them: by
+/// querying the base type the extractor stores them under.
+Iterable<(Entity, T)> _uiOf<T extends ExtractedUiElement>(RenderWorld world) =>
+    [
+      for (final (entity, e) in world.query1<ExtractedUiElement>().iter())
+        if (e is T) (entity, e),
+    ];
+
 void main() {
   testWidgets('UiPlugin end-to-end: spawn text, tick, paint FledgeUiOverlay', (
     tester,
@@ -30,9 +38,7 @@ void main() {
 
     // The extractor should have populated the render world.
     final renderWorld = app.world.getResource<RenderWorld>()!;
-    final extracted = renderWorld
-        .query1<ExtractedUiText>()
-        .iter()
+    final extracted = _uiOf<ExtractedUiText>(renderWorld)
         .map((r) => r.$2)
         .toList();
     expect(extracted, hasLength(1));
@@ -79,7 +85,7 @@ void main() {
     await app.tick();
 
     final renderWorld = app.world.getResource<RenderWorld>()!;
-    final result = renderWorld.query1<ExtractedUiText>().iter().single.$2;
+    final result = _uiOf<ExtractedUiText>(renderWorld).single.$2;
     expect(result.text, 'Score: 7');
   });
 

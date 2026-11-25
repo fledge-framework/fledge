@@ -6,6 +6,14 @@ import 'package:fledge_render_2d/fledge_render_2d.dart';
 import 'package:fledge_ui/fledge_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+/// UI elements of type [T] in [world], the way the overlay finds them: by
+/// querying the base type the extractor stores them under.
+Iterable<(Entity, T)> _uiOf<T extends ExtractedUiElement>(RenderWorld world) =>
+    [
+      for (final (entity, e) in world.query1<ExtractedUiElement>().iter())
+        if (e is T) (entity, e),
+    ];
+
 void main() {
   group('UiExtractor', () {
     late World mainWorld;
@@ -37,7 +45,7 @@ void main() {
         extractor.extract(mainWorld, renderWorld);
 
         final results = <ExtractedUiText>[];
-        for (final (_, e) in renderWorld.query1<ExtractedUiText>().iter()) {
+        for (final (_, e) in _uiOf<ExtractedUiText>(renderWorld)) {
           results.add(e);
         }
 
@@ -64,9 +72,7 @@ void main() {
         layout.run(mainWorld);
         extractor.extract(mainWorld, renderWorld);
 
-        final results = renderWorld
-            .query1<ExtractedUiImage>()
-            .iter()
+        final results = _uiOf<ExtractedUiImage>(renderWorld)
             .map((r) => r.$2)
             .toList();
 
@@ -90,9 +96,7 @@ void main() {
       layout.run(mainWorld);
       extractor.extract(mainWorld, renderWorld);
 
-      final results = renderWorld
-          .query1<ExtractedUiRect>()
-          .iter()
+      final results = _uiOf<ExtractedUiRect>(renderWorld)
           .map((r) => r.$2)
           .toList();
 
@@ -115,7 +119,7 @@ void main() {
         layout.run(mainWorld);
         extractor.extract(mainWorld, renderWorld);
 
-        final result = renderWorld.query1<ExtractedUiRect>().iter().single.$2;
+        final result = _uiOf<ExtractedUiRect>(renderWorld).single.$2;
         expect(result.borderRadius, 8);
       },
     );
@@ -148,6 +152,8 @@ void main() {
         for (final (_, e) in renderWorld.query1<ExtractedUiElement>().iter()) {
           keys.add(e.sortKey);
         }
+        // The overlay draws what this query finds, so it must find both.
+        expect(keys, hasLength(2));
         // Both keys should sit in `DrawLayer.ui`'s sort-key range.
         const uiStart =
             DrawLayerExtension.layerMultiplier * 5; // DrawLayer.ui index = 5
@@ -169,19 +175,13 @@ void main() {
 
       layout.run(mainWorld);
       extractor.extract(mainWorld, renderWorld);
-      expect(
-        renderWorld.query1<ExtractedUiText>().iter().single.$2.text,
-        'Score: 0',
-      );
+      expect(_uiOf<ExtractedUiText>(renderWorld).single.$2.text, 'Score: 0');
 
       mainWorld.get<UiText>(entity)!.text = 'Score: 3';
       renderWorld.clear();
       extractor.extract(mainWorld, renderWorld);
 
-      expect(
-        renderWorld.query1<ExtractedUiText>().iter().single.$2.text,
-        'Score: 3',
-      );
+      expect(_uiOf<ExtractedUiText>(renderWorld).single.$2.text, 'Score: 3');
     });
 
     test('ExtractedUiText carries the exact Rect the layout produced', () {

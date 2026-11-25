@@ -45,7 +45,7 @@ class UiExtractor extends Extractor {
 
       final text = mainWorld.get<UiText>(entity);
       if (text != null) {
-        renderWorld.add(
+        renderWorld.add<ExtractedUiElement>(
           ExtractedUiText(
             rect: computed.rect,
             sortKey: sortKey,
@@ -62,7 +62,7 @@ class UiExtractor extends Extractor {
 
       final image = mainWorld.get<UiImage>(entity);
       if (image != null) {
-        renderWorld.add(
+        renderWorld.add<ExtractedUiElement>(
           ExtractedUiImage(
             rect: computed.rect,
             sortKey: sortKey,
@@ -76,7 +76,7 @@ class UiExtractor extends Extractor {
 
       final rect = mainWorld.get<UiRect>(entity);
       if (rect != null) {
-        renderWorld.add(
+        renderWorld.add<ExtractedUiElement>(
           ExtractedUiRect(
             rect: computed.rect,
             sortKey: sortKey,
