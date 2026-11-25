@@ -175,10 +175,17 @@ class Pathfinder {
     return _astar(grid, startX, startY, goalX, goalY);
   }
 
-  /// Check if a path exists without returning the full path.
+  /// Whether any path joins start and goal, without finding the cheapest.
   ///
-  /// More efficient than [findPath] when you only need to know if
-  /// a path is possible.
+  /// Answers what `findPath(...).success` would, more cheaply: reaching
+  /// the goal doesn't depend on cell costs, so this is a greedy search
+  /// that heads straight for the goal and stops as soon as it gets there,
+  /// with no costs to track and no path to build. The same rules apply:
+  /// diagonals and corner cutting as configured, and false when start or
+  /// goal is blocked or out of bounds, or when it gives up after
+  /// [maxIterations] cells (where `findPath` would fail too, given the
+  /// same budget, unless it finds the goal sooner; a greedy search
+  /// usually visits far fewer cells).
   bool hasPath(
     CollisionGrid grid,
     int startX,
@@ -186,7 +193,49 @@ class Pathfinder {
     int goalX,
     int goalY,
   ) {
-    return findPath(grid, startX, startY, goalX, goalY).success;
+    if (!grid.isWalkable(startX, startY) || !grid.isWalkable(goalX, goalY)) {
+      return false;
+    }
+    if (startX == goalX && startY == goalY) return true;
+
+    final width = grid.width;
+    final scratch = _Scratch.forCells(width * grid.height);
+    final stamp = scratch.begin();
+    // A cell is "seen" (queued once) where its stamp is this search's.
+    final seen = scratch.stamps;
+    final neighbors = _getNeighbors();
+    final open = _OpenHeap();
+
+    final goalIndex = goalY * width + goalX;
+    final startIndex = startY * width + startX;
+    seen[startIndex] = stamp;
+    final startH = _heuristic(startX, startY, goalX, goalY);
+    open.push(_OpenEntry(startIndex, 0, startH, startH));
+
+    var iterations = 0;
+    while (open.isNotEmpty && iterations < maxIterations) {
+      final index = open.pop().index;
+      iterations++;
+      final cx = index % width;
+      final cy = index ~/ width;
+      for (final (dx, dy, _) in neighbors) {
+        final nx = cx + dx;
+        final ny = cy + dy;
+        if (!grid.isWalkable(nx, ny)) continue;
+        if (!allowCornerCutting && dx != 0 && dy != 0) {
+          if (!grid.isWalkable(cx + dx, cy) || !grid.isWalkable(cx, cy + dy)) {
+            continue;
+          }
+        }
+        final next = ny * width + nx;
+        if (next == goalIndex) return true;
+        if (seen[next] == stamp) continue;
+        seen[next] = stamp;
+        final h = _heuristic(nx, ny, goalX, goalY);
+        open.push(_OpenEntry(next, 0, h, h));
+      }
+    }
+    return false;
   }
 
   /// A* algorithm implementation.

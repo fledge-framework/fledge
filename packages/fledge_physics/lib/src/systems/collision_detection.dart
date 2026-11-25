@@ -8,6 +8,7 @@ import '../collision/collision_shapes.dart';
 import '../components/collision_config.dart';
 import '../components/collision_event.dart';
 import '../layers/collision_layers.dart';
+import '../physics_mode.dart';
 import 'collision_resolution.dart';
 import 'velocity_integration.dart';
 
@@ -46,8 +47,17 @@ class CollisionDetectionSystem implements System {
   /// cost and candidate-pair count for common games.
   final double spatialHashCellSize;
 
+  /// Which schedule the system runs in: [PhysicsMode.variable] in
+  /// `Schedules.update` (joining `UpdateSets.simulate`),
+  /// [PhysicsMode.fixed] in `Schedules.fixedUpdate` (no set). Detection
+  /// itself reads no clock.
+  final PhysicsMode mode;
+
   /// Creates a collision detection system.
-  const CollisionDetectionSystem({this.spatialHashCellSize = 64.0});
+  const CollisionDetectionSystem({
+    this.spatialHashCellSize = 64.0,
+    this.mode = PhysicsMode.variable,
+  });
 
   /// The `SystemMeta.name` of [CollisionDetectionSystem]. Games that
   /// order their own systems relative to this one use it in
@@ -57,7 +67,9 @@ class CollisionDetectionSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
     name: systemName,
-    sets: const [UpdateSets.simulate],
+    // UpdateSets only orders Schedules.update; in fixed mode the system
+    // runs in Schedules.fixedUpdate, outside it.
+    sets: mode == PhysicsMode.fixed ? const [] : const [UpdateSets.simulate],
     reads: {
       ComponentId.of<Transform2D>(),
       ComponentId.of<Collider>(),

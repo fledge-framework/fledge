@@ -56,7 +56,14 @@
 /// Read the [CollisionEvent] event queue to respond to collisions:
 ///
 /// ```dart
-/// class MySystem implements System {
+/// class MySystem extends System {
+///   @override
+///   SystemMeta get meta => const SystemMeta(
+///     name: 'my_collisions',
+///     eventReads: {CollisionEvent},
+///     after: [CollisionDetectionSystem.systemName],
+///   );
+///
 ///   @override
 ///   void run(World world) {
 ///     for (final evt in world.eventReader<CollisionEvent>().read()) {

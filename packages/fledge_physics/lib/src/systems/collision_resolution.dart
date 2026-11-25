@@ -62,7 +62,9 @@ class CollisionResolutionSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
     name: systemName,
-    sets: const [UpdateSets.simulate],
+    // UpdateSets only orders Schedules.update; in fixed mode the system
+    // runs in Schedules.fixedUpdate, outside it.
+    sets: mode == PhysicsMode.fixed ? const [] : const [UpdateSets.simulate],
     reads: {
       ComponentId.of<Transform2D>(),
       ComponentId.of<Collider>(),

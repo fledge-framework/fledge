@@ -19,7 +19,8 @@ import 'collision_resolution.dart';
 ///   system.
 ///
 /// Velocity is interpreted as pixels per 60 Hz frame, so
-/// `Velocity(0, 4)` produces 240 px/s in either mode.
+/// `Velocity(0, 4)` produces 240 px/s in either mode. [Velocity.max] is
+/// not applied here: it's a top speed for game code to scale by.
 class VelocityIntegrationSystem implements System {
   /// Which clock this system reads.
   final PhysicsMode mode;
@@ -38,7 +39,9 @@ class VelocityIntegrationSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
     name: systemName,
-    sets: const [UpdateSets.simulate],
+    // UpdateSets only orders Schedules.update; in fixed mode the system
+    // runs in Schedules.fixedUpdate, outside it.
+    sets: mode == PhysicsMode.fixed ? const [] : const [UpdateSets.simulate],
     reads: {ComponentId.of<Velocity>()},
     writes: {ComponentId.of<Transform2D>()},
     after: const [CollisionResolutionSystem.systemName],

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' show Offset, Rect;
 
 /// Base class for collision shapes from Tiled.
@@ -27,7 +28,11 @@ class RectangleShape extends CollisionShape {
   /// Height.
   final double height;
 
-  /// Rotation in degrees (clockwise).
+  /// Rotation in degrees, clockwise about ([x], [y]) (the top-left corner),
+  /// as Tiled rotates objects.
+  ///
+  /// Collision is resolved with axis-aligned boxes, so a rotated rectangle
+  /// collides as its [bounds]: the smallest box around the turned shape.
   final double rotation;
 
   const RectangleShape({
@@ -54,16 +59,21 @@ class RectangleShape extends CollisionShape {
       return Rect.fromLTWH(x, y, width, height);
     }
 
-    // Simple AABB for rotated rectangle (conservative)
-    final diagonal = (width * width + height * height);
-    final halfDiag = diagonal / 2;
-    final centerX = x + width / 2;
-    final centerY = y + height / 2;
-    return Rect.fromCenter(
-      center: Offset(centerX, centerY),
-      width: halfDiag * 2,
-      height: halfDiag * 2,
-    );
+    // The exact AABB of the rectangle turned clockwise (y points down)
+    // about (x, y), as Tiled rotates objects: the extent of its corners.
+    final radians = rotation * math.pi / 180;
+    final c = math.cos(radians);
+    final s = math.sin(radians);
+    var left = 0.0, top = 0.0, right = 0.0, bottom = 0.0;
+    for (final (px, py) in [(width, 0.0), (0.0, height), (width, height)]) {
+      final rx = px * c - py * s;
+      final ry = px * s + py * c;
+      left = math.min(left, rx);
+      right = math.max(right, rx);
+      top = math.min(top, ry);
+      bottom = math.max(bottom, ry);
+    }
+    return Rect.fromLTRB(x + left, y + top, x + right, y + bottom);
   }
 
   /// Center point of the rectangle.

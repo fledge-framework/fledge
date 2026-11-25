@@ -50,7 +50,7 @@ import 'systems/velocity_integration.dart';
 /// The default [PhysicsMode.variable] scales velocity by
 /// `WallTime.delta` and schedules every system in `Schedules.update`.
 /// Games that need deterministic simulation (netcode prediction,
-/// replays, replays) can switch to [PhysicsMode.fixed], which scales
+/// replays) can switch to [PhysicsMode.fixed], which scales
 /// by `FixedTimestep.stepSeconds` and schedules every system in
 /// `Schedules.fixedUpdate`:
 ///
@@ -122,7 +122,10 @@ class PhysicsPlugin implements Plugin {
       );
     }
     app.addSystem(
-      CollisionDetectionSystem(spatialHashCellSize: config.spatialHashCellSize),
+      CollisionDetectionSystem(
+        spatialHashCellSize: config.spatialHashCellSize,
+        mode: config.mode,
+      ),
       schedule: schedule,
     );
   }
