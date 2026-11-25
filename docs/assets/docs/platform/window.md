@@ -253,7 +253,7 @@ has:
 | `size` | Full resolution |
 | `bounds` | The usable area (without taskbar or menu bar) in virtual-screen coordinates, so it includes the monitor's offset in a multi-monitor setup |
 | `scaleFactor` | DPI scale: 1.0, 1.5, 2.0… |
-| `refreshRate` | A placeholder, always `Display.unknownRefreshRate` (60.0): `screen_retriever` 0.2.x doesn't report refresh rates. For the real rate of the display your game is on, read `View.of(context).display.refreshRate` |
+| `refreshRate` | In Hz, from Flutter's engine (`PlatformDispatcher.displays`), matched to the display by its physical size. `Display.unknownRefreshRate` (60.0) if no engine display matches. `View.of(context).display.refreshRate` gives the display your game's view is on |
 | `isPrimary` | Whether it's the primary display |
 
 The display list is re-read in the background every 5 seconds, so a monitor
@@ -298,7 +298,7 @@ callbacks feed. Tests and custom platform layers can call its
 
 - Desktop only (see [What you need](#what-you-need)). No web fullscreen API,
   no mobile support.
-- `Display.refreshRate` is a placeholder (60.0); see [Window state and displays](#window-state-and-displays).
+- `Display.refreshRate` falls back to 60.0 for a display Flutter's engine doesn't report (matched by physical size); see [Window state and displays](#window-state-and-displays).
 - One window. There's no multi-window support.
 
 ## See also

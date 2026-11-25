@@ -48,8 +48,9 @@ Focus, resize and move changes made by the user or the OS arrive as
 `WindowState` stays current. A native call that fails sends
 `WindowOperationFailed` and leaves `WindowState` unchanged.
 
-`Display.refreshRate` is a placeholder (60.0): `screen_retriever` 0.2.x
-doesn't report refresh rates.
+`Display.refreshRate` comes from Flutter's engine (`PlatformDispatcher.displays`),
+matched to each display by physical size, and falls back to 60.0 when no
+engine display matches.
 
 ## Documentation
 

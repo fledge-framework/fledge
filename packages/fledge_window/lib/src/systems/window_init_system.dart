@@ -7,6 +7,7 @@ import 'package:window_manager/window_manager.dart';
 
 import '../events/window_events.dart';
 import '../resources/display_info.dart';
+import '../resources/refresh_rate.dart';
 import '../resources/window_state.dart';
 import '../window_config.dart';
 import '../window_mode.dart';
@@ -275,6 +276,19 @@ class WindowInitSystem implements System {
     List<dynamic> screenDisplays,
     dynamic primaryId,
   ) {
+    // screen_retriever doesn't report refresh rates: take them from the
+    // matching displays Flutter's engine reports.
+    final refreshRates = matchRefreshRates(
+      [
+        for (final d in screenDisplays)
+          (
+            size: Size(d.size.width, d.size.height),
+            scaleFactor: (d.scaleFactor ?? 1.0).toDouble(),
+          ),
+      ],
+      engineDisplays(),
+      fallback: Display.unknownRefreshRate,
+    );
     final displays = <Display>[];
     var primaryIndex = 0;
     for (var i = 0; i < screenDisplays.length; i++) {
@@ -293,8 +307,7 @@ class WindowInitSystem implements System {
             d.visibleSize?.height ?? d.size.height,
           ),
           scaleFactor: (d.scaleFactor ?? 1.0).toDouble(),
-          // screen_retriever 0.2.x doesn't report refresh rates.
-          refreshRate: Display.unknownRefreshRate,
+          refreshRate: refreshRates[i],
           isPrimary: isPrimary,
         ),
       );

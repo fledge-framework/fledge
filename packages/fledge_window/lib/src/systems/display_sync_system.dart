@@ -5,6 +5,7 @@ import 'package:screen_retriever/screen_retriever.dart' hide Display;
 
 import '../events/window_events.dart';
 import '../resources/display_info.dart';
+import '../resources/refresh_rate.dart';
 import 'window_event_system.dart';
 import 'window_init_system.dart';
 
@@ -106,6 +107,19 @@ class DisplaySyncSystem implements System {
     final dynamic primaryDisplay = query.primary;
 
     // Build updated Display objects
+    // screen_retriever doesn't report refresh rates: take them from the
+    // matching displays Flutter's engine reports.
+    final refreshRates = matchRefreshRates(
+      [
+        for (final d in screenDisplays)
+          (
+            size: Size(d.size.width, d.size.height),
+            scaleFactor: (d.scaleFactor ?? 1.0).toDouble(),
+          ),
+      ],
+      engineDisplays(),
+      fallback: Display.unknownRefreshRate,
+    );
     final displays = <Display>[];
     var primaryIndex = 0;
 
@@ -126,8 +140,7 @@ class DisplaySyncSystem implements System {
             d.visibleSize?.height ?? d.size.height,
           ),
           scaleFactor: (d.scaleFactor ?? 1.0).toDouble(),
-          // screen_retriever 0.2.x doesn't report refresh rates.
-          refreshRate: Display.unknownRefreshRate,
+          refreshRate: refreshRates[i],
           isPrimary: isPrimary,
         ),
       );
@@ -150,6 +163,8 @@ class DisplaySyncSystem implements System {
       if (c.name != u.name ||
           c.size != u.size ||
           c.bounds != u.bounds ||
+          c.scaleFactor != u.scaleFactor ||
+          c.refreshRate != u.refreshRate ||
           c.isPrimary != u.isPrimary) {
         return true;
       }
