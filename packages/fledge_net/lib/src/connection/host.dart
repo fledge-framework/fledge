@@ -459,15 +459,15 @@ class NetworkHost {
     // A connect from this address is already being authenticated.
     if (_pendingConnects.contains(source)) return;
 
-    if (_peers.length >= maxPeers) {
-      _ignoreErrors(_sendReject(source, 'Server full'));
-      return;
-    }
-
     // Extract client identifier and credentials
     final reader = PacketReader(packet.payload);
     final clientId = reader.readString();
     final credentials = reader.hasMore ? reader.readBytes() : Uint8List(0);
+
+    if (_isFullFor(clientId)) {
+      _ignoreErrors(_sendReject(source, 'Server full'));
+      return;
+    }
     final sequence = packet.header.sequence;
 
     final withSource = sourceAuthenticator;
@@ -505,20 +505,35 @@ class NetworkHost {
       return;
     }
     // Capacity may have filled up while authentication was in flight.
-    if (_peers.length >= maxPeers) {
+    if (_isFullFor(clientId)) {
       _ignoreErrors(_sendReject(source, 'Server full'));
       return;
     }
     _ignoreErrors(_sendAccept(_createPeer(source, sequence, clientId)));
   }
 
+  /// Whether accepting [identity] would exceed [maxPeers]. A connection
+  /// [_createPeer] will replace (the same player rejoining) doesn't count,
+  /// so a player can rejoin a full host without waiting for their stale
+  /// connection to time out.
+  bool _isFullFor(String identity) {
+    var count = _peers.length;
+    if (_replacesSameIdentity(identity)) {
+      count -= _peers.values.where((p) => p.identity == identity).length;
+    }
+    return count >= maxPeers;
+  }
+
+  bool _replacesSameIdentity(String identity) =>
+      replaceSameIdentity &&
+      identity.isNotEmpty &&
+      identity != anonymousClientId;
+
   Peer _createPeer(NetAddress address, int connectSequence, String identity) {
     // The same player connecting again (after a crash, or from a new
     // address) replaces their old connection rather than waiting for it to
     // time out. Anonymous clients never replace each other.
-    if (replaceSameIdentity &&
-        identity.isNotEmpty &&
-        identity != anonymousClientId) {
+    if (_replacesSameIdentity(identity)) {
       for (final old in _peers.values.toList()) {
         if (old.identity == identity) {
           _removePeer(old, 'Reconnected from another connection');

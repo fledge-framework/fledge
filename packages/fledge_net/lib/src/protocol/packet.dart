@@ -62,7 +62,8 @@ class PacketHeader {
   /// Protocol version.
   ///
   /// History:
-  /// - **2**: 2D transform state wire format (see `Transform2DNetworkState`).
+  /// - **2**: 2D transform state wire format (the long-removed
+  ///   `Transform2DNetworkState`).
   /// - **3**: header [timestamp] became an unsigned 32-bit wrapping
   ///   monotonic clock value (was a truncated signed epoch-ms value);
   ///   ping/pong payloads carry a uint32 [NetClock] timestamp that the pong
@@ -73,6 +74,10 @@ class PacketHeader {
   ///   and defines payload formats for [PacketType.stateUpdate] (snapshot
   ///   chunks) and [PacketType.input] (redundant per-tick inputs); see
   ///   `lib/src/replication/wire.dart`.
+  /// - **4**: the unused `entitySpawn` (0x12), `entityDespawn` (0x13) and
+  ///   `rpc` (0x20) packet types were removed (spawns, despawns and RPCs
+  ///   travel on [PacketType.replication]), and the replication wire format
+  ///   gained player actions and fragmented reliable messages.
   ///
   /// Peers running another version cannot parse each other's packets;
   /// [deserialize] returns `null` on a version mismatch. [peekVersion] lets

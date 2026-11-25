@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import '../protocol/net_clock.dart';
 import '../protocol/packet.dart';
+import '../transport/encrypted_transport.dart';
 import '../transport/transport.dart';
 import 'peer.dart';
 import 'protocol_mismatch.dart';
@@ -222,9 +223,9 @@ class NetworkClient {
     try {
       final NetAddress address;
       try {
-        final t = transport;
-        address = t is AddressResolver
-            ? await (t as AddressResolver).resolve(host, port)
+        final resolver = _addressResolverOf(transport);
+        address = resolver != null
+            ? await resolver.resolve(host, port)
             : NetAddress(await _resolveHost(host), port);
       } catch (e) {
         _failConnect('Could not resolve host "$host": $e');
@@ -235,6 +236,7 @@ class NetworkClient {
 
       // Bind to any available port
       await transport.bind(0);
+      _transportBound = true;
 
       // Start listening for packets
       transport.onReceive.listen(_handlePacket);
@@ -302,10 +304,20 @@ class NetworkClient {
       }
     }
 
-    await transport.close();
+    await _closeTransport();
     _setState(ClientState.disconnected);
     _hostAddress = null;
     _localPeerId = null;
+  }
+
+  /// Whether [transport] was bound by [connect] and not closed since.
+  bool _transportBound = false;
+
+  /// Closes [transport] once, however the connection ended.
+  Future<void> _closeTransport() async {
+    if (!_transportBound) return;
+    _transportBound = false;
+    await transport.close();
   }
 
   /// Send data to the host.
@@ -369,6 +381,15 @@ class NetworkClient {
     _connectRetryTimer?.cancel();
     _connectRetryTimer = null;
   }
+
+  /// The [AddressResolver] behind [t], looking through encryption, so a
+  /// Steam transport wrapped in [EncryptedTransport] still resolves
+  /// `steam:` hosts.
+  static AddressResolver? _addressResolverOf(Transport t) => switch (t) {
+    AddressResolver() => t as AddressResolver,
+    EncryptedTransport(:final inner) => _addressResolverOf(inner),
+    _ => null,
+  };
 
   Future<String> _resolveHost(String host) async {
     final resolver = hostResolver;
@@ -437,7 +458,14 @@ class NetworkClient {
       case PacketType.disconnect:
         final reader = PacketReader(packet.payload);
         final reason = reader.readString();
+        _stopConnectRetries();
+        _completeConnect(false);
         _setState(ClientState.disconnected, reason);
+        _hostAddress = null;
+        _localPeerId = null;
+        // disconnect() returns early once we're disconnected, so release
+        // the socket here (host kick or shutdown).
+        unawaited(_closeTransport());
 
       case PacketType.ping:
         // Host is measuring its RTT to us: echo its timestamp back.

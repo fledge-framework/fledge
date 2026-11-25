@@ -36,7 +36,6 @@ class NetAddress {
   int get hashCode => Object.hash(host, port);
 }
 
-/// Received packet from network.
 /// A [Transport] whose addresses aren't IP addresses or host names, such
 /// as Steam IDs. `NetworkClient.connect` asks it to resolve the host
 /// instead of looking it up in DNS.
@@ -46,6 +45,7 @@ abstract interface class AddressResolver {
   Future<NetAddress> resolve(String host, int port);
 }
 
+/// Received packet from network.
 class ReceivedPacket {
   /// Source address of the packet.
   final NetAddress source;

@@ -137,6 +137,11 @@ class NetworkSession {
     this.transportFactory,
   }) : clock = clock ?? NetClock.system;
 
+  /// Largest encoded action payload. Actions are resent in every input
+  /// packet until acknowledged, so they must stay small: send what the
+  /// player did (a slot, a tile), not the state it produces.
+  static const int maxActionBytes = 256;
+
   /// Largest encoded replicated state of one entity, in bytes: the
   /// registered components' codec output plus a few bytes of framing
   /// (a presence mask and one length varint per component).
@@ -147,11 +152,6 @@ class NetworkSession {
   /// [NetworkStats.oversizedEntities]), never spawned on clients, or
   /// despawned on clients if it grew past the limit, and replicated again
   /// once it fits. Everything else keeps replicating.
-  /// Largest encoded action payload. Actions are resent in every input
-  /// packet until acknowledged, so they must stay small: send what the
-  /// player did (a slot, a tile), not the state it produces.
-  static const int maxActionBytes = 256;
-
   static const int maxEntityStateBytes =
       ReliableChannel.maxFragmentBytes - _spawnHeaderMaxBytes <
           _snapshotEntryMaxBytes
