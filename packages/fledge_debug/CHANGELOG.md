@@ -1,3 +1,19 @@
+## 0.6.0
+
+ - **FIX**: resolve incompatible apis. ([70d581c9](https://github.com/fledge-framework/fledge/commit/70d581c96c54d59d8ffc94ce791b8bb241194296))
+ - **FIX**(fledge_debug): keep an existing DebugConfig instead of overwriting it. ([8c5b3725](https://github.com/fledge-framework/fledge/commit/8c5b3725bbfd84a86f4f0d87d6a77840ab12f242))
+ - **FIX**: bump versions to stable. ([13c9aa7f](https://github.com/fledge-framework/fledge/commit/13c9aa7f0d2702dabaa7088a8679c2113f8d295d))
+ - **FEAT**(fledge_render_2d): improve culling. ([966e8657](https://github.com/fledge-framework/fledge/commit/966e86576f4f886ad4afcd24958e607188e222f6))
+ - **FEAT**(fledge_core): performance enhancements. ([839f52da](https://github.com/fledge-framework/fledge/commit/839f52dacb8eab4c1c69d7610cafb52b3af7601f))
+ - **FEAT**: make vsync checks asyncronous to prevent frame skips. ([a1f5cc97](https://github.com/fledge-framework/fledge/commit/a1f5cc97cca011e8f9be638bc4473eeb97858718))
+ - **FEAT**: update render graph. ([1a2aa4f7](https://github.com/fledge-framework/fledge/commit/1a2aa4f762ac933ac1aa9d8ebce431e8016908a8))
+ - **FEAT**(fledge_debug): auto-refresh ScheduleOrderingReport on first tick. ([0e152b9e](https://github.com/fledge-framework/fledge/commit/0e152b9e6eaf00f9f30096d9f61c1f2c7a0c777a))
+ - **FEAT**(fledge_debug): optional overlay and a standalone stats plugin. ([aef458b1](https://github.com/fledge-framework/fledge/commit/aef458b1ff7ceb251fbb46c7d9fbe244f43939f0))
+ - **FEAT**: camera-aware widget render path. ([6b8ff1b7](https://github.com/fledge-framework/fledge/commit/6b8ff1b7f1eaf6a930a73d7a4c5a0c4e26f12385))
+ - **FEAT**: upgrade tiled version. ([306fdb67](https://github.com/fledge-framework/fledge/commit/306fdb6708c06ff8c29a1a745a9899677bf9ce27))
+ - **FEAT**: add additional examples. ([dccbc356](https://github.com/fledge-framework/fledge/commit/dccbc356dc6b7b21b04fdcc4cd2faec1f258dd8b))
+ - **FEAT**: v0.2 engine restructure — 2D/2.5D desktop game engine. ([bf7c2b6c](https://github.com/fledge-framework/fledge/commit/bf7c2b6cc47837c998786f25bc87997f474c5b1d))
+
 ## 0.5.0
 
  - **FIX**: resolve incompatible apis. ([70d581c9](https://github.com/fledge-framework/fledge/commit/70d581c96c54d59d8ffc94ce791b8bb241194296))
