@@ -1,354 +1,319 @@
 # Core Concepts
 
-Now that you've seen Fledge in action with the bouncing square, let's understand the concepts more deeply. This page serves as a reference you can return to as you build more complex games.
+A tour of the ideas Fledge is built on. Each section is a summary; follow the
+links for the full story.
 
-## The ECS Pattern
-
-ECS stands for **Entity Component System**. It's a design pattern that separates:
-
-- **What exists** (entities)
-- **What they have** (components)
-- **What they do** (systems)
-
-This separation makes games easier to build, test, and extend.
-
-## Entities
-
-An **Entity** is just a unique identifier - think of it as a name tag. It has no data or behavior on its own.
-
-```dart
-// Spawn returns EntityCommands for chaining
-final commands = world.spawn()
-  ..insert(Position(0, 0));
-final entity = commands.entity;
-
-print(entity.id);          // Unique integer ID
-print(entity.generation);  // Detects stale references
-```
-
-### Why Generational IDs?
-
-When an entity is despawned, its ID slot can be reused. The generation number tracks this:
-
-```dart
-final entity = world.spawn().entity;  // id: 5, generation: 0
-world.despawn(entity);
-
-// Later, id 5 might be reused
-final newEntity = world.spawn().entity;  // id: 5, generation: 1
-
-// Old references can be detected
-world.contains(entity);     // false - generation mismatch
-world.contains(newEntity);  // true
-```
-
-## Components
-
-**Components** are plain Dart classes that hold data. They have no logic.
-
-```dart
-// Position component - where something is
+<!-- snippet-setup
 class Position {
-  double x;
-  double y;
+  double x, y;
   Position(this.x, this.y);
 }
 
-// Health component - can take damage
+class Velocity {
+  double dx, dy;
+  Velocity(this.dx, this.dy);
+}
+
 class Health {
-  int current;
-  int max;
-  Health(this.current, this.max);
-
-  bool get isDead => current <= 0;
+  int value;
+  Health(this.value);
 }
 
-// Marker component - no data, just tags the entity
-class Player {}
-class Enemy {}
-```
-
-### Component Guidelines
-
-| Guideline | Example |
-|-----------|---------|
-| Keep them small | `Position` not `PositionAndVelocityAndHealth` |
-| Make them mutable | Systems need to update them |
-| Use markers for tags | `class Player {}` with no fields |
-| Avoid methods | Logic belongs in systems |
-
-### Working with Components
-
-```dart
-// Adding components when spawning
-world.spawn()
-  ..insert(Position(0, 0))
-  ..insert(Health(100, 100))
-  ..insert(Player());
-
-// Or spawn with a list
-final entity = world.spawnWith([
-  Position(0, 0),
-  Health(100, 100),
-  Player(),
-]);
-
-// Reading components
-final pos = world.get<Position>(entity);
-final health = world.get<Health>(entity);
-
-// Removing components
-world.remove<Player>(entity);
-```
-
-## Systems
-
-**Systems** contain game logic. They query for entities with specific components and process them.
-
-```dart
-class MovementSystem implements System {
-  @override
-  SystemMeta get meta => SystemMeta(
-    name: 'movement',
-    writes: {ComponentId.of<Position>()},
-    reads: {ComponentId.of<Velocity>()},
-  );
-
-  @override
-  void run(World world) {
-    for (final (_, pos, vel) in world.query2<Position, Velocity>().iter()) {
-      pos.x += vel.dx;
-      pos.y += vel.dy;
-    }
-  }
-}
-```
-
-### SystemMeta
-
-The `SystemMeta` declares dependencies:
-
-| Property | Purpose |
-|----------|---------|
-| `name` | Human-readable identifier |
-| `reads` | Components this system reads |
-| `writes` | Components this system modifies |
-| `resourceReads` | Resources this system reads |
-| `resourceWrites` | Resources this system modifies |
-
-Fledge uses this information to:
-1. **Order systems** within schedules: a pair that conflicts always runs in the same order
-2. **Report ambiguities**: `checkScheduleOrdering()` lists conflicting pairs nothing orders
-
-### System Guidelines
-
-- Keep systems **focused** - one responsibility each
-- Declare **all** component and resource access
-- Use **queries** to find entities
-- Use **commands** for deferred spawn/despawn
-
-## Queries
-
-**Queries** efficiently find entities with specific component combinations.
-
-```dart
-// Find entities with Position and Velocity
-for (final (entity, pos, vel) in world.query2<Position, Velocity>().iter()) {
-  pos.x += vel.dx;
+class Player {
+  const Player();
 }
 
-// Query types: query1, query2, query3, query4
-final health = world.query1<Health>();
-final moving = world.query2<Position, Velocity>();
-final enemies = world.query3<Position, Health, Enemy>();
-```
-
-### Filters
-
-Narrow down queries with filters:
-
-```dart
-// Only entities WITH Player component
-final players = world.query2<Position, Velocity>(
-  filter: const With<Player>(),
-);
-
-// Only entities WITHOUT Dead component
-final alive = world.query1<Health>(
-  filter: const Without<Dead>(),
-);
-
-// Combine filters
-final activeEnemies = world.query2<Position, Health>(
-  filter: And([With<Enemy>(), Without<Dead>()]),
-);
-```
-
-## Resources
-
-**Resources** are global singletons accessible by all systems.
-
-```dart
-// Define a resource
-class GameConfig {
-  final int maxEnemies;
-  final double spawnRate;
-  GameConfig({this.maxEnemies = 10, this.spawnRate = 2.0});
+class Enemy {
+  const Enemy();
 }
 
-// Insert a resource
-world.insertResource(GameConfig());
+class Score {
+  int points = 0;
+}
 
-// Access in systems
-final config = world.getResource<GameConfig>();
-```
+class EnemyDefeated {
+  final Entity enemy;
+  const EnemyDefeated(this.enemy);
+}
+-->
 
-### Components vs Resources
+## Entities
 
-| Concept | Storage | Use Case |
-|---------|---------|----------|
-| Component | Per-entity | Entity-specific data (position, health) |
-| Resource | Global singleton | Shared state (time, config, input) |
-
-```dart
-// Components belong to entities
-world.spawn()
-  ..insert(Position(0, 0));    // This entity's position
-
-// Resources are global
-world.insertResource(WallTime());  // One Time for everyone
-```
-
-### Built-in Resources
-
-Fledge provides these via plugins:
-
-| Resource | Plugin | Purpose |
-|----------|--------|---------|
-| `WallTime` | `WallTimePlugin` | Delta time, elapsed time |
-
-## Archetypes
-
-An **archetype** is a unique combination of component types. Entities with the same components live together.
-
-```
-Archetype [Position, Velocity]
-├── Entity 0: Position(0, 0), Velocity(1, 0)
-├── Entity 3: Position(5, 5), Velocity(0, 1)
-└── Entity 7: Position(2, 8), Velocity(1, 1)
-
-Archetype [Position, Velocity, Player]
-└── Entity 1: Position(0, 0), Velocity(0, 0), Player()
-```
-
-Why does this matter?
-- **Cache efficiency**: Same components are stored contiguously in memory
-- **Fast queries**: Query iteration skips irrelevant archetypes
-- **O(1) access**: Components within an archetype use direct array indexing
-
-You don't manage archetypes directly - Fledge handles it automatically.
-
-## World
-
-The **World** is the container for all ECS data:
+An `Entity` is a lightweight ID: an index plus a **generation**. When an
+entity is despawned its index can be reused, and the generation goes up, so an
+old `Entity` value never refers to the new occupant by mistake:
 
 ```dart
 final world = World();
 
-// Entity operations
-world.spawn()..insert(Position(0, 0));
-world.despawn(entity);
+final first = world.spawn().entity;
+world.despawn(first);
+final second = world.spawn().entity; // may reuse the index
 
-// Component operations
-world.get<Position>(entity);
-world.remove<Position>(entity);
-
-// Resource operations
-world.insertResource(GameConfig());
-world.getResource<GameConfig>();
-
-// Query creation
-world.query2<Position, Velocity>();
+print(world.isAlive(first)); // false: the generation no longer matches
+print(world.isAlive(second)); // true
 ```
 
-> In games, don't create World directly. Use `App` and access `app.world`.
+Holding an `Entity` in a component or resource is the normal way to refer to
+another entity (a target, an owner). Check `world.isAlive` before using one
+that might be gone. More in [Entities & Components](/docs/ecs/entities-components).
 
-## Schedules
+## Components
 
-Systems run in **schedules**. Schedules run in order; within a schedule, systems run one at a time in an order that respects their dependencies.
+Components are plain Dart classes holding data. An entity has at most one
+component of each type. Keep them small and focused; a class with no fields
+is a **marker** that tags an entity (`Player`, `Enemy`):
 
 ```dart
-app.addSystem(inputSystem, schedule: Schedules.preUpdate);
-app.addSystem(movementSystem, schedule: Schedules.update);
-app.addSystem(collisionSystem, schedule: Schedules.postUpdate);
+final world = World();
+
+final hero = world.spawnWith([Position(0, 0), Health(100), const Player()]);
+
+world.get<Health>(hero)!.value -= 10; // read and change in place
+world.insert(hero, Velocity(5, 0)); // add a component
+world.remove<Velocity>(hero); // remove it
+print(world.has<Player>(hero)); // true
 ```
 
-### Standard Schedules
+Entities with the same set of component types are stored together (an
+**archetype**), so iterating over "everything with `Position` and `Velocity`"
+walks dense arrays.
 
-| Schedule | Purpose | Examples |
-|----------|---------|----------|
-| `Schedules.first` | Very first | Debug logging |
-| `Schedules.preUpdate` | Before main logic | Input handling |
-| `Schedules.update` | Main game logic | Movement, AI |
-| `Schedules.postUpdate` | After main logic | Physics, collision |
-| `Schedules.last` | Very last | Rendering prep |
+## Queries
 
-> `CoreStage` and the `stage:` parameter are aliased to the schedule constants above for one release. Prefer the new names in new code.
+A query finds every entity with a given set of components, with optional
+filters:
+
+```dart
+final world = World()
+  ..spawnWith([Position(0, 0), Velocity(1, 0), const Player()])
+  ..spawnWith([Position(5, 5), Velocity(0, 1), const Enemy()]);
+
+for (final (entity, pos, vel) in world.query2<Position, Velocity>().iter()) {
+  pos.x += vel.dx;
+}
+
+// Only enemies.
+for (final (_, pos) in world.query1<Position>(filter: const With<Enemy>()).iter()) {
+  print('enemy at ${pos.x}, ${pos.y}');
+}
+```
+
+`query1` to `query4` take one to four component types. Filters include
+`With<T>`, `Without<T>`, `Added<T>`, `Changed<T>` and `And`. See
+[Queries](/docs/ecs/queries) and [Change Detection](/docs/ecs/change-detection).
+
+## Systems
+
+A system is game logic: an object with a `run(World world)` method and a
+`SystemMeta` describing what it reads and writes.
+
+```dart
+class DamageOverTime extends System {
+  static const String systemName = 'damageOverTime';
+
+  @override
+  SystemMeta get meta => SystemMeta(
+    name: systemName,
+    writes: {ComponentId.of<Health>()},
+    reads: {ComponentId.of<Enemy>()},
+  );
+
+  @override
+  void run(World world) {
+    for (final (_, health) in world.query1<Health>(filter: const With<Enemy>()).iter()) {
+      health.value -= 1;
+    }
+  }
+}
+```
+
+The declarations feed the scheduler: two systems **conflict** when one writes
+something the other reads or writes, and conflicting systems are kept in a
+fixed order. Systems run one at a time; Dart gives your game a single
+isolate. For small systems, `FunctionSystem('name', run: (world) {...})`
+saves the class. See [Systems](/docs/ecs/systems).
+
+## Resources
+
+A resource is a single value stored on the world, not on an entity: the score,
+the game settings, the time.
+
+```dart
+final world = World()..insertResource(Score());
+
+world.getResource<Score>()!.points += 10;
+```
+
+Systems declare resource access with `resourceReads:` / `resourceWrites:`.
+See [Resources](/docs/ecs/resources).
+
+## Events
+
+Events let one system tell others that something happened, without either
+knowing about the other. They're double-buffered: an event sent in one frame
+is read in the next.
+
+```dart
+final app = App()..addEvent<EnemyDefeated>();
+final world = app.world;
+
+// In one system:
+world.eventWriter<EnemyDefeated>().send(EnemyDefeated(world.spawn().entity));
+
+// In another, on the next frame:
+for (final event in world.eventReader<EnemyDefeated>().read()) {
+  world.getResource<Score>()?.points += 100;
+}
+```
+
+See [Events](/docs/ecs/events).
 
 ## Commands
 
-When iterating over queries, you can't directly spawn or despawn entities (it would invalidate the iteration). Use **Commands** for deferred mutations:
+A `Commands` buffer queues spawns, despawns and component changes and applies
+them together. It's the tidy way to change the world's structure from inside a
+system:
 
 ```dart
-void spawnBulletSystem(World world) {
-  final commands = Commands();
+final world = World()..spawnWith([Health(0), const Enemy()]);
 
-  for (final (_, pos, gun) in world.query2<Position, Gun>().iter()) {
-    if (gun.shouldFire) {
-      commands.spawn()
-        ..insert(Position(pos.x, pos.y))
-        ..insert(Velocity(gun.direction.x * 500, gun.direction.y * 500))
-        ..insert(Bullet());
-      gun.shouldFire = false;
-    }
-  }
-
-  // Apply after iteration completes
-  commands.apply(world);
+final commands = Commands();
+for (final (entity, health) in world.query1<Health>().iter()) {
+  if (health.value <= 0) commands.despawn(entity);
 }
+commands.apply(world);
 ```
 
-## Plugins
+See [Commands](/docs/ecs/commands).
 
-**Plugins** bundle related functionality:
+## Hierarchies and observers
+
+Entities can have parents and children (`world.spawnChild(parent)`,
+`world.despawnRecursive(root)`), used for things like a turret riding a ship.
+Observers run a callback when a component is added, removed or replaced. See
+[Hierarchies](/docs/ecs/hierarchies) and [Observers](/docs/ecs/observers).
+
+## The App and plugins
+
+`App` owns the world and the scheduler and runs the frame. You configure it
+fluently, and a **plugin** packages a feature's resources, events and systems
+behind one `addPlugin` call:
 
 ```dart
-class CombatPlugin implements Plugin {
+class CombatPlugin extends Plugin {
   @override
   void build(App app) {
-    // Add resources
-    app.world.insertResource(DamageMultiplier(1.0));
-
-    // Add systems
-    app.addSystem(DamageSystem());
-    app.addSystem(DeathSystem());
-
-    // Spawn initial entities
-    app.world.spawn()..insert(Player());
-  }
-
-  @override
-  void cleanup() {
-    // Called when plugin is removed
+    app
+      ..insertResource(Score())
+      ..addEvent<EnemyDefeated>()
+      ..addSystem(
+        FunctionSystem(
+          'scoreDefeats',
+          eventReads: {EnemyDefeated},
+          resourceWrites: {Score},
+          run: (world) {
+            for (final _ in world.eventReader<EnemyDefeated>().read()) {
+              world.getResource<Score>()!.points += 100;
+            }
+          },
+        ),
+        schedule: Schedules.update,
+      );
   }
 }
 
-// Use plugins
 final app = App()
   ..addPlugin(WallTimePlugin())
   ..addPlugin(CombatPlugin());
 ```
 
-## What's Next?
+Every Fledge package (input, physics, rendering...) is a plugin you add the
+same way. See [App & Plugins](/docs/app/app-and-plugins).
 
-You now understand all the core concepts! Let's put them together and build a complete game in [Building Snake](/docs/getting-started/building-snake).
+## The frame
+
+Each `app.tick()` runs the schedules in this order:
+
+| Schedule | Use it for |
+|---|---|
+| `startup` | One-time setup, on the first tick only |
+| `first` | Frame-start bookkeeping: time, input polling |
+| `preUpdate` | Turning input into intent (movement, steering) |
+| `fixedFirst` → `fixedPreUpdate` → `fixedUpdate` → `fixedPostUpdate` → `fixedLast` | Physics and deterministic simulation, run 0..N times per frame at a fixed step |
+| `update` | Most game logic. The default when you don't pass `schedule:` |
+| `postUpdate` | Reacting to `update`: camera follow, UI layout |
+| `last` | End-of-frame cleanup |
+| `extract` | Copy what's visible into the render world |
+| `render` | Render systems, on the render world |
+
+Then state transitions are applied, ready for the next frame. Physics belongs
+in the fixed schedules (usually `fixedUpdate`), where every step has the same
+length, not in `update` or `postUpdate`. See
+[Schedules & the Frame](/docs/scheduling/schedules) and
+[Time & Fixed Timestep](/docs/scheduling/time).
+
+## Ordering
+
+Within a schedule, the order is computed once from explicit
+`before:`/`after:` constraints and [system sets](/docs/scheduling/ordering-and-sets#system-sets).
+Two conflicting systems with no explicit order between them fall back to
+**registration order**, which changes silently when you add or reorder
+plugins. `app.checkScheduleOrdering()` lists every such pair; keep it empty
+with a test:
+
+```dart
+class ApplyDamage extends System {
+  static const String systemName = 'applyDamage';
+
+  @override
+  SystemMeta get meta =>
+      SystemMeta(name: systemName, writes: {ComponentId.of<Health>()});
+
+  @override
+  void run(World world) {}
+}
+
+class Regenerate extends System {
+  static const String systemName = 'regenerate';
+
+  @override
+  SystemMeta get meta => SystemMeta(
+    name: systemName,
+    writes: {ComponentId.of<Health>()},
+    after: [ApplyDamage.systemName], // remove this and the assert fails
+  );
+
+  @override
+  void run(World world) {}
+}
+
+void main() {
+  final app = App()
+    ..addSystem(Regenerate())
+    ..addSystem(ApplyDamage());
+
+  assert(app.checkScheduleOrdering().isEmpty);
+}
+```
+
+Always name the other system by its `systemName` constant, never a string
+literal. See [Ordering & Sets](/docs/scheduling/ordering-and-sets).
+
+## Two worlds
+
+Rendering with `fledge_render_2d` uses a second world. Each frame, in the
+`extract` schedule, **extractors** copy what's needed for drawing from the
+main world into a `RenderWorld` that is cleared and rebuilt from scratch. The
+widget paints only the render world. Keep game logic in the main world, and
+never expect a render-world entity to survive to the next frame. See
+[Rendering Overview](/docs/rendering/overview).
+
+## States and run conditions
+
+`app.addState<GameState>(GameState.menu)` adds a state machine;
+`addSystemInState(system, GameState.playing)` runs a system only in that
+state, and `runIf:` gates any system on a condition. See
+[States & Run Conditions](/docs/ecs/states-run-conditions).
+
+Next: [Tutorial: Snake](/docs/getting-started/tutorial-snake).

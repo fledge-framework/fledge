@@ -1,125 +1,123 @@
-# Introduction to Fledge
+# Introduction
 
-Welcome! Fledge is a modern game framework for Flutter that brings the power of Entity Component System (ECS) architecture to Dart. If you've used Bevy (Rust), you'll feel right at home. If not, don't worry - we'll guide you through everything you need to know.
+Fledge is a game framework for Dart and Flutter built on an Entity Component
+System (ECS), modelled on [Bevy](https://bevyengine.org/). Your game state is
+plain Dart objects attached to entities; your game logic is systems that query
+for them. Fledge schedules the systems, keeps them in a predictable order, and
+provides packages for rendering, input, audio, physics, tilemaps, dialogue,
+saving and networking.
 
-## What You'll Build
+It targets desktop first (Windows, macOS and Linux). The web and mobile work on
+a best-effort basis; each package page says where it stands.
 
-By the end of the Getting Started guide, you'll:
+## The idea in one example
 
-1. **Understand ECS** - Learn why separating data from logic makes games easier to build
-2. **Set up a project** - Install Fledge and configure your development environment
-3. **Create your first game** - Build a working Snake game from scratch
-
-Here's a preview of what you'll create:
-
-```
-+---------------------------+
-|  Score: 5                 |
-|                           |
-|       * * *               |
-|           *               |
-|           @               |
-|                           |
-|             o             |
-+---------------------------+
-```
-
-A classic Snake game with player movement, food collection, and collision detection - all built using clean ECS architecture.
-
-## What is Fledge?
-
-Fledge is a **desktop-first** game framework that provides:
-
-- **Clean ECS architecture** - Separate data (components) from logic (systems)
-- **Archetype-based storage** - Excellent cache locality for fast iteration
-- **Deterministic ordering** - Systems that touch the same data always run in the same order, and ambiguities are reported
-- **Code generation** - Optional annotations to reduce boilerplate
-- **Modular plugins** - Add only what you need (rendering, audio, input, physics)
-
-## Why ECS?
-
-Traditional game development often uses deep inheritance hierarchies:
-
-```dart
-// Traditional OOP - gets messy fast
-class Player extends Character {
-  // Character extends Entity
-  // Entity extends GameObject
-  // What if I want a Player that's also a Vehicle?
+<!-- snippet-setup
+class Position {
+  double x, y;
+  Position(this.x, this.y);
 }
-```
 
-With ECS, you compose game objects from small, focused pieces:
+class Velocity {
+  double dx, dy;
+  Velocity(this.dx, this.dy);
+}
 
-```dart
-// ECS approach - flexible and clean
-final player = world.spawn()
-  ..insert(Position(0, 0))    // Where it is
-  ..insert(Velocity(0, 0))    // How it moves
-  ..insert(Health(100))       // Can take damage
-  ..insert(Player());         // It's the player
+class Health {
+  int value;
+  Health(this.value);
+}
 
-// Want a rideable mount? Just add components!
-final mount = world.spawn()
-  ..insert(Position(0, 0))
-  ..insert(Velocity(0, 0))
-  ..insert(Health(200))
-  ..insert(Mount())
-  ..insert(Rideable());
-```
+class Player {
+  const Player();
+}
+-->
 
-### The Three Pillars of ECS
-
-| Concept | What It Is | Example |
-|---------|------------|---------|
-| **Entity** | A unique ID | `Entity(id: 42)` |
-| **Component** | Data attached to an entity | `Position(x: 10, y: 20)` |
-| **System** | Logic that processes components | "Move all entities with Position and Velocity" |
-
-**Entities** are just IDs - they have no data or behavior on their own.
-
-**Components** are pure data containers - `Position`, `Health`, `Sprite`, etc.
-
-**Systems** are functions that query for entities with specific components and process them:
+An **entity** is an ID. **Components** are the data you attach to it:
 
 ```dart
-// This system runs every frame on all entities with Position and Velocity
-void movementSystem(World world) {
-  for (final (entity, pos, vel) in world.query2<Position, Velocity>().iter()) {
-    pos.x += vel.dx;
-    pos.y += vel.dy;
+final world = World();
+
+final player = world.spawnWith([
+  Position(0, 0),
+  Velocity(40, 0),
+  Health(100),
+  const Player(),
+]);
+
+// A crate: no Velocity, no Health. Nothing to inherit, nothing to override.
+world.spawnWith([Position(120, 0)]);
+```
+
+A **system** is logic that runs every frame over every entity that has the
+components it asks for:
+
+```dart
+class MovementSystem extends System {
+  static const String systemName = 'movement';
+
+  @override
+  SystemMeta get meta => SystemMeta(
+    name: systemName,
+    reads: {ComponentId.of<Velocity>()},
+    writes: {ComponentId.of<Position>()},
+    resourceReads: {WallTime},
+  );
+
+  @override
+  void run(World world) {
+    final dt = world.getResource<WallTime>()!.delta;
+    for (final (_, pos, vel) in world.query2<Position, Velocity>().iter()) {
+      pos.x += vel.dx * dt;
+      pos.y += vel.dy * dt;
+    }
   }
 }
 ```
 
-## Fledge vs Other Frameworks
+The player moves; the crate doesn't, because it has no `Velocity`. Give the
+crate a `Velocity` later and it starts moving, with no code change. That is
+the point of ECS: behaviour comes from which data an entity has, so features
+compose instead of fighting over a class hierarchy.
 
-| Feature | Fledge | Flame | Unity |
-|---------|--------|-------|-------|
-| Architecture | Pure ECS | Component-based | Hybrid ECS |
-| Language | Dart | Dart | C# |
-| Platform Focus | Desktop | Mobile-first | Cross-platform |
-| System ordering | Declared, checked | Manual | Manual |
-| Type Safety | Strong (Dart) | Moderate | Weak (runtime) |
+The `SystemMeta` declares what the system touches. Fledge uses it to order
+systems that conflict, and `App.checkScheduleOrdering()` tells you when two
+conflicting systems have no explicit order.
 
-Fledge is inspired by [Bevy](https://bevyengine.org/), the popular Rust game engine. If you're coming from Bevy, you'll find familiar concepts like:
+## What you get
 
-- Archetype-based ECS
-- Plugin architecture
-- Named schedule graph
-- Change detection
-- Two-world rendering architecture
+- **Core ECS** (`fledge_ecs`, pure Dart): archetype storage, queries with
+  filters, resources, events, commands, hierarchies, observers, change
+  detection, states and run conditions.
+- **Scheduling**: named schedules for each part of the frame, a fixed-timestep
+  chain for physics, explicit `before`/`after` ordering and system sets.
+- **A plugin for each concern**: rendering (sprites, cameras, lighting,
+  particles), input, window, audio, physics, Tiled maps, Yarn dialogue, save
+  games, an in-game calendar and multiplayer networking. See the
+  [Package Catalog](/docs/app/packages).
+- **Optional code generation**: write systems as annotated functions and let
+  `fledge_ecs_generator` produce the wrapper classes. See
+  [Code Generation](/docs/app/codegen).
 
-## Prerequisites
+Systems run one at a time, in an order computed once per schedule: Dart runs
+your game on a single isolate, and Fledge doesn't pretend otherwise.
 
-Before starting, you should have:
+## How these docs are organised
 
-- Basic Dart/Flutter knowledge (variables, classes, functions)
-- Flutter SDK 3.10+ installed
-- A code editor (VS Code recommended)
+1. **Getting Started** (here): [install](/docs/getting-started/installation),
+   [build a first app](/docs/getting-started/first-app), read the
+   [core concepts](/docs/getting-started/core-concepts), then
+   [make Snake](/docs/getting-started/tutorial-snake).
+2. **ECS** and **Scheduling & Time**: the core, one topic per page.
+3. **App & Tooling**, **Rendering**, **UI & Tools**, **Platform**,
+   **Gameplay**, **Networking**: one page per package or feature.
+4. **Examples**: walkthroughs of the runnable programs in the repository.
+5. **API Reference**: the dartdoc for every package on pub.dev.
 
-No game development experience required! We'll explain everything as we go.
+## Before you start
 
-## Next Steps
+You should be comfortable with Dart (classes, generics, records) and, for a
+game with graphics, with basic Flutter widgets. You don't need game
+development experience.
 
-Ready to begin? Let's [install Fledge](/docs/getting-started/installation) and set up your project.
+Next: [Installation](/docs/getting-started/installation).
