@@ -6,38 +6,53 @@ import 'package:source_gen/source_gen.dart';
 
 /// Generates system wrappers for @system annotated functions.
 ///
-/// Analyzes the function signature to determine:
-/// - Which queries are used (from Query parameters)
-/// - Which resources are accessed (from Res/ResMut parameters)
-/// - Read vs write access patterns
+/// Analyzes the function signature (never the body) to determine:
+/// - Component access from query parameters: every type argument of a
+///   `QueryN<...>` is a read, every type argument of a `QueryMutN<...>` is
+///   a write
+/// - Resource access from `Res<T>` / `ResOption<T>` (reads) and
+///   `ResMut<T>` (writes)
+/// - Event access from `EventReader<T>`, `EventWriter<T>` and
+///   `EventReadWriter<T>`
+///
+/// A `Commands` parameter is applied after the function returns, a `World`
+/// parameter receives the world (with a build warning, because it declares
+/// no access), and an async function is awaited.
 ///
 /// Example input:
 /// ```dart
 /// @system
-/// void movementSystem(Query2<Position, Velocity> query, Res<WallTime> time) {
+/// void movementSystem(QueryMut2<Position, Velocity> query, Res<WallTime> time) {
 ///   for (final (_, pos, vel) in query.iter()) {
 ///     pos.x += vel.dx * time.value.delta;
 ///   }
 /// }
 /// ```
 ///
-/// Example output:
+/// Example output (after `dart format`):
 /// ```dart
+/// /// Generated system wrapper for [movementSystem].
 /// class MovementSystemWrapper implements System {
+///   /// Name used in [SystemMeta] and for `before:`/`after:`.
 ///   static const String systemName = 'movementSystem';
 ///
 ///   @override
 ///   SystemMeta get meta => SystemMeta(
 ///     name: systemName,
-///     writes: {ComponentId.of<Position>()},
-///     reads: {ComponentId.of<Velocity>()},
+///     writes: {ComponentId.of<Position>(), ComponentId.of<Velocity>()},
 ///     resourceReads: {WallTime},
 ///   );
 ///
 ///   @override
+///   RunCondition? get runCondition => null;
+///
+///   @override
+///   bool shouldRun(World world) => runCondition?.call(world) ?? true;
+///
+///   @override
 ///   void run(World world) {
-///     final query = world.query2<Position, Velocity>();
-///     final time = Res<WallTime>(world.resource<WallTime>());
+///     final query = world.queryMut2<Position, Velocity>();
+///     final time = Res<WallTime>(world.getResource<WallTime>()!);
 ///     movementSystem(query, time);
 ///   }
 /// }
