@@ -50,8 +50,7 @@ class AudioPlugin implements Plugin {
   AudioFocusSystem? _focus;
 
   /// Creates an audio plugin with custom configuration.
-  AudioPlugin({this.config = const AudioConfig(), AudioBackend? backend})
-    : _backend = backend;
+  AudioPlugin({this.config = const AudioConfig(), this._backend});
 
   /// Creates an audio plugin with default settings.
   AudioPlugin.defaults()
@@ -78,6 +77,7 @@ class AudioPlugin implements Plugin {
         // Responses
         .addEvent<SfxStarted>()
         .addEvent<SfxFinished>()
+        .addEvent<AudioSourceFinished>()
         .addEvent<MusicStarted>()
         .addEvent<MusicFinished>()
         .addEvent<MusicChanged>()

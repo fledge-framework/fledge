@@ -23,6 +23,7 @@ class AudioPump {
     swap<SetChannelVolumeRequest>();
     swap<SfxStarted>();
     swap<SfxFinished>();
+    swap<AudioSourceFinished>();
     swap<MusicStarted>();
     swap<MusicFinished>();
     swap<MusicChanged>();

@@ -1,7 +1,8 @@
 import 'dart:math';
 
 import 'package:fledge_ecs/fledge_ecs.dart';
-import 'package:fledge_render_2d/fledge_render_2d.dart' show Transform2D;
+import 'package:fledge_render_2d/fledge_render_2d.dart'
+    show GlobalTransform2D, Transform2D, TransformPropagateSystem;
 
 import '../components/audio_listener.dart';
 import '../components/audio_source.dart';
@@ -21,14 +22,18 @@ import 'audio_cleanup_system.dart';
 /// - Keeps each voice's volume and pan following where the source is
 ///   relative to the active [AudioListener]: distance attenuates (linear
 ///   between the reference and max distances), lateral offset pans.
-///   A source without a `Transform2D`, with no active listener, or with
+///   Positions are world-space: an entity's `GlobalTransform2D` when it has
+///   one (so a source parented to a moving entity follows it), else its
+///   `Transform2D`. A source with neither, with no active listener, or with
 ///   spatial audio off plays centred at its volume times its channel's.
 /// - Stops (with a short fade) the voices of sources that are gone: the
 ///   entity was despawned, or its [AudioSource] removed or replaced.
 ///
 /// Registered in `Schedules.last` so it reads final per-frame positions
-/// (every `Transform2D` writer in `update` has run). Within `last` it runs
-/// before [AudioCleanupSystem]; both write [AudioState] and `AudioSource`.
+/// (every `Transform2D` writer in `update` has run, and transforms
+/// propagated in `postUpdate`). Within `last` it runs after
+/// `TransformPropagateSystem` if that's registered there too, and before
+/// [AudioCleanupSystem]; both write [AudioState] and `AudioSource`.
 class SpatialAudioSystem implements System {
   /// The `SystemMeta.name` of [SpatialAudioSystem].
   static const String systemName = 'SpatialAudioSystem';
@@ -39,10 +44,15 @@ class SpatialAudioSystem implements System {
   @override
   SystemMeta get meta => SystemMeta(
     name: systemName,
-    reads: {ComponentId.of<AudioListener>(), ComponentId.of<Transform2D>()},
+    reads: {
+      ComponentId.of<AudioListener>(),
+      ComponentId.of<Transform2D>(),
+      ComponentId.of<GlobalTransform2D>(),
+    },
     writes: {ComponentId.of<AudioSource>()},
     resourceReads: {SpatialAudioConfig, VolumeChannels, AudioLibrary},
     resourceWrites: {AudioState},
+    after: const [TransformPropagateSystem.systemName],
     before: const [AudioCleanupSystem.systemName],
   );
 
@@ -71,15 +81,13 @@ class SpatialAudioSystem implements System {
     final live = <AudioVoice>{};
 
     for (final (entity, source) in world.query1<AudioSource>().iter()) {
-      final transform = listener == null
-          ? null
-          : world.get<Transform2D>(entity);
+      final position = listener == null ? null : positionOf(world, entity);
       var volume = source.volume * channels.getEffectiveVolume(source.channel);
       var pan = 0.0;
-      if (listener != null && transform != null) {
+      if (listener != null && position != null) {
         final (attenuation, p) = mix(
           listener,
-          (transform.translation.x, transform.translation.y),
+          position,
           config!,
           referenceDistance: source.referenceDistance,
           maxDistance: source.maxDistance,
@@ -100,7 +108,9 @@ class SpatialAudioSystem implements System {
           _stop(state, voice, request.fadeOut);
         }
       } else if (request != null || (source.autoPlay && !source.hasStarted)) {
-        if (_start(state, library, source, volume, pan)) source.request = null;
+        if (_start(state, library, entity, source, volume, pan)) {
+          source.request = null;
+        }
       }
 
       final voice = source.voice;
@@ -131,6 +141,7 @@ class SpatialAudioSystem implements System {
   static bool _start(
     AudioState state,
     AudioLibrary library,
+    Entity entity,
     AudioSource source,
     double volume,
     double pan,
@@ -158,6 +169,7 @@ class SpatialAudioSystem implements System {
       ..voiceSpeed = source.playbackSpeed
       ..hasStarted = true;
     state.sounds[voice] = key;
+    state.sourceOwners[voice] = entity;
     state.sourceVoices.add(voice);
     return true;
   }
@@ -176,15 +188,24 @@ class SpatialAudioSystem implements System {
       ..stopAfter(voice, fade);
   }
 
-  /// Where the first active [AudioListener] with a `Transform2D` is, or
-  /// null if there's none.
+  /// Where the first active [AudioListener] with a position (see
+  /// [positionOf]) is, or null if there's none.
   static (double, double)? listenerPosition(World world) {
-    for (final (_, listener, transform)
-        in world.query2<AudioListener, Transform2D>().iter()) {
-      if (listener.isActive) {
-        return (transform.translation.x, transform.translation.y);
-      }
+    for (final (entity, listener) in world.query1<AudioListener>().iter()) {
+      if (!listener.isActive) continue;
+      final position = positionOf(world, entity);
+      if (position != null) return position;
     }
+    return null;
+  }
+
+  /// [entity]'s world-space position: its `GlobalTransform2D` translation
+  /// when it has one, else its `Transform2D` translation, else null.
+  static (double, double)? positionOf(World world, Entity entity) {
+    final global = world.get<GlobalTransform2D>(entity);
+    if (global != null) return (global.x, global.y);
+    final local = world.get<Transform2D>(entity);
+    if (local != null) return (local.translation.x, local.translation.y);
     return null;
   }
 

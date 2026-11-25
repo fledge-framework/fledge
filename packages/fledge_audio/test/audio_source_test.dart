@@ -1,6 +1,7 @@
 import 'package:fledge_audio/fledge_audio.dart';
 import 'package:fledge_ecs/fledge_ecs.dart';
-import 'package:fledge_render_2d/fledge_render_2d.dart' show Transform2D;
+import 'package:fledge_render_2d/fledge_render_2d.dart'
+    show GlobalTransform2D, Transform2D, TransformPropagateSystem;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_backend.dart';
@@ -77,7 +78,11 @@ void main() {
       await frame();
       expect(sourceOf(e.entity).isPlaying, isFalse);
       expect(backend.isPlaying(first), isFalse);
-      expect(sent<SfxFinished>().map((f) => f.soundKey), ['engine']);
+      final finished = sent<AudioSourceFinished>();
+      expect(finished.map((f) => (f.soundKey, f.entity)), [
+        ('engine', e.entity),
+      ]);
+      expect(sent<SfxFinished>(), isEmpty, reason: 'not a sound effect');
       await frame();
       expect(engineVoices(), isEmpty, reason: 'auto-play does not restart');
 
@@ -300,6 +305,23 @@ void main() {
       await frame();
       expect(sourceOf(e.entity).isPlaying, isFalse);
       expect(world.audioState!.sourceVoices, isEmpty);
+      expect(sent<AudioSourceFinished>().single.entity, e.entity);
+      expect(sent<SfxFinished>(), isEmpty);
+    });
+
+    test('a despawned source reports its end once the fade is over', () async {
+      final e = world.spawn()..insert(AudioSource.looping(soundKey: 'engine'));
+      await ready();
+      await frame();
+      final voice = sourceOf(e.entity).voice!;
+      world.despawn(e.entity);
+      await frame();
+      expect(sent<AudioSourceFinished>(), isEmpty, reason: 'still fading');
+      backend.end(voice);
+      await frame();
+      final finished = sent<AudioSourceFinished>().single;
+      expect((finished.soundKey, finished.entity), ('engine', e.entity));
+      expect(world.audioState!.sourceOwners, isEmpty);
     });
   });
 
@@ -348,6 +370,41 @@ void main() {
       // Halfway between the reference (100) and max (1000) distances.
       expect(voiceOf(e.entity).volume, closeTo(0.25, 1e-9));
       expect(voiceOf(e.entity).pan, closeTo(0.55, 1e-9));
+    });
+
+    test('positions are world-space: a child source follows its parent '
+        '(GlobalTransform2D)', () async {
+      setUpApp();
+      app.addSystem(TransformPropagateSystem(), schedule: Schedules.postUpdate);
+      final listenerParent = world.spawn()..insert(Transform2D.from(1000, 0));
+      world.spawnChild(listenerParent.entity)
+        ..insert(Transform2D.from(0, 0))
+        ..insert(AudioListener());
+      final parent = world.spawn()..insert(Transform2D.from(1500, 0));
+      final e = world.spawnChild(parent.entity)
+        ..insert(Transform2D.from(50, 0))
+        ..insert(AudioSource.looping(soundKey: 'engine'));
+      await ready();
+      await frame();
+      // Listener at (1000, 0), source at (1550, 0): halfway between the
+      // reference (100) and max (1000) distances, panned right.
+      expect(world.get<GlobalTransform2D>(e.entity)!.x, 1550);
+      expect(voiceOf(e.entity).volume, closeTo(0.25, 1e-9));
+      expect(voiceOf(e.entity).pan, closeTo(0.55, 1e-9));
+    });
+
+    test('a GlobalTransform2D set by hand wins over Transform2D', () async {
+      setUpApp();
+      world.spawn()
+        ..insert(Transform2D.from(0, 0))
+        ..insert(AudioListener());
+      final e = world.spawn()
+        ..insert(Transform2D.from(0, 0))
+        ..insert(GlobalTransform2D()..matrix[6] = 550)
+        ..insert(AudioSource.looping(soundKey: 'engine'));
+      await ready();
+      await frame();
+      expect(voiceOf(e.entity).volume, closeTo(0.25, 1e-9));
     });
 
     test('with spatial audio off, sources play and stop, unmixed', () async {

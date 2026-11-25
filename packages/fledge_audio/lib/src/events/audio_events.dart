@@ -1,3 +1,5 @@
+import 'package:fledge_ecs/fledge_ecs.dart' show Entity;
+
 import '../backend/audio_backend.dart';
 import '../resources/audio_channels.dart';
 
@@ -124,11 +126,25 @@ class SfxStarted {
   const SfxStarted(this.soundKey, this.voice);
 }
 
-/// A sound effect (or a spatial source's sound) finished.
+/// A sound effect (started with a [PlaySfxRequest]) finished.
+///
+/// An `AudioSource`'s sound sends [AudioSourceFinished] instead.
 class SfxFinished {
   final String soundKey;
 
   const SfxFinished(this.soundKey);
+}
+
+/// A sound an `AudioSource` was playing finished: it reached its end, was
+/// stopped (after its fade-out, if any), or its source went away.
+class AudioSourceFinished {
+  final String soundKey;
+
+  /// The entity whose `AudioSource` played it. It may have been despawned
+  /// since (that's one way the sound ends).
+  final Entity entity;
+
+  const AudioSourceFinished(this.soundKey, this.entity);
 }
 
 /// A music track started.

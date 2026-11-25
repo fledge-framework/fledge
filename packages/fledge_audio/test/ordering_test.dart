@@ -1,7 +1,8 @@
 import 'package:fledge_assets/fledge_assets.dart' show Assets;
 import 'package:fledge_audio/fledge_audio.dart';
 import 'package:fledge_ecs/fledge_ecs.dart';
-import 'package:fledge_render_2d/fledge_render_2d.dart' show Transform2D;
+import 'package:fledge_render_2d/fledge_render_2d.dart'
+    show Transform2D, TransformPropagateSystem;
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -61,4 +62,15 @@ void main() {
       expect(issues, isEmpty, reason: issues.map((i) => ' - $i').join('\n'));
     },
   );
+
+  test('spatial audio reads GlobalTransform2D after propagation, even when '
+      'propagation is registered in last too', () {
+    final meta = SpatialAudioSystem().meta;
+    expect(meta.after, contains(TransformPropagateSystem.systemName));
+    final app = App()
+      ..addPlugin(AudioPlugin())
+      ..addSystem(TransformPropagateSystem(), schedule: Schedules.last);
+    final issues = app.checkScheduleOrdering();
+    expect(issues, isEmpty, reason: issues.map((i) => ' - $i').join('\n'));
+  });
 }

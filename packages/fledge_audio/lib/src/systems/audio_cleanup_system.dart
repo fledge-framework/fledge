@@ -6,9 +6,10 @@ import '../resources/audio_state.dart';
 
 /// Forgets voices that have ended, and says so.
 ///
-/// Runs in `Schedules.last`. Sends [SfxFinished] for every sound effect or
-/// source sound that ended, and [MusicFinished] when a track that doesn't
-/// loop reaches its end.
+/// Runs in `Schedules.last`. Sends [SfxFinished] for every sound effect
+/// that ended, [AudioSourceFinished] for every `AudioSource` sound that
+/// ended, and [MusicFinished] when a track that doesn't loop reaches its
+/// end.
 class AudioCleanupSystem implements System {
   /// The `SystemMeta.name` of [AudioCleanupSystem].
   static const String systemName = 'AudioCleanupSystem';
@@ -18,7 +19,7 @@ class AudioCleanupSystem implements System {
     name: systemName,
     resourceWrites: {AudioState},
     writes: {ComponentId.of<AudioSource>()},
-    eventWrites: {SfxFinished, MusicFinished},
+    eventWrites: {SfxFinished, AudioSourceFinished, MusicFinished},
   );
 
   @override
@@ -39,7 +40,14 @@ class AudioCleanupSystem implements System {
     ];
     for (final (voice, key) in ended) {
       state.sounds.remove(voice);
-      world.eventWriter<SfxFinished>().send(SfxFinished(key));
+      final owner = state.sourceOwners.remove(voice);
+      if (owner != null) {
+        world.eventWriter<AudioSourceFinished>().send(
+          AudioSourceFinished(key, owner),
+        );
+      } else {
+        world.eventWriter<SfxFinished>().send(SfxFinished(key));
+      }
     }
 
     state.fadingOut.removeWhere((voice) => !backend.isPlaying(voice));

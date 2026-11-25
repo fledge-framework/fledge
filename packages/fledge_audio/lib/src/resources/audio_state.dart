@@ -1,3 +1,5 @@
+import 'package:fledge_ecs/fledge_ecs.dart' show Entity;
+
 import '../backend/audio_backend.dart';
 import '../events/audio_events.dart';
 
@@ -64,6 +66,11 @@ class AudioState {
   /// voices of despawned entities or removed sources can be found and
   /// stopped. Managed by `SpatialAudioSystem`.
   final Set<AudioVoice> sourceVoices = {};
+
+  /// The entity whose `AudioSource` started each source voice still in
+  /// [sounds], so `AudioCleanupSystem` reports its end as an
+  /// `AudioSourceFinished` rather than an `SfxFinished`.
+  final Map<AudioVoice, Entity> sourceOwners = {};
 
   /// Whether a music track is playing (or paused) now.
   bool get isMusicPlaying =>
