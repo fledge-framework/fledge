@@ -25,9 +25,12 @@ import 'filter.dart';
 ///
 /// ## Change Detection
 ///
-/// For queries with [Added] or [Changed] filters, [lastSeenTick] tracks
-/// when the query last ran. Call [updateLastSeenTick] after iterating
-/// to mark changes as "seen" for subsequent iterations.
+/// For queries with [Added] or [Changed] filters, [lastSeenTick] is the
+/// baseline: only components added or changed after it match. Inside a
+/// system run by the scheduler, `world.queryN` sets it to the change tick at
+/// which that system last ran, so nothing more is needed. Outside a system,
+/// keep the query and call [updateLastSeenTick] with `world.changeTick`
+/// after iterating to mark changes as seen.
 class QueryState {
   /// Component IDs that must be fetched (the query's data components).
   final List<ComponentId> fetchComponents;

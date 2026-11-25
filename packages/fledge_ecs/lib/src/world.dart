@@ -49,20 +49,73 @@ class World {
   /// Event queues.
   final Events events = Events();
 
-  /// The global tick counter for change detection.
+  /// The frame tick: advanced once per frame and once per fixed step.
   final Tick tick = Tick();
 
   /// The observer registry for component lifecycle events.
   final Observers observers = Observers();
 
-  /// Returns the current tick value.
+  /// Returns the current frame tick (see [tick]).
   int get currentTick => tick.value;
 
-  /// Advances the tick counter.
+  /// Advances the frame tick, and the change tick with it.
   ///
-  /// This should be called once per frame, typically at the end of the frame
-  /// after all systems have run. It enables change detection for the next frame.
-  void advanceTick() => tick.advance();
+  /// [App.tick] calls this once per frame and the fixed-step chain once per
+  /// step, so manual calls are only needed when driving a [World] directly.
+  void advanceTick() {
+    tick.advance();
+    _changeTick++;
+  }
+
+  int _changeTick = 0;
+
+  /// The change-detection clock. Component adds and changes are stamped with
+  /// it, and `Added`/`Changed` query filters compare those stamps against a
+  /// baseline.
+  ///
+  /// It moves forward on every [advanceTick] and before every system run, so
+  /// each system sees exactly the changes made since it last ran (including
+  /// changes made later in the previous frame by systems ordered after it),
+  /// and never its own. Outside a system, pass it to
+  /// `QueryState.updateLastSeenTick` to mark changes as seen.
+  int get changeTick => _changeTick;
+
+  /// The change tick at which each system last finished, keyed by system.
+  final Expando<int> _systemLastRun = Expando('systemLastRun');
+
+  /// Baseline for `Added`/`Changed` filters while a system is running.
+  int? _systemBaseline;
+
+  /// Called by the scheduler immediately before running [system]. Not part
+  /// of the public API.
+  void beginSystemRun(Object system) {
+    // -1 on a system's first run, so it sees everything that already exists.
+    _systemBaseline = _systemLastRun[system] ?? -1;
+    _changeTick++;
+  }
+
+  /// Called by the scheduler after [system] (and any future it returned)
+  /// completes. Not part of the public API.
+  void endSystemRun(Object system) {
+    _systemLastRun[system] = _changeTick;
+    _systemBaseline = null;
+  }
+
+  /// Marks [entity]'s [T] component as changed, for `Changed<T>` filters.
+  ///
+  /// Replacing a component with [insert] does this automatically. Call it
+  /// after mutating a component in place (`pos.x += 1`), which the world
+  /// cannot see. Returns false if the entity is dead or has no [T].
+  bool markChanged<T>(Entity entity) {
+    final location = entities.getLocation(entity);
+    if (location == null) return false;
+    final ticks = archetypes
+        .tableAt(location.archetypeIndex)
+        .getTicks(location.row, ComponentId.of<T>());
+    if (ticks == null) return false;
+    ticks.markChanged(_changeTick);
+    return true;
+  }
 
   /// Spawns a new entity with no components.
   ///
@@ -78,7 +131,7 @@ class World {
 
     // Start in the empty archetype
     final table = archetypes.tableAt(0);
-    final row = table.add(entity, {}, currentTick: currentTick);
+    final row = table.add(entity, {}, currentTick: _changeTick);
     entities.setLocation(entity, EntityLocation(0, row));
 
     return EntityCommands._(this, entity);
@@ -104,7 +157,7 @@ class World {
     if (components.isEmpty) {
       // Empty archetype
       final table = archetypes.tableAt(0);
-      final row = table.add(entity, {}, currentTick: currentTick);
+      final row = table.add(entity, {}, currentTick: _changeTick);
       entities.setLocation(entity, EntityLocation(0, row));
       return entity;
     }
@@ -122,7 +175,7 @@ class World {
     // Get or create the archetype table
     final archetypeIndex = archetypes.getOrCreate(archetypeId);
     final table = archetypes.tableAt(archetypeIndex);
-    final row = table.add(entity, componentMap, currentTick: currentTick);
+    final row = table.add(entity, componentMap, currentTick: _changeTick);
     entities.setLocation(entity, EntityLocation(archetypeIndex, row));
 
     return entity;
@@ -141,7 +194,7 @@ class World {
     );
     final row = archetypes.tableAt(archetypeIndex).add(entity, {
       id: component,
-    }, currentTick: currentTick);
+    }, currentTick: _changeTick);
     entities.setLocation(entity, EntityLocation(archetypeIndex, row));
     return entity;
   }
@@ -237,7 +290,7 @@ class World {
       location.row,
       componentId,
       component,
-      currentTick: currentTick,
+      currentTick: _changeTick,
     );
     observers.triggerOnChange<T>(this, entity, component);
   }
@@ -271,7 +324,7 @@ class World {
     final newRow = targetTable.add(
       entity,
       components,
-      currentTick: currentTick,
+      currentTick: _changeTick,
       existingTicks: existingTicks,
     );
     entities.setLocation(entity, EntityLocation(targetIndex, newRow));
@@ -322,7 +375,7 @@ class World {
     final newRow = targetTable.add(
       entity,
       components,
-      currentTick: currentTick,
+      currentTick: _changeTick,
       existingTicks: existingTicks,
     );
     entities.setLocation(entity, EntityLocation(targetIndex, newRow));
@@ -525,7 +578,13 @@ class World {
     QueryFilter? filter,
     QueryState Function() create,
   ) {
-    if (filter != null && _tracksChanges(filter)) return create();
+    if (filter != null && _tracksChanges(filter)) {
+      final state = create();
+      // Inside a system, "new" means since that system last ran.
+      final baseline = _systemBaseline;
+      if (baseline != null) state.lastSeenTick = baseline;
+      return state;
+    }
     return _queryStates[shape] ??= create();
   }
 

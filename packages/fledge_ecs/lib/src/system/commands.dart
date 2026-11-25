@@ -223,6 +223,12 @@ class Commands {
     _queue.add(RemoveCommand<T>(entity));
   }
 
+  /// Queues [World.markChanged] for [entity]'s [T] component, so
+  /// `Changed<T>` filters see an in-place mutation.
+  void markChanged<T>(Entity entity) {
+    _queue.add(CustomCommand((world) => world.markChanged<T>(entity)));
+  }
+
   /// Queues a custom command.
   void custom(void Function(World world) action) {
     _queue.add(CustomCommand(action));

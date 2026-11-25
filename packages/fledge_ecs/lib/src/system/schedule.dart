@@ -364,17 +364,27 @@ class SystemStage {
     for (final node in _order) {
       final system = node.system;
       if (!system.shouldRun(world)) continue;
-      if (timer == null) {
-        final result = system.run(world);
-        if (result is Future) await result;
-      } else {
-        final clock = Stopwatch()..start();
-        final result = system.run(world);
-        final sync = clock.elapsedMicroseconds;
-        if (result is Future) await result;
-        timer(
-          SystemTiming(name, system.meta.name, sync, clock.elapsedMicroseconds),
-        );
+      world.beginSystemRun(system);
+      try {
+        if (timer == null) {
+          final result = system.run(world);
+          if (result is Future) await result;
+        } else {
+          final clock = Stopwatch()..start();
+          final result = system.run(world);
+          final sync = clock.elapsedMicroseconds;
+          if (result is Future) await result;
+          timer(
+            SystemTiming(
+              name,
+              system.meta.name,
+              sync,
+              clock.elapsedMicroseconds,
+            ),
+          );
+        }
+      } finally {
+        world.endSystemRun(system);
       }
     }
   }

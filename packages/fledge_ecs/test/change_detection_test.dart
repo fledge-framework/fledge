@@ -163,7 +163,7 @@ void main() {
       expect(query.count(), equals(1));
 
       // Update lastSeenTick
-      state.updateLastSeenTick(world.currentTick);
+      state.updateLastSeenTick(world.changeTick);
       expect(state.lastSeenTick, equals(1));
 
       // Now the same entity is not found
@@ -194,7 +194,7 @@ void main() {
       expect(query.count(), equals(1));
 
       // Update lastSeenTick
-      query.state.updateLastSeenTick(world.currentTick);
+      query.state.updateLastSeenTick(world.changeTick);
 
       // No longer changed
       expect(query.count(), equals(0));
@@ -259,6 +259,108 @@ void main() {
       final velTicks = table.getTicks(location.row, ComponentId.of<Velocity>());
       expect(velTicks!.addedTick, equals(1));
       expect(velTicks.changedTick, equals(1));
+    });
+  });
+
+  group('Per-system change detection', () {
+    App appWith(void Function(World world) body) =>
+        App()..addSystem(FunctionSystem('probe', run: body));
+
+    test('a system sees spawns that predate its first run, once', () async {
+      var seen = <int>[];
+      final app = appWith((world) {
+        seen = [
+          for (final (_, p)
+              in world.query1<Position>(filter: const Added<Position>()).iter())
+            p.x.toInt(),
+        ];
+      });
+      app.world.spawnWith([Position(1, 0)]);
+
+      await app.tick();
+      expect(seen, [1], reason: 'tick-0 spawn is new to the system');
+
+      await app.tick();
+      expect(seen, isEmpty, reason: 'already seen on the previous run');
+
+      app.world.spawnWith([Position(2, 0)]);
+      await app.tick();
+      expect(seen, [2]);
+    });
+
+    test('changes made later in the frame are seen next frame', () async {
+      final app = App();
+      app.world.spawnWith([Position(0, 0)]);
+      var changedCount = -1;
+      var frame = 0;
+      app
+        ..addSystem(
+          FunctionSystem(
+            'reader',
+            run: (world) {
+              changedCount = world
+                  .query1<Position>(filter: const Changed<Position>())
+                  .count();
+            },
+          ),
+          schedule: Schedules.update,
+        )
+        ..addSystem(
+          FunctionSystem(
+            'writer',
+            run: (world) {
+              if (frame == 1) {
+                for (final (e, p) in world.query1<Position>().iter()) {
+                  p.x += 1;
+                  world.markChanged<Position>(e);
+                }
+              }
+              frame++;
+            },
+          ),
+          schedule: Schedules.postUpdate,
+        );
+
+      await app.tick(); // frame 0: reader sees the spawn as changed
+      expect(changedCount, 1);
+      await app.tick(); // frame 1: nothing new before reader; writer marks
+      expect(changedCount, 0);
+      await app.tick(); // frame 2: reader sees writer's mark
+      expect(changedCount, 1);
+      await app.tick();
+      expect(changedCount, 0);
+    });
+
+    test('a system does not see its own changes', () async {
+      final counts = <int>[];
+      final app = appWith((world) {
+        counts.add(
+          world.query1<Position>(filter: const Changed<Position>()).count(),
+        );
+        for (final (e, _) in world.query1<Position>().iter()) {
+          world.markChanged<Position>(e);
+        }
+      });
+      app.world.spawnWith([Position(0, 0)]);
+      await app.tick();
+      await app.tick();
+      expect(counts, [1, 0]);
+    });
+
+    test('Commands.markChanged and in-place mutation', () async {
+      final world = World();
+      final e = world.spawnWith([Position(0, 0)]);
+      final query = world.query1<Position>(filter: const Changed<Position>());
+      query.state.updateLastSeenTick(world.changeTick);
+      world.advanceTick();
+
+      world.get<Position>(e)!.x = 5; // invisible to change detection
+      expect(query.count(), 0);
+
+      final commands = Commands()..markChanged<Position>(e);
+      commands.apply(world);
+      expect(query.count(), 1);
+      expect(world.markChanged<Velocity>(e), isFalse);
     });
   });
 

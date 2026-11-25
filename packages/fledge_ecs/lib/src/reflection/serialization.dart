@@ -131,7 +131,7 @@ extension WorldSerializationExtension on World {
         location.row,
         componentId,
         component,
-        currentTick: currentTick,
+        currentTick: changeTick,
       );
       return;
     }
@@ -158,7 +158,7 @@ extension WorldSerializationExtension on World {
     final newRow = targetTable.add(
       entity,
       components,
-      currentTick: currentTick,
+      currentTick: changeTick,
       existingTicks: existingTicks,
     );
     entities.setLocation(entity, EntityLocation(targetIndex, newRow));
