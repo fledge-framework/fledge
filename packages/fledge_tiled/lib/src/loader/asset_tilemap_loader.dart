@@ -146,8 +146,8 @@ class AssetTilemapLoader implements TilemapLoader {
 
       texture = await textureLoader(imagePath, imageWidth, imageHeight);
     } else {
-      // Create a placeholder texture handle for image collection tilesets
-      texture = TextureHandle(id: 0, width: 0, height: 0);
+      // An image collection has no single image: each tile has its own.
+      texture = kNoTilesetImageTexture;
     }
 
     // Create the texture atlas
@@ -261,6 +261,10 @@ class AssetTilemapLoader implements TilemapLoader {
       tileImages: tileImages,
       tileClasses: tileClasses,
       ySortSpans: ySortSpans,
+      tileOffset: Offset(
+        (tileset.tileOffset?.x ?? 0).toDouble(),
+        (tileset.tileOffset?.y ?? 0).toDouble(),
+      ),
     );
   }
 

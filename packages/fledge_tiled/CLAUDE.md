@@ -41,6 +41,8 @@ TMX/TSX tilemap loading, rendering, animation, collision extraction, and walkabi
 - **Two-stage spawn**: Load asset → `SpawnTilemapEvent` triggers `TilemapSpawnSystem` → `TilemapSpawnedEvent` emitted.
 - **System names**: `TilemapSpawnSystem.systemName` (`'tilemap_spawn'`); `TileAnimationSystem.systemName` (`'tile_animation'`).
 - **Infinite maps**: `TilemapSpawnSystem` reads `tiled.TileLayer.chunks` into `TileLayer.tiles` (tile coords, can be negative) plus `TileLayer.chunks`; every chunk is loaded at once (`TiledPluginConfig.chunkSize`/`maxLoadedChunks` are deprecated, never read). `extractCollisionGrid` covers the collision layers' chunk bounds; `collisionGridOrigin` gives the tile at cell (0, 0).
-- **Tile size**: `tileToSprite` draws a tile at its `sourceRect` size anchored at the cell's bottom-left (Tiled semantics), plus optional `drawOffset` (tileoffset). `TilemapExtractor` doesn't pass `drawOffset` yet.
-- **Known extractor gaps** (all in `extraction/tilemap_extractor.dart`): layer parallax scales positions instead of offsetting by the camera; image-collection tiles on tile layers draw from the placeholder atlas texture (id 0); in-place `tiles[i] = ...` edits aren't picked up though its class doc says they are.
+- **Tile size**: `tileToSprite` draws a tile at its `sourceRect` size anchored at the cell's bottom-left (Tiled semantics), plus `drawOffset`; `TilemapExtractor` passes the tileset's `LoadedTileset.tileOffset`, measures a `y_sort` line from the image's top, and widens culling by the biggest tile's reach (`_reachOf`).
+- **Image collections**: `LoadedTileset.getTileTexture` / `getTileRect` return a tile's own image; the atlas texture is `kNoTilesetImageTexture` (id -1, never `kSolidColorTextureId`).
+- **Parallax**: a layer is shifted by `camera * (1 - p)` in map-local coordinates (camera from `ActiveCameraView`); the cull inverse subtracts the shift and the kept sprites are keyed on offset + shift.
+- **Tile edits**: replace `TileLayer.tiles`; in-place `tiles[i] = ...` edits aren't seen (the index is keyed on list identity and length).
 - **Tests**: Flutter package — run with `flutter test`.

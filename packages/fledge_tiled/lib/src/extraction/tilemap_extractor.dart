@@ -28,16 +28,26 @@ import 'tile_sprite_conversion.dart';
 /// Only tiles near the camera's last view ([ActiveCameraView]) are visited:
 /// each layer keeps an index of its tiles by grid position, and the view is
 /// mapped back into the layer's tile coordinates (through the map's
-/// transform, the layer's parallax and offset), so the cost follows what's
-/// on screen, not the size of the maps. The index is rebuilt when a layer's
-/// `tiles` list is replaced or changes length; edit tiles by replacing
-/// the list (or a `TileData` in it at the same index).
+/// transform, the layer's parallax shift and offset), so the cost follows
+/// what's on screen, not the size of the maps. The index is rebuilt when a
+/// layer's `tiles` list is replaced or changes length, so edit tiles by
+/// replacing the list: changing a `TileData` in place isn't seen.
+///
+/// Tiles are drawn at their image's size, anchored at their cell's
+/// bottom-left and moved by the tileset's tile offset, as Tiled draws them,
+/// so tiles taller or wider than the map grid and image-collection tiles
+/// (each drawn from its own texture) come out right.
+///
+/// Layer parallax works as in Tiled: a layer with parallax factor `p` moves
+/// `p` times as fast as the camera, which means it is shifted by
+/// `camera * (1 - p)` (in the map's own coordinates). Without an
+/// [ActiveCameraView] there is no shift.
 ///
 /// Each tile's `ExtractedSprite` is built once and kept with the index
 /// (nothing downstream changes an extracted sprite), and added again every
 /// frame it's in view; animated tiles are built afresh. The kept sprites are
 /// dropped when what they were built from changes: the map's transform, or
-/// the layer's colour, offset or parallax.
+/// the layer's colour, offset or parallax shift.
 class TilemapExtractor extends Extractor {
   /// Whether to skip invisible layers.
   final bool respectVisibility;
@@ -66,10 +76,8 @@ class TilemapExtractor extends Extractor {
   void extract(World mainWorld, RenderWorld renderWorld) {
     // ignore: deprecated_member_use_from_same_package
     final legacyAssets = mainWorld.getResource<TilemapAssets>();
-    final visible = mainWorld
-        .getResource<ActiveCameraView>()
-        ?.visibleWorldRect
-        ?.inflate(cullMargin);
+    final camera = mainWorld.getResource<ActiveCameraView>();
+    final visible = camera?.visibleWorldRect?.inflate(cullMargin);
 
     for (final (mapEntity, tilemap, mapTransform)
         in mainWorld.query2<Tilemap, GlobalTransform2D>().iter()) {
@@ -109,6 +117,7 @@ class TilemapExtractor extends Extractor {
           mapTransform,
           animator,
           visible,
+          camera,
         );
       }
     }
@@ -160,6 +169,37 @@ class TilemapExtractor extends Extractor {
     return null;
   }
 
+  final Expando<({int cols, int rows})> _reaches = Expando('tile reach');
+
+  /// How many cells beyond its own a tile of [loaded] can draw into: tiles
+  /// bigger than the map grid, and tile offsets.
+  ({int cols, int rows}) _reachOf(LoadedTilemap loaded) =>
+      _reaches[loaded] ??= () {
+        var extraW = 0.0, extraH = 0.0;
+        for (final tileset in loaded.tilesets) {
+          var w = tileset.tileWidth.toDouble();
+          var h = tileset.tileHeight.toDouble();
+          for (final image in tileset.tileImages.values) {
+            w = math.max(w, image.width.toDouble());
+            h = math.max(h, image.height.toDouble());
+          }
+          // A diagonal flip swaps a tile's width and height.
+          final size = math.max(w, h);
+          extraW = math.max(
+            extraW,
+            size - loaded.tileWidth + tileset.tileOffset.dx.abs(),
+          );
+          extraH = math.max(
+            extraH,
+            size - loaded.tileHeight + tileset.tileOffset.dy.abs(),
+          );
+        }
+        return (
+          cols: (math.max(0.0, extraW) / loaded.tileWidth).ceil(),
+          rows: (math.max(0.0, extraH) / loaded.tileHeight).ceil(),
+        );
+      }();
+
   _LayerIndex _indexOf(TileLayer layer, List<TileData> tiles) {
     final cached = _indexes[layer];
     if (cached != null &&
@@ -177,6 +217,7 @@ class TilemapExtractor extends Extractor {
     GlobalTransform2D mapTransform,
     TilemapAnimator? animator,
     Rect? visible,
+    ActiveCameraView? camera,
   ) {
     final tiles = layer.tiles;
     if (tiles == null || tiles.isEmpty) return;
@@ -194,6 +235,18 @@ class TilemapExtractor extends Extractor {
     // applies it): world = (s0 x + s3 y + s6, s1 x + s4 y + s7).
     final m = mapTransform.matrix.storage;
     final s0 = m[0], s1 = m[1], s3 = m[3], s4 = m[4], s6 = m[6], s7 = m[7];
+    final det = s0 * s4 - s1 * s3;
+
+    // Parallax: the layer is shifted by camera * (1 - p), with the camera's
+    // centre taken into the map's own coordinates.
+    var shiftX = 0.0, shiftY = 0.0;
+    if (camera != null && (px != 1 || py != 1) && det != 0) {
+      final wx = camera.x - s6, wy = camera.y - s7;
+      final camX = (s4 * wx - s3 * wy) / det;
+      final camY = (-s1 * wx + s0 * wy) / det;
+      shiftX = camX * (1 - px);
+      shiftY = camY * (1 - py);
+    }
     final drawLayer = (layer.layerClass == 'above')
         ? DrawLayer.foreground
         : DrawLayer.ground;
@@ -202,18 +255,17 @@ class TilemapExtractor extends Extractor {
     // every tile if there's no view (or the transform can't be undone).
     var minX = index.minX, maxX = index.maxX;
     var minY = index.minY, maxY = index.maxY;
-    final det = s0 * s4 - s1 * s3;
-    if (visible != null && det != 0 && px != 0 && py != 0) {
+    if (visible != null && det != 0) {
       var lowX = double.infinity, highX = double.negativeInfinity;
       var lowY = double.infinity, highY = double.negativeInfinity;
       // The view's four corners (no list: this runs for every layer).
       for (var c = 0; c < 4; c++) {
         final cx = c.isEven ? visible.left : visible.right;
         final cy = c < 2 ? visible.top : visible.bottom;
-        // Undo the map's transform, then the parallax and the offset.
+        // Undo the map's transform, then the parallax shift and offset.
         final wx = cx - s6, wy = cy - s7;
-        final x = (s4 * wx - s3 * wy) / det / px - ox;
-        final y = (-s1 * wx + s0 * wy) / det / py - oy;
+        final x = (s4 * wx - s3 * wy) / det - shiftX - ox;
+        final y = (-s1 * wx + s0 * wy) / det - shiftY - oy;
         lowX = math.min(lowX, x);
         highX = math.max(highX, x);
         lowY = math.min(lowY, y);
@@ -221,14 +273,17 @@ class TilemapExtractor extends Extractor {
       }
       // The tiles overlapping it (a tile covers [x w, (x + 1) w)); the
       // view is already widened by the cull margin.
-      minX = math.max(minX, (lowX / tileWidth).floor());
-      maxX = math.min(maxX, (highX / tileWidth).floor());
-      minY = math.max(minY, (lowY / tileHeight).floor());
-      maxY = math.min(maxY, (highY / tileHeight).floor());
+      // Tiles bigger than a cell, or moved by a tile offset, reach into
+      // neighbouring cells: widen the range by that reach.
+      final reach = _reachOf(loaded);
+      minX = math.max(minX, (lowX / tileWidth).floor() - reach.cols);
+      maxX = math.min(maxX, (highX / tileWidth).floor() + reach.cols);
+      minY = math.max(minY, (lowY / tileHeight).floor() - reach.rows);
+      maxY = math.min(maxY, (highY / tileHeight).floor() + reach.rows);
     }
 
     // The kept sprites, unless what they were built from has changed.
-    index.keepFor(mapTransform, layerColor, ox, oy, px, py);
+    index.keepFor(mapTransform, layerColor, ox + shiftX, oy + shiftY);
 
     for (var ty = minY; ty <= maxY; ty++) {
       for (var tx = minX; tx <= maxX; tx++) {
@@ -251,10 +306,11 @@ class TilemapExtractor extends Extractor {
           );
         }
         if (!tileset.containsTile(localId)) continue;
+        final texture = tileset.getTileTexture(localId);
         final sourceRect = tileset.getTileRect(localId);
 
-        final lx = (tile.x * tileWidth + ox) * px;
-        final ly = (tile.y * tileHeight + oy) * py;
+        final lx = tile.x * tileWidth + ox + shiftX;
+        final ly = tile.y * tileHeight + oy + shiftY;
         final worldX = s0 * lx + s3 * ly + s6;
         final worldY = s1 * lx + s4 * ly + s7;
 
@@ -274,7 +330,13 @@ class TilemapExtractor extends Extractor {
         final int sortKey;
         final double preciseSubOrder;
         if (line != null) {
-          final lineY = worldY + s4 * line * py;
+          // The line is measured from the image's top; the image sits on
+          // the cell's bottom edge, moved by the tile offset.
+          final diagonal = tile.flipFlags & 4 != 0;
+          final imageHeight = diagonal ? sourceRect.width : sourceRect.height;
+          final boxHeight = imageHeight > 0 ? imageHeight : tileHeight;
+          final top = tileHeight - boxHeight + tileset.tileOffset.dy;
+          final lineY = worldY + s4 * (top + line);
           sortKey = DrawLayer.characters.sortKey(
             subOrder: DrawLayerExtension.ySortSubOrder(lineY),
           );
@@ -292,7 +354,7 @@ class TilemapExtractor extends Extractor {
         }
 
         final sprite = tileToSprite(
-          texture: tileset.atlas.texture,
+          texture: texture,
           sourceRect: sourceRect,
           tileTopLeft: Offset(worldX, worldY),
           tileWidth: tileWidth,
@@ -301,6 +363,7 @@ class TilemapExtractor extends Extractor {
           sortKey: sortKey,
           flipFlags: tile.flipFlags,
           preciseSubOrder: preciseSubOrder,
+          drawOffset: tileset.tileOffset,
         );
         // An animated tile's frame changes: built every time.
         if (!tile.animated) index.sprites[cell] = sprite;
@@ -309,7 +372,7 @@ class TilemapExtractor extends Extractor {
           renderWorld.add(
             // ignore: deprecated_member_use_from_same_package
             ExtractedTile(
-              texture: tileset.atlas.texture,
+              texture: texture,
               sourceRect: sourceRect,
               position: Offset(worldX, worldY),
               tileWidth: tileWidth,
@@ -415,28 +478,19 @@ class _LayerIndex {
   int _transformVersion = -1;
   final _matrix = List<double>.filled(9, double.nan);
   Color? _color;
-  double _ox = double.nan, _oy = double.nan, _px = double.nan;
-  double _py = double.nan;
+  double _ox = double.nan, _oy = double.nan;
 
-  /// Drops the kept sprites if the map's transform or the layer's colour,
-  /// offset or parallax differ from what they were built from.
-  void keepFor(
-    GlobalTransform2D transform,
-    Color color,
-    double ox,
-    double oy,
-    double px,
-    double py,
-  ) {
+  /// Drops the kept sprites if the map's transform, the layer's colour, or
+  /// its total offset (offset plus parallax shift) differ from what they
+  /// were built from.
+  void keepFor(GlobalTransform2D transform, Color color, double ox, double oy) {
     final m = transform.matrix.storage;
     var same =
         identical(transform, _transform) &&
         transform.version == _transformVersion &&
         color == _color &&
         ox == _ox &&
-        oy == _oy &&
-        px == _px &&
-        py == _py;
+        oy == _oy;
     // A transform set by hand doesn't bump its version: compare the matrix.
     for (var i = 0; same && i < 9; i++) {
       same = m[i] == _matrix[i];
@@ -451,7 +505,5 @@ class _LayerIndex {
     _color = color;
     _ox = ox;
     _oy = oy;
-    _px = px;
-    _py = py;
   }
 }

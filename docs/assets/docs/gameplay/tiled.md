@@ -534,22 +534,13 @@ animated tile (an unanimated GID comes back unchanged, so check
   infinite maps cost memory in proportion to everything painted.
 - **Orthogonal only**: other orientations are placed on a square grid.
 - **Tiles bigger than the map grid** (a 32×64 tree on a 32×32 map) are drawn
-  at full size with their bottom-left corner on the cell's, as in Tiled, but
-  the tileset's tile offset isn't applied yet, a `y_sort` tile's sort line is
-  still measured from the cell's top, and generated tile colliders stay in
-  the cell. Culling works per cell, so the top of a very tall tile can pop in
-  at the screen's edge. Tiled's "Tile render size: Map grid" option isn't
-  read.
+  at full size with their bottom-left corner on the cell's, moved by the
+  tileset's tile offset, as in Tiled, and a `y_sort` tile sorts at its line
+  measured from the image's top. Generated tile colliders still stay in the
+  cell, and Tiled's "Tile render size: Map grid" option isn't read.
 - **Move the map, don't scale or rotate it**: the map's scale and rotation
   move tile positions but don't scale or rotate the tiles. Zoom with the
   camera.
-- **Tiles from image-collection tilesets painted on a tile layer aren't
-  drawn correctly**: the extractor draws from the tileset's atlas, which an
-  image collection doesn't have. Place such tiles as tile objects.
-- **Layer parallax**: keep it at 1.0. Other factors scale the layer's tile
-  positions rather than moving the layer with the camera as Tiled does
-  (a fix needs the tile extractor to offset the layer by the camera's
-  position; not done yet).
 - **Image layers** are skipped; **object layers aren't drawn** (spawn sprites
   from them yourself); **object templates** aren't resolved.
 

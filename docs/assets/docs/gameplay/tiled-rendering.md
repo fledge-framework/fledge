@@ -34,18 +34,21 @@ resource, if `RenderPlugin` was added first. Every frame, in
 Object layers aren't drawn: they're data, and you add sprites to the objects
 you spawn (see [Tile objects](/docs/gameplay/tiled#tile-objects-and-image-collections)).
 
-Each tile is drawn at its tileset's tile size, with its bottom-left corner on
-the bottom-left of its grid cell (so a tile bigger than the map's grid, a
-32×64 tree on a 32×32 map, rises above its cell as in Tiled, and a tile the
-size of the grid fills its cell), plus the layer's offset, moved by the map's
-`GlobalTransform2D`, and tinted with the layer's opacity and tint colour
-(`TileLayer.effectiveColor`). The tileset's tile offset isn't applied yet, and
-culling is per cell, so raise `cullMargin` if the tops of very tall tiles pop
-in at the screen's edge. Tiles painted from an image-collection tileset
-aren't drawn correctly yet (the extractor draws from the tileset's atlas,
-which an image collection doesn't have); place them as tile objects. Layer
-parallax other than 1.0 scales the layer's tile positions instead of moving
-the layer with the camera, so keep it at 1.0 for now. Move the map
+Each tile is drawn at its image's size, with its bottom-left corner on the
+bottom-left of its grid cell (so a tile bigger than the map's grid, a 32×64
+tree on a 32×32 map, rises above its cell as in Tiled, and a tile the size of
+the grid fills its cell), moved by the tileset's tile offset and the layer's
+offset, then by the map's `GlobalTransform2D`, and tinted with the layer's
+opacity and tint colour (`TileLayer.effectiveColor`). Culling allows for how
+far the biggest tile reaches beyond its cell, so tall tiles don't pop in at
+the screen's edge. Tiles painted from an image-collection tileset are drawn
+from their own image at its own size.
+
+Layer parallax works as in Tiled: a layer with factor `p` moves `p` times as
+fast as the camera, so it is shifted by `camera × (1 − p)`. A factor of 0
+pins a layer to the screen; 0.5 gives a distant background. The shift comes
+from the [`ActiveCameraView`](/docs/rendering/cameras), so without a camera
+there is none. Move the map
 with its `Transform2D`; zoom and rotate with the
 [camera](/docs/rendering/cameras), not the map: the map's scale and rotation
 move the tiles' positions but don't scale or rotate the tiles themselves.
@@ -155,7 +158,9 @@ looked at. Several large maps loaded side by side cost little more than one.
   Raise it if tiles pop in at the screen edge during fast camera moves.
 - Each tile's `ExtractedSprite` is built once and drawn again every frame it
   is in view. The cache is dropped when the map's transform changes, or the
-  layer's colour, offset or parallax. Animated tiles are built every frame.
+  layer's colour or offset. A parallax layer's shift changes whenever the
+  camera moves, so its cache is rebuilt then. Animated tiles are built every
+  frame.
 
 ### Changing tiles at runtime
 
@@ -183,9 +188,7 @@ for (final (_, layer) in world.query1<TileLayer>().iter()) {
 ```
 
 Replacing an element of the existing list in place (`tiles[i] = ...`) isn't
-noticed: the layer keeps drawing the old tile. (The `TilemapExtractor` class
-documentation still says replacing a `TileData` at the same index works; it
-doesn't.) The `gid` and `localId` must
+noticed: the layer keeps drawing the old tile. The `gid` and `localId` must
 agree (`gid` is the tileset's `firstGid` plus `localId`). Tile colliders
 generated at spawn time don't change with the tiles.
 

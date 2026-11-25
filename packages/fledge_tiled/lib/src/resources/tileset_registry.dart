@@ -1,4 +1,4 @@
-import 'dart:ui' show Rect;
+import 'dart:ui' show Offset, Rect;
 
 import 'package:fledge_physics/fledge_physics.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart'
@@ -59,6 +59,15 @@ class TilesetRegistry {
 /// A loaded tileset with texture and metadata.
 ///
 /// Contains everything needed to render and query tiles from this tileset.
+/// The atlas texture of an image-collection tileset, which has no single
+/// image: each tile has its own ([LoadedTileset.tileImages]). Its id can't
+/// collide with a real texture (ids from 1) or `kSolidColorTexture` (0).
+const TextureHandle kNoTilesetImageTexture = TextureHandle(
+  id: -1,
+  width: 0,
+  height: 0,
+);
+
 class LoadedTileset {
   /// Source path of the tileset (TSX file or embedded).
   final String source;
@@ -122,6 +131,10 @@ class LoadedTileset {
   /// int property `sort_y`. See [ySortLine].
   final Map<int, Rect> ySortSpans;
 
+  /// The tileset's tile offset (Tiled's "Drawing Offset"), in pixels: how
+  /// far every tile is drawn from its cell's bottom-left corner.
+  final Offset tileOffset;
+
   const LoadedTileset({
     required this.source,
     required this.name,
@@ -139,6 +152,7 @@ class LoadedTileset {
     this.tileImages = const {},
     this.tileClasses = const {},
     this.ySortSpans = const {},
+    this.tileOffset = Offset.zero,
   });
 
   /// Where tile [localId], painted with Tiled's [flipFlags]
@@ -167,8 +181,25 @@ class LoadedTileset {
   /// The tile's class, or null if none is set.
   String? getTileClass(int localId) => tileClasses[localId];
 
-  /// Gets the source rectangle for a local tile ID.
-  Rect getTileRect(int localId) => atlas.getSpriteRect(localId);
+  /// The texture tile [localId] is drawn from: its own image in an image
+  /// collection, otherwise the tileset's atlas.
+  TextureHandle getTileTexture(int localId) =>
+      tileImages[localId] ?? atlas.texture;
+
+  /// The source rectangle of tile [localId] in [getTileTexture]: the whole
+  /// image for an image-collection tile, else its cell of the atlas.
+  Rect getTileRect(int localId) {
+    final image = tileImages[localId];
+    if (image != null) {
+      return Rect.fromLTWH(
+        0,
+        0,
+        image.width.toDouble(),
+        image.height.toDouble(),
+      );
+    }
+    return atlas.getSpriteRect(localId);
+  }
 
   /// Checks if a local ID is valid for this tileset.
   bool containsTile(int localId) => isImageCollection
