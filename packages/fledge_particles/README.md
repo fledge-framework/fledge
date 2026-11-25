@@ -35,7 +35,7 @@ App buildApp(TextureHandle particleTexture) {
 }
 ```
 
-`ParticlePlugin` and `RenderPlugin` (which owns `Extractors`) can be added in either order: if `RenderPlugin` comes second, the particle extractor registers itself on the first tick. Without `RenderPlugin` the particles simulate headless. Each particle is drawn as a `size`-wide square of the whole texture, tinted by its colour.
+`ParticlePlugin` and `RenderPlugin` (which owns `Extractors`) can be added in either order: if `RenderPlugin` comes second, the particle extractor registers itself on the first tick. Without `RenderPlugin` the particles simulate headless. Each particle is drawn as a `size`-wide square of the whole texture, tinted by its colour. Particles well outside the camera's last view (`ActiveCameraView`) are skipped; without a view, all are drawn.
 
 ### One-off bursts
 

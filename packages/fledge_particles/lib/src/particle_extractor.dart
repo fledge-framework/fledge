@@ -21,11 +21,25 @@ import 'particle.dart';
 /// aren't reachable through the sprite path; if a game needs those it
 /// can build its own extractor + render node against the same
 /// [ParticleEmitter] component.
+///
+/// Particles further than [cullMargin] world units (plus their own size)
+/// outside the camera's last view (`ActiveCameraView.visibleWorldRect`)
+/// are skipped, like off-screen sprites. With no view (headless, tests,
+/// before the first paint) every live particle is extracted.
 class ParticleExtractor extends Extractor {
+  /// World units beyond the camera's last view that are still extracted,
+  /// matching `SpriteExtractor.cullMargin`.
+  static const double cullMargin = SpriteExtractor.cullMargin;
+
   static final Vector2 _centerAnchor = Vector2(0.5, 0.5);
 
   @override
   void extract(World mainWorld, RenderWorld renderWorld) {
+    // The margin covers camera movement since the last paint.
+    final visible = mainWorld
+        .getResource<ActiveCameraView>()
+        ?.visibleWorldRect
+        ?.inflate(cullMargin);
     for (final (entity, emitter, _)
         in mainWorld.query2<ParticleEmitter, GlobalTransform2D>().iter()) {
       final texture = emitter.texture;
@@ -34,6 +48,17 @@ class ParticleExtractor extends Extractor {
 
       for (final p in emitter.pool.live) {
         final size = p.currentSize;
+        if (visible != null) {
+          // A centred quad of side `size`, rotated or not, stays within
+          // `size` of its centre.
+          final x = p.position.x, y = p.position.y;
+          if (x < visible.left - size ||
+              x >= visible.right + size ||
+              y < visible.top - size ||
+              y >= visible.bottom + size) {
+            continue;
+          }
+        }
         final sourceRect = texture.fullRect;
 
         // Y-based sub-order, using exactly the sprite convention
