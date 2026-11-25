@@ -453,4 +453,48 @@ void main() {
       expect(called, isTrue);
     });
   });
+
+  group('Observers on bulk spawn and despawn', () {
+    test('spawnWith and Commands.spawn fire onAdd per component', () {
+      final world = World();
+      final added = <String>[];
+      world.observers
+        ..register(Observer<Position>.onAdd((w, e, c) => added.add('pos')))
+        ..register(Observer<Velocity>.onAdd((w, e, c) => added.add('vel')));
+
+      world.spawnWith([Position(0, 0), Velocity(1, 1)]);
+      expect(added, unorderedEquals(['pos', 'vel']));
+
+      added.clear();
+      final commands = Commands()..spawn().insert(Position(1, 1));
+      commands.apply(world);
+      expect(added, ['pos']);
+    });
+
+    test('despawn fires onRemove while the entity is still complete', () {
+      final world = World();
+      final removed = <String>[];
+      world.observers.register(
+        Observer<Position>.onRemove((w, e, c) {
+          // The rest of the entity is still readable.
+          removed.add('pos with vel=${w.get<Velocity>(e)?.dx}');
+        }),
+      );
+      final e = world.spawnWith([Position(0, 0), Velocity(3, 0)]);
+
+      expect(world.despawn(e), isTrue);
+      expect(removed, ['pos with vel=3.0']);
+      expect(world.isAlive(e), isFalse);
+    });
+
+    test('an observer that despawns during despawn is tolerated', () {
+      final world = World();
+      world.observers.register(
+        Observer<Position>.onRemove((w, e, c) => w.despawn(e)),
+      );
+      final e = world.spawnWith([Position(0, 0)]);
+      expect(world.despawn(e), isTrue);
+      expect(world.isAlive(e), isFalse);
+    });
+  });
 }

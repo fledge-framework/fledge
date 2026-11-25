@@ -1,7 +1,7 @@
 /// A Bevy-inspired Entity Component System (ECS) for Dart and Flutter.
 ///
 /// Fledge ECS provides a high-performance, type-safe ECS architecture
-/// with archetype-based storage and concurrent system execution.
+/// with archetype-based storage and dependency-ordered system scheduling.
 ///
 /// ## Core Concepts
 ///

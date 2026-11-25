@@ -13,8 +13,8 @@ import 'schedule_label.dart';
 /// Each phase is configured `before` the next one, so every system in an
 /// earlier phase runs before every system in a later phase, regardless of
 /// plugin registration order. Systems *within* a phase are still ordered
-/// by their own `before:` / `after:` edges (and parallelised when they do
-/// not conflict).
+/// by their own `before:` / `after:` edges and, failing those, registration
+/// order.
 ///
 /// A game system joins a phase by declaring membership in its meta:
 ///

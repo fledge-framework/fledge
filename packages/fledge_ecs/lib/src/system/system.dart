@@ -6,9 +6,10 @@ import 'run_condition.dart';
 
 /// Describes the data access patterns of a system.
 ///
-/// [SystemMeta] is used by the scheduler to determine which systems
-/// can run in parallel. Systems that don't conflict (no read-write or
-/// write-write overlaps) can execute concurrently.
+/// [SystemMeta] is used by the scheduler to order systems. Systems run one
+/// at a time (Dart has one isolate); two systems that conflict (read-write
+/// or write-write overlap) without an explicit [before]/[after] fall back to
+/// registration order, which `App.checkScheduleOrdering()` reports.
 ///
 /// Explicit ordering constraints can be specified using [before] and [after]:
 ///
@@ -45,7 +46,8 @@ class SystemMeta {
 
   /// Whether this system is exclusive (requires sole world access).
   ///
-  /// Exclusive systems cannot run in parallel with any other system.
+  /// An exclusive system conflicts with every other system, so it is
+  /// ordered against all of them.
   final bool exclusive;
 
   /// Names of systems (or system sets) that this system must run before.
@@ -142,8 +144,8 @@ class SystemMeta {
 /// Base interface for all systems.
 ///
 /// Systems contain the logic that operates on entities and their components.
-/// Each system declares its data dependencies via [meta], allowing the
-/// scheduler to run non-conflicting systems in parallel.
+/// Each system declares its data dependencies via [meta], which the
+/// scheduler uses to order it against conflicting systems.
 abstract class System {
   /// Metadata describing this system's data access patterns.
   SystemMeta get meta;

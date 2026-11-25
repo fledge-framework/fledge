@@ -178,14 +178,19 @@ class World {
     final row = table.add(entity, componentMap, currentTick: _changeTick);
     entities.setLocation(entity, EntityLocation(archetypeIndex, row));
 
+    if (observers.hasObservers) {
+      for (final MapEntry(:key, :value) in componentMap.entries) {
+        observers.triggerOnAddDynamic(this, entity, key, value);
+      }
+    }
     return entity;
   }
 
   /// Spawns an entity with the one [component], stored as [T] (its static
   /// type, as `spawn().insert<T>` does). The cheap path for many small
   /// short-lived entities, such as a render world's extracted items: it
-  /// goes straight into its table, with no move from the empty archetype
-  /// and no observers.
+  /// goes straight into its table, with no move from the empty archetype.
+  /// Unlike [spawnWith], it does not fire `onAdd` observers.
   Entity spawnOne<T>(T component) {
     final entity = entities.spawn();
     final id = ComponentId.of<T>();
@@ -199,12 +204,35 @@ class World {
     return entity;
   }
 
+  /// Entities whose `onRemove` observers are currently firing in [despawn].
+  final Set<Entity> _despawning = {};
+
   /// Despawns an entity, removing it and all its components.
   ///
-  /// Returns true if the entity was alive, false otherwise.
+  /// `onRemove` observers fire for each component first, while the entity
+  /// is still alive and complete. Returns true if the entity was alive,
+  /// false otherwise.
   bool despawn(Entity entity) {
-    final location = entities.getLocation(entity);
+    var location = entities.getLocation(entity);
     if (location == null) return false;
+
+    // A despawn of the same entity from inside one of its onRemove
+    // observers skips the observers and just removes it.
+    if (observers.hasObservers && _despawning.add(entity)) {
+      try {
+        final components = archetypes
+            .tableAt(location.archetypeIndex)
+            .extractRow(location.row);
+        for (final MapEntry(:key, :value) in components.entries) {
+          observers.triggerOnRemoveDynamic(this, entity, key, value);
+        }
+      } finally {
+        _despawning.remove(entity);
+      }
+      // An observer may have despawned or reshaped the entity.
+      location = entities.getLocation(entity);
+      if (location == null) return true;
+    }
 
     final table = archetypes.tableAt(location.archetypeIndex);
     final movedEntity = table.swapRemove(location.row);

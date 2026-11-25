@@ -57,9 +57,12 @@ class FrameTime {
 
 /// System that records frame start time.
 class FrameStartSystem implements System {
+  /// Name used in [SystemMeta] and for `before:`/`after:` ordering.
+  static const String systemName = 'frameStart';
+
   @override
   SystemMeta get meta => const SystemMeta(
-    name: 'frameStart',
+    name: systemName,
     resourceWrites: {FrameTime},
     sets: [FirstSets.frameStart],
   );
@@ -94,6 +97,9 @@ class FrameStartSystem implements System {
 /// ticker callback instead of a `while (running) tick()` loop) and is
 /// tracked separately.
 class FrameLimiterSystem implements System {
+  /// Name used in [SystemMeta] and for `before:`/`after:` ordering.
+  static const String systemName = 'frameLimiter';
+
   /// The next monotonic instant (as microseconds since [Stopwatch.start])
   /// at which a frame should begin. Rolled forward by `targetDuration`
   /// each tick so temporary hitches don't cause a permanent phase shift.
@@ -104,7 +110,7 @@ class FrameLimiterSystem implements System {
 
   @override
   SystemMeta get meta => const SystemMeta(
-    name: 'frameLimiter',
+    name: systemName,
     resourceReads: {FrameLimiterConfig},
     resourceWrites: {FrameTime},
   );

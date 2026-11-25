@@ -26,7 +26,7 @@ class SystemNode {
 
 /// A stage containing systems that run together.
 ///
-/// Within a stage, systems may run in parallel if they don't conflict.
+/// Within a stage, systems run one at a time in dependency order.
 ///
 /// ## Ordering
 ///
@@ -516,9 +516,9 @@ List<String> _describeMetaConflict(SystemMeta a, SystemMeta b) {
 /// The scheduler containing all systems organized by [Schedule].
 ///
 /// The [Scheduler] owns one [SystemStage] per registered [Schedule] label.
-/// Within each schedule, systems may run in parallel when they don't
-/// conflict; between schedules the scheduler runs them serially in the
-/// order they were registered.
+/// Within each schedule, systems run one at a time in an order computed from
+/// their dependencies; between schedules the scheduler runs them serially
+/// in the order they were registered.
 ///
 /// ## Default Schedules
 ///

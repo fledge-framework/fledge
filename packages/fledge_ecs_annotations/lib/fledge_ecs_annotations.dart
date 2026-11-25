@@ -29,7 +29,7 @@ class Component {
 /// Systems contain the logic that operates on entities with specific
 /// components. The function signature determines which components and
 /// resources the system accesses, and the code generator emits a matching
-/// [SystemMeta] so the scheduler can safely parallelise non-conflicting
+/// `SystemMeta` so the scheduler can order it against conflicting
 /// systems.
 ///
 /// ## Query access is inferred by parameter *type*, not by inspection
@@ -44,7 +44,7 @@ class Component {
 /// intent visible at the call site.
 ///
 /// ```dart
-/// // Reads Position and Velocity — can run in parallel with other reads.
+/// // Reads Position and Velocity — never conflicts with other readers.
 /// @system
 /// void logMovementSystem(Query2<Position, Velocity> query) {
 ///   for (final (_, pos, vel) in query.iter()) {
@@ -141,7 +141,8 @@ class Event {
 /// Core schedule stages for system execution ordering.
 ///
 /// Systems are grouped into stages, and stages run in order.
-/// Within a stage, systems may run concurrently if they don't conflict.
+/// Deprecated in favour of `Schedules` in fledge_ecs; the generator ignores
+/// it, so pass `schedule:` to `App.addSystem` instead.
 enum CoreStage {
   /// Runs before all other stages. Use for setup that must happen first.
   first,
