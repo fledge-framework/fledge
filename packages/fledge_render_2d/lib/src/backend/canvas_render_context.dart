@@ -21,16 +21,15 @@ import '../sprite/texture.dart' show Texture;
 ///
 /// The outer widget (a `CustomPainter`, `RenderView`, or equivalent)
 /// must call [beginFrame] with the current `Canvas` before the
-/// render graph executes and [endFrame] afterwards. Phase 3a leaves
-/// widget-side wiring for Phase 3e — see the plan document for how
-/// Drifter will migrate.
+/// render graph executes and [endFrame] afterwards. `FledgeRenderView`
+/// does this for you.
 ///
 /// ## Texture resolution
 ///
 /// The drawer resolves each [TextureHandle] against an
 /// `Assets<Texture>` resource (installed by `RenderPlugin`). The
 /// legacy [registerTexture] API still writes into the same store, so
-/// existing call sites (e.g. Drifter's 1x1 solid-colour handle)
+/// existing call sites (e.g. a 1x1 solid-colour handle)
 /// continue to work through the same pathway that
 /// `Handle<Texture>` uses.
 class CanvasSpriteDrawer implements SpriteDrawer {
@@ -40,7 +39,7 @@ class CanvasSpriteDrawer implements SpriteDrawer {
   /// build; tests can pass an ad-hoc `Assets<Texture>` in the same
   /// way. A drawer with no bound store still works — [drawSpriteBatch]
   /// silently no-ops for any handle it cannot resolve, which matches
-  /// the pre-Phase-5 "no texture registered → silent" behaviour.
+  /// the "no texture registered → silent" behaviour.
   Assets<Texture>? _assets;
 
   /// Bind [assets] as the texture-resolution store. Called by
@@ -140,7 +139,7 @@ class CanvasSpriteDrawer implements SpriteDrawer {
     final canvas = _canvas;
     if (canvas == null) {
       // Without a live canvas (e.g. running in a test that only
-      // checks contract, or before widget-side wiring in Phase 3e)
+      // checks the contract, or outside beginFrame/endFrame)
       // silently drop. Existing behaviour was "callback is null →
       // no-op" so this is not a regression.
       return;

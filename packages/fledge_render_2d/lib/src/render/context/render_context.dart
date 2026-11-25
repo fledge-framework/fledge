@@ -53,7 +53,7 @@ abstract class RenderContext {
 /// `fledge_render_2d`'s sprite drawer wiring) can pick a concrete
 /// implementation.
 ///
-/// Phase 3a ships the [canvas] backend; [gpu] is reserved and its
+/// [canvas] is the working backend; [gpu] is reserved and its
 /// concrete drawer throws [UnimplementedError] on any draw call.
 enum RenderBackend {
   /// `dart:ui` [Canvas] via `Canvas.drawRawAtlas`. Battle-tested,

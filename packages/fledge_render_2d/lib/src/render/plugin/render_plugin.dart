@@ -16,11 +16,8 @@ import '../world/render_world.dart';
 /// Runs in [Schedules.extract], immediately after the per-frame
 /// `first → preUpdate → update → postUpdate → last` chain and before
 /// any [Schedules.render] systems. Clears the render world and runs
-/// all registered extractors.
-///
-/// Phase 3 will introduce dedicated render systems inside
-/// [Schedules.render]; this extract step is now driven separately
-/// from `last`.
+/// all registered extractors. Render systems then run in
+/// [Schedules.render] against the freshly built render world.
 class RenderExtractionSystem implements System {
   @override
   SystemMeta get meta => const SystemMeta(

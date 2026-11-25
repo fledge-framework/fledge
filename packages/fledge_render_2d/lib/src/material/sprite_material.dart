@@ -14,7 +14,7 @@ import 'material2d.dart';
 /// - Blend modes
 /// - Alpha testing
 /// - An optional [normalMap] slot for future GPU-side lighting
-///   (see the field docstring for scope in v0.2).
+///   (see the field docstring for its current scope).
 ///
 /// Example:
 /// ```dart
@@ -41,7 +41,7 @@ class SpriteMaterial extends Material2D {
 
   /// Normal map for future GPU-side lighting passes.
   ///
-  /// **Ignored by the Canvas backend in v0.2.** This is a
+  /// **Ignored by the Canvas backend.** This is a
   /// data-plumbing slot so that `fledge_lighting_2d` consumers can
   /// wire normal maps into their `SpriteMaterial` today without a
   /// breaking API change when a `FragmentProgram`-based lighting

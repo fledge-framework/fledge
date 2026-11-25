@@ -7,23 +7,47 @@ import '../world/render_world.dart';
 ///
 /// Extractors copy data from the main world to the render world each frame.
 /// This enables the two-world architecture where game logic and rendering
-/// are decoupled.
+/// are decoupled. Register them on the [Extractors] resource that
+/// `RenderPlugin` inserts; `RenderExtractionSystem` clears the
+/// [RenderWorld] and runs every registered extractor in `Schedules.extract`.
 ///
-/// Example:
+/// Sprites go into the render world with [RenderWorld.addSprite]; any
+/// other render data is added as its own entity with [RenderWorld.add] and
+/// read back with [RenderWorld.query1]:
+///
 /// ```dart
-/// class SpriteExtractor extends Extractor {
+/// class Health {
+///   double current = 10, max = 10;
+/// }
+///
+/// class ExtractedHealthBar {
+///   final double x, y, fraction;
+///   const ExtractedHealthBar(this.x, this.y, this.fraction);
+/// }
+///
+/// class HealthBarExtractor extends Extractor {
 ///   @override
 ///   void extract(World mainWorld, RenderWorld renderWorld) {
-///     for (final (entity, sprite, transform) in
-///         mainWorld.query2<Sprite, GlobalTransform2D>().iter()) {
-///       renderWorld.spawn()
-///         .insert(ExtractedSprite(
-///           entity: entity,
-///           texture: sprite.texture,
-///           transform: transform.matrix,
-///         ));
+///     for (final (_, health, transform)
+///         in mainWorld.query2<Health, GlobalTransform2D>().iter()) {
+///       renderWorld.add(
+///         ExtractedHealthBar(
+///           transform.x,
+///           transform.y,
+///           health.current / health.max,
+///         ),
+///       );
 ///     }
 ///   }
+/// }
+///
+/// // Once, after adding RenderPlugin:
+/// app.world.getResource<Extractors>()!.register(HealthBarExtractor());
+///
+/// // In a render system or widget painter:
+/// final renderWorld = app.world.getResource<RenderWorld>()!;
+/// for (final (_, bar) in renderWorld.query1<ExtractedHealthBar>().iter()) {
+///   // draw bar
 /// }
 /// ```
 abstract class Extractor {
@@ -35,13 +59,25 @@ abstract class Extractor {
 
 /// Type-safe extractor for a specific component type.
 ///
-/// Provides a simplified API for extracting single components.
+/// Calls the function for every main-world entity with a [TSource]
+/// component and adds what it returns to the render world: an
+/// [ExtractedSprite] with [RenderWorld.addSprite], anything else as its own
+/// entity, stored as [TExtracted].
 ///
-/// Example:
+/// Example (with the `Health` / `ExtractedHealthBar` types from
+/// [Extractor]'s example):
 /// ```dart
-/// final extractor = ComponentExtractor<Sprite, ExtractedSprite>(
-///   (world, entity, sprite) => ExtractedSprite(sprite),
+/// final extractor = ComponentExtractor<Health, ExtractedHealthBar>(
+///   (world, entity, health) {
+///     final transform = world.get<GlobalTransform2D>(entity);
+///     return ExtractedHealthBar(
+///       transform?.x ?? 0,
+///       transform?.y ?? 0,
+///       health.current / health.max,
+///     );
+///   },
 /// );
+/// app.world.getResource<Extractors>()!.register(extractor);
 /// ```
 class ComponentExtractor<TSource, TExtracted> extends Extractor {
   final TExtracted Function(World world, Entity entity, TSource component)
@@ -55,9 +91,8 @@ class ComponentExtractor<TSource, TExtracted> extends Extractor {
   ComponentExtractor(
     TExtracted Function(World world, Entity entity, TSource component)
     extract, {
-    QueryFilter? filter,
-  }) : _extractFn = extract,
-       _filter = filter;
+    this._filter,
+  }) : _extractFn = extract;
 
   @override
   void extract(World mainWorld, RenderWorld renderWorld) {
@@ -144,17 +179,25 @@ class ExtractSystem {
   }
 }
 
-/// Marker trait for components that should be automatically extracted.
+/// Interface for components that know how to build their own render
+/// data.
 ///
-/// Components implementing this trait can be auto-discovered by the
-/// extraction system.
+/// Nothing discovers these automatically: extract them like any other
+/// component, e.g. with a [ComponentExtractor].
 ///
 /// Example:
 /// ```dart
-/// class Sprite implements ExtractComponent<ExtractedSprite> {
+/// class Marker implements ExtractComponent<ExtractedMarker> {
+///   final Color color;
+///   const Marker(this.color);
+///
 ///   @override
-///   ExtractedSprite extract() => ExtractedSprite(this);
+///   ExtractedMarker extract() => ExtractedMarker(color);
 /// }
+///
+/// app.world.getResource<Extractors>()!.register(
+///   ComponentExtractor<Marker, ExtractedMarker>((_, _, m) => m.extract()),
+/// );
 /// ```
 abstract class ExtractComponent<TExtracted> {
   /// Extract render data from this component.

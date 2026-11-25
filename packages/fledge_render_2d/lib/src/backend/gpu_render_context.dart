@@ -9,7 +9,7 @@ import '../sprite/sprite_render_node.dart' show BackendSpriteData, SpriteDrawer;
 /// future GPU implementation drops in without touching the render
 /// graph or the batch pipeline.
 ///
-/// The plan (as of Phase 3a): implement this with a fragment shader
+/// The intended implementation: a fragment shader
 /// (`FragmentProgram`) and instanced quad draws once
 /// `Canvas.drawRawAtlas` becomes a bottleneck. Until then the Canvas
 /// backend covers desktop-primary targets comfortably (5k–20k

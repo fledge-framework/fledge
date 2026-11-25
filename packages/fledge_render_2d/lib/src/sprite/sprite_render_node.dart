@@ -113,8 +113,8 @@ class SpriteRenderContext {
 ///
 /// The 2D sprite pipeline produces one instance of this per rendered
 /// sprite and hands a `List<BackendSpriteData>` to the current
-/// [SpriteDrawer]. Fields were previously typed `dynamic`; Phase 3a
-/// tightens them so the backend contract is checked at compile time.
+/// [SpriteDrawer]. Fields are fully typed so the backend contract is
+/// checked at compile time.
 class BackendSpriteData {
   /// Source rectangle in the texture (pixel-space).
   ///

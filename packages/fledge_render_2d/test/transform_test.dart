@@ -144,6 +144,27 @@ void main() {
 
       expect(original.x, equals(100));
     });
+
+    test('inverse undoes the transform and leaves the original intact', () {
+      final transform = Transform2D(
+        translation: Vector2(10, -4),
+        rotation: math.pi / 3,
+        scale: Vector2(2, 0.5),
+      );
+      final global = GlobalTransform2D(transform.toMatrix());
+      final before = global.matrix.clone();
+
+      final inverse = global.inverse();
+
+      expect(global.matrix.storage, equals(before.storage));
+      final point = Vector2(3, 7);
+      final back = inverse.transformPoint(global.transformPoint(point));
+      expect(back.x, closeTo(3, 1e-4));
+      expect(back.y, closeTo(7, 1e-4));
+      final origin = inverse.transformPoint(Vector2(10, -4));
+      expect(origin.x, closeTo(0, 1e-4));
+      expect(origin.y, closeTo(0, 1e-4));
+    });
   });
 
   group('TransformPropagateSystem', () {

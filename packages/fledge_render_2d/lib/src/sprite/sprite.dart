@@ -12,7 +12,7 @@ import '../render/extract/draw_layer.dart';
 /// so existing sprite APIs (`Sprite.texture`, `Sprite.region`,
 /// `ExtractedSprite.texture`, ...) continue to compile.
 ///
-/// **Deprecated in Phase 5.** New code should mint a
+/// **Legacy.** New code should mint a
 /// `Handle<Texture>` via `Assets<Texture>.add` / `Assets<Texture>.load`
 /// and pass its `id.id` through this wrapper (see
 /// [TextureHandle.fromAsset]). A future release will replace

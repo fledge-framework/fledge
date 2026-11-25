@@ -81,10 +81,12 @@ class GlobalTransform2D {
     matrix.setFrom(other.matrix);
   }
 
-  /// Compute the inverse transform.
+  /// A new transform that maps world space back to this transform's local
+  /// space. This transform is left unchanged. A singular matrix (a zero
+  /// scale) has no inverse; the result is then a copy of this transform.
   GlobalTransform2D inverse() {
     final inv = Matrix3.zero();
-    matrix.copyInverse(inv);
+    inv.copyInverse(matrix);
     return GlobalTransform2D(inv);
   }
 

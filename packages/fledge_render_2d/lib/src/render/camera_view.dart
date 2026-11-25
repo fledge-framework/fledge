@@ -13,15 +13,16 @@ import 'package:fledge_ecs/fledge_ecs.dart' show World;
 /// to translate world coordinates into screen ones. This resource is
 /// the single hand-off point.
 ///
-/// - `fledge_camera_2d`'s camera-driver system writes it every frame.
+/// - `fledge_camera_2d`'s `ActiveCameraViewSystem` writes it every frame
+///   from the lowest-order active camera (its position plus any screen
+///   shake offset).
 /// - `fledge_render_2d`'s widgets read it (via
 ///   [activeCameraCanvasOffset]) and translate the canvas so the
 ///   camera's world position sits at the widget centre.
 ///
 /// Games that don't use `fledge_camera_2d` can either write this
 /// resource themselves or leave it unset. When unset, widgets render
-/// with world = screen (1:1, camera-less) — the pre-Batch-3-#15
-/// behaviour.
+/// with world = screen (1:1, camera-less).
 ///
 /// The `SpriteRenderNode` render-graph path is unaffected by this
 /// resource — it reads `CameraView` off the render graph as before.

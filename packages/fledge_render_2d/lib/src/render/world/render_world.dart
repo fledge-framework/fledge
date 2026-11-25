@@ -13,20 +13,25 @@ import '../../sprite/extracted_sprite.dart';
 /// 2. Render world contains extracted render data and GPU resources
 /// 3. Each frame, relevant data is extracted from main to render world
 ///
-/// Example:
+/// `RenderPlugin` inserts one as a resource on the main world, and
+/// `RenderExtractionSystem` clears and refills it in `Schedules.extract`
+/// by running every registered [Extractor]. Extractors put sprites in with
+/// [addSprite] and other render data (lights, UI elements) with [add];
+/// render systems and widget painters read them back:
+///
 /// ```dart
-/// final renderWorld = RenderWorld();
+/// final renderWorld = app.world.getResource<RenderWorld>()!;
 ///
-/// // At start of frame, clear previous data
-/// renderWorld.clear();
+/// // Sprites, in the order they were extracted (sort with
+/// // ExtractedSprite.sortByDrawOrder before drawing).
+/// for (final sprite in renderWorld.extractedSprites) {
+///   // draw sprite
+/// }
 ///
-/// // Extract from the main world: sprites go in the sprite list, other
-/// // render data (lights, UI) as entities.
-/// renderWorld.addSprite(ExtractedSprite(...));
-/// renderWorld.add(ExtractedLight(...));
-///
-/// // Run render systems on render world
-/// renderSchedule.run(renderWorld);
+/// // Other render data, by the type it was added as.
+/// for (final (_, bar) in renderWorld.query1<ExtractedHealthBar>().iter()) {
+///   // draw bar
+/// }
 /// ```
 class RenderWorld {
   final World _world = World();
