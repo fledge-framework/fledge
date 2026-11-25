@@ -8,6 +8,7 @@ import 'resources/window_state.dart';
 import 'systems/display_sync_system.dart';
 import 'systems/window_event_system.dart';
 import 'systems/window_init_system.dart';
+import 'systems/window_os_event_system.dart';
 import 'window_config.dart';
 
 /// Plugin that adds window management to a Fledge app.
@@ -123,7 +124,8 @@ class WindowPlugin implements Plugin {
     // Insert resources
     app
         .insertResource(WindowState.initial(config))
-        .insertResource(DisplayInfo.empty());
+        .insertResource(DisplayInfo.empty())
+        .insertResource(WindowOsEvents());
 
     // Add systems
     // Init runs first and only once
@@ -134,10 +136,14 @@ class WindowPlugin implements Plugin {
 
     // Event handler processes mode/size change requests
     app.addSystem(WindowEventSystem(), schedule: Schedules.first);
+
+    // Applies OS-driven focus/resize/move/minimize changes.
+    app.addSystem(WindowOsEventSystem(), schedule: Schedules.first);
   }
 
   @override
   void cleanup() {
-    // Resources are garbage collected with the world
+    // The world (and its resources) is garbage collected with the app; the
+    // window_manager listener is removed with WindowOsEvents.disconnect.
   }
 }

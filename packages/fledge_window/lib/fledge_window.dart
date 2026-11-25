@@ -97,4 +97,5 @@ export 'src/commands/window_commands.dart';
 // Systems (for advanced use)
 export 'src/systems/window_init_system.dart';
 export 'src/systems/window_event_system.dart';
+export 'src/systems/window_os_event_system.dart';
 export 'src/systems/display_sync_system.dart';

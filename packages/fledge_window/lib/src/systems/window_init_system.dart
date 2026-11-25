@@ -9,6 +9,7 @@ import '../resources/display_info.dart';
 import '../resources/window_state.dart';
 import '../window_config.dart';
 import '../window_mode.dart';
+import 'window_os_event_system.dart';
 
 /// System that initializes the window on app startup.
 ///
@@ -49,6 +50,7 @@ class WindowInitSystem implements System {
     // Declares exactly what run() touches instead of `exclusive: true`,
     // so it only serialises against systems that share this data.
     resourceWrites: {DisplayInfo, WindowState},
+    resourceReads: {WindowOsEvents},
     eventWrites: {WindowOperationFailed},
   );
 
@@ -153,6 +155,16 @@ class WindowInitSystem implements System {
 
     if (shown) windowState.isVisible = true;
     if (focused) windowState.isFocused = true;
+
+    // From here on, focus/resize/move changes made by the user or the OS
+    // reach WindowState through WindowOsEventSystem.
+    try {
+      world.getResource<WindowOsEvents>()?.connect();
+    } catch (e) {
+      world.eventWriter<WindowOperationFailed>().send(
+        WindowOperationFailed(operation: 'listen', reason: e.toString()),
+      );
+    }
 
     // If the initial mode didn't apply, the window state for mode/size/pos
     // is left as the plugin's optimistic `WindowState.initial(config)` — the

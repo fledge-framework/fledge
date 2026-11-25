@@ -26,6 +26,7 @@ void main() {
       WindowInitSystem(const WindowConfig()).meta,
       DisplaySyncSystem().meta,
       WindowEventSystem().meta,
+      WindowOsEventSystem().meta,
     ];
     for (final meta in metas) {
       expect(meta.sets, [FirstSets.platform], reason: meta.name);
