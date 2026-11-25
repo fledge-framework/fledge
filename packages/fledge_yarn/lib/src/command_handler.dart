@@ -18,6 +18,11 @@ typedef CommandCallback = bool Function(String command, List<String> arguments);
 /// hold, wait for a modal to close) can finish before the dialogue
 /// moves on. Return `false` to continue processing as if the command
 /// were a regular one (e.g. malformed arguments: log and carry on).
+///
+/// Under `DialogueCorePlugin` the runner is private, so a pause holds the
+/// dialogue (`DialogueState.isHeld`) until a `DialogueHoldReleased` whose
+/// token is the command name as written in the script; prefer
+/// `registerHoldingCommand` there, which lets you choose the token.
 typedef PausingCommandCallback = bool Function(
   String command,
   List<String> arguments,
@@ -52,7 +57,11 @@ class CommandHandler {
 
   /// Register a handler for a command.
   ///
-  /// The [name] should not include the `<<` and `>>` delimiters.
+  /// The [name] should not include the `<<` and `>>` delimiters. Custom
+  /// command names match case-insensitively; the built-in keywords
+  /// (`set`, `jump`, `stop`, `if`, `declare`...) are case-sensitive, as in
+  /// Yarn Spinner, so `<<Stop>>` reaches a handler registered as `stop`
+  /// rather than ending the dialogue.
   void register(String name, CommandCallback handler) {
     _handlers[name.toLowerCase()] = handler;
   }

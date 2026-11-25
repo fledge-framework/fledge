@@ -71,6 +71,11 @@ double _wallTimeDelta(World world) => world.getResource<WallTime>()?.delta ?? 0;
 /// used to run those commands eagerly and only defer presentation, which
 /// let a command mutate world state before the awaited beat finished.
 ///
+/// A plain pausing handler ([CommandHandler.registerPausing]) that pauses
+/// during an active dialogue holds it the same way, with the command's
+/// name as written in the script as the token: send
+/// `DialogueHoldReleased('name')` to continue.
+///
 /// Several holds can be in place at once (the game can add extra holds
 /// externally, e.g. from another system); the dialogue resumes when all
 /// are released. A stop drops them. [world] is the one whose
@@ -412,11 +417,17 @@ void _syncFromRunner(World world, DialogueState state, {bool skipped = false}) {
         DialogueChoicesReady(state.choices),
       );
     case DialogueRunnerState.paused:
-      // A pausing command (registerHoldingCommand) that did not hold —
-      // e.g. it received malformed arguments and returned null. Resume
-      // the runner in place, sync from the next stop.
-      runner.resume();
-      _syncFromRunner(world, state, skipped: skipped);
+      // A plain pausing handler (CommandHandler.registerPausing) paused the
+      // runner without taking a hold (registerHoldingCommand takes its own,
+      // so it never gets here). Hold the dialogue on the command's name —
+      // a DialogueHoldReleased with that name resumes it — exactly like a
+      // holding command.
+      final command = runner.pausedCommand ?? '';
+      _log(
+        '<<$command>> paused the dialogue: holding until '
+        'DialogueHoldReleased(\'$command\')',
+      );
+      state._hold(command);
     case DialogueRunnerState.ended:
     case DialogueRunnerState.inactive:
       world.eventWriter<DialogueEnded>().send(

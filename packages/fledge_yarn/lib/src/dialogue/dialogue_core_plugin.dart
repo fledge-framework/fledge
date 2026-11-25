@@ -49,6 +49,9 @@ class DialogueCorePlugin implements Plugin {
     _app = app;
     final world = app.world;
     commands.register(declareCommandName, (command, arguments) {
+      // `declare` is a Yarn keyword, so it's case-sensitive: `<<Declare>>`
+      // is some other command (CommandHandler names aren't).
+      if (command != declareCommandName) return false;
       final storage = world.getResource<VariableStorage>();
       return storage == null ? false : declareCommand(storage, arguments);
     });

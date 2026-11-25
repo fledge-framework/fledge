@@ -91,6 +91,7 @@ class DialogueRunner {
   DialogueLine? _currentLine;
   List<Choice>? _currentChoices;
   final List<String> _nodeHistory = [];
+  String? _pausedCommand;
 
   /// Current state of the dialogue runner.
   DialogueRunnerState get state => _state;
@@ -111,6 +112,10 @@ class DialogueRunner {
 
   /// The title of the current node.
   String? get currentNodeTitle => _currentNode?.title;
+
+  /// The command (as written in the script) whose pausing handler paused
+  /// the runner, while [state] is [DialogueRunnerState.paused]; else null.
+  String? get pausedCommand => _pausedCommand;
 
   /// History of visited node titles.
   List<String> get nodeHistory => List.unmodifiable(_nodeHistory);
@@ -134,6 +139,8 @@ class DialogueRunner {
     final node = project.getNode(nodeTitle);
     if (node == null) return false;
 
+    _state = DialogueRunnerState.inactive;
+    _pausedCommand = null;
     _currentNode = node;
     _lineQueue = List.from(node.lines);
     _lineIndex = 0;
@@ -196,12 +203,15 @@ class DialogueRunner {
   void resume() {
     if (_state != DialogueRunnerState.paused) return;
     _state = DialogueRunnerState.inactive;
+    _pausedCommand = null;
     _processNext();
   }
 
-  /// Stop the current dialogue.
+  /// Stop the current dialogue. Calls [onDialogueEnd] once (also for a
+  /// `<<stop>>` in the script).
   void stop() {
     _state = DialogueRunnerState.ended;
+    _pausedCommand = null;
     _currentNode = null;
     _lineQueue = [];
     _lineIndex = 0;
@@ -213,6 +223,7 @@ class DialogueRunner {
   /// Reset the runner to inactive state.
   void reset() {
     _state = DialogueRunnerState.inactive;
+    _pausedCommand = null;
     _currentNode = null;
     _lineQueue = [];
     _lineIndex = 0;
@@ -246,10 +257,14 @@ class DialogueRunner {
         case CommandLine():
           _executeCommand(line);
           _lineIndex++;
-          // A pausing command handler flipped _state = paused. Stop
+          // A pausing command handler flipped _state = paused: stop
           // processing here; DialogueRunner.resume() picks up at the
-          // next statement.
-          if (_state == DialogueRunnerState.paused) return;
+          // next statement. `<<stop>>` (or a handler calling stop())
+          // ended the dialogue and already called onDialogueEnd.
+          if (_state == DialogueRunnerState.paused ||
+              _state == DialogueRunnerState.ended) {
+            return;
+          }
           break;
 
         case ConditionalBlock():
@@ -319,7 +334,9 @@ class DialogueRunner {
 
     onCommand?.call(command, args);
 
-    // Handle built-in commands
+    // Built-in commands. Like Yarn Spinner's keywords, these names are
+    // case-sensitive (the parser keeps names as written): `<<Stop>>` is a
+    // custom command, looked up on the [CommandHandler].
     switch (command) {
       case 'set':
         if (args.isNotEmpty) {
@@ -348,6 +365,7 @@ class DialogueRunner {
           final shouldPause = commandHandler!.executePausing(command, args);
           if (shouldPause) {
             _state = DialogueRunnerState.paused;
+            _pausedCommand = command;
             return;
           }
           break;

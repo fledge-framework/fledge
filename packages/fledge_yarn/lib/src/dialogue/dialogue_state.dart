@@ -94,7 +94,8 @@ class DialogueState {
   bool get isWaitingForChoice =>
       !isHeld && (_runner?.isWaitingForChoice ?? false);
 
-  /// Whether a holding command (`registerHoldingCommand`) paused the
+  /// Whether a holding command (`registerHoldingCommand`) or a plain
+  /// pausing handler (`CommandHandler.registerPausing`) paused the
   /// dialogue: nothing is shown ([currentLine] is null, no [choices]) and
   /// every request but a stop is ignored until each hold is released
   /// (`DialogueHoldReleased`).

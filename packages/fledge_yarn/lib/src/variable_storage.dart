@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'expression.dart';
 
 /// Storage for Yarn dialogue variables.
@@ -174,15 +176,23 @@ class VariableStorage {
 
   /// Execute a set command (e.g., `$var = value`, `$var += 5`, `$var = $a * 2`).
   ///
-  /// Malformed expressions are silently ignored.
-  void executeSet(String expression) {
+  /// String values keep their quotes: `$name = "Alex Smith"`. Returns
+  /// whether the variable was set. A malformed expression changes nothing
+  /// and is logged as a warning (logger `fledge_yarn.variables`) instead of
+  /// throwing, so a script typo doesn't crash a scene.
+  bool executeSet(String expression) {
     try {
       _evaluator.executeSet(expression, (name, value) {
         _variables[_normalize(name)] = value;
       });
-    } on FormatException {
-      // Intentionally swallowed — matches the tolerant semantics of the
-      // previous evaluator. Malformed scripts will simply not update state.
+      return true;
+    } on FormatException catch (e) {
+      developer.log(
+        'Ignored malformed assignment "$expression": ${e.message}',
+        name: 'fledge_yarn.variables',
+        level: 900,
+      );
+      return false;
     }
   }
 }

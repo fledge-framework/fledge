@@ -20,6 +20,60 @@ DialogueHarness _harness({List<String>? requested}) {
 }
 
 void main() {
+  group('plain pausing handlers under the core', () {
+    test('hold the dialogue until released by command name', () async {
+      final h = _harness();
+      final ran = <String>[];
+      h.commands.registerPausing('pause_here', (command, args) {
+        ran.add(command);
+        return true;
+      });
+      h.project.parse('''
+title: plain_pause
+---
+Host: Before.
+<<pause_here>>
+<<log after>>
+Host: After.
+===
+''');
+      await h.start('plain_pause');
+      await h.request(const DialogueAdvanceRequested());
+
+      expect(ran, ['pause_here']);
+      expect(h.state.isHeld, isTrue);
+      expect(h.state.holdTokens, ['pause_here']);
+      expect(h.state.currentLine, isNull);
+      expect(h.commandLog, isEmpty, reason: 'commands after it wait');
+
+      await h.request(const DialogueAdvanceRequested());
+      await h.ticks(5);
+      expect(h.state.isHeld, isTrue);
+
+      await h.request(const DialogueHoldReleased('pause_here'));
+      expect(h.state.isHeld, isFalse);
+      expect(h.commandLog, ['after']);
+      expect(h.state.currentLine?.text, 'After.');
+    });
+
+    test('a pausing handler returning false does not hold', () async {
+      final h = _harness();
+      h.commands.registerPausing('maybe', (_, _) => false);
+      h.project.parse('''
+title: no_pause
+---
+Host: Before.
+<<maybe>>
+Host: After.
+===
+''');
+      await h.start('no_pause');
+      await h.request(const DialogueAdvanceRequested());
+      expect(h.state.isHeld, isFalse);
+      expect(h.state.currentLine?.text, 'After.');
+    });
+  });
+
   group('holding commands', () {
     test(
       'hold the dialogue until released, then show what comes next',

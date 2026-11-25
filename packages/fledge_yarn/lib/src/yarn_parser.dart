@@ -270,13 +270,15 @@ class YarnParser {
       return _LineParseResult(line: null, nextIndex: index + 1);
     }
 
-    final command = match.group(1)!.toLowerCase();
+    // Yarn Spinner's keywords (`jump`, `if`, `set`, `declare`, `stop`, ...)
+    // are lowercase and case-sensitive: `<<Stop>>` is an ordinary command
+    // named "Stop", not the built-in. The name is kept as written.
+    final command = match.group(1)!;
     final argsStr = match.group(2) ?? '';
-    final args = argsStr.isEmpty ? <String>[] : _parseArguments(argsStr);
 
-    // Handle special commands
     switch (command) {
       case 'jump':
+        final args = _parseArguments(argsStr);
         return _LineParseResult(
           line: JumpLine(targetNode: args.isNotEmpty ? args[0] : ''),
           nextIndex: index + 1,
@@ -287,11 +289,22 @@ class YarnParser {
 
       case 'set':
       case 'declare':
-      case 'wait':
-      case 'stop':
+        // Expression commands: the arguments are an expression, so string
+        // literals keep their quotes (and spaces) for the evaluator.
+        return _LineParseResult(
+          line: CommandLine(
+            command: command,
+            arguments: _splitExpression(argsStr),
+          ),
+          nextIndex: index + 1,
+        );
+
       default:
         return _LineParseResult(
-          line: CommandLine(command: command, arguments: args),
+          line: CommandLine(
+            command: command,
+            arguments: _parseArguments(argsStr),
+          ),
           nextIndex: index + 1,
         );
     }
@@ -414,22 +427,72 @@ class YarnParser {
     return indent;
   }
 
+  /// Splits a generic command's arguments on spaces, like Yarn Spinner:
+  /// a double- or single-quoted run stays one argument with its quotes
+  /// removed (`""` is an empty argument), and inside quotes `\"`, `\'`
+  /// and `\\` write a literal quote or backslash.
   List<String> _parseArguments(String argsStr) {
     final args = <String>[];
     final buffer = StringBuffer();
     var inQuotes = false;
     var quoteChar = '';
+    var quoted = false; // the current argument had quotes (may be empty)
+
+    void flush() {
+      if (buffer.isNotEmpty || quoted) {
+        args.add(buffer.toString());
+        buffer.clear();
+      }
+      quoted = false;
+    }
 
     for (var i = 0; i < argsStr.length; i++) {
       final char = argsStr[i];
 
-      if (!inQuotes && (char == '"' || char == "'")) {
+      if (inQuotes &&
+          char == r'\' &&
+          i + 1 < argsStr.length &&
+          const ['"', "'", r'\'].contains(argsStr[i + 1])) {
+        buffer.write(argsStr[++i]);
+      } else if (!inQuotes && (char == '"' || char == "'")) {
         inQuotes = true;
+        quoted = true;
         quoteChar = char;
       } else if (inQuotes && char == quoteChar) {
         inQuotes = false;
         quoteChar = '';
-      } else if (!inQuotes && char == ' ') {
+      } else if (!inQuotes && (char == ' ' || char == '\t')) {
+        flush();
+      } else {
+        buffer.write(char);
+      }
+    }
+    flush();
+
+    return args;
+  }
+
+  /// Splits an expression command's arguments (`set`, `declare`) on
+  /// whitespace outside string literals, keeping each literal verbatim —
+  /// quotes and escapes included — so `args.join(' ')` is the expression.
+  List<String> _splitExpression(String argsStr) {
+    final args = <String>[];
+    final buffer = StringBuffer();
+    var quoteChar = '';
+
+    for (var i = 0; i < argsStr.length; i++) {
+      final char = argsStr[i];
+      if (quoteChar.isNotEmpty) {
+        buffer.write(char);
+        if (char == r'\' && i + 1 < argsStr.length) {
+          buffer.write(argsStr[++i]);
+        } else if (char == quoteChar) {
+          quoteChar = '';
+        }
+      } else if (char == '"' || char == "'") {
+        quoteChar = char;
+        buffer.write(char);
+      } else if (char == ' ' || char == '\t') {
         if (buffer.isNotEmpty) {
           args.add(buffer.toString());
           buffer.clear();
@@ -438,11 +501,7 @@ class YarnParser {
         buffer.write(char);
       }
     }
-
-    if (buffer.isNotEmpty) {
-      args.add(buffer.toString());
-    }
-
+    if (buffer.isNotEmpty) args.add(buffer.toString());
     return args;
   }
 }
