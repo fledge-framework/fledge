@@ -184,7 +184,7 @@ abstract class System {
 /// A synchronous system that doesn't need async operations.
 ///
 /// Extend this class for simple systems that don't perform I/O.
-abstract class SyncSystem implements System {
+abstract class SyncSystem extends System {
   @override
   void run(World world) => runSync(world);
 
