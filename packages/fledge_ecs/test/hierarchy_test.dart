@@ -303,6 +303,26 @@ void main() {
       expect(world.isAlive(child), isFalse);
     });
 
+    test('despawn leaves the parent and orphans the children', () {
+      final world = World();
+      final grandparent = world.spawn().entity;
+      final parent = world.spawn().entity;
+      final childA = world.spawn().entity;
+      final childB = world.spawn().entity;
+
+      world.setParent(parent, grandparent);
+      world.setParent(childA, parent);
+      world.setParent(childB, parent);
+
+      expect(world.despawn(parent), isTrue);
+
+      expect(world.getChildren(grandparent), isEmpty);
+      expect(world.isAlive(childA), isTrue);
+      expect(world.isAlive(childB), isTrue);
+      expect(world.get<Parent>(childA), isNull);
+      expect(world.get<Parent>(childB), isNull);
+    });
+
     test('despawnRecursive removes from parent', () {
       final world = World();
       final grandparent = world.spawn().entity;

@@ -5,6 +5,7 @@ import 'change_detection/tick.dart';
 import 'component.dart';
 import 'entity.dart';
 import 'event.dart';
+import 'hierarchy/hierarchy.dart';
 import 'observer/observer.dart';
 import 'query/query.dart';
 import 'resource.dart';
@@ -210,7 +211,9 @@ class World {
   /// Despawns an entity, removing it and all its components.
   ///
   /// `onRemove` observers fire for each component first, while the entity
-  /// is still alive and complete. Returns true if the entity was alive,
+  /// is still alive and complete. The entity leaves its parent's
+  /// [Children], and its own children become roots (their [Parent] is
+  /// removed); use `despawnRecursive` to despawn them too. Returns true if the entity was alive,
   /// false otherwise.
   bool despawn(Entity entity) {
     var location = entities.getLocation(entity);
@@ -230,6 +233,20 @@ class World {
         _despawning.remove(entity);
       }
       // An observer may have despawned or reshaped the entity.
+      location = entities.getLocation(entity);
+      if (location == null) return true;
+    }
+
+    // Keep the hierarchy consistent: leave the parent's Children, and turn
+    // this entity's children into roots (despawnRecursive removes them).
+    final parent = get<Parent>(entity);
+    if (parent != null) get<Children>(parent.entity)?.remove(entity);
+    final children = get<Children>(entity);
+    if (children != null && children.isNotEmpty) {
+      for (final child in children.list) {
+        if (get<Parent>(child)?.entity == entity) remove<Parent>(child);
+      }
+      // Moving the children between tables can move this entity's row.
       location = entities.getLocation(entity);
       if (location == null) return true;
     }
