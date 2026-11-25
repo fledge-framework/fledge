@@ -43,3 +43,21 @@ void readPositionsWriteVelocities(Query1<Position> r, QueryMut1<Velocity> w) {
   for (final _ in r.iter()) {}
   for (final _ in w.iter()) {}
 }
+
+/// Commands are applied when the function returns, so the spawn lands.
+@system
+void spawnWithCommands(Commands commands) {
+  commands.spawn().insert(Position(0, 0));
+}
+
+/// An async system's wrapper awaits it, so the scheduler does too.
+@system
+Future<void> asyncSystem(Query1<Position> q) async {
+  await Future<void>.value();
+}
+
+/// A World parameter receives the wrapper's world whatever it is named.
+@system
+void takesWorldNamedW(World w) {
+  w.spawn();
+}

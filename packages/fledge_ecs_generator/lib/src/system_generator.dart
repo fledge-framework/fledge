@@ -24,9 +24,11 @@ import 'package:source_gen/source_gen.dart';
 /// Example output:
 /// ```dart
 /// class MovementSystemWrapper implements System {
+///   static const String systemName = 'movementSystem';
+///
 ///   @override
 ///   SystemMeta get meta => SystemMeta(
-///     name: 'movementSystem',
+///     name: systemName,
 ///     writes: {ComponentId.of<Position>()},
 ///     reads: {ComponentId.of<Velocity>()},
 ///     resourceReads: {WallTime},
@@ -57,9 +59,20 @@ class SystemGenerator extends GeneratorForAnnotation<SystemAnnotation> {
     final functionName = element.name!;
     final className = _toClassName(functionName);
     final params = element.formalParameters;
+    final returnType = element.returnType;
+    final isAsync =
+        returnType.isDartAsyncFuture || returnType.isDartAsyncFutureOr;
 
     // Analyze parameters to extract component and resource access
     final analysis = _analyzeParameters(params);
+    if (analysis.takesWorld) {
+      log.warning(
+        '@system $functionName takes a World parameter. The generated '
+        'SystemMeta cannot see what it reads or writes through it, so it is '
+        'never ordered against conflicting systems. Prefer Query/Res/Event '
+        'parameters, or hand-write a System class with an accurate meta.',
+      );
+    }
 
     final buffer = StringBuffer();
 
@@ -67,10 +80,17 @@ class SystemGenerator extends GeneratorForAnnotation<SystemAnnotation> {
     buffer.writeln('/// Generated system wrapper for [$functionName].');
     buffer.writeln('class $className implements System {');
 
+    // Name constant, for before:/after: ordering.
+    buffer.writeln(
+      '  /// Name used in [SystemMeta] and for `before:`/`after:`.',
+    );
+    buffer.writeln("  static const String systemName = '$functionName';");
+    buffer.writeln();
+
     // Generate meta
     buffer.writeln('  @override');
     buffer.writeln('  SystemMeta get meta => SystemMeta(');
-    buffer.writeln("    name: '$functionName',");
+    buffer.writeln('    name: systemName,');
 
     if (analysis.writes.isNotEmpty) {
       buffer.writeln('    writes: {${analysis.writes.join(', ')}},');
@@ -112,22 +132,38 @@ class SystemGenerator extends GeneratorForAnnotation<SystemAnnotation> {
 
     // Generate run method
     buffer.writeln('  @override');
-    buffer.writeln('  void run(World world) {');
+    buffer.writeln(
+      isAsync
+          ? '  Future<void> run(World world) async {'
+          : '  void run(World world) {',
+    );
 
     // Generate query/resource setup
     for (final param in analysis.parameterSetup) {
       buffer.writeln('    $param');
     }
 
-    // Call the original function
-    final args = params.map((p) => p.name!).join(', ');
-    buffer.writeln('    $functionName($args);');
+    // Call the original function. World parameters receive `world` whatever
+    // the function named them.
+    final args = params
+        .map((p) => _isWorld(p.type) ? 'world' : p.name!)
+        .join(', ');
+    buffer.writeln(
+      isAsync ? '    await $functionName($args);' : '    $functionName($args);',
+    );
+    // Commands queued by the function take effect once it returns.
+    for (final name in analysis.commandsParams) {
+      buffer.writeln('    $name.apply(world);');
+    }
     buffer.writeln('  }');
 
     buffer.writeln('}');
 
     return buffer.toString();
   }
+
+  static bool _isWorld(DartType type) =>
+      type is InterfaceType && type.element.name == 'World';
 
   String _toClassName(String functionName) {
     // Convert camelCase function name to PascalCase class name
@@ -157,12 +193,13 @@ class SystemGenerator extends GeneratorForAnnotation<SystemAnnotation> {
         }
         // Check for World parameter - no setup needed, passed directly
         else if (typeName == 'World') {
-          // World is passed directly, no setup needed
+          // Passed directly as the wrapper's own `world`.
+          analysis.takesWorld = true;
         }
         // Check for Commands parameter
         else if (typeName == 'Commands') {
           analysis.parameterSetup.add('final $paramName = Commands();');
-          analysis.needsCommandsApply = true;
+          analysis.commandsParams.add(paramName);
         }
         // Check for Res<T> parameter (read-only resource access)
         else if (typeName == 'Res') {
@@ -354,5 +391,6 @@ class _ParameterAnalysis {
   final List<String> eventReads = [];
   final List<String> eventWrites = [];
   final List<String> parameterSetup = [];
-  bool needsCommandsApply = false;
+  final List<String> commandsParams = [];
+  bool takesWorld = false;
 }

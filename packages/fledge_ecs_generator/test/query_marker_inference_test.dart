@@ -127,4 +127,35 @@ void main() {
       expect(body, contains('final w = world.queryMut1<Velocity>();'));
     });
   });
+
+  group('SystemGenerator wrapper body', () {
+    test('emits a systemName constant used by the meta', () {
+      final body = _classBody(content, 'ReadOnePositionsWrapper');
+      expect(
+        body,
+        contains("static const String systemName = 'readOnePositions';"),
+      );
+      expect(body, contains('name: systemName,'));
+    });
+
+    test('applies Commands after calling the function', () {
+      final body = _classBody(content, 'SpawnWithCommandsWrapper');
+      expect(body, contains('final commands = Commands();'));
+      final call = body.indexOf('spawnWithCommands(commands);');
+      final apply = body.indexOf('commands.apply(world);');
+      expect(call, isNonNegative);
+      expect(apply, greaterThan(call));
+    });
+
+    test('awaits async systems', () {
+      final body = _classBody(content, 'AsyncSystemWrapper');
+      expect(body, contains('Future<void> run(World world) async {'));
+      expect(body, contains('await asyncSystem(q);'));
+    });
+
+    test('passes the wrapper world to a World parameter of any name', () {
+      final body = _classBody(content, 'TakesWorldNamedWWrapper');
+      expect(body, contains('takesWorldNamedW(world);'));
+    });
+  });
 }
