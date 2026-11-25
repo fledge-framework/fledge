@@ -11,12 +11,17 @@ import 'systems/calendar_systems.dart';
 /// automatically advance the in-game clock each frame, plus the
 /// calendar change events.
 ///
+/// [CalendarSystem] advances the clock by `WallTime.delta`, so the app
+/// also needs `WallTimePlugin` (in any order). If `WallTime` is missing
+/// when the system first runs it throws a [StateError] instead of leaving
+/// the clock silently frozen.
+///
 /// ## Usage
 ///
 /// ```dart
-/// app.addPlugin(CalendarPlugin(
-///   config: CalendarConfig.farmingSim(),
-/// ));
+/// app
+///   ..addPlugin(const WallTimePlugin())
+///   ..addPlugin(CalendarPlugin(config: CalendarConfig.farmingSim()));
 ///
 /// // Access the calendar in systems
 /// final calendar = world.getResource<Calendar>()!;
@@ -25,7 +30,7 @@ import 'systems/calendar_systems.dart';
 /// }
 ///
 /// // Or subscribe to events
-/// for (final event in world.eventReader<DayChangedEvent>().iter()) {
+/// for (final event in world.eventReader<DayChangedEvent>().read()) {
 ///   print('New day: ${event.newDay}');
 /// }
 /// ```

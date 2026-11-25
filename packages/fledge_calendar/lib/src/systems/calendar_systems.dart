@@ -56,10 +56,18 @@ class CalendarSystem implements System {
   }
 
   void _runSync(World world) {
-    final time = world.getResource<WallTime>();
     final calendar = world.getResource<Calendar>();
+    if (calendar == null) return;
 
-    if (time == null || calendar == null) return;
+    final time = world.getResource<WallTime>();
+    if (time == null) {
+      throw StateError(
+        'CalendarSystem needs the WallTime resource, but it is missing, so '
+        'the in-game clock cannot advance. Add WallTimePlugin to the app '
+        '(app.addPlugin(const WallTimePlugin())) or insert a WallTime '
+        'resource yourself.',
+      );
+    }
 
     // Changes made outside this system since its last run (skipToNextMorning,
     // skipToHour, setTime). Their edge flags are about to be cleared.

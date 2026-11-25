@@ -33,7 +33,7 @@
 ///
 /// 3. Or subscribe to events:
 /// ```dart
-/// for (final event in world.eventReader<DayChangedEvent>().iter()) {
+/// for (final event in world.eventReader<DayChangedEvent>().read()) {
 ///   print('New day: ${event.newDay}');
 /// }
 /// ```

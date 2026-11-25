@@ -295,4 +295,61 @@ void main() {
       expect((season.oldSeason, season.newSeason), (0, 1));
     });
   });
+
+  group('timeString', () {
+    test('uses 12-hour AM/PM on a 24-hour day', () {
+      final calendar = Calendar(config: _config(), day: 1, hour: 18)
+        ..minute = 5;
+      expect(calendar.timeString, '6:05 PM');
+      calendar.hour = 0;
+      expect(calendar.timeString, '12:05 AM');
+    });
+
+    test('falls back to hour:minute when hoursPerDay is not 24', () {
+      final calendar = Calendar(
+        config: const CalendarConfig(hoursPerDay: 20),
+        day: 1,
+        hour: 17,
+      )..minute = 5;
+      expect(calendar.timeString, '17:05');
+      expect(calendar.fullTimeString, 'Day 1 - 17:05');
+    });
+  });
+
+  group('WallTime requirement', () {
+    test('CalendarSystem throws a clear StateError without WallTime', () {
+      final world = World()
+        ..insertResource(Calendar(config: _config()))
+        ..registerEvent<HourChangedEvent>()
+        ..registerEvent<DayChangedEvent>()
+        ..registerEvent<SeasonChangedEvent>()
+        ..registerEvent<YearChangedEvent>()
+        ..registerEvent<CurfewTriggeredEvent>();
+      expect(
+        () => const CalendarSystem().run(world),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            contains('WallTimePlugin'),
+          ),
+        ),
+      );
+    });
+
+    test(
+      'CalendarPlugin without WallTimePlugin fails on the first tick',
+      () async {
+        final app = App()..addPlugin(const CalendarPlugin());
+        await expectLater(app.tick(), throwsStateError);
+      },
+    );
+
+    test('plugin order does not matter', () async {
+      final app = App()
+        ..addPlugin(const CalendarPlugin())
+        ..addPlugin(const WallTimePlugin());
+      await app.tick();
+    });
+  });
 }

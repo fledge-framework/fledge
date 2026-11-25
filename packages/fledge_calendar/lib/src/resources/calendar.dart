@@ -238,8 +238,16 @@ class Calendar {
 
   // === Time Display ===
 
-  /// Format time for display (e.g., "6:30 AM").
+  /// Format time for display.
+  ///
+  /// With the standard 24-hour day ([CalendarConfig.hoursPerDay] == 24)
+  /// this is 12-hour clock time, e.g. "6:30 AM". With any other day length
+  /// AM/PM is meaningless, so it falls back to plain `hour:minute` with a
+  /// zero-padded minute, e.g. "17:05" on a 20-hour day.
   String get timeString {
+    if (config.hoursPerDay != 24) {
+      return '$hour:${minute.toString().padLeft(2, '0')}';
+    }
     final displayHour = hour % 12 == 0 ? 12 : hour % 12;
     final ampm = hour < 12 ? 'AM' : 'PM';
     return '$displayHour:${minute.toString().padLeft(2, '0')} $ampm';

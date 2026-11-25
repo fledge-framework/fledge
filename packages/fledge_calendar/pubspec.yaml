@@ -16,7 +16,6 @@ topics:
 
 environment:
   sdk: ^3.11.0
-  flutter: ">=3.41.0"
 dependencies:
   fledge_ecs: ^0.6.0
   meta: ^1.17.0
