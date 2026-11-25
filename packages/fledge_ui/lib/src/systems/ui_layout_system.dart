@@ -23,9 +23,10 @@ const double _kApproximateLineHeightFactor = 1.2;
 /// Walks the UI hierarchy each frame and writes a [UiComputedRect] on
 /// every entity that carries [UiNode].
 ///
-/// Runs in `Schedules.postUpdate` — after `TransformPropagateSystem`
-/// and camera systems, so the [ViewportSize] resource is up-to-date
-/// for the frame being rendered. The extractor then reads the
+/// Runs in `Schedules.postUpdate` and lays roots out inside the
+/// [ViewportSize] resource's rect (`UiPlugin` makes sure one exists;
+/// keep it at the size of your `FledgeUiOverlay`). Registered by hand
+/// without that resource, it does nothing. The extractor then reads the
 /// computed rect in `Schedules.extract`.
 ///
 /// Algorithm:

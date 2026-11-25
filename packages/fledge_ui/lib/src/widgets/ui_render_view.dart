@@ -1,5 +1,15 @@
 import 'dart:ui' as ui;
-import 'dart:ui' show Canvas, Color, Offset, Paint, RRect, Radius, Rect;
+import 'dart:ui'
+    show
+        BlendMode,
+        Canvas,
+        Color,
+        ColorFilter,
+        Offset,
+        Paint,
+        RRect,
+        Radius,
+        Rect;
 
 import 'package:fledge_ecs/fledge_ecs.dart' show App;
 import 'package:fledge_render_2d/fledge_render_2d.dart'
@@ -9,6 +19,7 @@ import 'package:flutter/widgets.dart'
         BuildContext,
         CustomPaint,
         CustomPainter,
+        Listenable,
         Positioned,
         SizedBox,
         Size,
@@ -33,13 +44,18 @@ import '../extraction/extracted_ui_element.dart';
 ///
 /// Internally this is a `Stack`: the child is drawn first, then a
 /// second `CustomPaint` layer walks the app's [RenderWorld] for
-/// [ExtractedUiElement]s and paints them (images through the sprite
-/// drawer's atlas path, text and rounded rects directly via
-/// `Canvas.drawParagraph` / `Canvas.drawRRect`).
+/// [ExtractedUiElement]s and paints them in `sortKey` order: images with
+/// `Canvas.drawImageRect` (the texture resolved through the app's
+/// `CanvasSpriteDrawer`), panels with `Canvas.drawRect` /
+/// `Canvas.drawRRect`, and text with `Canvas.drawParagraph`.
 ///
-/// The widget is stateless and pulls fresh data every paint —
-/// callers still drive `App.tick()` themselves and rebuild the
-/// widget after each tick.
+/// ## Repaint policy
+///
+/// The overlay repaints every time the enclosing widget rebuilds, and
+/// also whenever [repaint] notifies: pass the same once-a-frame
+/// listenable you give `FledgeRenderView.repaint` (e.g. a
+/// `ValueNotifier<int>` bumped after `App.tick`) and the HUD repaints
+/// every frame without rebuilding any widget.
 class FledgeUiOverlay extends StatelessWidget {
   /// The Fledge app whose UI extractions will be painted.
   final App app;
@@ -47,8 +63,17 @@ class FledgeUiOverlay extends StatelessWidget {
   /// The game render widget drawn underneath the UI pass.
   final Widget child;
 
+  /// Repaints the UI pass whenever it notifies (once a frame, from the
+  /// game loop), without a rebuild. `null` = repaint only on rebuild.
+  final Listenable? repaint;
+
   /// Creates a UI overlay.
-  const FledgeUiOverlay({super.key, required this.app, required this.child});
+  const FledgeUiOverlay({
+    super.key,
+    required this.app,
+    required this.child,
+    this.repaint,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +82,9 @@ class FledgeUiOverlay extends StatelessWidget {
         Positioned.fill(child: child),
         Positioned.fill(
           child: SizedBox.expand(
-            child: CustomPaint(painter: _UiPainter(app: app)),
+            child: CustomPaint(
+              painter: _UiPainter(app: app, repaint: repaint),
+            ),
           ),
         ),
       ],
@@ -68,7 +95,7 @@ class FledgeUiOverlay extends StatelessWidget {
 class _UiPainter extends CustomPainter {
   final App app;
 
-  _UiPainter({required this.app});
+  _UiPainter({required this.app, super.repaint});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -121,8 +148,7 @@ class _UiPainter extends CustomPainter {
     }
 
     final srcRect = image.sourceRect ?? image.texture.fullRect;
-    final paint = Paint()..color = image.tint;
-    canvas.drawImageRect(resolved, srcRect, image.rect, paint);
+    canvas.drawImageRect(resolved, srcRect, image.rect, _tintPaint(image.tint));
   }
 
   void _drawRect(Canvas canvas, ExtractedUiRect r) {
@@ -165,4 +191,18 @@ class _UiPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _UiPainter oldDelegate) => true;
+}
+
+/// The paint `FledgeUiOverlay` draws a `UiImage` with: `drawImageRect`
+/// only takes the alpha of `Paint.color`, so a coloured [tint] multiplies
+/// the texels through a modulate colour filter (alpha included). White
+/// keeps the plain paint, with the tint's alpha as the opacity.
+Paint _tintPaint(Color tint) {
+  final paint = Paint();
+  if (tint.r == 1 && tint.g == 1 && tint.b == 1) {
+    paint.color = tint;
+  } else {
+    paint.colorFilter = ColorFilter.mode(tint, BlendMode.modulate);
+  }
+  return paint;
 }

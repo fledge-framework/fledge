@@ -8,8 +8,10 @@ import 'package:fledge_render_2d/fledge_render_2d.dart' show TextureHandle;
 /// filling the entity's computed rect, tinted by [tint]. If
 /// [sourceRect] is `null`, the full texture is used.
 ///
-/// Rendered through the sprite pipeline at [DrawLayer.ui] so the same
-/// backend batching path handles UI images and gameplay sprites.
+/// Drawn by `FledgeUiOverlay` with `Canvas.drawImageRect`, the texture
+/// resolved through the app's `CanvasSpriteDrawer`. If the texture can't
+/// be resolved, the rect is filled with [tint] instead so the element
+/// stays visible.
 class UiImage {
   /// The texture to render.
   final TextureHandle texture;
@@ -17,8 +19,9 @@ class UiImage {
   /// Source rectangle in texture pixels. `null` uses the whole texture.
   final Rect? sourceRect;
 
-  /// Tint colour applied to the sampled texels. White (`0xFFFFFFFF`)
-  /// is the identity.
+  /// Tint colour multiplied into the sampled texels, alpha included.
+  /// White (`0xFFFFFFFF`) is the identity; a translucent white only fades
+  /// the image.
   final Color tint;
 
   /// Creates a UI image.
