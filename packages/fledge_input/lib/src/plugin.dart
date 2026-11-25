@@ -164,9 +164,17 @@ class InputPlugin<S extends Enum> implements Plugin {
 /// Configuration for the input plugin.
 class InputPluginConfig {
   /// Default deadzone for analog inputs.
+  @Deprecated(
+    'Never read: set deadzones per binding (InputBinding.deadzone, '
+    'CompositeVector2Binding.deadzone) or per action (InputMap.deadzones). '
+    'Will be removed.',
+  )
   final double defaultDeadzone;
 
   /// Whether to consume handled key events (prevent propagation).
+  @Deprecated(
+    'Never read: InputWidget decides key-event propagation. Will be removed.',
+  )
   final bool consumeKeyEvents;
 
   const InputPluginConfig({

@@ -77,8 +77,9 @@ class SpatialAudioConfig {
   /// Distance at which volume starts to fall off.
   final double referenceDistance;
 
-  /// How quickly volume falls off with distance.
-  /// 1.0 = linear, 2.0 = inverse square, etc.
+  /// Slope multiplier for the linear falloff between [referenceDistance]
+  /// and the maximum distance: 1.0 reaches silence at the maximum distance,
+  /// 2.0 halfway there. The curve is always linear.
   final double rolloffFactor;
 
   /// Maximum pan value (-1.0 to 1.0).

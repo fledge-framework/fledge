@@ -18,7 +18,7 @@
 // The generated `.g.dart` must be up to date. In CI this is guaranteed by
 // `melos run build_runner` running before `melos run test`. Locally, run
 // `melos run build_runner` (or `cd examples/basic_ecs &&
-// dart run build_runner build --delete-conflicting-outputs`) before running
+// dart run build_runner build`) before running
 // these tests.
 //
 // # Why not build_test?

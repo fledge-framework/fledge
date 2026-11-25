@@ -59,6 +59,10 @@ class SlotTypeMismatchError extends Error {
 /// [Edge]s. Nodes are executed in topological order, ensuring that
 /// dependencies are satisfied before each node runs.
 ///
+/// Not wired in by default: `RenderPlugin` runs extraction in
+/// `Schedules.extract` and `FledgeRenderView` paints the render world
+/// directly. Use this to build a custom pipeline.
+///
 /// Example:
 /// ```dart
 /// final graph = RenderGraph();

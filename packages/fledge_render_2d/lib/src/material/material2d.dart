@@ -25,6 +25,10 @@ enum BlendMode {
 ///
 /// Materials are compared by [id] for batching purposes - sprites
 /// with the same material ID can be batched together.
+///
+/// Materials are data only: the built-in sprite drawers
+/// (`CanvasSpriteDrawer`, `GpuSpriteDrawer`) ignore them. Use them from a
+/// custom `SpriteDrawer` or render node.
 abstract class Material2D {
   /// Unique identifier for this material.
   ///

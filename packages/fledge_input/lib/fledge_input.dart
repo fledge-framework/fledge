@@ -31,17 +31,16 @@
 /// // Use in your app
 /// await App()
 ///   .addPlugin(inputPlugin)
-///   .addSystem(playerSystem)
+///   .addSystem(FunctionSystem('player', run: playerSystem))
 ///   .run();
 ///
 /// // Wrap your game widget with InputWidget
 /// InputWidget(
 ///   world: app.world,
-///   child: GameWidget(app: app),
+///   child: FledgeRenderView(app: app),
 /// )
 ///
 /// // Read actions in a system
-/// @system
 /// void playerSystem(World world) {
 ///   final actions = world.getResource<ActionState>()!;
 ///

@@ -4,7 +4,6 @@
 ///
 /// - **Transform2D**: Local position, rotation, and scale
 /// - **GlobalTransform2D**: Computed world-space transform
-/// - **Camera2D**: 2D camera with orthographic projection
 /// - **Sprite**: Textured quad rendering
 /// - **SpriteBatch**: Efficient batched sprite rendering
 ///
@@ -24,17 +23,8 @@
 /// The [TransformPropagateSystem] computes [GlobalTransform2D] from
 /// the entity hierarchy.
 ///
-/// ## Camera
-///
-/// Create a camera with [Camera2D]:
-///
-/// ```dart
-/// world.spawn()
-///   ..insert(Transform2D.from(0, 0))
-///   ..insert(Camera2D(
-///     projection: OrthographicProjection(viewportHeight: 20),
-///   ));
-/// ```
+/// Cameras live in `fledge_camera_2d`, which writes the [ActiveCameraView]
+/// that [FledgeRenderView] draws through.
 ///
 /// ## Sprites
 ///

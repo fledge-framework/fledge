@@ -1,8 +1,7 @@
 /// Retained-mode game HUD/UI for Fledge.
 ///
-/// Phase 7 of the restructure: anchor-based layout with containers,
-/// text, images, and solid panels painted on top of the sprite
-/// pipeline.
+/// Anchor-based layout with containers, text, images, and solid panels,
+/// painted by [FledgeUiOverlay] on top of the game view.
 ///
 /// ## Contents
 ///
@@ -21,8 +20,8 @@
 ///   on top of a game render view.
 /// - [UiPlugin] — wires the layout system and extractor.
 ///
-/// Focus, keyboard, and gamepad navigation are deliberately out of
-/// scope for this phase — see the phase 7b plan.
+/// UI entities are not focusable. For controller-driven menus, build them
+/// from Flutter widgets and use `GamepadFocusBridge` from `fledge_input`.
 library;
 
 export 'src/components/ui_anchor.dart';

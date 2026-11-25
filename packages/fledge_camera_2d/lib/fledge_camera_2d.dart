@@ -1,6 +1,6 @@
 /// 2D camera components and cinematics for Fledge.
 ///
-/// Extracted from `fledge_render_2d` in Phase 6a. Depends on
+/// Depends on
 /// `fledge_render_2d` for the [CameraView] and [Viewport] types that
 /// flow through the render graph — the reverse dependency does not
 /// exist.

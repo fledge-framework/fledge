@@ -55,6 +55,10 @@ class SyncRenderSystem implements RenderSystem {
 /// The render schedule organizes systems into stages that run in sequence.
 /// Within each stage, systems run in the order they were added.
 ///
+/// Not wired in by default: `RenderPlugin` runs extraction in
+/// `Schedules.extract` and `FledgeRenderView` paints the render world
+/// directly. Use this to build a custom pipeline.
+///
 /// Example:
 /// ```dart
 /// final schedule = RenderSchedule();

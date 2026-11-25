@@ -1,11 +1,8 @@
 /// Runtime observability for Fledge — FPS, entity count, schedule
 /// ordering ambiguities, and debug gizmos for colliders and cameras.
 ///
-/// Phase 9 of the restructure. This package is intentionally
-/// **runtime observability only** — a reflection-based inspector
-/// (editable component fields, entity tree drilling) is deferred; it
-/// needs `@reflectable` codegen + a full `TypeRegistry`, which is
-/// bigger than a v0.2 phase.
+/// This package is **runtime observability only**: there is no
+/// reflection-based inspector (editable component fields, entity tree).
 ///
 /// ## Contents
 ///

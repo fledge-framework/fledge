@@ -103,11 +103,16 @@ class TiledPluginConfig {
   final bool respectLayerVisibility;
 
   /// Chunk size for infinite maps (in tiles).
-  ///
-  /// Only chunks within view will be loaded/rendered.
+  @Deprecated(
+    'Never read: infinite maps use the chunks stored in the TMX file, and '
+    'TilemapExtractor culls tiles against the camera. Will be removed.',
+  )
   final int chunkSize;
 
   /// Maximum number of chunks to keep loaded for infinite maps.
+  @Deprecated(
+    'Never read: every chunk in the TMX file is loaded. Will be removed.',
+  )
   final int maxLoadedChunks;
 
   const TiledPluginConfig({

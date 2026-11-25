@@ -33,7 +33,7 @@
 ///   app.world.spawn()
 ///     ..insert(Transform2D.from(100, 100))
 ///     ..insert(GlobalTransform2D.identity())
-///     ..insert(ParticleEmitter.fire(texture: myParticleTexture));
+///     ..insert(ParticleEmitterPresets.fire(texture: myParticleTexture));
 ///
 ///   await app.run();
 /// }
