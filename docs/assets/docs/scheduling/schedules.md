@@ -199,11 +199,14 @@ doesn't swap event buffers, apply state transitions or advance ticks. With an
 ## Driving the frame
 
 - **Flutter**: your game widget calls `app.tick()` from a `Ticker` (an
-  `AnimationController` listener, for example), once per display frame. See
+  `AnimationController` listener, for example), once per display frame, and
+  calls `app.dispose()` from its own `dispose`. See
   [Rendering Overview](/docs/rendering/overview) and the
   [Drifter example](/docs/examples/drifter).
 - **Headless or console**: `await app.run()` calls `tick()` in a loop until
-  `app.stop()`. On its own that loop runs as fast as it can; add
+  `app.stop()`, yielding to the event loop after each tick so timers and I/O
+  get a turn even when every system is synchronous, then calls `dispose()` to
+  clean up the plugins. On its own that loop runs as fast as it can; add
   `FrameLimiterPlugin` to cap it (see
   [Time & Fixed Timestep](/docs/scheduling/time#frame-limiter)).
 - **Tests**: `await app.tick()` as many times as you need. `app.runStartup()`

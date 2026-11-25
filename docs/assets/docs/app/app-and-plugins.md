@@ -118,13 +118,16 @@ How you call it depends on where the game runs.
 Your game widget calls `app.tick()` from a `Ticker`, once per display frame,
 and paints after it completes. [Your First App](/docs/getting-started/first-app#the-frame-loop)
 shows the full pattern, including handing `WallTime` the vsync clock. Don't
-call `app.run()` in a Flutter app: its loop never yields to the frame
-scheduler between ticks.
+call `app.run()` in a Flutter app: its loop isn't paced by the display. When
+the widget is done with the app, call `app.dispose()` from the widget's
+`dispose` so plugins get their `cleanup` (see [When cleanup runs](#when-cleanup-runs)).
 
 ### Headless
 
 For a server, a simulation or a console game, `run()` calls `tick()` in a loop
-until `stop()`:
+until `stop()`, then calls `onStop` and `dispose()`. After each tick it yields
+to the event loop, so timers, I/O and stream events get a turn every frame
+even when every system is synchronous:
 
 ```dart
 Future<void> main() async {
@@ -142,7 +145,7 @@ Future<void> main() async {
 }
 ```
 
-On its own, `run()` spins as fast as it can. `FrameLimiterPlugin` caps it: a
+On its own, `run()` runs frames as fast as it can. `FrameLimiterPlugin` caps it: a
 `FrameStartSystem` in `first` and a `FrameLimiterSystem` in `last` that waits
 out the rest of each frame (drift-corrected, yielding to the event loop while
 it waits). It's for standalone loops only: in Flutter the display already
@@ -215,16 +218,24 @@ consequences:
 
 ### When cleanup runs
 
-`cleanup()` is called when `run()` returns (in reverse order of addition), and
-for plugins removed by `resetToSessionCheckpoint` (below). Nothing calls it
-when a Flutter widget simply stops ticking the app, so if a plugin holds
-something that must be released (a file watcher, a socket), release it from
-your widget's `dispose` too.
+`app.dispose()` calls every plugin's `cleanup()` once, in reverse order of
+addition. `run()` calls it when its loop ends; an app you tick yourself (a
+Flutter widget's `Ticker`) needs you to call it, typically from the widget's
+`dispose`. It's idempotent, and afterwards `tick()`, `run()` and
+`resetToSessionCheckpoint()` throw a `StateError`; `isDisposed` tells you
+whether it has happened. `resetToSessionCheckpoint` (below) also calls
+`cleanup` on the plugins it removes.
+
+```dart
+final app = App()..addPlugin(WallTimePlugin());
+await app.tick();
+app.dispose(); // WallTimePlugin.cleanup runs once
+```
 
 ### Plugin groups
 
-`PluginGroup` bundles plugins: override `plugins`, and adding the group adds
-each of them.
+`PluginGroup` bundles plugins: override `plugins`, and adding the group builds
+each of them, in order.
 
 ```dart
 class GamePlugins extends PluginGroup {
@@ -238,11 +249,12 @@ class GamePlugins extends PluginGroup {
 final app = App()..addPlugin(GamePlugins());
 ```
 
-Two caveats: when `run()` ends, each grouped plugin's `cleanup` is called
-twice (once for the plugin, once through the group), and
-`resetToSessionCheckpoint` builds grouped plugins again more than once. Keep
-`cleanup` idempotent, or prefer `addPlugins([...])`, which has neither
-problem. Fledge itself ships no plugin groups.
+The group is a single plugin as far as the app is concerned: each child is
+built once per build (and once more per `resetToSessionCheckpoint`) and
+cleaned up once, in reverse order, when the group is. `plugins` is read on the
+first build only, so a getter that creates new instances, as above, is fine:
+the instances that were built are the ones cleaned up. Fledge itself ships no
+plugin groups.
 
 ## Checking the schedule
 
@@ -259,13 +271,18 @@ final app = App()
 
 for (final issue in app.checkScheduleOrdering()) {
   // movement runs before clamp by registration order only.
-  // Reasons: both write component Position. ...
+  // Reasons: both write component Position. Add
+  // `before: [<clamp's systemName>]` to movement, or ...
   print(issue);
 }
 ```
 
 `checkScheduleOrdering()` returns one `OrderingAmbiguity` per pair of
-conflicting systems whose order comes only from registration. Keep it empty
+conflicting systems whose order comes only from registration. Its
+`suggestion` names the fix in terms of `systemName` constants: for
+class-based systems the class is known, so it reads
+`before: [ClampSystem.systemName]`; for function systems it describes the
+constant instead. Keep it empty
 with a test. See
 [Ordering & Sets](/docs/scheduling/ordering-and-sets#checking-with-checkscheduleordering).
 

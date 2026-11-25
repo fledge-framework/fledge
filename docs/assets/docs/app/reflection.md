@@ -102,9 +102,9 @@ Things to know:
   ignored, and any `Entity` stored inside a component (a target, a `Parent`)
   still points at the old id. Remap references yourself after loading a
   group of entities.
-- **Observers don't fire** for components inserted by `entityFromJson`
-  (it uses `insertDynamic`, which bypasses them). Run any setup your
-  `onAdd` observers would have done yourself.
+- **Observers fire** as they do for `world.insert`: `entityFromJson` (through
+  `insertDynamic`) fires `onAdd` for each component it inserts, and
+  `insertDynamic` fires `onChange` when it replaces an existing component.
 - `insertDynamic`, `getByComponentId` and `getArchetypeId` on `World` are the
   low-level, untyped building blocks the serializer uses.
 

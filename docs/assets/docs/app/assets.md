@@ -199,28 +199,37 @@ Tiled plugins. Register each file:
 | `HotReloadWatcher` method | Does |
 |---|---|
 | `watch(path, assets, id)` | When `path` changes, reload entry `id` through its loader |
-| `watchWithCallback(path, callback)` | When `path` changes, run your async callback |
+| `watchWithCallback(path, callback)` | When `path` changes, start your async callback (failures go to `onCallbackError`) |
 | `unwatch(path)` | Stop reacting to `path` |
 | `dispose()` | Stop every file watcher (`AssetPlugin.cleanup` calls it) |
 
-Each change is queued, and the poll system runs the queued reloads at the
-start of the next frame. The reloaded value replaces the old one in the same
-entry, so every handle sees it. Before reloading, the watcher marks the entry
-dirty; Fledge doesn't consume that set, so after a tick
-`assets.drainDirtyReloads()` tells you which entries were reloaded (to rebuild
-anything you derived from them).
+When a watched file changes, the watcher marks its entry dirty with
+`assets.markDirty(id)`. At the start of the next frame `HotReloadPollSystem`
+drains the dirty set of every store it knows (each store passed to `watch`,
+and every `Assets` resource in the world) and starts a reload for each entry.
+You can call `markDirty` yourself too, to reload an entry for any other
+reason; an entry marked twice before the next frame reloads once.
 
-Limitations:
+The poll system is synchronous: it starts the reloads and returns, so a
+reload never holds up the frame, and a frame with nothing dirty does no async
+work. The reloaded value replaces the old one in the same entry, so every
+handle sees it, a frame or more later, when the loader completes. A failed
+reload keeps the old value and records the error like a failed load
+(`assets.error(id)`, `handle.error`, `onLoadError`). If an entry is reloaded
+again before the previous reload finishes, the newest one wins. To rebuild
+something derived from a reloaded asset, watch the same path with
+`watchWithCallback` as well.
 
-- **Desktop development only.** `HotReloadPollSystem` is `async` and awaits
-  each reload, file I/O included, inside the frame, so a reload stalls that
-  frame. That's acceptable while editing, not in a shipped game: keep
-  `enableHotReload` off in release builds. Don't enable it on the web, where
-  there is no file system to watch.
+Things to know:
+
+- **Development builds.** File watching is meant for editing on desktop;
+  keep `enableHotReload` off in release builds.
+- **On the web it does nothing.** There's no `dart:io` file watching there,
+  so `watch` and `watchWithCallback` start no watcher (they don't throw) and
+  no file change ever arrives. `markDirty` still works.
 - A changed file matches a watched path exactly or, failing that, by file
   name alone, so two watched files with the same name in different folders
   both reload.
-- Failed reloads are silent, like failed loads: the old value stays.
 
 ## See also
 

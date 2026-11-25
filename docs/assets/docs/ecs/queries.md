@@ -111,7 +111,8 @@ if (query.isEmpty) return;
 print(query.count()); // number of matches
 print(query.isNotEmpty); // true
 
-// First match, or null. Handy for singletons such as the player.
+// The one match, or null if there's none. Handy for singletons such as
+// the player. Throws a StateError if more than one entity matches.
 final player = query.single();
 if (player != null) {
   final (entity, pos) = player;
@@ -122,8 +123,10 @@ if (player != null) {
 final all = query.iter().toList();
 ```
 
-`single()` returns the *first* match; it doesn't check that there is exactly
-one.
+`single()` checks that there is at most one match: it returns `null` for
+none and throws a `StateError` for two or more, so a second "player" shows up
+as an error instead of a silently ignored entity. When any one match will do,
+use `query.iter().firstOrNull`.
 
 ## Read and write intent: `queryMut`
 

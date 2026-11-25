@@ -67,6 +67,7 @@ A plugin typically registers its observers in `build` via
 | `world.insert(e, c)`, replacing an existing `T` | `onChange` (with the new value) |
 | `world.spawnWith([...])`, `Commands.spawn()` | `onAdd` for each component |
 | `world.spawn()..insert(...)` | `onAdd` for each insert |
+| `world.entityFromJson(json)`, `world.insertDynamic(e, type, c)` | `onAdd` (or `onChange` when `insertDynamic` replaces an existing component) |
 | `world.remove<T>(e)` | `onRemove` (with the removed value) |
 | `world.despawn(e)`, `despawnRecursive`, `Commands.despawn` | `onRemove` for every component |
 | `world.spawnOne<T>(c)` | nothing (by design: the cheap path for throwaway entities) |

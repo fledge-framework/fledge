@@ -153,7 +153,9 @@ final app = App()
 for (final issue in app.checkScheduleOrdering()) {
   print(issue);
   // OrderingAmbiguity(stage=update): move runs before collide by
-  // registration order only. Reasons: ...
+  // registration order only. Reasons: ... Add
+  // `before: [CollideSystem.systemName]` to move, or
+  // `after: [MoveSystem.systemName]` to collide, ...
 }
 ```
 
@@ -165,6 +167,8 @@ Each `OrderingAmbiguity` has:
 | `systemA` | Runs first under the current registration |
 | `systemB` | Runs second |
 | `reasons` | Why they conflict, e.g. `both write component Position` |
+| `systemAClass`, `systemBClass` | The systems' class names, when they're public class-based systems; otherwise `null` |
+| `suggestion` | The fix, naming `systemName` constants: `before: [CollideSystem.systemName]` when the class is known, `<collide's systemName>` when it isn't (a `FunctionSystem`) |
 
 A test that asserts the list is empty catches the trap the moment it's
 introduced:

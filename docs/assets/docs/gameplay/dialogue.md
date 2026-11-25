@@ -119,10 +119,12 @@ Shopkeeper: Welcome! You have {$gold} gold. #greeting
 
 Expressions support numbers, strings, booleans, `null`, `$variables`,
 arithmetic (`+ - * / %`, `+` also joins strings), comparisons and
-`and`/`or`/`not`, with the usual precedence and parentheses. A malformed
-condition is false and a malformed `<<set>>` or `<<declare>>` changes nothing
-and logs a warning (logger `fledge_yarn.variables`), so a typo doesn't crash a
-scene. `VariableStorage.executeSet` returns whether it applied.
+`and`/`or`/`not`, with the usual precedence and parentheses. A typo doesn't
+crash a scene, and none passes silently: a malformed condition counts as false
+and a malformed `<<set>>` changes nothing, each logging a warning (logger
+`fledge_yarn.variables`); a malformed `<<declare>>` changes nothing and logs
+a warning on logger `dialogue`. `VariableStorage.executeSet` returns whether
+it applied.
 
 Not supported: Yarn functions (`visited()`, `dice()` and so on), `<<once>>`,
 line groups, and smart variables. Choice text isn't interpolated. An unset
