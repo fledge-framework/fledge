@@ -1,6 +1,6 @@
 # fledge_net
 
-Multiplayer networking for [Fledge](https://fledge-framework.dev) games: host-authoritative sessions, an ECS replication layer (spawn/despawn, hierarchy, snapshots, interest management), owned inputs with authority checks, client prediction and reconciliation, tick-keyed interpolation, RPCs, and an encrypted UDP transport. Pure Dart.
+Multiplayer networking for [Fledge](https://fledge-framework.dev) games: host-authoritative sessions, an ECS replication layer (spawn/despawn, hierarchy, snapshots, interest management), owned inputs with authority checks, client prediction and reconciliation, tick-keyed interpolation, RPCs and player actions, over UDP with optional AES-256-GCM encryption. Pure Dart.
 
 [![pub package](https://img.shields.io/pub/v/fledge_net.svg)](https://pub.dev/packages/fledge_net)
 
@@ -8,8 +8,10 @@ Multiplayer networking for [Fledge](https://fledge-framework.dev) games: host-au
 
 ```yaml
 dependencies:
-  fledge_net: ^0.4.0
+  fledge_net: ^0.6.0
 ```
+
+Desktop first (Windows, macOS, Linux). The UDP transport uses `dart:io` (IPv4), so the web isn't supported. For Steam relays, lobbies and identities, add [`fledge_net_steam`](https://pub.dev/packages/fledge_net_steam).
 
 ## Quick Start
 
@@ -98,11 +100,11 @@ NetworkConfig(
 );
 ```
 
-With `holdForReturn`, a returning player gets their entities back (`NetPeerConnected.returned`). See the Player Identity section of the documentation for hubs and mixed verifiers.
+With `holdForReturn`, a returning player gets their entities back (`NetPeerConnected.returned`). See [Security and identity](https://fledge-framework.dev/docs/networking/security-identity#player-identity) for hubs and mixed verifiers.
 
 ## Documentation
 
-See the [Fledge documentation site](https://fledge-framework.dev/docs/plugins/net) for the co-op quickstart, how replication works, and the low-level API.
+See the [networking docs](https://fledge-framework.dev/docs/networking/overview) for the co-op quickstart, [how replication works](https://fledge-framework.dev/docs/networking/replication), [configuration](https://fledge-framework.dev/docs/networking/configuration), and the [low-level API](https://fledge-framework.dev/docs/networking/low-level).
 
 ## License
 

@@ -8,7 +8,7 @@ Ref-counted asset management for the [Fledge](https://fledge-framework.dev) ECS 
 
 ```yaml
 dependencies:
-  fledge_assets: ^0.2.1
+  fledge_assets: ^0.6.0
 ```
 
 ## Quick Start
@@ -33,7 +33,7 @@ shared.drop();
 
 ## Documentation
 
-See the [Fledge documentation site](https://fledge-framework.dev/docs/plugins/assets) for guides, API reference, and advanced usage.
+See the [Fledge documentation site](https://fledge-framework.dev/docs/app/assets) for guides, API reference, and advanced usage.
 
 ## License
 

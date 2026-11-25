@@ -11,13 +11,20 @@ dependencies:
   fledge_audio: ^0.6.0
 ```
 
+## Requirements
+
+Flutter 3.50+: flutter_soloud 5.3 builds its native library with Dart build
+hooks. Desktop (Windows, macOS, Linux) is the primary target; flutter_soloud
+also runs on Android, iOS and the web (with its own web setup), untested with
+Fledge.
+
 ## Quick Start
 
 ```dart
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_audio/fledge_audio.dart';
 
-void main() async {
+void setUpAudio() {
   final app = App()
     ..addPlugin(WallTimePlugin())
     ..addPlugin(AudioPlugin());
@@ -30,18 +37,25 @@ void main() async {
 
   // Music waits for its clip; crossfades run on the audio thread.
   app.world.playMusic('theme', crossfade: const Duration(seconds: 2));
-  app.world.playSfx('explosion', position: (120, 40));
 
-  await app.run();
+  // Sound effects play only once their clip is ready: one asked for before
+  // then is skipped, with an AudioFailed event saying why.
+  app.world.playSfx('explosion', position: (120, 40));
 }
 ```
+
+Tick the app from your game widget. Clips are read from the app's assets, so
+if you drive it with `app.run()` from `main` instead, call
+`WidgetsFlutterBinding.ensureInitialized()` first.
 
 ## Sound sources
 
 An `AudioSource` is a sound that belongs to an entity: an engine hum, a
-fan, a campfire. With a `Transform2D` (and an active `AudioListener`) it is
-attenuated and panned by where the entity is; without one it plays centred
-at its volume times its channel's volume.
+fan, a campfire. With a transform (and an active `AudioListener`) it is
+attenuated and panned by where the entity is in world space (its
+`GlobalTransform2D`, or its `Transform2D` if it has none, so sources and
+listeners on child entities follow their parents); without one it plays
+centred at its volume times its channel's volume.
 
 ```dart
 // Starts looping as soon as the clip has loaded.
@@ -62,16 +76,20 @@ the frame. A `play()` waits for the engine and the clip; a `stop()` before
 then cancels the start (an `autoPlay` source included). Despawning the
 entity, or removing its `AudioSource`, stops its sound. Its `volume` and
 `playbackSpeed` (speed and pitch, 1.0 as recorded) may change while it
-plays: an engine's hum rises with `playbackSpeed = 0.8 + revs * 0.6`.
+plays: an engine's hum rises with `playbackSpeed = 0.8 + revs * 0.6`. When
+its sound ends an `AudioSourceFinished` (with the `soundKey` and `entity`)
+is sent; `SfxFinished` is only for `playSfx` effects. There's no Doppler
+effect (`AudioListener.velocityX`/`velocityY` are deprecated and unused).
 
 Nothing in the plugin holds up a frame. Channel volumes reach music that is
-already playing, audio pauses while the window lacks focus, and everything
+already playing, audio pauses while the app isn't focused (from Flutter's app
+lifecycle, so `fledge_window` isn't needed), and everything
 above the `AudioBackend` interface can be tested with a fake backend
 (`AudioPlugin(backend: ...)`).
 
 ## Documentation
 
-See the [Fledge documentation site](https://fledge-framework.dev/docs/plugins/audio) for guides, API reference, and advanced usage.
+See the [Fledge documentation site](https://fledge-framework.dev/docs/platform/audio) for guides, API reference, and advanced usage.
 
 ## License
 

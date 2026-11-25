@@ -4,13 +4,13 @@ In-game calendar and time-of-day system for [Fledge](https://fledge-framework.de
 
 [![pub package](https://img.shields.io/pub/v/fledge_calendar.svg)](https://pub.dev/packages/fledge_calendar)
 
-> Previously published as `fledge_time`. The old package name still resolves via a re-export shim for one release — new code should depend on `fledge_calendar` directly.
+> Previously published as `fledge_time`. Depend on `fledge_calendar` instead; the old class names (`GameTime`, `GameTimePlugin`, `GameTimeSystem`) remain as deprecated aliases of `Calendar`, `CalendarPlugin` and `CalendarSystem`.
 
 ## Installation
 
 ```yaml
 dependencies:
-  fledge_calendar: ^0.2.1
+  fledge_calendar: ^0.6.0
 ```
 
 ## Quick Start
@@ -34,6 +34,8 @@ void main() async {
 }
 ```
 
+`CalendarPlugin` advances the clock by `WallTime.delta`, so add `WallTimePlugin` too (plugin order doesn't matter). If `WallTime` is missing, `CalendarSystem` throws a `StateError` on its first run rather than leaving the clock frozen.
+
 ## Skipping Time
 
 ```dart
@@ -45,7 +47,7 @@ calendar.skipToNextMorning();
 
 ## Documentation
 
-See the [Fledge documentation site](https://fledge-framework.dev/docs/plugins/calendar) for guides, API reference, and advanced usage.
+See the [Fledge documentation site](https://fledge-framework.dev/docs/gameplay/calendar) for guides, API reference, and advanced usage.
 
 ## License
 

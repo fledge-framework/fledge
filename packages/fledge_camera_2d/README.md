@@ -8,7 +8,7 @@
 
 ```yaml
 dependencies:
-  fledge_camera_2d: ^0.2.1
+  fledge_camera_2d: ^0.6.0
 ```
 
 ## Quick Start
@@ -19,17 +19,23 @@ import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart';
 
 final app = App()
+  ..addPlugin(WallTimePlugin()) // follow and shake use WallTime.delta
   ..addPlugin(RenderPlugin())
-  ..addPlugin(const CameraPlugin());
+  ..addPlugin(const CameraPlugin())
+  ..addSystem(TransformPropagateSystem(), schedule: Schedules.preUpdate);
 
-// Spawn a camera that follows the player.
-app.world.spawn()
-  ..insert(Transform2D.from(0, 0))
-  ..insert(GlobalTransform2D.identity())
-  ..insert(Camera2D(projection: OrthographicProjection()))
-  ..insert(CameraFollow(target: playerEntity, smoothing: 0.15))
-  ..insert(CameraShake());
+void spawnCamera(World world, Entity player) {
+  // A camera that follows the player.
+  world.spawn()
+    ..insert(Transform2D.from(0, 0))
+    ..insert(GlobalTransform2D.identity())
+    ..insert(Camera2D(projection: OrthographicProjection()))
+    ..insert(CameraFollow(target: player, smoothing: 0.15))
+    ..insert(CameraShake());
+}
 ```
+
+`CameraPlugin` adds `CameraFollowSystem`, `CameraShakeSystem`, `ParallaxSystem`, `CameraTransitionSystem` and `ActiveCameraViewSystem` to `Schedules.postUpdate`, plus a `ViewportSize` resource (1280×720 until you update it). `ActiveCameraViewSystem` publishes the lowest-`order` active camera to `ActiveCameraView`, which `FledgeRenderView` draws through. Screen shake is a render-time offset added there: `CameraShake` never moves the camera's `Transform2D`, so follow and bounds see the steady position. The widget path uses the camera's position and (with `scaleWidgetView`) its zoom; it doesn't apply camera rotation, isometric/oblique skew, or `Camera2D.viewport`, so split-screen isn't supported there.
 
 ### Follow feel
 
@@ -43,7 +49,7 @@ Both follows use `WallTime.delta`, so they feel the same at 60 Hz and 144 Hz and
 
 ### Keeping the camera inside the map
 
-Give `CameraFollow` a `bounds` rect and the follow stops at its edges, so nothing outside the map shows. It uses the projection's visible size and the `ViewportSize` resource; on an axis where the map is smaller than the view, the camera centres on it.
+Give `CameraFollow` a `bounds` rect and the follow stops at its edges, so nothing outside the map shows; on an axis where the map is smaller than the view, the camera centres on it. The view's size is what the widget actually shows: the size it was last painted at, divided by the camera's widget zoom (one world unit per logical pixel unless `scaleWidgetView`). Before the first paint, or without `FledgeRenderView`, the `ViewportSize` resource stands in for the widget's size; nothing updates it, so keep it equal to your view's size in that case.
 
 ```dart
 CameraFollow.marker(bounds: const Rect.fromLTWH(0, 0, 2048, 1280))
@@ -73,7 +79,7 @@ For even scrolling, also time frames by the display: when a Flutter ticker drive
 
 ## Documentation
 
-See the [Fledge documentation site](https://fledge-framework.dev/docs/plugins/camera_2d) for guides, API reference, and advanced usage.
+See the [Fledge documentation site](https://fledge-framework.dev/docs/rendering/cameras) for guides, API reference, and advanced usage.
 
 ## License
 

@@ -1,6 +1,6 @@
 # fledge_physics
 
-Physics and collision handling for [Fledge](https://fledge-framework.dev) games — layer-based collision detection, wall-sliding resolution, and sensor trigger zones.
+Physics and collision handling for [Fledge](https://fledge-framework.dev) games — layer-based collision detection, wall-sliding resolution, sensor trigger zones, and A* grid pathfinding.
 
 [![pub package](https://img.shields.io/pub/v/fledge_physics.svg)](https://pub.dev/packages/fledge_physics)
 
@@ -8,7 +8,7 @@ Physics and collision handling for [Fledge](https://fledge-framework.dev) games 
 
 ```yaml
 dependencies:
-  fledge_physics: ^0.2.1
+  fledge_physics: ^0.6.0
 ```
 
 ## Quick Start
@@ -41,7 +41,9 @@ void main() async {
 
 ## Documentation
 
-See the [Fledge documentation site](https://fledge-framework.dev/docs/plugins/physics) for guides, API reference, and advanced usage — including the [system-ordering rules](https://fledge-framework.dev/docs/plugins/physics#system-ordering) that prevent movement-through-walls bugs.
+- [Physics](https://fledge-framework.dev/docs/gameplay/physics): collision, layers, sensors, events, fixed-timestep mode, and the [system-ordering rule](https://fledge-framework.dev/docs/gameplay/physics#moving-things-system-ordering) that prevents movement-through-walls bugs.
+- [Pathfinding](https://fledge-framework.dev/docs/gameplay/pathfinding): `CollisionGrid`, A* `Pathfinder`, movement costs, path smoothing and lanes.
+- [API reference](https://pub.dev/documentation/fledge_physics/latest/)
 
 ## License
 

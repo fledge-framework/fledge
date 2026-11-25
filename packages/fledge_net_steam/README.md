@@ -68,7 +68,8 @@ Ship the `steam_api` library with the game, where `Steam.init` looks first (`Ste
 ## How it fits fledge_net
 
 - **Addresses** are Steam users: `NetAddress('steam:<SteamID64>', 0)` (`steamAddress`). The host part is the same string as the user's player identity. `SteamTransport` resolves `steam:` hosts itself, so they never reach DNS.
-- **Datagrams** go unreliable and unbuffered: fledge_net does its own reliability, ordering and fragmentation-free framing, so it behaves the same over Steam as over UDP.
+- **Datagrams** go unreliable and unbuffered: fledge_net does its own reliability, ordering and fragmentation, so it behaves the same over Steam as over UDP.
+- **Encryption**: `NetworkConfig.enableEncryption` works over Steam, but it adds little: Steam already relays the traffic and authenticates each sender, and the pre-shared key still has to reach every player out of band.
 - **Sessions** started by others are accepted by default (`acceptSession`); who may actually join is decided by the host's handshake (password, identity verifier).
 - **Identities**: `SteamIdentityProvider` presents `steam:<SteamID64>` with no proof, and `SteamIdentityVerifier` accepts it only when the connect came from that Steam user, whom Steam has authenticated. To accept LAN `dev:` players on the same host, combine verifiers: `SchemeVerifier({'steam': const SteamIdentityVerifier(), 'dev': const TrustingVerifier()})`.
 
@@ -80,7 +81,7 @@ Ship the `steam_api` library with the game, where `Steam.init` looks first (`Ste
 
 ## Documentation
 
-See the [Fledge documentation site](https://fledge-framework.dev/docs/plugins/net) (Steam section).
+See the [Steam page](https://fledge-framework.dev/docs/networking/steam) of the Fledge networking docs.
 
 ## License
 

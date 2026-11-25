@@ -8,7 +8,7 @@ Action-based input system for [Fledge](https://fledge-framework.dev) games. Maps
 
 ```yaml
 dependencies:
-  fledge_input: ^0.2.1
+  fledge_input: ^0.6.0
 ```
 
 ## Quick Start
@@ -17,6 +17,7 @@ dependencies:
 import 'package:flutter/services.dart';
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_input/fledge_input.dart';
+import 'package:fledge_render_2d/fledge_render_2d.dart';
 
 enum Actions { jump, move, attack }
 
@@ -32,12 +33,15 @@ final app = App()
     context: InputContext(name: 'default', map: inputMap),
   ));
 
-// Wrap your Flutter game widget with InputWidget.
+// Wrap the widget that shows your game with InputWidget
+// (FledgeRenderView from fledge_render_2d, here).
 InputWidget(
   world: app.world,
-  child: GameWidget(app: app),
+  child: FledgeRenderView(app: app),
 );
 ```
+
+Systems that turn input into movement (writing `Velocity`) go in `Schedules.preUpdate` (or `Schedules.fixedPreUpdate` with `PhysicsMode.fixed`), so they run before physics; actions are resolved in `Schedules.first`.
 
 ## Buttons in the fixed step
 
@@ -90,6 +94,14 @@ final map = InputMap.builder()
 world.getResource<InputContextRegistry>()!.replaceMap('gameplay', map);
 ```
 
+## Contexts and the cursor
+
+- **Switching by hand**: `InputContextRegistry.push(name)` puts a context over the current one (a pause menu) and `pop()` removes it. Popping the last one goes back to the base context: the current state's context, the default, or the last `setActive`.
+- **Priority**: `InputContext.priority` picks among the base context and the pushed ones; the highest wins, ties go to the most recently pushed. With every priority at `0` (the default) the top of the stack is active.
+- **Cursor mode**: the plugin keeps `CursorState` in step with the active context's `cursorMode`, so the cursor changes as soon as the context does, without `InputWidget` rebuilding. `addListener` on the registry hears each change of active context.
+- **Mouse buttons**: `InputWidget` remembers which buttons each pointer pressed and lets go of exactly those, so back (`3`) and forward (`4`), and a button pressed while another is held, release properly.
+- **Gamepads off**: `InputPlugin(enableGamepad: false)` (published as the `InputSettings` resource) stops every `InputWidget` on the world polling gamepads; `InputWidget(enableGamepad: false)` does it for one widget.
+
 ## Gamepads
 
 Bind gamepad buttons and axes by their standard names (the `GamepadButtonBinding` / `GamepadAxisBinding` constants: `a`, `left_bumper`, `dpad_up`, `left_stick_x`, ...). Raw platform events are normalized through the `gamepads` package, so one binding works on Windows, macOS and Linux with any recognised controller; Xbox and PlayStation layouts share names (`left_bumper` is LB and L1). Stick Y is +1 **down**, like the screen and the keyboard composites. Raw platform keys still work as binding names too.
@@ -140,9 +152,11 @@ GamepadFocusBridge(
 
 **The virtual pointer** reaches what focus order doesn't (or deliberately leaves out). Clicking the right stick shows it; the right stick moves it, A clicks (and drags while held), X right-clicks, and B, the right stick's click, the d-pad or the left stick put it away. `VirtualPointer` sends its moves and presses as real mouse events from device `VirtualPointer.device`, so `MouseRegion`, `GestureDetector` and drags answer it exactly as they would a mouse; add that device to `ActiveInputDevice.gamepadPointerDevices` so it never counts as the mouse.
 
+See [Controller Menus](https://fledge-framework.dev/docs/ui/controller-menus) for the full guide.
+
 ## Documentation
 
-See the [Fledge documentation site](https://fledge-framework.dev/docs/plugins/input) for guides, API reference, and advanced usage.
+See the [Input guide](https://fledge-framework.dev/docs/platform/input) on the Fledge documentation site, and the [API reference](https://pub.dev/documentation/fledge_input/latest/).
 
 ## License
 

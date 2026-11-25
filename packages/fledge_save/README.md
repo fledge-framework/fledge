@@ -8,7 +8,7 @@ Save/load system for [Fledge](https://fledge-framework.dev) games. Resource seri
 
 ```yaml
 dependencies:
-  fledge_save: ^0.2.1
+  fledge_save: ^0.6.0
 ```
 
 ## Quick Start
@@ -117,7 +117,7 @@ await prefs.write({...data, 'music': 0.6});
 
 ## Documentation
 
-See the [Fledge documentation site](https://fledge-framework.dev/docs/plugins/save) for guides, API reference, and advanced usage.
+See the [Fledge documentation site](https://fledge-framework.dev/docs/gameplay/save) for guides, API reference, and advanced usage.
 
 ## License
 

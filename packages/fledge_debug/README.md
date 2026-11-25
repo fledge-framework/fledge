@@ -8,7 +8,7 @@ Runtime observability for [Fledge](https://fledge-framework.dev) — FPS / entit
 
 ```yaml
 dependencies:
-  fledge_debug: ^0.2.1
+  fledge_debug: ^0.6.0
 ```
 
 ## Quick Start
@@ -19,6 +19,7 @@ import 'package:fledge_debug/fledge_debug.dart';
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart';
 import 'package:fledge_ui/fledge_ui.dart';
+import 'package:flutter/widgets.dart';
 
 final app = App()
   ..addPlugin(WallTimePlugin())
@@ -28,11 +29,13 @@ final app = App()
   ..addPlugin(const DebugPlugin());
 
 // Wrap the render view: gizmos outermost, then the UI overlay, then the sprite view.
-runApp(DebugGizmosLayer(
+Widget gameView() => DebugGizmosLayer(
   app: app,
   child: FledgeUiOverlay(app: app, child: FledgeRenderView(app: app)),
-));
+);
 ```
+
+`DebugPlugin` inserts `DebugConfig` (keeping one you inserted first), `FrameStats`, `SystemStats` and `ScheduleOrderingReport`. Pass `overlay: false` if you don't use `fledge_ui`. Gizmos (`showAabbGizmos`, `showColliderGizmos`, `showCameraFrustum`) are off by default; turn them on by inserting `config.copyWith(...)`.
 
 ### Performance panel for Flutter UIs
 
@@ -49,7 +52,7 @@ Stack(children: [
 
 ## Documentation
 
-See the [Fledge documentation site](https://fledge-framework.dev/docs/plugins/debug) for guides, API reference, and advanced usage.
+See the [Fledge documentation site](https://fledge-framework.dev/docs/ui/debug) for guides, API reference, and advanced usage.
 
 ## License
 

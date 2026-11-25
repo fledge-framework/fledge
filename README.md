@@ -73,7 +73,7 @@ Add Fledge to your project:
 
 ```yaml
 dependencies:
-  fledge_ecs: ^0.2.1
+  fledge_ecs: ^0.6.0
 ```
 
 Create your first ECS app:
@@ -88,54 +88,66 @@ class Position {
 }
 
 class Velocity {
-  double x, y;
+  double x, y; // units per second
   Velocity(this.x, this.y);
 }
 
-// Systems operate on component queries
+// Systems declare what they read and write, then query for it
 class MovementSystem extends System {
+  static const String systemName = 'movement';
+
   @override
   SystemMeta get meta => SystemMeta(
-    name: 'movement',
-    writes: {ComponentId.of<Position>()},
+    name: systemName,
     reads: {ComponentId.of<Velocity>()},
+    writes: {ComponentId.of<Position>()},
     resourceReads: {WallTime},
   );
 
   @override
   void run(World world) {
-    final time = world.getResource<WallTime>()!;
+    final dt = world.getResource<WallTime>()!.delta;
     for (final (_, pos, vel) in world.query2<Position, Velocity>().iter()) {
-      pos.x += vel.x * time.delta;
-      pos.y += vel.y * time.delta;
+      pos.x += vel.x * dt;
+      pos.y += vel.y * dt;
     }
   }
 }
 
-void main() async {
+Future<void> main() async {
+  var frames = 0;
   final app = App()
     ..addPlugin(WallTimePlugin())
-    ..addSystem(MovementSystem());
+    ..addPlugin(const FrameLimiterPlugin(targetFps: 60))
+    ..addSystem(MovementSystem(), schedule: Schedules.update)
+    ..onTick((app) {
+      if (++frames == 60) app.stop();
+    });
 
   // Spawn an entity
-  app.world.spawn()
-    ..insert(Position(0, 0))
-    ..insert(Velocity(10, 5));
+  final ball = app.world.spawnWith([Position(0, 0), Velocity(10, 5)]);
 
-  // Run the game loop
+  // Run the loop for 60 frames (about a second)
   await app.run();
+
+  final pos = app.world.get<Position>(ball)!;
+  print('${pos.x.toStringAsFixed(1)}, ${pos.y.toStringAsFixed(1)}'); // about 10, 5
 }
 ```
+
+This runs headless. In a Flutter game your widget calls `app.tick()` once per
+display frame instead; see
+[Your First App](https://fledge-framework.dev/docs/getting-started/first-app).
 
 ## Documentation
 
 Visit [fledge-framework.dev](https://fledge-framework.dev) for:
 
-- [Getting Started Guide](https://fledge-framework.dev/docs/getting-started)
+- [Getting Started](https://fledge-framework.dev/docs/getting-started/introduction)
 - [Core Concepts](https://fledge-framework.dev/docs/getting-started/core-concepts)
-- [Plugins](https://fledge-framework.dev/docs/plugins/overview)
-- [API Reference](https://fledge-framework.dev/docs/api)
-- [Examples](https://fledge-framework.dev/docs/examples)
+- [Package Catalog](https://fledge-framework.dev/docs/app/packages)
+- [Examples](https://fledge-framework.dev/docs/examples/basic-ecs)
+- API reference: each package's dartdoc on pub.dev, e.g. [fledge_ecs](https://pub.dev/documentation/fledge_ecs/latest/)
 
 ## Examples
 

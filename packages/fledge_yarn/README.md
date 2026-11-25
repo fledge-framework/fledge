@@ -8,7 +8,7 @@
 
 ```yaml
 dependencies:
-  fledge_yarn: ^0.2.1
+  fledge_yarn: ^0.6.0
 ```
 
 ## Quick Start
@@ -18,29 +18,36 @@ import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_yarn/fledge_yarn.dart';
 import 'package:flutter/services.dart';
 
-Future<void> main() async {
+Future<App> buildApp() async {
   final app = App()
-    ..addPlugin(YarnPlugin())
+    ..addPlugin(WallTimePlugin()) // drives the typewriter
+    ..addPlugin(YarnPlugin()) // YarnProject, VariableStorage, CommandHandler
     ..addPlugin(DialogueCorePlugin()); // event-driven dialogue layer
 
+  // Needs WidgetsFlutterBinding.ensureInitialized() (or runApp) first.
   final project = app.world.getResource<YarnProject>()!;
   project.parse(await rootBundle.loadString('assets/dialogue/npcs.yarn'));
 
   app.world.eventWriter<DialogueStartRequested>().send(
     const DialogueStartRequested('sara_greeting'),
   );
-
-  await app.run();
+  return app; // tick it once per Flutter frame from your game widget
 }
 ```
 
-`DialogueCorePlugin` adds a `DialogueState` resource, a set of request /
-notification events, holding-command support (`registerHoldingCommand`),
-and the `DialogueBoxWidget` — see the plugin docs for the full API.
+`DialogueCorePlugin` (added after `YarnPlugin`) adds a `DialogueState`
+resource with a typewriter, request events (`DialogueAdvanceRequested`,
+`DialogueChoiceSelected`, `DialogueSkipRequested`, `DialogueStopRequested`,
+...), notification events (`DialogueLineShown`, `DialogueChoicesReady`,
+`DialogueEnded`, ...), holding commands (`registerHoldingCommand`) and the
+built-in `<<declare>>` command. A plain pausing handler
+(`CommandHandler.registerPausing`) holds the dialogue the same way, released
+by a `DialogueHoldReleased` carrying the command's name. `DialogueBoxWidget`
+draws the current line and choices.
 
 ## Documentation
 
-See the [Fledge documentation site](https://fledge-framework.dev/docs/plugins/yarn) for guides, API reference, and advanced usage.
+See the [Fledge documentation site](https://fledge-framework.dev/docs/gameplay/dialogue) for guides, API reference, and advanced usage.
 
 ## License
 

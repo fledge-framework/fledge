@@ -8,7 +8,7 @@ CPU-driven particle system for [Fledge](https://fledge-framework.dev) games — 
 
 ```yaml
 dependencies:
-  fledge_particles: ^0.2.1
+  fledge_particles: ^0.6.0
 ```
 
 ## Quick Start
@@ -18,19 +18,24 @@ import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_particles/fledge_particles.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart';
 
-Future<void> main() async {
+App buildApp(TextureHandle particleTexture) {
   final app = App()
-    ..addPlugin(RenderPlugin())
-    ..addPlugin(const ParticlePlugin());
+    ..addPlugin(WallTimePlugin()) // the particle systems use WallTime.delta
+    ..addPlugin(RenderPlugin()) // before ParticlePlugin, or nothing is drawn
+    ..addPlugin(const ParticlePlugin())
+    ..addSystem(TransformPropagateSystem(), schedule: Schedules.preUpdate);
 
+  // Particles spawn at the emitter's GlobalTransform2D position.
   app.world.spawn()
     ..insert(Transform2D.from(100, 100))
     ..insert(GlobalTransform2D.identity())
-    ..insert(ParticleEmitterPresets.fire(texture: myParticleTexture));
+    ..insert(ParticleEmitterPresets.fire(texture: particleTexture));
 
-  await app.run();
+  return app;
 }
 ```
+
+`ParticlePlugin` and `RenderPlugin` (which owns `Extractors`) can be added in either order: if `RenderPlugin` comes second, the particle extractor registers itself on the first tick. Without `RenderPlugin` the particles simulate headless. Each particle is drawn as a `size`-wide square of the whole texture, tinted by its colour.
 
 ### One-off bursts
 
@@ -49,7 +54,7 @@ chips.burst(6, Vector2(x, y));
 
 ## Documentation
 
-See the [Fledge documentation site](https://fledge-framework.dev/docs/plugins/particles) for guides, API reference, and advanced usage.
+See the [Fledge documentation site](https://fledge-framework.dev/docs/rendering/particles) for guides, API reference, and advanced usage.
 
 ## License
 

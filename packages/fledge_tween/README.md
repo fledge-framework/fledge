@@ -8,7 +8,7 @@ Easing curves and value tweens for [Fledge](https://fledge-framework.dev) games.
 
 ```yaml
 dependencies:
-  fledge_tween: ^0.2.1
+  fledge_tween: ^0.6.0
 ```
 
 ## Quick Start
@@ -17,11 +17,15 @@ dependencies:
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_tween/fledge_tween.dart';
 
-Future<void> main() async {
-  final position = Position(0, 0);
+class Position {
+  double x = 0;
+}
+
+void main() {
+  final position = Position();
 
   final app = App()
-    ..addPlugin(WallTimePlugin())
+    ..addPlugin(WallTimePlugin()) // tweens advance by WallTime.delta
     ..addPlugin(const TweenPlugin());
 
   app.world.spawn().insert(Tweener(
@@ -34,14 +38,15 @@ Future<void> main() async {
     ),
     onSample: (value) => position.x = value as double,
   ));
-
-  await app.run();
+  // Tick the app each frame (from a Flutter ticker in a game).
 }
 ```
 
+`Curve`, `Curves` and `Tween` share names with Flutter's, and `lerpDouble` with `dart:ui`'s. In files that import both, hide one side (`import 'package:material_ui/material_ui.dart' hide Curve, Curves, Tween;`) or import `fledge_tween` with a prefix.
+
 ## Documentation
 
-See the [Fledge documentation site](https://fledge-framework.dev/docs/plugins/tween) for guides, API reference, and advanced usage.
+See the [Fledge documentation site](https://fledge-framework.dev/docs/rendering/tween) for guides, API reference, and advanced usage.
 
 ## License
 
