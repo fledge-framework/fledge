@@ -1,5 +1,5 @@
 import 'package:fledge_yarn/fledge_yarn.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 /// Batch 8 #31 — a pausing command handler holds the runner until
 /// resume() is called. Statements between the pausing command and the

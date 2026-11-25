@@ -1,4 +1,4 @@
-import 'dart:ui' show Offset;
+import 'dart:ui' show Offset, Rect;
 
 import 'package:fledge_physics/fledge_physics.dart';
 import 'package:fledge_render_2d/fledge_render_2d.dart'
@@ -228,6 +228,22 @@ class AssetTilemapLoader implements TilemapLoader {
       }
     }
 
+    // Tiles drawn with characters (`y_sort`): the span whose bottom is
+    // their line (`LoadedTileset.ySortSpans`).
+    final ySortSpans = <int, Rect>{};
+    for (final MapEntry(key: localId, value: props) in tileProperties.entries) {
+      if (!(props.getBool('y_sort') ?? false)) continue;
+      final sortY = props.getDouble('sort_y');
+      final shapes = collisionShapes[localId] ?? const <CollisionShape>[];
+      ySortSpans[localId] = sortY != null
+          ? Rect.fromLTRB(0, sortY, tileWidth.toDouble(), sortY)
+          : shapes.isEmpty
+          ? Rect.fromLTWH(0, 0, tileWidth.toDouble(), tileHeight.toDouble())
+          : shapes
+                .map((shape) => shape.bounds)
+                .reduce((a, b) => a.expandToInclude(b));
+    }
+
     return LoadedTileset(
       source: tileset.source ?? '',
       name: tileset.name ?? '',
@@ -244,6 +260,7 @@ class AssetTilemapLoader implements TilemapLoader {
       collisionShapes: collisionShapes,
       tileImages: tileImages,
       tileClasses: tileClasses,
+      ySortSpans: ySortSpans,
     );
   }
 

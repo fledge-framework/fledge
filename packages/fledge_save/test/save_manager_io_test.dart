@@ -253,9 +253,8 @@ void main() {
         },
       });
       // Simulate a crash mid-write: a truncated temp file next to the save.
-      await File(
-        p.join(saveDirPath(), 'save.json.tmp'),
-      ).writeAsString('{"version": 1, "resou');
+      await File(p.join(saveDirPath(), 'save.json.tmp'))
+          .writeAsString('{"version": 1, "resou');
 
       final manager = SaveManager(config: config(keepBackup: true));
       final player = _Player();

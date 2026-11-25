@@ -16,7 +16,7 @@ You are the Fledge monorepo/workflow specialist.
 - `melos run build_runner` runs `dart run build_runner build --delete-conflicting-outputs` in every package that `dependsOn: build_runner`. `*.g.dart` files are gitignored, so CI runs it before BOTH `analyze` and `test` — locally you must do the same after a fresh clone or after touching any `@component`/`@system`-annotated code.
 - `examples/basic_ecs` needs its own `dart run build_runner build --delete-conflicting-outputs` before it compiles (see the CI workflow).
 - Root `dependency_overrides` contains only `meta: ^1.18.0` (analyzer 12.x needs it; `flutter_test` pins older). Do NOT re-add a `test_api` override — `flutter_test` pins `test_api: 0.7.11` exactly and forcing a newer one makes the resolver pick an incompatible `test`. See the comment above `dependency_overrides`.
-- SDK floor: Dart 3.11, Flutter 3.41 (`sdk: ^3.11.0` in every package). CONTRIBUTING.md's SDK line is stale.
+- SDK floor: pure-Dart packages `sdk: ^3.11.0`; packages depending on Flutter `sdk: ^3.14.0` + `flutter: ">=3.50.0"` (see CLAUDE.md).
 - Other scripts: `format` (`dart format .`), `publish:dry` (`dart pub publish --dry-run` on non-private packages), `release` (runs `scripts/release.dart`; use `dart run scripts/release.dart X.Y.Z [--dry-run]` on any OS, or `melos run release` with a `VERSION` env var — melos runs script bodies through cmd.exe on Windows, so release logic must stay in Dart, not shell; it refuses a dirty tree, bumps every `packages/fledge_*` to that version, writes per-package + workspace CHANGELOGs, and creates the `chore(release): vX.Y.Z` commit; it does not push). Avoid `melos run clean`: it runs `dart pub cache clean`, which wipes the GLOBAL pub cache, not just this repo.
 - Release flow: push the release commit to `main` → `ci.yml`'s `tag-release` job tags `vX.Y.Z` after CI passes → `publish-packages.yml` publishes via pub.dev OIDC in its `PACKAGES` dependency order. A brand-new package must be published once manually (`scripts/publish-all.sh`, or `dart pub publish`) before OIDC publishing can claim it.
 
@@ -28,7 +28,7 @@ You are the Fledge monorepo/workflow specialist.
   3. Place it in the "Dependency Order" tiers in `CONTRIBUTING.md` (and its package table).
   4. Add it to the `pana` job's `matrix.package` list in `.github/workflows/ci.yml`.
   5. Add it to the `PACKAGES` array in `.github/workflows/publish-packages.yml` and in `scripts/publish-all.sh`, after all of its in-tree dependencies.
-  6. Use `sdk: ^3.11.0`, `resolution: workspace`, and the current shared version.
+  6. Use `sdk: ^3.11.0` (pure Dart) or `sdk: ^3.14.0` + `flutter: ">=3.50.0"` (Flutter), `resolution: workspace`, and the current shared version.
   7. If it ships a plugin: add a `test/ordering_test.dart`, and add the package as a dependency of `integration/all_plugins` (test-only workspace member, `all_plugins_integration`) with its plugin in `test/all_plugins_ordering_test.dart`. Systems in `Schedules.first` join a `FirstSets` phase.
   8. Run `melos bootstrap`, then `melos run build_runner`, `melos run analyze`, and `melos run test` to verify.
 - When a test is not running in CI: check the package filter membership first. If the package doesn't declare `flutter: sdk: flutter`, it's a Dart package; make sure it is not in the `test:dart` ignore list.

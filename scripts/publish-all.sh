@@ -69,6 +69,8 @@ PACKAGES=(
   "fledge_yarn"
   "fledge_save"
   "fledge_net"
+  # Steam transport depends on net.
+  "fledge_net_steam"
   # Tiled depends on physics + assets + camera_2d.
   "fledge_tiled"
   # Debug depends on ui + physics + camera_2d + render_2d.

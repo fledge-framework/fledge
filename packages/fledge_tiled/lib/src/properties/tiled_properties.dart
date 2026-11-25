@@ -1,4 +1,5 @@
 import 'dart:ui' show Color;
+
 import 'package:tiled/tiled.dart' as tiled;
 
 /// Type-safe wrapper for Tiled custom properties.

@@ -6,8 +6,9 @@
 /// `version` on the returned map itself, so steps don't need to.
 ///
 /// Steps may mutate and return [data] or build a new map.
-typedef SaveMigration =
-    Map<String, dynamic> Function(Map<String, dynamic> data);
+typedef SaveMigration = Map<String, dynamic> Function(
+  Map<String, dynamic> data,
+);
 
 /// Configuration for the save system.
 ///

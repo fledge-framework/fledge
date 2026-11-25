@@ -65,6 +65,7 @@ Fledge brings the power of modern ECS architecture to Flutter, enabling you to b
 | [fledge_save](packages/fledge_save) | Save/load system with versioning | [![pub](https://img.shields.io/pub/v/fledge_save.svg)](https://pub.dev/packages/fledge_save) |
 | [fledge_calendar](packages/fledge_calendar) | Game calendar and day/night cycles | [![pub](https://img.shields.io/pub/v/fledge_calendar.svg)](https://pub.dev/packages/fledge_calendar) |
 | [fledge_net](packages/fledge_net) | Multiplayer networking | [![pub](https://img.shields.io/pub/v/fledge_net.svg)](https://pub.dev/packages/fledge_net) |
+| [fledge_net_steam](packages/fledge_net_steam) | fledge_net over Steam Networking (relays, lobbies, Steam identities) | [![pub](https://img.shields.io/pub/v/fledge_net_steam.svg)](https://pub.dev/packages/fledge_net_steam) |
 
 ## Quick Start
 

@@ -1,4 +1,5 @@
 import 'dart:ui' show Color, Offset;
+
 import 'package:tiled/tiled.dart' show Layer;
 
 /// Component for a single tile layer.

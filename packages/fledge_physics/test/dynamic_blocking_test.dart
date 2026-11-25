@@ -57,90 +57,78 @@ void main() {
       expect(v.y, 0.0);
     });
 
-    test(
-      'blocksDynamic is symmetric: only one side setting the flag is not enough',
-      () async {
-        // Only A opts in; B does not. Since dynamic blocking requires
-        // the mover's own `blocksDynamic` (and the blocker to be in the
-        // pool, which needs ITS `blocksDynamic`), and B is not in the
-        // pool, A passes through.
-        final world = World()..insertResource(FixedTimestep());
-        const cfgA = CollisionConfig(blocksDynamic: true);
-        final a = _spawnDynamic(world, 0, 0, vx: 4, config: cfgA);
-        _spawnDynamic(world, 6, 0); // No config → not in blocker pool.
+    test('blocksDynamic is symmetric: only one side setting the flag is not enough', () async {
+      // Only A opts in; B does not. Since dynamic blocking requires
+      // the mover's own `blocksDynamic` (and the blocker to be in the
+      // pool, which needs ITS `blocksDynamic`), and B is not in the
+      // pool, A passes through.
+      final world = World()..insertResource(FixedTimestep());
+      const cfgA = CollisionConfig(blocksDynamic: true);
+      final a = _spawnDynamic(world, 0, 0, vx: 4, config: cfgA);
+      _spawnDynamic(world, 6, 0); // No config → not in blocker pool.
 
-        const CollisionResolutionSystem.fixed().run(world);
-        expect(world.get<Velocity>(a.entity)!.x, 4.0);
-      },
-    );
+      const CollisionResolutionSystem.fixed().run(world);
+      expect(world.get<Velocity>(a.entity)!.x, 4.0);
+    });
 
-    test(
-      'layer/mask still filters: two blocksDynamic bodies on unrelated layers pass',
-      () async {
-        final world = World()..insertResource(FixedTimestep());
-        const layerA = 1 << 4;
-        const layerB = 1 << 5;
-        const cfgA = CollisionConfig(
-          layer: layerA,
-          mask: layerA, // Only collides with own layer.
-          blocksDynamic: true,
-        );
-        const cfgB = CollisionConfig(
-          layer: layerB,
-          mask: layerB,
-          blocksDynamic: true,
-        );
-        final a = _spawnDynamic(world, 0, 0, vx: 4, config: cfgA);
-        _spawnDynamic(world, 6, 0, config: cfgB);
+    test('layer/mask still filters: two blocksDynamic bodies on unrelated layers pass', () async {
+      final world = World()..insertResource(FixedTimestep());
+      const layerA = 1 << 4;
+      const layerB = 1 << 5;
+      const cfgA = CollisionConfig(
+        layer: layerA,
+        mask: layerA, // Only collides with own layer.
+        blocksDynamic: true,
+      );
+      const cfgB = CollisionConfig(
+        layer: layerB,
+        mask: layerB,
+        blocksDynamic: true,
+      );
+      final a = _spawnDynamic(world, 0, 0, vx: 4, config: cfgA);
+      _spawnDynamic(world, 6, 0, config: cfgB);
 
-        const CollisionResolutionSystem.fixed().run(world);
-        expect(world.get<Velocity>(a.entity)!.x, 4.0);
-      },
-    );
+      const CollisionResolutionSystem.fixed().run(world);
+      expect(world.get<Velocity>(a.entity)!.x, 4.0);
+    });
 
-    test(
-      'head-on: two movers with blocksDynamic each get their moving axis zeroed',
-      () async {
-        final world = World()..insertResource(FixedTimestep());
-        const cfg = CollisionConfig(blocksDynamic: true);
-        final a = _spawnDynamic(world, 0, 0, vx: 4, config: cfg);
-        final b = _spawnDynamic(world, 6, 0, vx: -4, config: cfg);
+    test('head-on: two movers with blocksDynamic each get their moving axis zeroed', () async {
+      final world = World()..insertResource(FixedTimestep());
+      const cfg = CollisionConfig(blocksDynamic: true);
+      final a = _spawnDynamic(world, 0, 0, vx: 4, config: cfg);
+      final b = _spawnDynamic(world, 6, 0, vx: -4, config: cfg);
 
-        const CollisionResolutionSystem.fixed().run(world);
+      const CollisionResolutionSystem.fixed().run(world);
 
-        // Both bodies want to move into each other; both get blocked.
-        // Neither is pushed.
-        expect(world.get<Velocity>(a.entity)!.x, 0.0);
-        expect(world.get<Velocity>(b.entity)!.x, 0.0);
-      },
-    );
+      // Both bodies want to move into each other; both get blocked.
+      // Neither is pushed.
+      expect(world.get<Velocity>(a.entity)!.x, 0.0);
+      expect(world.get<Velocity>(b.entity)!.x, 0.0);
+    });
 
-    test(
-      'axis-by-axis slide works around a dynamic blocker just like a static one',
-      () async {
-        final world = World()..insertResource(FixedTimestep());
-        const cfg = CollisionConfig(blocksDynamic: true);
-        // Tall dynamic wall to the mover's right, spanning the full
-        // vertical range the mover could reach in one step.
-        world.spawn()
-          ..insert(Transform2D.from(6, -10))
-          ..insert(
-            Collider.single(
-              const RectangleShape(x: 0, y: 0, width: 4, height: 30),
-            ),
-          )
-          ..insert(Velocity(0, 0))
-          ..insert(cfg);
-        // Mover heads SE; should slide along Y (x blocked, y free).
-        final mover = _spawnDynamic(world, 0, 0, vx: 4, vy: 4, config: cfg);
+    test('axis-by-axis slide works around a dynamic blocker just like a static one', () async {
+      final world = World()..insertResource(FixedTimestep());
+      const cfg = CollisionConfig(blocksDynamic: true);
+      // Tall dynamic wall to the mover's right, spanning the full
+      // vertical range the mover could reach in one step.
+      world.spawn()
+        ..insert(Transform2D.from(6, -10))
+        ..insert(
+          Collider.single(
+            const RectangleShape(x: 0, y: 0, width: 4, height: 30),
+          ),
+        )
+        ..insert(Velocity(0, 0))
+        ..insert(cfg);
+      // Mover heads SE; should slide along Y (x blocked, y free).
+      final mover = _spawnDynamic(world, 0, 0, vx: 4, vy: 4, config: cfg);
 
-        const CollisionResolutionSystem.fixed().run(world);
+      const CollisionResolutionSystem.fixed().run(world);
 
-        final v = world.get<Velocity>(mover.entity)!;
-        expect(v.x, 0.0);
-        expect(v.y, 4.0);
-      },
-    );
+      final v = world.get<Velocity>(mover.entity)!;
+      expect(v.x, 0.0);
+      expect(v.y, 4.0);
+    });
 
     test(
       'static blocking still works when dynamic blocking is enabled',

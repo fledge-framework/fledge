@@ -1,5 +1,5 @@
 import 'package:fledge_yarn/fledge_yarn.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 /// Batch 8 #31 — a `<<jump>>` to a missing node used to leave the
 /// previous line visible while incrementing the line index. Now the

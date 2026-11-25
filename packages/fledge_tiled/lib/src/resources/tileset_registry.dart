@@ -114,6 +114,14 @@ class LoadedTileset {
   /// tile's.
   final Map<int, String> tileClasses;
 
+  /// The tiles drawn with characters, y-sorted, wherever they're painted
+  /// (the bool tile property `y_sort`), by local ID: the span, in the
+  /// tile's own pixels and before flips, whose bottom is the line it sorts
+  /// at. That's its collision's bounds (so a wall sorts where its base
+  /// is), the whole tile without collision, or a zero-height span at its
+  /// int property `sort_y`. See [ySortLine].
+  final Map<int, Rect> ySortSpans;
+
   const LoadedTileset({
     required this.source,
     required this.name,
@@ -130,7 +138,25 @@ class LoadedTileset {
     this.collisionShapes = const {},
     this.tileImages = const {},
     this.tileClasses = const {},
+    this.ySortSpans = const {},
   });
+
+  /// Where tile [localId], painted with Tiled's [flipFlags]
+  /// (`TileFlipFlags`), sorts among characters: the y of its line, in
+  /// pixels from the tile's top; null for a tile drawn on its layer.
+  ///
+  /// Tiled swaps x and y first (diagonal), then mirrors (horizontal,
+  /// vertical): only the swap and the vertical mirror move a line.
+  double? ySortLine(int localId, int flipFlags) {
+    final span = ySortSpans[localId];
+    if (span == null) return null;
+    final diagonal = flipFlags & 4 != 0;
+    final vertical = flipFlags & 2 != 0;
+    final top = diagonal ? span.left : span.top;
+    final bottom = diagonal ? span.right : span.bottom;
+    final height = (diagonal ? tileWidth : tileHeight).toDouble();
+    return vertical ? height - top : bottom;
+  }
 
   /// Whether each tile is its own image rather than a cell of [atlas].
   bool get isImageCollection => tileImages.isNotEmpty;

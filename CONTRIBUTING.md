@@ -10,8 +10,8 @@ Please be respectful and constructive in all interactions. We want Fledge to be 
 
 ### Prerequisites
 
-- [Dart SDK](https://dart.dev/get-dart) (3.11.0 or higher)
-- [Flutter SDK](https://flutter.dev/docs/get-started/install) (3.41.0 or higher)
+- [Dart SDK](https://dart.dev/get-dart) (3.14.0 or higher; the pure-Dart packages still support 3.11)
+- [Flutter SDK](https://flutter.dev/docs/get-started/install) (3.50.0 or higher)
 - [Melos](https://melos.invertase.dev/) for monorepo management
 
 ### Setting Up the Development Environment
@@ -209,6 +209,7 @@ Closes #123
 | `fledge_tween` | Easing curves and value tweens |
 | `fledge_particles` | CPU-driven particle system (emitters, pooling, presets) |
 | `fledge_net` | Multiplayer networking |
+| `fledge_net_steam` | `fledge_net` transport over Steam Networking, Steam lobbies and identities |
 
 ### Dependency Order
 
@@ -222,9 +223,10 @@ When making changes that affect multiple packages, be aware of the dependency or
 7. `fledge_ui` (depends on `fledge_render_2d` for `Extractors` / `RenderWorld` / `TextureHandle` / `DrawLayer` and on `fledge_camera_2d` for `ViewportSize`)
 8. `fledge_input`, `fledge_audio`, `fledge_window` (parallel; `fledge_audio` depends on `fledge_assets` for `Assets<AudioClip>`)
 9. `fledge_physics`, `fledge_yarn`, `fledge_save`, `fledge_calendar`, `fledge_tween`, `fledge_particles`, `fledge_net` (parallel; `fledge_particles` depends on `fledge_render_2d` for `ExtractedSprite` / `DrawLayer`)
-10. `fledge_tiled` (depends on `fledge_physics` (and re-exports it), `fledge_assets` for `Assets<TilemapAsset>` / `Assets<TilesetAsset>`, and `fledge_camera_2d` for `Camera2D` / `ViewportSize`)
-11. `fledge_debug` (depends on `fledge_ui` for `UiText` / `UiAnchor`, `fledge_camera_2d` for `Camera2D`, and `fledge_physics` for `Collider` / `CollisionShape`)
-12. `fledge_ecs_generator`
+10. `fledge_net_steam` (depends on `fledge_net` for `Transport` / `IdentityProvider` / `NetworkSession`)
+11. `fledge_tiled` (depends on `fledge_physics` (and re-exports it), `fledge_assets` for `Assets<TilemapAsset>` / `Assets<TilesetAsset>`, and `fledge_camera_2d` for `Camera2D` / `ViewportSize`)
+12. `fledge_debug` (depends on `fledge_ui` for `UiText` / `UiAnchor`, `fledge_camera_2d` for `Camera2D`, and `fledge_physics` for `Collider` / `CollisionShape`)
+13. `fledge_ecs_generator`
 
 ## Adding New Features
 

@@ -1,5 +1,5 @@
 import 'package:fledge_yarn/fledge_yarn.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 /// `<<wait>>` is a Yarn built-in the game handles: with a handler
 /// registered it reaches it (and a pausing one pauses the runner); with

@@ -15,7 +15,7 @@ dependencies:
   # 3.6 (the workspace SDK floor), and 13.x/14.x resolve on newer SDKs so
   # pana no longer flags the constraint against the latest stable.
   analyzer: ">=12.0.0 <15.0.0"
-  build: ^4.0.3
+  build: ^5.0.0
   source_gen: ^4.1.1
   fledge_ecs_annotations: ^0.5.0
 

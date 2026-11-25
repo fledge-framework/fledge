@@ -19,9 +19,9 @@ void repairWangTiles(
   String tmxContent,
   Map<String, String> tsxContents,
 ) {
-  final elements = XmlDocument.parse(
-    tmxContent,
-  ).rootElement.findElements('tileset').toList();
+  final elements = XmlDocument.parse(tmxContent).rootElement
+      .findElements('tileset')
+      .toList();
   for (var i = 0; i < map.tilesets.length && i < elements.length; i++) {
     final tileset = map.tilesets[i];
     if (tileset.wangSets.every((set) => set.wangTiles.isNotEmpty)) continue;

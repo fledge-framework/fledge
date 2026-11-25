@@ -727,8 +727,30 @@ This places tiles into the correct `DrawLayer` range:
 | DrawLayer | Sort Key Range | Purpose |
 |-----------|---------------|---------|
 | `ground` | 100,000 - 199,999 | Tile layers without `class="above"` |
-| `characters` | 200,000 - 299,999 | Player, NPCs, enemies |
+| `characters` | 200,000 - 299,999 | Player, NPCs, enemies, and `y_sort` tiles |
 | `foreground` | 300,000 - 399,999 | Tile layers with `class="above"` |
+
+#### Y-Sorted Tiles
+
+Some tiles belong with the characters rather than under or over them: the
+front wall of a room, a counter, a fence. A character standing behind one
+should be hidden by it, and one standing in front should be drawn over it.
+Give such a tile the bool property `y_sort` in its tileset, and wherever
+it's painted on a layer without `class="above"` it's drawn in
+`DrawLayer.characters`, sorted by y like a character, at its line:
+
+- the bottom of its collision rectangles (Tiled's tile collision editor), so
+  a wall sorts where its base is;
+- its own bottom edge, if it has no collision;
+- or its int property `sort_y` (pixels from the tile's top), when set.
+
+Flips move the line with the tile. Sorting at the collision's bottom keeps
+the order unambiguous: a body can't stand with its feet inside a solid
+rectangle, so it's always clearly behind the line or in front of it. Leave
+`y_sort` off anything that's walked on or that nothing can stand behind,
+such as a back wall: a sprite hung on a back wall would otherwise sort
+behind it. `LoadedTileset.ySortLine(localId, flipFlags)` gives a tile's
+line.
 
 #### Rendering Pipeline Integration
 

@@ -73,9 +73,8 @@ class _Raster {
 
 Future<Image> _whitePixel() {
   final recorder = PictureRecorder();
-  Canvas(
-    recorder,
-  ).drawRect(const Rect.fromLTWH(0, 0, 1, 1), Paint()..color = _white);
+  Canvas(recorder)
+      .drawRect(const Rect.fromLTWH(0, 0, 1, 1), Paint()..color = _white);
   return recorder.endRecording().toImage(1, 1);
 }
 

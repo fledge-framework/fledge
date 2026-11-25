@@ -6,6 +6,7 @@ import 'package:fledge_render_2d/fledge_render_2d.dart'
     show
         ActiveCameraView,
         DrawLayer,
+        DrawLayerExtension,
         Extractor,
         ExtractedSprite,
         GlobalTransform2D,
@@ -264,15 +265,31 @@ class TilemapExtractor extends Extractor {
         // Sub-order: row * 100 + layerIndex (row first, then layer index),
         // clamped into the layer range; the unclamped value rides along as
         // the precise sub-order so rows >= 1,000 still sort by row.
-        final sortKey = tileSortKey(
-          drawLayer: drawLayer,
-          row: tile.y,
-          layerIndex: layer.layerIndex,
-        );
-        final preciseSubOrder = tilePreciseSubOrder(
-          row: tile.y,
-          layerIndex: layer.layerIndex,
-        );
+        // A `y_sort` tile on a layer under the characters is drawn among
+        // them instead, sorted at its line (its collision's bottom): a
+        // wall's base, so whoever stands behind it is drawn behind it.
+        final line = drawLayer == DrawLayer.ground
+            ? tileset.ySortLine(tile.localId, tile.flipFlags)
+            : null;
+        final int sortKey;
+        final double preciseSubOrder;
+        if (line != null) {
+          final lineY = worldY + s4 * line * py;
+          sortKey = DrawLayer.characters.sortKey(
+            subOrder: DrawLayerExtension.ySortSubOrder(lineY),
+          );
+          preciseSubOrder = lineY * DrawLayerExtension.ySortScale;
+        } else {
+          sortKey = tileSortKey(
+            drawLayer: drawLayer,
+            row: tile.y,
+            layerIndex: layer.layerIndex,
+          );
+          preciseSubOrder = tilePreciseSubOrder(
+            row: tile.y,
+            layerIndex: layer.layerIndex,
+          );
+        }
 
         final sprite = tileToSprite(
           texture: tileset.atlas.texture,
