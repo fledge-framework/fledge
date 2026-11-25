@@ -122,6 +122,41 @@ void main() {
       expect(loader.calls, 2);
     });
 
+    test('a failed load is recorded and reported, not swallowed', () async {
+      final assets = Assets<String>();
+      final reported = <String>[];
+      assets.onLoadError = (path, error, _) => reported.add(path);
+      final h = assets.load('missing', _StringLoader({}));
+
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(h.get(), isNull);
+      expect(h.isReady, isFalse);
+      expect(h.error, isA<StateError>());
+      expect(assets.hasError(h.id), isTrue);
+      expect(reported, ['missing']);
+    });
+
+    test(
+      'a failed reload keeps the value; a later success clears the error',
+      () async {
+        final store = <String, String>{'p': 'v1'};
+        final assets = Assets<String>();
+        final h = assets.load('p', _StringLoader(store));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(h.error, isNull);
+
+        store.remove('p');
+        await assets.reload(h.id);
+        expect(h.get(), 'v1');
+        expect(h.error, isA<StateError>());
+
+        store['p'] = 'v2';
+        await assets.reload(h.id);
+        expect(h.get(), 'v2');
+        expect(h.error, isNull);
+      },
+    );
+
     test('reload on an add()-only entry is a no-op (no path/loader)', () async {
       final assets = Assets<String>();
       final h = assets.add('static');

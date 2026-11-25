@@ -66,6 +66,10 @@ class Handle<T> {
   /// Whether the underlying entry currently holds a resolved asset.
   bool get isReady => _assets.ready(id);
 
+  /// The error from the last failed load or reload of this entry, or
+  /// `null`. See [Assets.error].
+  Object? get error => _assets.error(id);
+
   /// Decrement the reference count on this handle's entry. Idempotent
   /// per-instance — calling `drop` twice on the same [Handle] is a
   /// no-op after the first call.

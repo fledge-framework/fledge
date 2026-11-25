@@ -21,6 +21,14 @@ class AssetEntry<T> {
   /// Diagnostic label, mirrored onto the [HandleId] for readable logs.
   String debugLabel;
 
+  /// The error thrown by the last [loader] run for this entry, or `null`
+  /// if it succeeded (or hasn't finished). Cleared by a later successful
+  /// load or reload.
+  Object? error;
+
+  /// The stack trace of [error], when one was captured.
+  StackTrace? stackTrace;
+
   AssetEntry({
     this.value,
     this.refCount = 1,
@@ -90,9 +98,19 @@ class Assets<T> {
     return Handle<T>.internal(id, this);
   }
 
+  /// Called with the path, error and stack trace whenever a [load] or
+  /// [reload] fails. `null` (the default) reports nothing beyond
+  /// [error]; set it to log or surface failures.
+  void Function(String path, Object error, StackTrace stackTrace)? onLoadError;
+
   /// Begin an asynchronous load of [path] through [loader]. Returns a
   /// [Handle] immediately, whose `get()` returns `null` until the
   /// loader completes.
+  ///
+  /// If the loader throws, the value stays `null`, the error is kept
+  /// for [error] / [hasError] (and `Handle.error`), and [onLoadError] is
+  /// called. The returned future of the loader never surfaces as an
+  /// unhandled error.
   ///
   /// Loading the same [path] twice returns a fresh [Handle] onto the
   /// existing entry (dedup) — refcount is bumped rather than a second
@@ -112,22 +130,42 @@ class Assets<T> {
       debugLabel: debugLabel,
     );
     _pathIndex[path] = id;
-    // Fire the async load. Errors are swallowed into a null value —
-    // callers can check `ready()`.
-    loader
-        .load(path)
-        .then(
-          (v) {
-            final entry = _entries[id];
-            if (entry != null) entry.value = v;
-          },
-          onError: (Object _) {
-            // Deliberately silent; a future revision may add a
-            // diagnostic sink here.
-          },
-        );
+    // Fire the async load. A failure leaves the value null and is
+    // recorded on the entry (see [error]) and reported to [onLoadError].
+    _run(id, path, loader);
     return Handle<T>.internal(id, this);
   }
+
+  Future<void> _run(HandleId id, String path, Loader<T> loader) async {
+    try {
+      final v = await loader.load(path);
+      // Entry may have been dropped while we were awaiting.
+      final current = _entries[id];
+      if (current != null) {
+        current
+          ..value = v
+          ..error = null
+          ..stackTrace = null;
+      }
+    } catch (e, st) {
+      final current = _entries[id];
+      if (current != null) {
+        current
+          ..error = e
+          ..stackTrace = st;
+      }
+      onLoadError?.call(path, e, st);
+    }
+  }
+
+  /// The error from the last failed load or reload of [id], or `null`
+  /// if it loaded (or is still loading, or doesn't exist).
+  Object? error(HandleId id) => _entries[id]?.error;
+
+  /// Whether the last load or reload of [id] failed. A failed reload
+  /// keeps the previous value, so an entry can be both [ready] and
+  /// failed.
+  bool hasError(HandleId id) => _entries[id]?.error != null;
 
   /// The current value for [id], or `null` if the entry is missing or
   /// still loading.
@@ -175,14 +213,8 @@ class Assets<T> {
     final loader = entry.loader;
     final path = entry.path;
     if (loader == null || path == null) return;
-    try {
-      final v = await loader.load(path);
-      // Entry may have been dropped while we were awaiting.
-      final current = _entries[id];
-      if (current != null) current.value = v;
-    } catch (_) {
-      // Silent; matches [load]'s error policy.
-    }
+    // A failure keeps the previous value and is recorded like [load]'s.
+    await _run(id, path, loader);
   }
 
   /// All live handle ids in the store.
