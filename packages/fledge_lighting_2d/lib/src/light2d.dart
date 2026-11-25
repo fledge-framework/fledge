@@ -46,7 +46,7 @@ enum LightType { point, directional, spot }
 /// ## Shadows
 ///
 /// [castsShadow] is reserved for future SDF shadow tracing. It has no
-/// effect in the Phase 6c MVP.
+/// effect yet.
 class Light2D {
   /// The kind of light source.
   final LightType type;

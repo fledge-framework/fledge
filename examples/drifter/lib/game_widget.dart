@@ -119,8 +119,7 @@ class _DrifterWidgetState extends State<DrifterWidget>
         children: [
           // Canvas — painted by `FledgeRenderView`, which reads the
           // app's RenderWorld each frame and submits sprite batches
-          // through `CanvasSpriteDrawer.drawRawAtlas`. No more
-          // hand-drawn shapes.
+          // through `CanvasSpriteDrawer.drawRawAtlas`.
           Container(
             decoration: BoxDecoration(
               border: Border.all(color: const Color(0xFF4CAF50), width: 2),

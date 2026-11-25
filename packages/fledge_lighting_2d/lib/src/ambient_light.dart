@@ -69,9 +69,7 @@ class AmbientLight {
   ///   viewport, matching the behaviour before this field existed.
   /// - non-null: clip the ambient fill to this rect. Useful when the
   ///   camera can look past a map's edge and the game doesn't want
-  ///   the ambient tint to hang off into empty screen space
-  ///   (Batch 6 item 25 — Porios's `computerStore` map exposed the
-  ///   50 px "interact highlight" fringe past the map bounds).
+  ///   the ambient tint to hang off into empty screen space.
   ///
   /// The rect is in world coordinates; the widget applies the active
   /// camera transform to it before painting.

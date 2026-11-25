@@ -95,8 +95,8 @@ App buildApp({SaveConfig? saveConfig}) {
   // Register a 1×1 white pixel under the reserved solid-colour
   // handle. Drifter's sprites tint this via `Sprite.color`, so
   // walls/player/pickups get their colour without a real atlas.
-  // Post-Phase 5: registration goes through `Assets<Texture>` so
-  // hot-reload and ref-count paths work uniformly. The legacy
+  // Registration goes through `Assets<Texture>` so hot-reload and
+  // ref-count paths work uniformly. The legacy
   // `TextureHandle` value type in `Sprite.texture` is a compile-only
   // shim onto the same asset store.
   final textures = app.world.getResource<Assets<Texture>>()!;
@@ -167,10 +167,8 @@ Entity _spawnPlayer(World world, GameBounds bounds) {
         mask: Layers.solid | Layers.pickup,
       ),
     )
-    // The player is a green square. The old painter drew a rounded
-    // rect with an outline; the sprite pipeline draws a plain
-    // rect — an acceptable visual regression for Phase 3e. Anchor
-    // defaults to (0.5, 0.5), matching the transform-at-centre
+    // The player is a green square drawn by the sprite pipeline.
+    // Anchor defaults to (0.5, 0.5), matching the transform-at-centre
     // convention used by the collider.
     ..insert(
       Sprite(
@@ -186,11 +184,11 @@ Entity _spawnPlayer(World world, GameBounds bounds) {
 
 /// Spawn a camera that follows [player].
 ///
-/// Drifter's world is 480×320 in world units (== screen pixels), so
-/// the camera doesn't currently transform what's on screen (the
-/// `FledgeRenderView` draws in raw world space). The camera is
-/// spawned so `CameraFollowSystem` from `fledge_camera_2d` has
-/// something to update — this is the Phase 6a integration point.
+/// `CameraPlugin` publishes this camera's position as the
+/// `ActiveCameraView`, and `FledgeRenderView` and `DebugGizmosLayer`
+/// translate the canvas so it sits at the centre of the 480×320 view. `scaleWidgetView` is off, so one world unit is
+/// one logical pixel and the projection's size only matters to the
+/// render-graph path; the follow scrolls the arena with the player.
 void _spawnCamera(World world, GameBounds bounds, Entity player) {
   world.spawn()
     ..insert(Transform2D.from(bounds.width / 2, bounds.height / 2))
