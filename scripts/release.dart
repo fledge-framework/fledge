@@ -113,10 +113,9 @@ List<String> _updateDocVersions(String version, {required bool write}) {
   final pin = RegExp(r'\b(fledge_\w+):(\s*)\^\d+\.\d+\.\d+\S*');
   final files = <File>[
     File('README.md'),
-    ...Directory('packages')
-        .listSync()
-        .whereType<Directory>()
-        .map((d) => File('${d.path}/README.md')),
+    ...Directory(
+      'packages',
+    ).listSync().whereType<Directory>().map((d) => File('${d.path}/README.md')),
     ...Directory('docs/assets/docs')
         .listSync(recursive: true)
         .whereType<File>()
