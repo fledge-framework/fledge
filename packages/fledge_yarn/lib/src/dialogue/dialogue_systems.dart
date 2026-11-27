@@ -108,7 +108,8 @@ const List<String> dialogueCoreSystemNames = [
 ];
 
 /// Starts dialogues: on [DialogueStartRequested], unless a dialogue is
-/// already active (the request is refused and logged), creates the runner
+/// already active or the node is missing (the request is refused, logged
+/// and answered with [DialogueStartRefused]), creates the runner
 /// and runs the node up to its first line or choice — executing the leading
 /// commands — then sends [DialogueStarted] and [DialogueLineShown] /
 /// [DialogueChoicesReady] (or [DialogueEnded] if the node had nothing to
@@ -138,6 +139,7 @@ class DialogueStartSystem implements System {
       DialogueLineShown,
       DialogueChoicesReady,
       DialogueEnded,
+      DialogueStartRefused,
       ...commandAccess.eventWrites,
     },
   );
@@ -152,22 +154,36 @@ class DialogueStartSystem implements System {
   void run(World world) {
     final state = world.getResource<DialogueState>();
     if (state == null) return;
+    void refuse(DialogueStartRequested request, DialogueRefusal reason) {
+      if (!world.events.isRegistered<DialogueStartRefused>()) return;
+      world.eventWriter<DialogueStartRefused>().send(
+        DialogueStartRefused(
+          request.node,
+          context: request.context,
+          reason: reason,
+        ),
+      );
+    }
+
     for (final request in world.eventReader<DialogueStartRequested>().read()) {
       if (state.isActive) {
         _log(
           'Refused $request: "${state.startNode}" is already active',
           level: 900,
         );
+        refuse(request, DialogueRefusal.alreadyActive);
         continue;
       }
       final project = world.getResource<YarnProject>();
       final storage = world.getResource<VariableStorage>();
       if (project == null || storage == null) {
         _log('Refused $request: Yarn isn\'t set up', level: 900);
+        refuse(request, DialogueRefusal.notSetUp);
         continue;
       }
       if (!project.hasNode(request.node)) {
         _log('Refused $request: no such node', level: 900);
+        refuse(request, DialogueRefusal.noSuchNode);
         continue;
       }
       final runner = DialogueRunner(

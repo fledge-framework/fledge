@@ -14,7 +14,7 @@ import 'dialogue_state.dart';
 ///   [DialogueCursorMoved], [DialogueCursorSet], [DialogueSkipRequested],
 ///   [DialogueStopRequested], [DialogueHoldReleased]) and notifications
 ///   ([DialogueStarted], [DialogueLineShown], [DialogueChoicesReady],
-///   [DialogueChoiceMade], [DialogueEnded]);
+///   [DialogueChoiceMade], [DialogueEnded], [DialogueStartRefused]);
 /// - [DialogueStartSystem] → [DialogueAdvanceSystem] in [schedule];
 /// - the built-in `<<declare>>` command ([declareCommand]);
 /// - holding commands, which the dialogue waits on until released
@@ -71,6 +71,7 @@ class DialogueCorePlugin implements Plugin {
       ..addEvent<DialogueChoicesReady>()
       ..addEvent<DialogueChoiceMade>()
       ..addEvent<DialogueEnded>()
+      ..addEvent<DialogueStartRefused>()
       ..addSystem(
         DialogueStartSystem(commandAccess: commandAccess),
         schedule: schedule,

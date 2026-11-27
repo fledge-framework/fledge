@@ -133,17 +133,63 @@ class ExtractedSprite with ExtractedData, SortableExtractedData {
   /// Stable: sprites with an identical composite key keep their
   /// relative order (render-world extraction order), so equal-key
   /// sprites don't swap from frame to frame.
-  static void sortByDrawOrder(List<ExtractedSprite> sprites) {
+  ///
+  /// A bottom-up merge sort (stable by construction): runs of 16 are
+  /// insertion-sorted, then merged through [scratch], a buffer the caller
+  /// can keep between frames so sorting allocates nothing once it has
+  /// grown to fit.
+  static void sortByDrawOrder(
+    List<ExtractedSprite> sprites, [
+    List<ExtractedSprite>? scratch,
+  ]) {
     final n = sprites.length;
     if (n < 2) return;
-    final copy = List<ExtractedSprite>.of(sprites);
-    final order = List<int>.generate(n, (i) => i);
-    order.sort((i, j) {
-      final c = compareDrawOrder(copy[i], copy[j]);
-      return c != 0 ? c : i.compareTo(j);
-    });
-    for (var i = 0; i < n; i++) {
-      sprites[i] = copy[order[i]];
+    const run = 16;
+    for (var lo = 0; lo < n; lo += run) {
+      final hi = lo + run < n ? lo + run : n;
+      for (var i = lo + 1; i < hi; i++) {
+        final s = sprites[i];
+        var j = i - 1;
+        while (j >= lo && compareDrawOrder(sprites[j], s) > 0) {
+          sprites[j + 1] = sprites[j];
+          j--;
+        }
+        sprites[j + 1] = s;
+      }
+    }
+    if (n <= run) return;
+    final buffer = scratch ?? <ExtractedSprite>[];
+    if (buffer.length < n) {
+      buffer.addAll(List.filled(n - buffer.length, sprites[0]));
+    }
+    var from = sprites;
+    var to = buffer;
+    for (var width = run; width < n; width *= 2) {
+      for (var lo = 0; lo < n; lo += 2 * width) {
+        final mid = lo + width < n ? lo + width : n;
+        final hi = lo + 2 * width < n ? lo + 2 * width : n;
+        var i = lo, j = mid, k = lo;
+        while (i < mid && j < hi) {
+          // `<=` keeps the left (earlier) one first on ties: stable.
+          to[k++] = compareDrawOrder(from[i], from[j]) <= 0
+              ? from[i++]
+              : from[j++];
+        }
+        while (i < mid) {
+          to[k++] = from[i++];
+        }
+        while (j < hi) {
+          to[k++] = from[j++];
+        }
+      }
+      final swap = from;
+      from = to;
+      to = swap;
+    }
+    if (!identical(from, sprites)) {
+      for (var i = 0; i < n; i++) {
+        sprites[i] = from[i];
+      }
     }
   }
 }

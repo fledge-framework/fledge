@@ -9,6 +9,7 @@ import '../resources/display_info.dart';
 import '../resources/window_state.dart';
 import '../window_mode.dart';
 import 'display_sync_system.dart';
+import 'native_modes.dart';
 import 'window_init_system.dart';
 
 /// System that processes window change requests.
@@ -190,10 +191,7 @@ class WindowEventSystem implements System {
           display.size.height,
         );
         native = () async {
-          await windowManager.setFullScreen(false);
-          await windowManager.setAsFrameless();
-          await windowManager.setHasShadow(false);
-          await windowManager.setBounds(borderlessBounds);
+          await enterBorderless(borderlessBounds);
         };
         newSize = display.size;
         newPosition = displayOrigin;
@@ -203,7 +201,7 @@ class WindowEventSystem implements System {
         final position =
             state.savedWindowedPosition ?? _centerOnDisplay(size, display);
         native = () async {
-          await windowManager.setFullScreen(false);
+          await leaveFullScreen();
           await windowManager.setTitleBarStyle(TitleBarStyle.normal);
           await windowManager.setAlwaysOnTop(false);
           await windowManager.setBounds(

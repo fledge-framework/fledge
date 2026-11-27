@@ -180,6 +180,14 @@ class NetworkSession {
   /// then).
   bool get isReady => _host != null || (_client?.ready ?? false);
 
+  /// Whether this machine holds the host's copy of the replicated resource
+  /// registered as [key]: always while hosting (or offline: it's the only
+  /// copy), and on a client once at least one chunk of it has arrived. A
+  /// client that has only just become [isReady] may still be showing what
+  /// it had before joining; read a resource for decisions once this is true.
+  bool hasReceived(String key) =>
+      _client == null || _client!.received.contains(key);
+
   /// The underlying host while hosting.
   NetworkHost? get networkHost => _host?.host;
 

@@ -136,16 +136,35 @@ class HotReloadWatcher {
       }
       return;
     }
-    // Fallback: basename match, in case the caller registered a
-    // relative path and the watcher reports an absolute one.
-    final baseName = _basenameOf(event.path);
+    // Fallback for a relative registration and an absolute event (or the
+    // other separator): the event's normalised path must equal the key's
+    // or end with it at a separator, so `a/tree.png` changing never reloads
+    // `b/tree.png`, as matching basenames alone did.
+    final changed = _normalise(event.path);
     final matches = [
       for (final MapEntry(:key, :value) in _pathHandlers.entries)
-        if (_basenameOf(key) == baseName) ...value,
+        if (_sameFile(changed, _normalise(key))) ...value,
     ];
     for (final handler in matches) {
       handler();
     }
+  }
+
+  static bool _sameFile(String changed, String registered) {
+    if (registered.isEmpty) return false;
+    if (changed == registered) return true;
+    if (registered.startsWith('/')) return false; // absolute: exact only
+    return changed.endsWith('/$registered');
+  }
+
+  /// [path] with forward slashes, no `./` segments and no doubled slashes.
+  static String _normalise(String path) {
+    final parts = path.replaceAll(r'\', '/').split('/');
+    final kept = <String>[
+      for (var i = 0; i < parts.length; i++)
+        if (!(parts[i] == '.' || (parts[i].isEmpty && i > 0))) parts[i],
+    ];
+    return kept.join('/');
   }
 
   /// Index of the last path separator in [path], accepting both a slash
@@ -155,9 +174,6 @@ class HotReloadWatcher {
     final backslash = path.lastIndexOf(r'\');
     return slash > backslash ? slash : backslash;
   }
-
-  static String _basenameOf(String path) =>
-      path.substring(_lastSeparator(path) + 1);
 
   static String _dirnameOf(String path) {
     final idx = _lastSeparator(path);

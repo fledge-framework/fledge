@@ -77,7 +77,8 @@ class AnimationPlayer {
   /// Current animation clip, or null if none.
   AnimationClip? get currentClip => _currentClip;
 
-  /// Current playback time.
+  /// Current playback time: within one loop (`0 <= time < duration`) for a
+  /// looping clip.
   double get time => _time;
 
   /// Current playback state.
@@ -100,16 +101,21 @@ class AnimationPlayer {
 
   /// Current frame (0-based index within the animation).
   int get currentFrame {
-    if (_currentClip == null || _currentClip!.frames.isEmpty) return 0;
+    final clip = _currentClip;
+    if (clip == null || clip.frames.isEmpty) return 0;
 
+    // A looping clip's time wraps (the same as [AnimationClip.getFrameAtTime]).
+    final time = clip.looping && clip.duration > 0
+        ? _time % clip.duration
+        : _time;
     double accumulated = 0;
-    for (var i = 0; i < _currentClip!.frames.length; i++) {
-      accumulated += _currentClip!.frames[i].duration;
-      if (_time < accumulated) {
+    for (var i = 0; i < clip.frames.length; i++) {
+      accumulated += clip.frames[i].duration;
+      if (time < accumulated) {
         return i;
       }
     }
-    return _currentClip!.frames.length - 1;
+    return clip.frames.length - 1;
   }
 
   /// Play an animation by name.
@@ -167,11 +173,19 @@ class AnimationPlayer {
       return false;
     }
 
+    final clip = _currentClip!;
     _time += dt * speed;
 
+    // A looping clip's time stays within one loop, so it never grows
+    // without bound (and loses precision) over a long session.
+    if (clip.looping) {
+      if (clip.duration > 0) _time %= clip.duration;
+      return false;
+    }
+
     // Check for animation end
-    if (!_currentClip!.looping && _time >= _currentClip!.duration) {
-      _time = _currentClip!.duration;
+    if (_time >= clip.duration) {
+      _time = clip.duration;
       _state = AnimationState.stopped;
       return true;
     }

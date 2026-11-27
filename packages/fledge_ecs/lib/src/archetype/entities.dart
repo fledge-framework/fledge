@@ -120,10 +120,12 @@ class Entities {
     // Pre-grow the list to avoid reallocations
     final targetCapacity = _meta.length + count - _freeList.length;
     if (targetCapacity > _meta.length) {
-      for (int i = _meta.length; i < targetCapacity; i++) {
+      final oldLength = _meta.length;
+      for (int i = oldLength; i < targetCapacity; i++) {
         _meta.add(EntityMeta(0));
       }
-      for (int i = targetCapacity - 1; i >= _meta.length - count; i--) {
+      // Only the slots just added are free: the ones before may be alive.
+      for (int i = targetCapacity - 1; i >= oldLength; i--) {
         _freeList.add(i);
       }
     }
@@ -144,9 +146,18 @@ class Entities {
   }
 
   /// Clears all entities.
+  ///
+  /// Every slot is kept and its generation bumped, so a handle held from
+  /// before the clear stays dead instead of coming back as whatever is
+  /// spawned into its slot next.
   void clear() {
-    _meta.clear();
     _freeList.clear();
+    for (int id = _meta.length - 1; id >= 0; id--) {
+      final meta = _meta[id];
+      meta.location = null;
+      meta.generation++;
+      _freeList.add(id);
+    }
     _aliveCount = 0;
   }
 }

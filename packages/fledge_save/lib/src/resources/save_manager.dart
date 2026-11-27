@@ -146,7 +146,9 @@ class SaveManager {
   /// The write is crash-safe: data goes to `<slot>.json.tmp` first (flushed),
   /// and is then renamed over `<slot>.json`, so an interrupted save never
   /// leaves a truncated current file. When [SaveConfig.keepBackup] is true
-  /// the previous `<slot>.json` is moved to `<slot>.backup.json` first.
+  /// the previous `<slot>.json` is copied to `<slot>.backup.json` first
+  /// (copied, not moved, so there's always a whole `<slot>.json` on disk).
+  /// Saves to the same slot run one after another, never interleaved.
   ///
   /// [world] - The ECS world containing saveable resources
   /// [slotName] - Save slot identifier (uses default if not specified)
@@ -157,10 +159,43 @@ class SaveManager {
     Map<String, dynamic>? metadata,
   }) async {
     final slot = slotName ?? config.defaultSlot;
+    // The world is read now, synchronously, so a save captures the state at
+    // the moment it was asked for even if it waits behind another.
+    final Map<String, dynamic> saveData;
+    final String json;
     try {
-      final saveData = _collectSaveData(world, metadata);
-      final json = const JsonEncoder.withIndent('  ').convert(saveData);
+      saveData = _collectSaveData(world, metadata);
+      json = const JsonEncoder.withIndent('  ').convert(saveData);
+    } catch (e, st) {
+      developer.log(
+        'Failed to save slot "$slot"',
+        name: _logName,
+        error: e,
+        stackTrace: st,
+      );
+      return false;
+    }
+    final previous = _writing[slot];
+    final done = _write(slot, saveData, json, previous);
+    _writing[slot] = done;
+    try {
+      return await done;
+    } finally {
+      if (identical(_writing[slot], done)) _writing.remove(slot);
+    }
+  }
 
+  /// The write in flight for each slot, so saves to one slot queue up.
+  final Map<String, Future<bool>> _writing = {};
+
+  Future<bool> _write(
+    String slot,
+    Map<String, dynamic> saveData,
+    String json,
+    Future<bool>? previous,
+  ) async {
+    if (previous != null) await previous;
+    try {
       await _ensureSaveDirectory();
       final file = await _getSaveFile(slot);
       final tmp = await _getTempFile(slot);
@@ -169,13 +204,13 @@ class SaveManager {
 
       if (config.keepBackup && await file.exists()) {
         final backup = await _getBackupFile(slot);
-        await file.rename(backup.path);
+        await file.copy(backup.path);
       }
 
+      // Atomic replace: a crash leaves either the old file or the new one.
       await tmp.rename(file.path);
 
-      // Refresh cache
-      await _refreshSlotCache();
+      _updateSlotCache(slot, saveData);
 
       return true;
     } catch (e, st) {
@@ -208,12 +243,18 @@ class SaveManager {
   }) async {
     final slot = slotName ?? config.defaultSlot;
     try {
-      final file = fromBackup
+      var file = fromBackup
           ? await _getBackupFile(slot)
           : await _getSaveFile(slot);
 
       if (!await file.exists()) {
-        return null;
+        // A save interrupted by older versions of this manager (which moved
+        // the file to the backup before renaming the new one in) can leave
+        // only the backup or a finished temp file. Recover from those.
+        if (fromBackup) return null;
+        final recovered = await _recover(slot);
+        if (recovered == null) return null;
+        file = recovered;
       }
 
       final json = await file.readAsString();
@@ -233,6 +274,30 @@ class SaveManager {
       );
       return null;
     }
+  }
+
+  /// The file to load for [slot] when `<slot>.json` is missing: a temp file
+  /// that parses (the save finished writing it), else the backup.
+  Future<File?> _recover(String slot) async {
+    final tmp = await _getTempFile(slot);
+    if (await tmp.exists()) {
+      try {
+        jsonDecode(await tmp.readAsString());
+        developer.log(
+          'Recovering slot "$slot" from its temp file',
+          name: _logName,
+        );
+        return tmp;
+      } catch (_) {
+        // Truncated: fall through to the backup.
+      }
+    }
+    final backup = await _getBackupFile(slot);
+    if (await backup.exists()) {
+      developer.log('Recovering slot "$slot" from its backup', name: _logName);
+      return backup;
+    }
+    return null;
   }
 
   /// Bring [saveData] up to [SaveConfig.formatVersion].
@@ -367,7 +432,7 @@ class SaveManager {
             timestamp:
                 DateTime.tryParse(data['timestamp'] as String? ?? '') ??
                 DateTime.now(),
-            formatVersion: data['version'] as int? ?? 1,
+            formatVersion: data['version'] as int? ?? 0,
             metadata: data['metadata'] as Map<String, dynamic>? ?? {},
           ),
         );
@@ -385,6 +450,25 @@ class SaveManager {
     // Sort by timestamp (newest first)
     slots.sort((a, b) => b.timestamp.compareTo(a.timestamp));
     _cachedSlots = slots;
+  }
+
+  /// Put [slot]'s fresh info in the cache without re-reading every file.
+  void _updateSlotCache(String slot, Map<String, dynamic> data) {
+    final slots = _cachedSlots;
+    if (slots == null) return; // read in full on the next listing
+    final info = SaveSlotInfo(
+      slotName: slot,
+      timestamp:
+          DateTime.tryParse(data['timestamp'] as String? ?? '') ??
+          DateTime.now(),
+      formatVersion: data['version'] as int? ?? 0,
+      metadata: data['metadata'] as Map<String, dynamic>? ?? {},
+    );
+    _cachedSlots = [
+      for (final s in slots)
+        if (s.slotName != slot) s,
+      info,
+    ]..sort((a, b) => b.timestamp.compareTo(a.timestamp));
   }
 
   /// Collect all saveable data from resources.

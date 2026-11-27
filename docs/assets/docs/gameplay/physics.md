@@ -181,9 +181,11 @@ Limits to know about:
 - **A moving body blocks as one box**: the bounding box of all its shapes
   (`Collider.bounds`). Detection checks shape against shape.
 - **Only `translation` counts.** Rotation and scale on `Transform2D` are
-  ignored, and so is the hierarchy: physics reads the entity's own
-  `Transform2D`, not `GlobalTransform2D`, so put colliders on top-level
-  entities.
+  ignored for shapes. A collider on a child entity sits where its parents put
+  it: its `Transform2D.translation` carried up through every ancestor's
+  `Transform2D` (as a tilemap's colliders sit under the map's root). It's
+  worked out from the local transforms, so it's current before transform
+  propagation runs. `Velocity` still moves the entity's own `Transform2D`.
 - **Movement isn't swept.** Resolution checks where a body ends up, not the
   path there, so a body moving further in one step than a wall is thick can
   pass through it. Keep walls thicker than your fastest per-step move.
@@ -247,9 +249,9 @@ Always order against the `systemName` constants, never string literals:
 
 | System | `systemName` | Reads | Writes |
 |---|---|---|---|
-| `CollisionResolutionSystem` | `'collision_resolution'` | `Transform2D`, `Collider`, `CollisionConfig` | `Velocity` |
+| `CollisionResolutionSystem` | `'collision_resolution'` | `Transform2D`, `Collider`, `CollisionConfig`, `Parent` | `Velocity` |
 | `VelocityIntegrationSystem` | `'velocity_integration'` | `Velocity` | `Transform2D` |
-| `CollisionDetectionSystem` | `'collision_detection'` | `Transform2D`, `Collider`, `CollisionConfig` | `CollisionEvent` (event) |
+| `CollisionDetectionSystem` | `'collision_detection'` | `Transform2D`, `Collider`, `CollisionConfig`, `Parent` | `CollisionEvent` (event) |
 
 Their order among themselves is declared with `after:`, so it doesn't depend on
 the order plugins are added.

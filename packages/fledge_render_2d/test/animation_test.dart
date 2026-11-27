@@ -377,4 +377,32 @@ void main() {
       expect(time.deltaTime, 0.033);
     });
   });
+
+  group('AnimationPlayer looping', () {
+    test('currentFrame wraps after a loop instead of sticking on the last '
+        'frame, and time stays within one loop', () {
+      final player = AnimationPlayer(
+        animations: {
+          'walk': AnimationClip.fromIndices(
+            name: 'walk',
+            startIndex: 4,
+            endIndex: 7,
+            frameDuration: 0.1,
+          ),
+        },
+        initialAnimation: 'walk',
+      );
+      player.update(0.45); // a loop and a bit: frame 0 again
+      expect(player.currentFrame, 0);
+      expect(player.currentIndex, 4);
+      expect(player.time, closeTo(0.05, 1e-9));
+      player.update(0.1);
+      expect(player.currentFrame, 1);
+      for (var i = 0; i < 10000; i++) {
+        player.update(0.37);
+      }
+      expect(player.time, lessThan(0.4));
+      expect(player.currentIndex, 4 + player.currentFrame);
+    });
+  });
 }

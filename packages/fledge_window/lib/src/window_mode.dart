@@ -11,6 +11,10 @@ enum WindowMode {
   /// A frameless window that covers the entire display but isn't truly
   /// fullscreen. Allows for faster alt-tabbing and better multi-monitor
   /// support than true fullscreen.
+  ///
+  /// On macOS this is native fullscreen instead: AppKit keeps ordinary
+  /// windows below the menu bar and clear of the Dock, so a frameless
+  /// window couldn't cover them.
   borderless,
 
   /// Standard windowed mode with title bar and borders.

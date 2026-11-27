@@ -72,11 +72,11 @@ class State<S extends Enum> {
   /// The transition will be applied on the next call to [applyTransition],
   /// typically at the end of the frame.
   ///
-  /// If a transition is already pending, this replaces it.
+  /// If a transition is already pending, this replaces it; setting the
+  /// current state again cancels it (a toggle there and back in one frame
+  /// changes nothing).
   void set(S newState) {
-    if (newState != _current) {
-      _next = newState;
-    }
+    _next = newState == _current ? null : newState;
   }
 
   /// Clears any pending transition.

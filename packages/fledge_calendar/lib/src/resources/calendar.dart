@@ -353,18 +353,24 @@ class Calendar {
   /// Set time directly.
   ///
   /// Records pending changes (so [CalendarSystem] emits events for them on
-  /// its next run) and re-evaluates season/year state. Does not itself fire
-  /// a curfew trigger; curfew is re-evaluated on the next hour tick.
+  /// its next run) and re-evaluates season/year state. Curfew is evaluated
+  /// at once, as [skipToHour] does: landing past curfew from before it fires
+  /// the trigger with this change's events, and landing before it re-arms
+  /// it. Setting the minute drops the part-minute accumulated so far.
   void setTime({int? newDay, int? newHour, int? newMinute}) {
     _recordPending();
     final oldHour = hour;
     final oldDay = day;
     if (newDay != null) day = newDay;
     if (newHour != null) hour = newHour.clamp(0, config.hoursPerDay - 1);
-    if (newMinute != null) minute = newMinute.clamp(0, 59);
+    if (newMinute != null) {
+      minute = newMinute.clamp(0, 59);
+      _accumulator = 0.0;
+    }
     changedThisFrame = true;
     if (hour != oldHour) hourChangedThisFrame = true;
     if (day != oldDay) dayChangedThisFrame = true;
+    if (_updateCurfewEdge()) _pendingCurfew = true;
     _checkSeasonYearChange();
   }
 

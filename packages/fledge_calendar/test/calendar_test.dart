@@ -121,6 +121,26 @@ void main() {
       expect(triggers, hasLength(2));
     });
 
+    test('setTime past curfew fires it with that change, once', () async {
+      final h = _Harness(
+        Calendar(config: _config(curfew: 22), day: 1, hour: 20),
+      );
+      h.calendar.setTime(newHour: 23, newMinute: 30);
+      final events = await h.frame();
+      expect(events.whereType<CurfewTriggeredEvent>(), hasLength(1));
+      // The next hour tick doesn't fire it again.
+      final later = await h.frame(_hour);
+      expect(later.whereType<CurfewTriggeredEvent>(), isEmpty);
+    });
+
+    test('setTime with a minute drops the part-minute so far', () async {
+      final h = _Harness(Calendar(config: _config(), day: 1, hour: 8));
+      await h.frame(0.9); // 0.9 of a game minute accumulated
+      h.calendar.setTime(newMinute: 10);
+      await h.frame(0.5);
+      expect(h.calendar.minute, 10);
+    });
+
     test('isPastCurfew stays true after midnight for a 22:00 curfew', () {
       final calendar = Calendar(config: _config(curfew: 22), hour: 23);
       calendar.update(_hour);

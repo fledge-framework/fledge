@@ -21,6 +21,9 @@ final Stopwatch _clock = Stopwatch()..start();
 /// `Scheduler`'s stage list, not the world) so a plugin that swaps
 /// systems out mid-run shows up on the overlay by the next tick.
 class SystemStatsStartSystem implements System {
+  /// The `SystemMeta.name` of [SystemStatsStartSystem], for `before:` / `after:`.
+  static const String systemName = 'debug_system_stats_start';
+
   /// The scheduler whose stages we count. Held so we don't rely on the
   /// app being reachable from the world.
   final Scheduler scheduler;
@@ -30,7 +33,7 @@ class SystemStatsStartSystem implements System {
 
   @override
   SystemMeta get meta => const SystemMeta(
-    name: 'debug_system_stats_start',
+    name: systemName,
     resourceWrites: {SystemStats},
     // Frame bookkeeping: the FirstSets phase chain orders this before
     // every platform / input / content system in Schedules.first.
@@ -73,14 +76,15 @@ class SystemStatsStartSystem implements System {
 ///
 /// Registered in `Schedules.last` by the plugin.
 class SystemStatsEndSystem implements System {
+  /// The `SystemMeta.name` of [SystemStatsEndSystem], for `before:` / `after:`.
+  static const String systemName = 'debug_system_stats_end';
+
   /// Creates an end system.
   const SystemStatsEndSystem();
 
   @override
-  SystemMeta get meta => const SystemMeta(
-    name: 'debug_system_stats_end',
-    resourceWrites: {SystemStats},
-  );
+  SystemMeta get meta =>
+      const SystemMeta(name: systemName, resourceWrites: {SystemStats});
 
   @override
   RunCondition? get runCondition => null;

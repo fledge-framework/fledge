@@ -53,6 +53,7 @@ class DialogueHarness {
     _collect<DialogueLineShown>();
     _collect<DialogueChoicesReady>();
     _collect<DialogueEnded>();
+    _collect<DialogueStartRefused>();
   }
 
   Future<void> ticks(int n, [double dt = 1 / 60]) async {

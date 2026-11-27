@@ -123,8 +123,11 @@ class _FledgeRenderPainter extends CustomPainter {
         for (final pass in passes) {
           pass.paintBehind(app.world, target, visible);
         }
-        renderSpritesToDrawer(
-          renderWorld,
+        // Sorted once; the emissive ones (drawn after the passes) are a
+        // stable split of the same order.
+        final sorted = sortedSprites(renderWorld);
+        drawSortedSprites(
+          sorted,
           drawer,
           where: passes.isEmpty ? null : (s) => !s.emissive,
         );
@@ -132,7 +135,7 @@ class _FledgeRenderPainter extends CustomPainter {
           for (final pass in passes) {
             pass.paintOver(app.world, target, visible);
           }
-          renderSpritesToDrawer(renderWorld, drawer, where: (s) => s.emissive);
+          drawSortedSprites(sorted, drawer, where: (s) => s.emissive);
         }
       } finally {
         canvasDrawer?.endFrame();
@@ -163,20 +166,54 @@ void renderSpritesToDrawer(
   RenderWorld renderWorld,
   SpriteDrawer drawer, {
   bool Function(ExtractedSprite sprite)? where,
-}) {
-  final sprites = [
-    for (final sprite in renderWorld.extractedSprites)
-      if (where == null || where(sprite)) sprite,
-  ];
-  if (sprites.isEmpty) return;
-  ExtractedSprite.sortByDrawOrder(sprites);
+}) => drawSortedSprites(sortedSprites(renderWorld), drawer, where: where);
 
+/// Every [ExtractedSprite] in [renderWorld] in draw order
+/// ([ExtractedSprite.sortByDrawOrder]). The list and the sort's scratch
+/// space are kept per render world and reused, so a frame's sort allocates
+/// nothing once they've grown; the list is valid until the next call for
+/// the same render world.
+List<ExtractedSprite> sortedSprites(RenderWorld renderWorld) {
+  final buffers = _sortBuffers[renderWorld] ??= _SortBuffers();
+  final sprites = buffers.sprites..clear();
+  sprites.addAll(renderWorld.extractedSprites);
+  ExtractedSprite.sortByDrawOrder(sprites, buffers.scratch);
+  return sprites;
+}
+
+final Expando<_SortBuffers> _sortBuffers = Expando();
+
+class _SortBuffers {
+  final List<ExtractedSprite> sprites = [];
+  final List<ExtractedSprite> scratch = [];
+}
+
+/// Draws [sorted] (already in draw order, see [sortedSprites]) through
+/// [drawer], contiguous same-texture runs as one batch each; [where], if
+/// given, draws only the sprites it accepts, keeping their order.
+void drawSortedSprites(
+  List<ExtractedSprite> sorted,
+  SpriteDrawer drawer, {
+  bool Function(ExtractedSprite sprite)? where,
+}) {
   var i = 0;
-  while (i < sprites.length) {
-    final texture = sprites[i].texture;
+  final n = sorted.length;
+  while (i < n) {
+    final first = sorted[i];
+    if (where != null && !where(first)) {
+      i++;
+      continue;
+    }
+    final texture = first.texture;
     final batch = <BackendSpriteData>[];
-    while (i < sprites.length && sprites[i].texture.id == texture.id) {
-      batch.add(_toBackendSprite(sprites[i]));
+    while (i < n) {
+      final s = sorted[i];
+      if (where != null && !where(s)) {
+        i++;
+        continue;
+      }
+      if (s.texture.id != texture.id) break;
+      batch.add(_toBackendSprite(s));
       i++;
     }
     drawer.drawSpriteBatch(texture, batch);

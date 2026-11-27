@@ -10,6 +10,7 @@ import '../components/velocity.dart';
 import '../layers/collision_layers.dart';
 import '../physics_mode.dart';
 import 'contact_yield_tracker.dart';
+import 'world_origin.dart';
 
 /// Adjusts velocity to prevent movement into solid colliders.
 ///
@@ -69,6 +70,7 @@ class CollisionResolutionSystem implements System {
       ComponentId.of<Transform2D>(),
       ComponentId.of<Collider>(),
       ComponentId.of<CollisionConfig>(),
+      ComponentId.of<Parent>(),
     },
     writes: {ComponentId.of<Velocity>()},
     resourceReads: mode == PhysicsMode.fixed ? {FixedTimestep} : {WallTime},
@@ -120,8 +122,11 @@ class CollisionResolutionSystem implements System {
       final layer = config?.layer ?? CollisionLayers.all;
       final mask = config?.mask ?? CollisionLayers.all;
 
-      final tx = transform.translation.x;
-      final ty = transform.translation.y;
+      // World space: a child collider (a tilemap's) carries its parents'
+      // positions.
+      final origin = worldOrigin(world, entity, transform);
+      final tx = origin.dx;
+      final ty = origin.dy;
 
       for (final shape in collider.shapes) {
         final bounds = shape.bounds;
@@ -183,8 +188,9 @@ class CollisionResolutionSystem implements System {
 
       if (relevantColliders.isEmpty) continue;
 
-      final currentX = transform.translation.x;
-      final currentY = transform.translation.y;
+      final origin = worldOrigin(world, entity, transform);
+      final currentX = origin.dx;
+      final currentY = origin.dy;
       final localBounds = collider.bounds;
 
       // Scale velocity by time (same as VelocityApplySystem will do)

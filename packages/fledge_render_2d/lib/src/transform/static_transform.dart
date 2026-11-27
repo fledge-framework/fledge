@@ -3,7 +3,9 @@
 /// The contract: once spawned, the entity's `Transform2D` won't change, nor
 /// will its place in the hierarchy. On a root with children it covers the
 /// whole subtree. Everything else may still change: a `Sprite`'s texture,
-/// colour, source rect and flips, and `Visibility`.
+/// colour, source rect and flips, and `Visibility`. A child spawned under a
+/// frozen entity later is computed from it once and frozen too, and a
+/// `Sprite` added to a frozen entity later is found by the extractors.
 ///
 /// [TransformPropagateSystem] computes a static root (and its subtree) once,
 /// then marks every entity in it [TransformFrozen] and never visits them

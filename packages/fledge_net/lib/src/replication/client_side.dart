@@ -143,6 +143,10 @@ class _ClientSide {
 
   /// Resource chunks from the host (receive only).
   final ReliableChannel bulk = ReliableChannel();
+
+  /// The keys of the replicated resources the host has sent at least one
+  /// chunk of ([NetworkSession.hasReceived]).
+  final Set<String> received = {};
   final List<StreamSubscription<Object?>> _subs = [];
   final List<HostDataEvent> _inbox = [];
   final List<ProtocolMismatchEvent> _mismatches = [];
@@ -471,6 +475,7 @@ class _ClientSide {
     final resource = rep.obtain(world);
     if (resource == null) return;
     rep.apply(resource, count, chunk, r);
+    received.add(rep.key);
     session.stats.resourceChunksReceived++;
     NetworkSession._emit(world, NetResourceUpdated(rep.key, chunk));
   }
@@ -687,7 +692,15 @@ class _ClientSide {
     for (var i = 0; i < count; i++) {
       states.add((r.readVarUint(), readEntityDelta(r)));
     }
-    _ackChunk(header.chunkSeq);
+    // A chunk can overtake the reliable spawn of an entity it lists (the
+    // spawn lost and resent). Its state is dropped below, so the chunk is
+    // left unacknowledged: the host keeps treating that state as unsent and
+    // sends it again, rather than taking it as this client's baseline.
+    final applicable = states.every((s) {
+      final info = entities[s.$1];
+      return info != null && world.isAlive(info.entity);
+    });
+    if (applicable) _ackChunk(header.chunkSeq);
     if (header.actionAck > _actionAck) {
       _actionAck = header.actionAck;
       while (_unacked.isNotEmpty && _unacked.firstKey()! <= _actionAck) {

@@ -81,12 +81,18 @@ class ChunkVersions {
   /// [chunk]'s version (0 until first bumped).
   int of(int chunk) => chunk < _versions.length ? _versions[chunk] : 0;
 
+  /// How many bumps there have been across every chunk: a cheap "has any
+  /// of it changed since" for local caches.
+  int get total => _total;
+  int _total = 0;
+
   /// Marks [chunk] as changed.
   void bump(int chunk) {
     while (_versions.length <= chunk) {
       _versions.add(0);
     }
     _versions[chunk]++;
+    _total++;
   }
 
   /// Marks every chunk below [count] as changed.

@@ -109,6 +109,7 @@ abstract class CulledSpriteExtractor<C extends Object> extends Extractor {
   final Map<int, List<Entity>> _grid = {};
   StaticTransforms? _builtFor;
   int _builtGeneration = -1;
+  int _builtCount = -1;
   double _maxReach = 0;
 
   static int _key(int x, int y) => (x + 0x8000) * 0x10000 + (y + 0x8000);
@@ -128,7 +129,15 @@ abstract class CulledSpriteExtractor<C extends Object> extends Extractor {
     }
     _builtFor = frozen;
     _builtGeneration = frozen.generation;
+    _builtCount = _frozenCount(world);
   }
+
+  /// How many frozen entities carry the component (cheap: summed per
+  /// archetype). It changes when one is added to (or taken from) an entity
+  /// frozen earlier, which freezing alone wouldn't tell the grid.
+  int _frozenCount(World world) => world
+      .query2<C, GlobalTransform2D>(filter: const With<TransformFrozen>())
+      .count();
 
   void _extractFrozen(
     World world,
@@ -139,7 +148,8 @@ abstract class CulledSpriteExtractor<C extends Object> extends Extractor {
     final frozen = world.getResource<StaticTransforms>();
     if (frozen == null) return; // nothing frozen in this world
     if (!identical(frozen, _builtFor) ||
-        frozen.generation != _builtGeneration) {
+        frozen.generation != _builtGeneration ||
+        _frozenCount(world) != _builtCount) {
       _rebuild(world, frozen);
     }
     if (visible == null) {

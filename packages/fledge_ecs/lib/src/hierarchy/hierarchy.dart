@@ -94,8 +94,16 @@ extension WorldHierarchyExtension on World {
   /// ```dart
   /// world.setParent(child, parent);
   /// ```
+  ///
+  /// Refused (nothing changes) if it would make a cycle: [parent] being
+  /// [child] itself or one of its descendants, which would leave [root],
+  /// [ancestors] and recursive despawns walking forever.
   void setParent(Entity child, Entity parent) {
     if (!isAlive(child) || !isAlive(parent)) return;
+    if (child == parent) return;
+    for (Entity? up = getParent(parent); up != null; up = getParent(up)) {
+      if (up == child) return;
+    }
 
     // Remove from old parent if exists
     final oldParent = get<Parent>(child);

@@ -16,8 +16,8 @@ import 'dialogue_state.dart' show DialogueChoice;
 
 /// Starts the dialogue at Yarn node [node].
 ///
-/// Refused (logged, nothing happens) while another dialogue is active or if
-/// the node doesn't exist. [context] is an opaque value carried through to
+/// Refused (logged, and [DialogueStartRefused] sent) while another
+/// dialogue is active or if the node doesn't exist. [context] is an opaque value carried through to
 /// `DialogueState.context`, [DialogueStarted] and [DialogueEnded] — e.g. the
 /// id of the character being talked to.
 class DialogueStartRequested {
@@ -116,6 +116,33 @@ class DialogueHoldReleased {
 
   @override
   String toString() => 'DialogueHoldReleased($token)';
+}
+
+/// Why a [DialogueStartRequested] was refused.
+enum DialogueRefusal {
+  /// Another dialogue was active (or started earlier the same tick).
+  alreadyActive,
+
+  /// The project has no node by that name.
+  noSuchNode,
+
+  /// Yarn isn't set up (no `YarnProject` or `VariableStorage`).
+  notSetUp,
+}
+
+/// A [DialogueStartRequested] for [node] (with its [context]) was refused
+/// for [reason]: no dialogue started for it, so no [DialogueEnded] will
+/// follow. Lets whoever asked (a cutscene director, say) stop waiting.
+class DialogueStartRefused {
+  final String node;
+  final Object? context;
+  final DialogueRefusal reason;
+
+  const DialogueStartRefused(this.node, {this.context, required this.reason});
+
+  @override
+  String toString() =>
+      'DialogueStartRefused($node, context: $context, reason: $reason)';
 }
 
 /// A dialogue started at [node] (with the request's [context]).

@@ -144,6 +144,9 @@ class SetConfiguredSystem implements System {
   /// The wrapped system.
   System get inner => _inner;
 
+  /// The name of the set this wrapper applies.
+  String get setName => _set.name;
+
   SetConfiguredSystem(this._inner, this._set)
     : _meta = SystemMeta(
         name: _inner.meta.name,

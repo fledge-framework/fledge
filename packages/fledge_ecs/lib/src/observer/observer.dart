@@ -134,6 +134,9 @@ class Observers {
     final componentList = _byComponent[componentId];
     if (componentList != null) {
       componentList.removeWhere((r) => identical(r.observer, observer));
+      // An emptied list goes, so [hasObservers] turns false again and
+      // despawns take the fast path.
+      if (componentList.isEmpty) _byComponent.remove(componentId);
     }
 
     // Remove from by-trigger index

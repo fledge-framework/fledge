@@ -304,4 +304,56 @@ void main() {
       expect(await manager.listSaveSlots(), isEmpty);
     });
   });
+  group('Audit regressions', () {
+    test('saves to one slot queue up and the last one asked wins', () async {
+      final player = _Player(name: 'Ada', gold: 1);
+      final world = worldWith(player);
+      final manager = SaveManager(config: config(keepBackup: true));
+      final first = manager.save(world);
+      player.gold = 2;
+      final second = manager.save(world);
+      expect(await first, isTrue);
+      expect(await second, isTrue);
+      expect((readRaw('save.json')['resources'] as Map)['player']['gold'], 2);
+      expect(
+        (readRaw('save.backup.json')['resources'] as Map)['player']['gold'],
+        1,
+      );
+    });
+
+    test('a slot left with only its backup still loads', () async {
+      final world = worldWith(_Player(name: 'Ada', gold: 7));
+      final manager = SaveManager(config: config(keepBackup: true));
+      await manager.save(world);
+      await manager.save(world);
+      File(p.join(saveDirPath(), 'save.json')).deleteSync();
+      final loaded = _Player();
+      expect(await manager.load(worldWith(loaded)), isNull); // no metadata
+      expect(loaded.gold, 7);
+    });
+
+    test('a slot left with a finished temp file loads from it', () async {
+      await writeRaw('save.json.tmp', {
+        'version': 1,
+        'resources': {
+          'player': {'name': 'Bo', 'gold': 3},
+        },
+      });
+      final loaded = _Player();
+      await SaveManager(config: config()).load(worldWith(loaded));
+      expect(loaded.name, 'Bo');
+    });
+
+    test(
+      'the slot list stays right after a save without a full re-read',
+      () async {
+        final manager = SaveManager(config: config());
+        expect(await manager.listSaveSlots(), isEmpty);
+        await manager.save(worldWith(_Player()), slotName: 'a');
+        await manager.save(worldWith(_Player()), slotName: 'b');
+        final names = (await manager.listSaveSlots()).map((s) => s.slotName);
+        expect(names.toSet(), {'a', 'b'});
+      },
+    );
+  });
 }

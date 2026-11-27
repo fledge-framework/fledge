@@ -1,5 +1,6 @@
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_window/fledge_window.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -24,6 +25,8 @@ void main() {
       if (failing.contains(call.method)) {
         throw PlatformException(code: 'denied', message: 'nope');
       }
+      // Queries (isMinimized, isFullScreen, ...) answer no.
+      if (call.method.startsWith('is')) return false;
       return null;
     });
     messenger.setMockMethodCallHandler(screenChannel, (call) async => null);
@@ -170,6 +173,81 @@ void main() {
     expect(state.mode, WindowMode.fullscreen);
     expect(state.size, const Size(1920, 1080));
     expect(calls, isNot(contains('setBounds')));
+  });
+
+  test('borderless is a frameless window sized to the display', () async {
+    final system = WindowEventSystem();
+    world.setWindowMode(WindowMode.borderless);
+    nextFrame();
+
+    system.run(world);
+    await pumpEventQueue();
+    system.run(world);
+
+    expect(state.mode, WindowMode.borderless);
+    expect(calls, containsAllInOrder(['setAsFrameless', 'setBounds']));
+  });
+
+  group('on macOS', () {
+    setUp(() => debugDefaultTargetPlatformOverride = TargetPlatform.macOS);
+    tearDown(() => debugDefaultTargetPlatformOverride = null);
+
+    test(
+      'borderless goes native fullscreen, over the menu bar and Dock',
+      () async {
+        final system = WindowEventSystem();
+        world.setWindowMode(WindowMode.borderless);
+        nextFrame();
+
+        system.run(world);
+        await pumpEventQueue();
+        system.run(world);
+
+        expect(state.mode, WindowMode.borderless);
+        expect(state.size, const Size(1920, 1080));
+        expect(
+          calls,
+          containsAllInOrder(['setAsFrameless', 'show', 'setFullScreen']),
+        );
+        // A frame set on a window macOS keeps clear of the menu bar is what
+        // left the menu bar and Dock showing.
+        expect(calls, isNot(contains('setBounds')));
+      },
+    );
+
+    test(
+      'windowed waits until fullscreen is left, then sets its bounds',
+      () async {
+        final system = WindowEventSystem();
+        world.setWindowMode(WindowMode.borderless);
+        nextFrame();
+        system.run(world);
+        await pumpEventQueue();
+        system.run(world);
+
+        // Out of fullscreen after two polls, as at the end of the animation.
+        var polls = 0;
+        messenger.setMockMethodCallHandler(windowChannel, (call) async {
+          calls.add(call.method);
+          if (call.method == 'isFullScreen') return ++polls < 3;
+          return null;
+        });
+        calls.clear();
+        world.setWindowMode(WindowMode.windowed);
+        nextFrame();
+        system.run(world);
+        // Lets the polls' delays pass.
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+        system.run(world);
+
+        expect(state.mode, WindowMode.windowed);
+        expect(polls, 3);
+        expect(
+          calls.indexOf('setBounds'),
+          greaterThan(calls.lastIndexOf('isFullScreen')),
+        );
+      },
+    );
   });
 
   test('WindowInitSystem returns synchronously after its first run', () async {

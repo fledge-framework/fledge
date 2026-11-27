@@ -11,6 +11,7 @@ import '../layers/collision_layers.dart';
 import '../physics_mode.dart';
 import 'collision_resolution.dart';
 import 'velocity_integration.dart';
+import 'world_origin.dart';
 
 /// Detects collisions between entities and writes [CollisionEvent]s to
 /// the ECS event queue.
@@ -74,6 +75,7 @@ class CollisionDetectionSystem implements System {
       ComponentId.of<Transform2D>(),
       ComponentId.of<Collider>(),
       ComponentId.of<CollisionConfig>(),
+      ComponentId.of<Parent>(),
     },
     // Detection writes only the event queue — no more component
     // churn from per-frame CollisionEvent insert/remove. Explicit
@@ -119,8 +121,11 @@ class CollisionDetectionSystem implements System {
       final layer = config?.layer ?? CollisionLayers.all;
       final mask = config?.mask ?? CollisionLayers.all;
 
-      final tx = transform.translation.x;
-      final ty = transform.translation.y;
+      // World space: a child collider (a tilemap's) carries its parents'
+      // positions.
+      final origin = worldOrigin(world, entity, transform);
+      final tx = origin.dx;
+      final ty = origin.dy;
 
       final entityShapes = <Rect>[];
       for (final shape in collider.shapes) {

@@ -1,4 +1,4 @@
-import 'dart:ui' show Color;
+import 'dart:ui' show Color, Size;
 
 import 'package:fledge_ecs/fledge_ecs.dart';
 import 'package:fledge_lighting_2d/fledge_lighting_2d.dart';
@@ -45,6 +45,57 @@ void main() {
       expect(e.innerRadius, 30);
       expect(e.position.x, closeTo(120, 1e-9));
       expect(e.position.y, closeTo(240, 1e-9));
+    });
+
+    test('culls lights whose pool misses the view, keeps those reaching '
+        'into it and directional ones', () {
+      // A 400x300 view centred on the origin: x -200..200, y -150..150.
+      mainWorld.insertResource(
+        ActiveCameraView(x: 0, y: 0, zoomFor: (_) => 1)
+          ..viewportSize = const Size(400, 300),
+      );
+      Entity place(Light2D light, double x, double y) {
+        final gt = GlobalTransform2D.identity();
+        gt.matrix.setValues(1, 0, 0, 0, 1, 0, x, y, 1);
+        return (mainWorld.spawn()
+              ..insert(Transform2D.from(x, y))
+              ..insert(gt)
+              ..insert(light))
+            .entity;
+      }
+
+      final near = place(
+        Light2D.point(color: const Color(0xFFFFFFFF), radius: 20),
+        50,
+        50,
+      );
+      // Centre well off screen, but its 400 px pool reaches in.
+      final reaching = place(
+        Light2D.point(color: const Color(0xFFFFFFFF), radius: 400),
+        500,
+        0,
+      );
+      place(
+        Light2D.point(color: const Color(0xFFFFFFFF), radius: 50),
+        3000,
+        3000,
+      );
+      final sun = place(
+        Light2D.directional(
+          color: const Color(0xFFFFFFFF),
+          direction: Vector2(0, 1),
+        ),
+        5000,
+        5000,
+      );
+      LightExtractor().extract(mainWorld, renderWorld);
+      expect(
+        {
+          for (final (_, l) in renderWorld.query1<ExtractedLight>().iter())
+            l.entity,
+        },
+        {near, reaching, sun},
+      );
     });
 
     test('skips entities without GlobalTransform2D', () {

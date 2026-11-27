@@ -184,14 +184,17 @@ final waypoints = smoothPath(
   (sx + 0.5, sy + 0.5), // where the walker is now
   [for (final (x, y) in cells) (x + 0.5, y + 0.5)],
   slack: 1.0, // cost tolerance for a shortcut, in cost-weighted cells
-  sampleStep: 0.25, // spacing of walkability samples along a line, in cells
+  sampleStep: 0.25, // spacing of cost samples along a line, in cells
 );
 ```
 
 The result is the kept points, ending at the goal; the start isn't included.
-Lines are checked by sampling every `sampleStep` cells, so a wall narrower
-than that can be missed. `smoothPath` only checks cells: a shortcut through a
-gap barely wider than the walker can clip a wall. `simplifyPath` (below)
+A shortcut must be walkable on every cell its line touches. A line passing
+exactly through a cell corner also needs both cells beside that corner, as
+`Pathfinder` asks of a diagonal step, so no shortcut squeezes through a
+zero-width diagonal gap (pass `allowCornerCutting: true` if your pathfinder
+allows it). `smoothPath` only checks cells: a shortcut through a gap barely
+wider than the walker can clip a wall. `simplifyPath` (below)
 takes your own fit check.
 
 ### Walking like people: lanes

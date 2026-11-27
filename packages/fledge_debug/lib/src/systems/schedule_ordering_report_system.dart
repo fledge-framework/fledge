@@ -14,6 +14,9 @@ import '../resources/schedule_ordering_report.dart';
 /// to fire a startup [RefreshScheduleOrderingReportRequested] from
 /// their own debug plugin. Later ticks only re-run on request.
 class ScheduleOrderingReportSystem implements System {
+  /// The `SystemMeta.name` of [ScheduleOrderingReportSystem], for `before:` / `after:`.
+  static const String systemName = 'debug_schedule_ordering_report';
+
   /// The scheduler whose stages the report describes.
   final Scheduler scheduler;
 
@@ -24,7 +27,7 @@ class ScheduleOrderingReportSystem implements System {
 
   @override
   SystemMeta get meta => const SystemMeta(
-    name: 'debug_schedule_ordering_report',
+    name: systemName,
     // Frame bookkeeping: the FirstSets phase chain orders this before
     // every platform / input / content system in Schedules.first.
     sets: [FirstSets.frameStart],

@@ -37,6 +37,9 @@ import '../resources/system_stats.dart';
 /// would require managing hierarchy each frame; standalone anchored
 /// texts are cheaper and give the same visual result.
 class OverlayPopulateSystem implements System {
+  /// The `SystemMeta.name` of [OverlayPopulateSystem], for `before:` / `after:`.
+  static const String systemName = 'debug_overlay_populate';
+
   /// Horizontal padding from the anchor edge, in logical pixels.
   static const double kHorizontalPad = 8.0;
 
@@ -51,7 +54,7 @@ class OverlayPopulateSystem implements System {
 
   @override
   SystemMeta get meta => SystemMeta(
-    name: 'debug_overlay_populate',
+    name: systemName,
     reads: {ComponentId.of<DebugOverlayEntity>()},
     writes: {
       ComponentId.of<UiText>(),

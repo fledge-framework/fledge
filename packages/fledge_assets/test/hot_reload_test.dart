@@ -250,5 +250,14 @@ void main() {
       expect(watcher.drainPending(), hasLength(1));
       expect(calls, 0, reason: 'callbacks start in the poll system');
     });
+
+    test('a file of the same name in another folder is not a match', () {
+      final watcher = HotReloadWatcher();
+      addTearDown(watcher.dispose);
+      watcher
+        ..watchWithCallback('assets/a/tree.png', () async {})
+        ..debugFireChange('/abs/assets/b/tree.png');
+      expect(watcher.drainPending(), isEmpty);
+    });
   });
 }

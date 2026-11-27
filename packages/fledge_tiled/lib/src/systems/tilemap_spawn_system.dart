@@ -215,6 +215,7 @@ class TilemapSpawnSystem implements System {
       loaded,
       config,
       layerIndex,
+      const _Inherited(),
     );
 
     return mapEntity.entity;
@@ -227,16 +228,34 @@ class TilemapSpawnSystem implements System {
     LoadedTilemap loaded,
     TilemapSpawnConfig config,
     int layerIndex,
+    _Inherited inherited,
   ) {
     for (final layer in layers) {
       if (layer is tiled.TileLayer) {
-        _spawnTileLayer(world, parent, layer, layerIndex, loaded, config);
+        _spawnTileLayer(
+          world,
+          parent,
+          layer,
+          layerIndex,
+          loaded,
+          config,
+          inherited.apply(layer),
+        );
         layerIndex++;
       } else if (layer is tiled.ObjectGroup) {
-        _spawnObjectLayer(world, parent, layer, layerIndex, loaded, config);
+        _spawnObjectLayer(
+          world,
+          parent,
+          layer,
+          layerIndex,
+          loaded,
+          config,
+          inherited.apply(layer),
+        );
         layerIndex++;
       } else if (layer is tiled.Group) {
-        // Recursively handle layer groups
+        // A group's offset, parallax, opacity, visibility and tint apply
+        // to every layer in it, as Tiled draws them.
         layerIndex = _spawnLayers(
           world,
           parent,
@@ -244,6 +263,7 @@ class TilemapSpawnSystem implements System {
           loaded,
           config,
           layerIndex,
+          inherited.apply(layer),
         );
       } else if (layer is tiled.ImageLayer) {
         // Image layers could be handled here
@@ -260,6 +280,7 @@ class TilemapSpawnSystem implements System {
     int layerIndex,
     LoadedTilemap loaded,
     TilemapSpawnConfig config,
+    _Inherited look,
   ) {
     final chunks = layer.data == null && layer.chunks != null
         ? <ChunkKey, TileChunk>{}
@@ -272,11 +293,11 @@ class TilemapSpawnSystem implements System {
           name: layer.name,
           layerIndex: layerIndex,
           tiledLayer: layer,
-          opacity: layer.opacity,
-          visible: layer.visible,
-          offset: Offset(layer.offsetX, layer.offsetY),
-          parallax: Offset(layer.parallaxX, layer.parallaxY),
-          tintColor: _parseColor(layer.tintColorHex),
+          opacity: look.opacity,
+          visible: look.visible,
+          offset: look.offset,
+          parallax: look.parallax,
+          tintColor: look.tint,
           layerClass: layer.class_,
           tiles: tiles,
           chunks: chunks,
@@ -299,6 +320,7 @@ class TilemapSpawnSystem implements System {
           loaded,
           layer.name,
           config.tileConfig,
+          look.offset,
         );
       }
     }
@@ -311,10 +333,15 @@ class TilemapSpawnSystem implements System {
     LoadedTilemap loaded,
     String layerName,
     TileLayerConfig tileConfig,
+    Offset layerOffset,
   ) {
-    // Collect collision data from tiles
-    final collisionData = <TileCollisionData>[];
+    final cellWidth = loaded.tileWidth.toDouble();
+    final cellHeight = loaded.tileHeight.toDouble();
 
+    // Every tile's collision in the map's space, where its art is drawn
+    // (flipped with the tile, on the cell's bottom-left corner, moved by
+    // the tileset's tile offset).
+    var allShapes = <CollisionShape>[];
     for (final tile in tiles) {
       final tileset = loaded.tilesets.elementAtOrNull(tile.tilesetIndex);
       if (tileset == null) continue;
@@ -322,34 +349,23 @@ class TilemapSpawnSystem implements System {
       final shapes = tileset.getCollisionShapes(tile.localId);
       if (shapes.isEmpty) continue;
 
-      collisionData.add(
-        TileCollisionData(
+      allShapes.addAll(
+        TileCollider.placeTileShapes(
+          shapes,
+          tileRect: tileset.getTileRect(tile.localId),
+          tileOffset: tileset.tileOffset,
           gridX: tile.x,
           gridY: tile.y,
-          // A flipped tile's collision is flipped with it.
-          shapes: TileCollider.flipShapes(
-            shapes,
-            tileWidth: tileset.tileWidth.toDouble(),
-            tileHeight: tileset.tileHeight.toDouble(),
-            horizontal: tile.flipHorizontal,
-            vertical: tile.flipVertical,
-            diagonal: tile.flipDiagonal,
-          ),
+          cellWidth: cellWidth,
+          cellHeight: cellHeight,
+          horizontal: tile.flipHorizontal,
+          vertical: tile.flipVertical,
+          diagonal: tile.flipDiagonal,
         ),
       );
     }
 
-    if (collisionData.isEmpty) return;
-
-    // Generate world-space collision shapes
-    final tileWidth = loaded.tileWidth.toDouble();
-    final tileHeight = loaded.tileHeight.toDouble();
-
-    var allShapes = TileCollider.fromTileLayer(
-      tiles: collisionData,
-      tileWidth: tileWidth,
-      tileHeight: tileHeight,
-    );
+    if (allShapes.isEmpty) return;
 
     // Optimize by merging adjacent rectangles (always enabled)
     final rectangles = <RectangleShape>[];
@@ -370,10 +386,13 @@ class TilemapSpawnSystem implements System {
 
     if (allShapes.isEmpty) return;
 
-    // Spawn collider entity as child of the layer
+    // Spawn collider entity as child of the layer. The shapes stay in the
+    // map's space; the layer's offset (its groups' included) is the
+    // entity's, so physics, which carries the map root's position down
+    // to it, finds the collision where the layer is drawn.
     final collider = Collider(shapes: allShapes);
     final colliderEntity = world.spawnChild(layerEntity)
-      ..insert(Transform2D())
+      ..insert(Transform2D.from(layerOffset.dx, layerOffset.dy))
       ..insert(GlobalTransform2D())
       ..insert(collider);
 
@@ -456,6 +475,7 @@ class TilemapSpawnSystem implements System {
     int layerIndex,
     LoadedTilemap loaded,
     TilemapSpawnConfig config,
+    _Inherited look,
   ) {
     final objects = layer.objects.map((obj) {
       // A tile object takes its tile's class and properties as defaults.
@@ -497,10 +517,10 @@ class TilemapSpawnSystem implements System {
           drawOrder: layer.drawOrder == tiled.DrawOrder.indexOrder
               ? DrawOrder.indexOrder
               : DrawOrder.topDown,
-          color: _parseColor(layer.tintColorHex),
-          opacity: layer.opacity,
-          visible: layer.visible,
-          offset: Offset(layer.offsetX, layer.offsetY),
+          color: look.tint,
+          opacity: look.opacity,
+          visible: look.visible,
+          offset: look.offset,
         ),
       )
       ..insert(Transform2D())
@@ -519,7 +539,13 @@ class TilemapSpawnSystem implements System {
         }
 
         final typeConfig = objectTypes[objType]!;
-        _spawnObjectEntity(world, layerEntity.entity, obj, typeConfig);
+        _spawnObjectEntity(
+          world,
+          layerEntity.entity,
+          obj,
+          typeConfig,
+          look.offset,
+        );
       }
     }
   }
@@ -529,9 +555,11 @@ class TilemapSpawnSystem implements System {
     Entity layerEntity,
     TiledObjectData obj,
     ObjectTypeConfig typeConfig,
+    Offset layerOffset,
   ) {
+    // Where the object is drawn in the map: its layer's offset included.
     final entity = world.spawnChild(layerEntity)
-      ..insert(Transform2D.from(obj.x, obj.y))
+      ..insert(Transform2D.from(obj.x + layerOffset.dx, obj.y + layerOffset.dy))
       ..insert(GlobalTransform2D())
       ..insert(TiledObject.fromData(obj));
 
@@ -567,7 +595,7 @@ class TilemapSpawnSystem implements System {
     return null;
   }
 
-  Color _parseColor(String? hex) {
+  static Color _parseColor(String? hex) {
     if (hex == null || hex.isEmpty) return const Color(0xFFFFFFFF);
 
     final cleaned = hex.replaceFirst('#', '');
@@ -582,5 +610,46 @@ class TilemapSpawnSystem implements System {
     }
 
     return value != null ? Color(value) : const Color(0xFFFFFFFF);
+  }
+}
+
+/// What a layer takes from the groups it's in, as Tiled draws it: offsets
+/// add up, parallax factors and opacities multiply, it's visible only
+/// when every group is, and tints multiply channel by channel.
+class _Inherited {
+  final Offset offset;
+  final Offset parallax;
+  final double opacity;
+  final bool visible;
+  final Color tint;
+
+  const _Inherited({
+    this.offset = Offset.zero,
+    this.parallax = const Offset(1, 1),
+    this.opacity = 1,
+    this.visible = true,
+    this.tint = const Color(0xFFFFFFFF),
+  });
+
+  /// [layer]'s own settings on top of these.
+  _Inherited apply(tiled.Layer layer) {
+    final own = TilemapSpawnSystem._parseColor(layer.tintColorHex);
+    return _Inherited(
+      offset: offset + Offset(layer.offsetX, layer.offsetY),
+      parallax: Offset(
+        parallax.dx * layer.parallaxX,
+        parallax.dy * layer.parallaxY,
+      ),
+      opacity: opacity * layer.opacity,
+      visible: visible && layer.visible,
+      tint: tint == const Color(0xFFFFFFFF)
+          ? own
+          : Color.from(
+              alpha: tint.a * own.a,
+              red: tint.r * own.r,
+              green: tint.g * own.g,
+              blue: tint.b * own.b,
+            ),
+    );
   }
 }

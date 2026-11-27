@@ -11,12 +11,15 @@ import '../resources/frame_stats.dart';
 /// Reads [WallTime] and writes [FrameStats] — both resources — so it
 /// doesn't fight anything for entity access.
 class FrameStatsSystem implements System {
+  /// The `SystemMeta.name` of [FrameStatsSystem], for `before:` / `after:`.
+  static const String systemName = 'debug_frame_stats';
+
   /// Creates the frame-stats system.
   const FrameStatsSystem();
 
   @override
   SystemMeta get meta => const SystemMeta(
-    name: 'debug_frame_stats',
+    name: systemName,
     resourceReads: {WallTime},
     resourceWrites: {FrameStats},
     // Frame bookkeeping: the FirstSets phase chain orders this before

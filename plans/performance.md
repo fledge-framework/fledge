@@ -46,6 +46,7 @@ The follow-up to the 2026-11-15 performance review of Fledge and Tharsis Plateau
 - [x] **8. Prediction obstacles rebuilt every replayed step** (Tharsis `player/`)
 - [x] **9. Tilemap extraction** (fledge_tiled)
 - [x] **10. Render-world sprite list** (fledge_render_2d, fledge_tiled, fledge_particles, fledge_debug)
+- [x] **11. One sprite sort a frame** (fledge_render_2d)
 
 Work order: 1 → 2 → 3 → 5 → 4 → 6. (1-3 are framework and benefit everything; 5 removes the worst spikes; 4 is UI; 6 needs the user at a real machine.)
 
@@ -220,6 +221,14 @@ Baseline (after the review's fixes, 2026-11-15; town at 16:30): tick p50 3.4 ms,
 - Tick p50: town 16:30 961 -> **727 us**, frontier 809 -> 596 us, plot 1173 -> 915 us.
 
 Since item 7 began (all of 7, 9, 10): town 16:30 tick p50 1714 -> 727 us (-58%), frontier 1613 -> 596 us (-63%).
+
+## 11. One sprite sort a frame (2026-11-26)
+
+**Evidence.** With a view pass (Tharsis's lighting), `_FledgeRenderPainter` called `renderSpritesToDrawer` twice a paint (sprites, then the emissive ones), each collecting the render world's sprites into a new list and sorting it; `sortByDrawOrder` copied the list and built an index list to stay stable.
+
+**Design as built.** `sortedSprites(renderWorld)` collects and sorts once into a list kept per render world (an `Expando`), and `drawSortedSprites(sorted, drawer, where:)` draws a filtered pass from it (same batching: contiguous same-texture runs among the accepted sprites). `sortByDrawOrder(sprites, [scratch])` is a bottom-up merge sort (runs of 16 insertion-sorted, then merged through a reusable scratch buffer): stable by construction, allocating nothing once the buffers have grown. `renderSpritesToDrawer` stays as a wrapper. `test/sprite_sort_test.dart` checks it orders exactly as a stable sort on random inputs with many ties.
+
+**Results** (2,000 sprites, the test runner, sort alone): 635 us a frame (two sorts) -> **262 us** (one). Not yet profiled in the running game.
 
 ## Not in scope here (reported by the review, to verify separately)
 

@@ -63,4 +63,26 @@ void main() {
   test('an empty path stays empty', () {
     expect(smoothPath(CollisionGrid(width: 2, height: 2), (0.5, 0.5), []), []);
   });
+
+  test('no shortcut squeezes through a zero-width diagonal gap', () {
+    // (2, 1) and (1, 2) blocked: the straight line from (0.5, 0.5) to
+    // (3.5, 3.5) passes exactly through the corner between them.
+    final grid = CollisionGrid(width: 4, height: 4)
+      ..setBlocked(2, 1)
+      ..setBlocked(1, 2);
+    const around = [(0.5, 3.5), (3.5, 3.5)];
+    expect(smoothPath(grid, (0.5, 0.5), around), around);
+    // Corner cutting allowed, the squeeze is a way through.
+    expect(smoothPath(grid, (0.5, 0.5), around, allowCornerCutting: true), [
+      (3.5, 3.5),
+    ]);
+  });
+
+  test('no shortcut clips the corner of a blocked cell between samples', () {
+    // The line from (0.5, 0.5) to (4.45, 1.3) crosses a corner of (2, 1)
+    // for a sliver no 0.25-cell sample lands in.
+    final grid = CollisionGrid(width: 5, height: 3)..setBlocked(2, 1);
+    const around = [(3.5, 0.5), (4.45, 1.3)];
+    expect(smoothPath(grid, (0.5, 0.5), around), around);
+  });
 }

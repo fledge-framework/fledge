@@ -120,6 +120,22 @@ class TransformPropagateSystem implements System {
       if (children != null) _propagate(world, global, children, force: false);
       (freeze ??= []).add(entity);
     }
+    // Newcomers under frozen entities (a child spawned under static
+    // scenery after it was frozen): computed from their frozen parent once
+    // and frozen with it, else nothing would ever compute them.
+    final late = _lateChildren(world);
+    for (final (child, parent) in late) {
+      final local = world.get<Transform2D>(child);
+      final parentGlobal = world.get<GlobalTransform2D>(parent);
+      if (local == null || parentGlobal == null) continue;
+      final global = _globalOf(world, child);
+      _computeChild(global, parentGlobal, local, force: true);
+      final grandchildren = world.get<Children>(child);
+      if (grandchildren != null) {
+        _propagate(world, global, grandchildren, force: true);
+      }
+      (freeze ??= []).add(child);
+    }
     if (freeze != null) {
       for (final root in freeze) {
         _freeze(world, root);
@@ -147,6 +163,40 @@ class TransformPropagateSystem implements System {
             .iter()) {
       _propagate(world, global, children, force: true);
     }
+  }
+
+  /// Entities not frozen whose parent is, each with that parent: children
+  /// added under static scenery after it was frozen. One whose global
+  /// transform was computed under a parent already (it has a source
+  /// parent) isn't new; only those never computed are checked for a frozen
+  /// parent.
+  static List<(Entity, Entity)> _lateChildren(World world) {
+    final out = <(Entity, Entity)>[];
+    for (final (entity, _, parent, global)
+        in world
+            .query3<Transform2D, Parent, GlobalTransform2D>(
+              filter: const Without<TransformFrozen>(),
+            )
+            .iter()) {
+      if (global.sourceParent != null) continue;
+      if (world.has<TransformFrozen>(parent.entity)) {
+        out.add((entity, parent.entity));
+      }
+    }
+    for (final (entity, _, parent)
+        in world
+            .query2<Transform2D, Parent>(
+              filter:
+                  const And<
+                    (Without<TransformFrozen>, Without<GlobalTransform2D>)
+                  >([Without<TransformFrozen>(), Without<GlobalTransform2D>()]),
+            )
+            .iter()) {
+      if (world.has<TransformFrozen>(parent.entity)) {
+        out.add((entity, parent.entity));
+      }
+    }
+    return out;
   }
 
   /// Marks [entity] and everything below it [TransformFrozen].

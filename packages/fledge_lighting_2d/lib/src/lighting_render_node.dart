@@ -93,7 +93,7 @@ void _drawRadial(Canvas canvas, Rect viewport, ExtractedLight light) {
   // giving full color from center to innerRadius, then falling off.
   final innerStop = (light.innerRadius / radius).clamp(0.0, 1.0);
   final coreColor = _scaleAlpha(light.color, light.intensity);
-  final (colors, stops) = falloffStops(coreColor, innerStop, light.bands);
+  final (colors, stops) = _cachedStops(coreColor, innerStop, light.bands);
   final shader = Gradient.radial(center, radius, colors, stops);
 
   final paint = Paint()
@@ -114,6 +114,26 @@ void _drawRadial(Canvas canvas, Rect viewport, ExtractedLight light) {
     ..translate(-center.dx, -center.dy)
     ..drawCircle(center, radius, paint)
     ..restore();
+}
+
+/// [falloffStops], remembered: lights keep their colour and shape from
+/// frame to frame, so their stops are built once, not every frame.
+final Map<(Color, double, int), (List<Color>, List<double>)> _stopsCache = {};
+
+/// Most stops kept; past it the cache starts over (lights animating their
+/// colour or intensity would otherwise grow it without bound).
+const _stopsCacheLimit = 512;
+
+(List<Color>, List<double>) _cachedStops(
+  Color core,
+  double innerStop,
+  int bands,
+) {
+  final key = (core, innerStop, bands);
+  final cached = _stopsCache[key];
+  if (cached != null) return cached;
+  if (_stopsCache.length >= _stopsCacheLimit) _stopsCache.clear();
+  return _stopsCache[key] = falloffStops(core, innerStop, bands);
 }
 
 /// Gradient samples of the smooth falloff, between the inner radius and
@@ -211,7 +231,7 @@ void renderLightGlows(RenderWorld renderWorld, Canvas canvas, Rect area) {
     final rect = Rect.fromCircle(center: center, radius: radius);
     if (!rect.overlaps(area)) continue;
     final core = _scaleAlpha(light.color, light.glow * light.intensity);
-    final (colors, stops) = falloffStops(core, 0, 0);
+    final (colors, stops) = _cachedStops(core, 0, 0);
     canvas.drawCircle(
       center,
       radius,

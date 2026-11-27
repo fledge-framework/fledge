@@ -47,6 +47,8 @@ window.
 | `borderless` | A frameless window covering the whole display. Alt-tabs faster and plays better with other monitors than exclusive fullscreen. **The default** |
 | `windowed` | A normal window with a title bar, 1280×720 and centred on the display unless you say otherwise |
 
+On macOS, `borderless` uses the system's own fullscreen (the window gets its own Space, and the menu bar slides in when the pointer reaches the top). macOS keeps every ordinary window below the menu bar and clear of the Dock, so a frameless window the size of the display would leave both showing. macOS has no exclusive fullscreen either, so there `borderless` and `fullscreen` look the same.
+
 `WindowPlugin` has a constructor per mode:
 
 ```dart

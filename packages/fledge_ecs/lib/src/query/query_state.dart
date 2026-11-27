@@ -268,9 +268,16 @@ class QueryState {
 /// before: a despawned entity is skipped, one that moved is read where it
 /// is now, one that no longer matches is skipped.
 class _Cursor {
-  _Cursor(this._archetypes, this._entities, this._state, this._snapshot)
-    : _matching = _state.matchingArchetypes,
-      _version = Table.structureVersion;
+  /// [_version] is [Table.structureVersion] when [_snapshot] was taken, not
+  /// when this pass starts: an iterable walked a second time after a spawn
+  /// or despawn must not read its old snapshot along the fast path.
+  _Cursor(
+    this._archetypes,
+    this._entities,
+    this._state,
+    this._snapshot,
+    this._version,
+  ) : _matching = _state.matchingArchetypes;
 
   final Archetypes _archetypes;
   final Entities _entities;
@@ -329,13 +336,16 @@ class QueryIter1<T1> extends Iterable<(Entity, T1)> {
   final Entities _entities;
   final QueryState _state;
   final List<Entity> _snapshot;
+  final int _version;
 
   QueryIter1(this._archetypes, this._entities, this._state)
-    : _snapshot = _state.snapshotEntities(_archetypes);
+    : _snapshot = _state.snapshotEntities(_archetypes),
+      _version = Table.structureVersion;
 
   @override
-  Iterator<(Entity, T1)> get iterator =>
-      _QueryIterator1(_Cursor(_archetypes, _entities, _state, _snapshot));
+  Iterator<(Entity, T1)> get iterator => _QueryIterator1(
+    _Cursor(_archetypes, _entities, _state, _snapshot, _version),
+  );
 }
 
 class _QueryIterator1<T1> implements Iterator<(Entity, T1)> {
@@ -371,13 +381,16 @@ class QueryIter2<T1, T2> extends Iterable<(Entity, T1, T2)> {
   final Entities _entities;
   final QueryState _state;
   final List<Entity> _snapshot;
+  final int _version;
 
   QueryIter2(this._archetypes, this._entities, this._state)
-    : _snapshot = _state.snapshotEntities(_archetypes);
+    : _snapshot = _state.snapshotEntities(_archetypes),
+      _version = Table.structureVersion;
 
   @override
-  Iterator<(Entity, T1, T2)> get iterator =>
-      _QueryIterator2(_Cursor(_archetypes, _entities, _state, _snapshot));
+  Iterator<(Entity, T1, T2)> get iterator => _QueryIterator2(
+    _Cursor(_archetypes, _entities, _state, _snapshot, _version),
+  );
 }
 
 class _QueryIterator2<T1, T2> implements Iterator<(Entity, T1, T2)> {
@@ -417,13 +430,16 @@ class QueryIter3<T1, T2, T3> extends Iterable<(Entity, T1, T2, T3)> {
   final Entities _entities;
   final QueryState _state;
   final List<Entity> _snapshot;
+  final int _version;
 
   QueryIter3(this._archetypes, this._entities, this._state)
-    : _snapshot = _state.snapshotEntities(_archetypes);
+    : _snapshot = _state.snapshotEntities(_archetypes),
+      _version = Table.structureVersion;
 
   @override
-  Iterator<(Entity, T1, T2, T3)> get iterator =>
-      _QueryIterator3(_Cursor(_archetypes, _entities, _state, _snapshot));
+  Iterator<(Entity, T1, T2, T3)> get iterator => _QueryIterator3(
+    _Cursor(_archetypes, _entities, _state, _snapshot, _version),
+  );
 }
 
 class _QueryIterator3<T1, T2, T3> implements Iterator<(Entity, T1, T2, T3)> {
@@ -465,13 +481,16 @@ class QueryIter4<T1, T2, T3, T4> extends Iterable<(Entity, T1, T2, T3, T4)> {
   final Entities _entities;
   final QueryState _state;
   final List<Entity> _snapshot;
+  final int _version;
 
   QueryIter4(this._archetypes, this._entities, this._state)
-    : _snapshot = _state.snapshotEntities(_archetypes);
+    : _snapshot = _state.snapshotEntities(_archetypes),
+      _version = Table.structureVersion;
 
   @override
-  Iterator<(Entity, T1, T2, T3, T4)> get iterator =>
-      _QueryIterator4(_Cursor(_archetypes, _entities, _state, _snapshot));
+  Iterator<(Entity, T1, T2, T3, T4)> get iterator => _QueryIterator4(
+    _Cursor(_archetypes, _entities, _state, _snapshot, _version),
+  );
 }
 
 class _QueryIterator4<T1, T2, T3, T4>

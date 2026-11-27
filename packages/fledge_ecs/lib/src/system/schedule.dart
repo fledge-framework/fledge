@@ -392,7 +392,11 @@ class SystemStage {
   /// Whether every set [system] joins through [SystemMeta.sets] lets it
   /// run: a set's `runIf` gates all its members, however they joined.
   bool _setsAllow(System system, World world) {
+    // A [SetConfiguredSystem] already checked its own set's condition in
+    // [System.shouldRun]; don't run that condition a second time.
+    final checked = system is SetConfiguredSystem ? system.setName : null;
     for (final name in system.meta.sets) {
+      if (name == checked) continue;
       final condition = _sets.get(name)?.runCondition;
       if (condition != null && !condition(world)) return false;
     }

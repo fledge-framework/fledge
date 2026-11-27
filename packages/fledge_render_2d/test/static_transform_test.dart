@@ -140,5 +140,43 @@ void main() {
       propagateTransforms(world);
       expect(_extracted(world, extractor), contains(later));
     });
+
+    test('a child spawned under frozen scenery is placed under it, frozen '
+        'and drawn', () {
+      final world = scene();
+      final root = world.spawn()
+        ..insert(Transform2D(translation: Vector2(100, 50)))
+        ..insert(const StaticTransform());
+      final system = TransformPropagateSystem()..run(world);
+      expect(world.has<TransformFrozen>(root.entity), isTrue);
+      final extractor = SpriteExtractor();
+      _extracted(world, extractor);
+      final child = world.spawnChild(root.entity)
+        ..insert(Sprite(texture: _texture))
+        ..insert(Transform2D(translation: Vector2(-90, -40)));
+      final grandchild = world.spawnChild(child.entity)
+        ..insert(Transform2D(translation: Vector2(1, 2)));
+      system.run(world);
+      final g = world.get<GlobalTransform2D>(child.entity)!.matrix.storage;
+      expect((g[6], g[7]), (10.0, 10.0));
+      final gg = world.get<GlobalTransform2D>(grandchild.entity)!;
+      expect((gg.matrix.storage[6], gg.matrix.storage[7]), (11.0, 12.0));
+      expect(world.has<TransformFrozen>(child.entity), isTrue);
+      expect(world.has<TransformFrozen>(grandchild.entity), isTrue);
+      expect(_extracted(world, extractor), {child.entity});
+    });
+
+    test('a sprite inserted later on a frozen entity is drawn', () {
+      final world = scene();
+      final a = place(world, 0, 0);
+      final bare = world.spawn()
+        ..insert(Transform2D(translation: Vector2(20, 20)))
+        ..insert(const StaticTransform());
+      propagateTransforms(world);
+      final extractor = SpriteExtractor();
+      expect(_extracted(world, extractor), {a});
+      world.insert(bare.entity, Sprite(texture: _texture));
+      expect(_extracted(world, extractor), {a, bare.entity});
+    });
   });
 }

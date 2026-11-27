@@ -1,3 +1,5 @@
+import 'dart:ui' show Offset, Rect;
+
 import 'package:fledge_physics/fledge_physics.dart';
 
 import '../components/object_layer.dart';
@@ -67,7 +69,49 @@ class TileCollider {
     return tileShapes.map((shape) => shape.translate(worldX, worldY)).toList();
   }
 
-  /// [shapes] (in a tile's local space, [tileWidth] x [tileHeight]) as they
+  /// Tile collision [shapes] (in the tile's own space, before flips) as
+  /// they lie in the map when the tile is painted in cell ([gridX],
+  /// [gridY]) of a [cellWidth] x [cellHeight] grid, exactly where its art
+  /// is drawn: flipped about the tile's own size ([tileRect], its image in
+  /// an image collection, else the map cell when empty), with the drawn
+  /// box's bottom-left on the cell's bottom-left corner, then moved by the
+  /// tileset's [tileOffset]. A tile the size of the cell, with no offset,
+  /// fills the cell exactly.
+  static List<CollisionShape> placeTileShapes(
+    List<CollisionShape> shapes, {
+    required Rect tileRect,
+    required int gridX,
+    required int gridY,
+    required double cellWidth,
+    required double cellHeight,
+    Offset tileOffset = Offset.zero,
+    bool horizontal = false,
+    bool vertical = false,
+    bool diagonal = false,
+  }) {
+    if (shapes.isEmpty) return const [];
+    final width = tileRect.width > 0 ? tileRect.width : cellWidth;
+    final height = tileRect.height > 0 ? tileRect.height : cellHeight;
+    // A diagonal flip swaps the drawn box's sides.
+    final boxHeight = diagonal ? width : height;
+    final left = gridX * cellWidth + tileOffset.dx;
+    final top = (gridY + 1) * cellHeight - boxHeight + tileOffset.dy;
+    return [
+      for (final shape in flipShapes(
+        shapes,
+        tileWidth: width,
+        tileHeight: height,
+        horizontal: horizontal,
+        vertical: vertical,
+        diagonal: diagonal,
+      ))
+        shape.translate(left, top),
+    ];
+  }
+
+  /// [shapes] (in a tile's local space, [tileWidth] x [tileHeight], the
+  /// tile's own size: an image-collection tile's image, not the tileset's
+  /// largest tile) as they
   /// lie on a tile placed flipped: diagonally ([diagonal], a transpose of
   /// x and y), then horizontally, then vertically, in Tiled's order.
   ///

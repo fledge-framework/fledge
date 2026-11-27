@@ -132,6 +132,21 @@ void main() {
     await bed.dispose();
   });
 
+  test(
+    'a client has received a resource only once a chunk of it arrived',
+    () async {
+      final (bed, host) = await start();
+      expect(NetTestbed.session(host).hasReceived('grid'), isTrue);
+      final client = await bed.addClient();
+      final session = NetTestbed.session(client);
+      await bed.frames(30);
+      expect(session.hasReceived('grid'), isTrue);
+      expect(session.isClient, isTrue);
+      expect(session.hasReceived('nothing_by_that_name'), isFalse);
+      await bed.dispose();
+    },
+  );
+
   test('a change sends only the chunks it touched', () async {
     final (bed, host) = await start();
     final client = await bed.addClient();

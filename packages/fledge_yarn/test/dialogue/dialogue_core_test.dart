@@ -100,8 +100,23 @@ void main() {
     });
 
     test('an unknown node is refused', () async {
-      await h.start('no_such_node');
+      await h.start('no_such_node', context: 'npc');
       expect(h.state.isActive, isFalse);
+      await h.tick();
+      final refused = h.events.whereType<DialogueStartRefused>().single;
+      expect(refused.node, 'no_such_node');
+      expect(refused.context, 'npc');
+      expect(refused.reason, DialogueRefusal.noSuchNode);
+      expect(h.events.whereType<DialogueEnded>(), isEmpty);
+    });
+
+    test('a refused start while one is active says so', () async {
+      await h.start('intro');
+      await h.start('narration');
+      await h.tick();
+      final refused = h.events.whereType<DialogueStartRefused>().single;
+      expect(refused.node, 'narration');
+      expect(refused.reason, DialogueRefusal.alreadyActive);
     });
 
     test('requests sent in the tick a dialogue starts are ignored (they '

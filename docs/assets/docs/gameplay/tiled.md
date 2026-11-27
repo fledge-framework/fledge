@@ -239,7 +239,10 @@ Map entity: Tilemap, Transform2D (position), GlobalTransform2D,
 └── ...
 ```
 
-Layers inside Tiled group layers are flattened into children of the map.
+Layers inside Tiled group layers are flattened into children of the map,
+each taking its groups' settings as Tiled draws them: offsets add up, parallax
+and opacity multiply, a layer is visible only if every group is, and tints
+multiply.
 Image layers are skipped. Despawn a whole map with
 `world.despawnRecursive(mapEntity)`.
 
@@ -344,9 +347,9 @@ world.eventWriter<SpawnTilemapEvent>().send(
 
 Each object entity is a child of its layer's entity and gets:
 
-- `Transform2D.from(object.x, object.y)`, relative to the map. For a
-  rectangle or ellipse that's its top-left corner; for a tile object, its
-  image's bottom-left. Layer offsets aren't applied.
+- `Transform2D.from(object.x, object.y)` plus its layer's offset (its
+  groups' included), relative to the map. For a rectangle or ellipse that's
+  its top-left corner; for a tile object, its image's bottom-left.
 - A `TiledObject` component: `id`, `name`, `type`, `properties`.
 - With `createCollider: true` (the default), a `Collider` built from its
   shape in local space (relative to the transform): rectangles (with
@@ -457,16 +460,22 @@ world.eventWriter<SpawnTilemapEvent>().send(
 For each layer it:
 
 1. Takes the collision shapes of every painted tile. On a flipped or rotated
-   tile, unrotated rectangles are flipped with it (`TileCollider.flipShapes`);
-   other shapes keep their unflipped position.
-2. Moves them to the tile's position in the map.
+   tile, unrotated rectangles are flipped with it, about the tile's own size
+   (`TileCollider.flipShapes`); other shapes keep their unflipped position.
+2. Moves them to where the tile's art is drawn in the map: a tile bigger or
+   smaller than the grid sits on its cell's bottom-left corner, moved by the
+   tileset's tile offset (`TileCollider.placeTileShapes`).
 3. Merges neighbouring unrotated rectangles, first along rows, then rows of
    the same span stacked under each other, so a wall becomes one rectangle.
-4. Spawns one entity with `Transform2D`, `GlobalTransform2D` and the
-   `Collider`, and calls `onColliderSpawn`.
+4. Spawns one entity with `Transform2D` (the layer's offset, its groups'
+   included), `GlobalTransform2D` and the `Collider`, and calls
+   `onColliderSpawn`. The shapes are in the map's space; physics carries the
+   map's position down the hierarchy, so the collision is where the map is
+   drawn.
 
 `TileCollider` exposes the steps for your own use: `fromTileCollision`,
-`fromTileLayer` (from `TileCollisionData`), `flipShapes`, `mergeRectangles`
+`fromTileLayer` (from `TileCollisionData`), `placeTileShapes`, `flipShapes`,
+`mergeRectangles`
 and `fromObject`.
 
 ### Pathfinding grids

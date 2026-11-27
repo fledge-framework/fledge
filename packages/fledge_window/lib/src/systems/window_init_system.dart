@@ -11,6 +11,7 @@ import '../resources/refresh_rate.dart';
 import '../resources/window_state.dart';
 import '../window_config.dart';
 import '../window_mode.dart';
+import 'native_modes.dart';
 import 'window_os_event_system.dart';
 
 /// System that initializes the window on app startup.
@@ -214,10 +215,7 @@ class WindowInitSystem implements System {
           display.size.height,
         );
         if (!await _tryNative(world, 'setMode', () async {
-          await windowManager.setFullScreen(false);
-          await windowManager.setAsFrameless();
-          await windowManager.setHasShadow(false);
-          await windowManager.setBounds(borderlessBounds);
+          await enterBorderless(borderlessBounds);
         }, attemptedMode: mode)) {
           return false;
         }
@@ -230,7 +228,7 @@ class WindowInitSystem implements System {
         final position =
             config.windowedPosition ?? _centerOnDisplay(size, display);
         if (!await _tryNative(world, 'setMode', () async {
-          await windowManager.setFullScreen(false);
+          await leaveFullScreen();
           await windowManager.setTitleBarStyle(TitleBarStyle.normal);
           await windowManager.setBounds(
             Rect.fromLTWH(position.dx, position.dy, size.width, size.height),
