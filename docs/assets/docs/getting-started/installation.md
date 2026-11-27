@@ -39,9 +39,9 @@ dependencies:
   flutter:
     sdk: flutter
   material_ui: ^1.11.0
-  fledge_ecs: ^0.7.0
-  fledge_input: ^0.7.0       # keyboard, mouse and gamepad actions
-  fledge_render_2d: ^0.7.0   # sprites, transforms, the render world
+  fledge_ecs: ^0.7.1
+  fledge_input: ^0.7.1       # keyboard, mouse and gamepad actions
+  fledge_render_2d: ^0.7.1   # sprites, transforms, the render world
 ```
 
 ```bash
@@ -76,7 +76,7 @@ For a server, a simulation or tests that don't need Flutter:
 ```bash
 dart create -t console my_sim
 cd my_sim
-dart pub add fledge_ecs:^0.7.0
+dart pub add fledge_ecs:^0.7.1
 ```
 
 ```yaml
@@ -84,7 +84,7 @@ environment:
   sdk: ^3.11.0
 
 dependencies:
-  fledge_ecs: ^0.7.0
+  fledge_ecs: ^0.7.1
 ```
 
 Check it works by replacing `bin/my_sim.dart` with:
@@ -131,11 +131,11 @@ dependencies:
 
 ```yaml
 dependencies:
-  fledge_ecs: ^0.7.0
+  fledge_ecs: ^0.7.1
 
 dev_dependencies:
   build_runner: ^2.10.4
-  fledge_ecs_generator: ^0.7.0
+  fledge_ecs_generator: ^0.7.1
 ```
 
 `fledge_ecs` re-exports the annotations (`@system`, `@component`), so you only

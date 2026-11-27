@@ -11,7 +11,7 @@ Add it only if you import `package:fledge_ecs_annotations` yourself.
 
 ```yaml
 dependencies:
-  fledge_ecs_annotations: ^0.7.0
+  fledge_ecs_annotations: ^0.7.1
 ```
 
 ## Annotations

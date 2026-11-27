@@ -8,7 +8,7 @@ Retained-mode game HUD/UI and generic placement mode for [Fledge](https://fledge
 
 ```yaml
 dependencies:
-  fledge_ui: ^0.7.0
+  fledge_ui: ^0.7.1
 ```
 
 ## Quick Start

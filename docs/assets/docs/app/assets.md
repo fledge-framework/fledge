@@ -7,7 +7,7 @@ change on disk during development.
 
 ```yaml
 dependencies:
-  fledge_assets: ^0.7.0
+  fledge_assets: ^0.7.1
 ```
 
 It's pure Dart (Dart 3.11+), with no Flutter dependency. You'll often use it

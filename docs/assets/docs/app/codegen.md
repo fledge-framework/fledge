@@ -13,11 +13,11 @@ alike.
 
 ```yaml
 dependencies:
-  fledge_ecs: ^0.7.0
+  fledge_ecs: ^0.7.1
 
 dev_dependencies:
   build_runner: ^2.10.4
-  fledge_ecs_generator: ^0.7.0
+  fledge_ecs_generator: ^0.7.1
 ```
 
 `fledge_ecs` re-exports the annotations, so importing

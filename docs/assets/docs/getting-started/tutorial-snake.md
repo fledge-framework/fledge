@@ -150,8 +150,8 @@ dependencies:
   flutter:
     sdk: flutter
   material_ui: ^1.11.0
-  fledge_ecs: ^0.7.0
-  fledge_input: ^0.7.0
+  fledge_ecs: ^0.7.1
+  fledge_input: ^0.7.1
 ```
 
 ```bash

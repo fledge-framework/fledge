@@ -6,7 +6,7 @@ colliders and the camera view.
 
 ```yaml
 dependencies:
-  fledge_debug: ^0.7.0
+  fledge_debug: ^0.7.1
 ```
 
 Flutter 3.50+ (Dart 3.14+); desktop first, web and mobile best-effort. It

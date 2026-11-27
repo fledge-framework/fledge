@@ -13,8 +13,8 @@ It also contains the grid pathfinder, covered on its own page:
 
 ```yaml
 dependencies:
-  fledge_physics: ^0.7.0
-  fledge_render_2d: ^0.7.0 # Transform2D
+  fledge_physics: ^0.7.1
+  fledge_render_2d: ^0.7.1 # Transform2D
 ```
 
 - **Flutter 3.50+** (Dart `^3.14`). Positions come from `Transform2D` in

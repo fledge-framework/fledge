@@ -8,7 +8,7 @@
 
 ```yaml
 dependencies:
-  fledge_render_2d: ^0.7.0
+  fledge_render_2d: ^0.7.1
 ```
 
 ## Quick Start

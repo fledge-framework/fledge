@@ -1,3 +1,13 @@
+## 0.7.1
+
+ - **FIX**(fledge_ecs): fire observers on despawn and bulk spawn. ([dcfbccb6](https://github.com/fledge-framework/fledge/commit/dcfbccb6c7ff1ae8880257d805ecbd7a5c4574a5))
+ - **FIX**: bump versions to stable. ([13c9aa7f](https://github.com/fledge-framework/fledge/commit/13c9aa7f0d2702dabaa7088a8679c2113f8d295d))
+ - **FIX**(fledge): update dependencies, upgrade melos to v7. ([e513327a](https://github.com/fledge-framework/fledge/commit/e513327a9f77e28d2126f9140e146a9b322c7b94))
+ - **FEAT**: upgrade tiled version. ([306fdb67](https://github.com/fledge-framework/fledge/commit/306fdb6708c06ff8c29a1a745a9899677bf9ce27))
+ - **FEAT**: v0.2 engine restructure — 2D/2.5D desktop game engine. ([bf7c2b6c](https://github.com/fledge-framework/fledge/commit/bf7c2b6cc47837c998786f25bc87997f474c5b1d))
+ - **FEAT**: initial commit. ([0e057c5a](https://github.com/fledge-framework/fledge/commit/0e057c5a4646a51d2f7f4c6bd5ed552b745b1b7d))
+ - **DOCS**(*): correct README quick starts and point links at the new docs. ([50d6e5da](https://github.com/fledge-framework/fledge/commit/50d6e5da2e8bf3eb220be3782b66e0b74438fd06))
+
 ## 0.7.0
 
  - **FIX**(fledge_ecs): fire observers on despawn and bulk spawn. ([dcfbccb6](https://github.com/fledge-framework/fledge/commit/dcfbccb6c7ff1ae8880257d805ecbd7a5c4574a5))

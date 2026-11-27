@@ -8,7 +8,7 @@ mouse pointer for anything focus can't reach.
 
 ```yaml
 dependencies:
-  fledge_input: ^0.7.0
+  fledge_input: ^0.7.1
 ```
 
 Flutter 3.50+ (Dart 3.14+); desktop first (Windows, macOS, Linux), web and

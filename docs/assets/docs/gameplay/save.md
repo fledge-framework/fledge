@@ -9,7 +9,7 @@ with format versioning and migrations for when your save layout changes.
 
 ```yaml
 dependencies:
-  fledge_save: ^0.7.0
+  fledge_save: ^0.7.1
 ```
 
 - **Flutter 3.50+** (Dart `^3.14`). Saves go to the platform documents

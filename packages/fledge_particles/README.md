@@ -8,7 +8,7 @@ CPU-driven particle system for [Fledge](https://fledge-framework.dev) games — 
 
 ```yaml
 dependencies:
-  fledge_particles: ^0.7.0
+  fledge_particles: ^0.7.1
 ```
 
 ## Quick Start

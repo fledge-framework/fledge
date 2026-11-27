@@ -1,6 +1,6 @@
 name: fledge_net_steam
 description: Steam networking for Fledge - fledge_net over Steam Networking (relays, NAT traversal) with Steam player identities.
-version: 0.7.0
+version: 0.7.1
 repository: https://github.com/fledge-framework/fledge/tree/main/packages/fledge_net_steam
 homepage: https://fledge-framework.dev
 issue_tracker: https://github.com/fledge-framework/fledge/issues
@@ -12,11 +12,11 @@ resolution: workspace
 
 dependencies:
   ffi: ^2.1.0
-  fledge_net: ^0.7.0
+  fledge_net: ^0.7.1
 
 dev_dependencies:
   test: ^1.25.0
-  fledge_ecs: ^0.7.0
+  fledge_ecs: ^0.7.1
   lints: ^6.0.0
 
 topics:
