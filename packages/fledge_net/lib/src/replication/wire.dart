@@ -1,4 +1,4 @@
-/// Payload formats of the replication layer (protocol version 4).
+/// Payload formats of the replication layer (protocol version 5).
 ///
 /// All integers are little-endian; `varuint` is unsigned LEB128.
 ///
@@ -28,7 +28,11 @@
 ///
 /// Every chunk is self-contained; one entity never spans two chunks. Only
 /// entities that changed since the client's last acknowledged copy are
-/// listed (at least one chunk, possibly empty, is sent every sync).
+/// listed (at least one chunk, possibly empty, is sent every sync). An
+/// entity whose delta is larger than `NetworkSession.maxSnapshotEntityBytes`
+/// is never listed: its delta goes as a reliable `state` message instead
+/// (see below), as do its later deltas until the client has acknowledged
+/// that message, so a snapshot never overtakes it.
 ///
 /// ## Entity delta (snapshots)
 ///
@@ -106,7 +110,12 @@
 ///              bytes (resource codec output for the chunk, to the end)
 ///   8 resolved varuint seq, uint32 resolvedTick, uint8 flags (bit 0
 ///              accepted, bit 1 a reason follows), [string reason]
+///   9 state    varuint netId, uint32 tick, entity delta (as in snapshots)
 /// ```
+///
+/// `spawn` and `state` messages may be larger than one packet; the
+/// reliable channel sends them as fragments. A `state` message is applied
+/// exactly like a snapshot entry of that tick (since version 5).
 ///
 /// Clients may only send `rpc` messages; the host rejects anything else.
 /// (Actions travel in input packets.)
@@ -126,6 +135,9 @@ abstract final class WireKind {
   static const int rpc = 6;
   static const int resource = 7;
   static const int resolved = 8;
+
+  /// An entity delta too large for a snapshot (protocol version 5).
+  static const int state = 9;
 }
 
 /// Reliable channels inside `PacketType.replication` packets.

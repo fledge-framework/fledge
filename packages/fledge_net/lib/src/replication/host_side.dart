@@ -59,6 +59,13 @@ class _HostPeer {
 
   /// Net ids currently spawned on this client.
   final Set<int> relevant = {};
+
+  /// Entities whose last delta went as a reliable `state` message, by net
+  /// id: the sequence number of its last fragment. Until the client has
+  /// acknowledged it, the entity's deltas keep going reliably, so no
+  /// snapshot can be applied before it (a snapshot of a later tick would
+  /// make the client drop it as stale).
+  final Map<int, int> reliableStates = {};
   final SplayTreeMap<int, TickInputQueue<Uint8List>> inputs = SplayTreeMap();
   int lastProcessedInputTick = 0;
   int lateInputs = 0;
@@ -104,7 +111,7 @@ class _HostEntity {
   int sentParent = 0;
   int sentOwner = 0;
 
-  /// Encoded state, every component included, exceeds
+  /// Encoded state, every component included, exceeds the hard cap
   /// `NetworkSession.maxEntityStateBytes`: not replicated to its owner
   /// (despawned there) until it fits again.
   bool oversized = false;
@@ -112,8 +119,8 @@ class _HostEntity {
   /// Encoded state without owner-only components (what every client but
   /// the owner gets) exceeds `NetworkSession.maxEntityStateBytes`: not
   /// replicated to anyone else until it fits again. Implies [oversized].
-  /// Kept apart from it so a large private component (a player's
-  /// inventory) never hides an entity from the clients it isn't sent to.
+  /// Kept apart from it so a huge private component never hides an
+  /// entity from the clients it isn't sent to.
   bool oversizedPublic = false;
 
   // Refreshed every send pass.
@@ -1059,6 +1066,7 @@ class _HostSide {
       for (final info in exits) {
         _enqueue(peer, _despawnMessage(info.netId));
         peer.baselines.remove(info.netId);
+        peer.reliableStates.remove(info.netId);
       }
       peer.relevant
         ..clear()
@@ -1078,7 +1086,11 @@ class _HostSide {
     _flushChannels(bulk: false);
     Set<int>? lagging;
     if (tick % _config.syncInterval == 0) {
-      _sendSnapshots(world, tick, stateFor, componentsFor);
+      if (_sendSnapshots(world, tick, stateFor, componentsFor)) {
+        // Large deltas went on the control channel: send them now, as the
+        // snapshots of the same tick just went.
+        _flushChannels(bulk: false);
+      }
       lagging = _sendResources(world);
     } else if (_registry.resources.isEmpty) {
       lagging = const {}; // no resource to wait for: resolve every tick
@@ -1087,23 +1099,24 @@ class _HostSide {
     _flushChannels(bulk: true);
   }
 
-  /// Queue [message] on [peer]'s channel. A full channel means the peer
-  /// is not acknowledging: the message is dropped and the peer is
+  /// Queue [message] on [peer]'s channel and return the sequence number of
+  /// its last fragment (0 if not queued). A full channel means the peer is
+  /// not acknowledging: the message is dropped and the peer is
   /// disconnected by the next [_flushChannels] (the ordered stream is
   /// broken, so nothing more is queued for it).
-  void _enqueue(_HostPeer peer, Uint8List message) {
-    if (peer.overflowed) return;
-    if (peer.channel.isFull) {
+  int _enqueue(_HostPeer peer, Uint8List message) {
+    if (peer.overflowed) return 0;
+    if (!peer.channel.canEnqueue(message.length)) {
       peer.overflowed = true;
-      return;
+      return 0;
     }
-    peer.channel.enqueue(message);
+    return peer.channel.enqueue(message);
   }
 
-  /// Whether [info]'s encoded [state], as one peer gets it, fits
-  /// `maxEntityStateBytes`: with every component for its owner ([owned]),
-  /// without owner-only ones for everyone else. If not, marks it oversized
-  /// for that kind of peer ([_HostEntity.oversized] or
+  /// Whether [info]'s encoded [state], as one peer gets it, is within the
+  /// hard cap `maxEntityStateBytes`: with every component for its owner
+  /// ([owned]), without owner-only ones for everyone else. If not, marks
+  /// it oversized for that kind of peer ([_HostEntity.oversized] or
   /// [_HostEntity.oversizedPublic]; it is then not relevant to them) and
   /// reports it once.
   bool _fits(_HostEntity info, Uint8List state, {required bool owned}) {
@@ -1116,9 +1129,10 @@ class _HostSide {
       developer.log(
         'Not replicating entity netId ${info.netId}'
         '${owned ? ' to its owner' : ''}: its replicated state is '
-        '${state.length} bytes, more than '
-        '${NetworkSession.maxEntityStateBytes} bytes. It replicates again '
-        'once it fits.',
+        '${state.length} bytes, more than the '
+        '${NetworkSession.maxEntityStateBytes} bytes one entity may hold '
+        '(NetworkSession.maxEntityStateBytes). Move large state into a '
+        'replicated resource. It replicates again once it fits.',
         name: 'fledge_net',
         level: 900, // WARNING
       );
@@ -1241,6 +1255,7 @@ class _HostSide {
       for (final peer in _peers.values) {
         peer.inputs.remove(info.netId);
         peer.baselines.remove(info.netId);
+        peer.reliableStates.remove(info.netId);
         if (peer.relevant.remove(info.netId)) {
           _enqueue(peer, _despawnMessage(info.netId));
         }
@@ -1372,13 +1387,17 @@ class _HostSide {
   /// those that changed (and, to their owner, every predicted component,
   /// which reconciliation needs every snapshot). At least one chunk, maybe
   /// empty, goes every sync: it carries the tick and the acks.
-  void _sendSnapshots(
+  ///
+  /// A delta too large for a snapshot goes as a reliable `state` message
+  /// instead ([_queueReliableState]). Returns whether any did.
+  bool _sendSnapshots(
     World world,
     int tick,
     Uint8List Function(_HostEntity, int peerId) stateFor,
     Map<int, Uint8List> Function(_HostEntity, int peerId) componentsFor,
   ) {
     const budget = _snapshotEntryBudget;
+    var queuedReliable = false;
     for (final peer in _peers.values) {
       // Owned entities first (prediction and the player's own view), then
       // the rest from a rotating start, so a tight budget reaches every
@@ -1403,6 +1422,19 @@ class _HostSide {
       for (final id in ids) {
         final info = _entities[id];
         if (info == null) continue;
+        // A reliable state message of this entity still unacknowledged:
+        // its deltas follow it on the same channel until it's in.
+        var reliable = false;
+        if (peer.reliableStates.isNotEmpty) {
+          final pending = peer.reliableStates[id];
+          if (pending != null) {
+            if (peer.channel.isAcknowledged(pending)) {
+              peer.reliableStates.remove(id);
+            } else {
+              reliable = true;
+            }
+          }
+        }
         // Outgrown maxEntityStateBytes as this peer gets it: left out (and
         // despawned there by the next send pass).
         final owned = info.owner == peer.id;
@@ -1423,14 +1455,20 @@ class _HostSide {
         if (changed.isEmpty && base != null && base.presentMask == present) {
           continue;
         }
+        _stateOut.clear();
+        writeEntityDelta(_stateOut, present, changed);
+        final delta = _stateOut.build();
+        if (reliable || delta.length > NetworkSession.maxSnapshotEntityBytes) {
+          if (_queueReliableState(peer, info, tick, delta, present, comps)) {
+            queuedReliable = true;
+          }
+          continue;
+        }
         final entry =
             (_entryOut
                   ..clear()
                   ..writeVarUint(id))
                 .build();
-        _stateOut.clear();
-        writeEntityDelta(_stateOut, present, changed);
-        final delta = _stateOut.build();
         final bytes = Uint8List(entry.length + delta.length)
           ..setAll(0, entry)
           ..setAll(entry.length, delta);
@@ -1481,6 +1519,54 @@ class _HostSide {
         session.stats.snapshotChunksSent++;
       }
     }
+    return queuedReliable;
+  }
+
+  /// Queues [delta] (an entity delta of [info] at [tick], as [peer] gets
+  /// it) as a reliable `state` message on the control channel, for a delta
+  /// too large for a snapshot or one following such a message. Returns
+  /// whether it was queued.
+  ///
+  /// Like a spawn, it arrives for sure and in order, so the client's
+  /// baseline becomes what it carries ([comps], the components [peer]
+  /// gets, with [present] their mask) right away, and older snapshot
+  /// chunks acknowledged later can't roll the presence mask back. The
+  /// entity's later deltas follow it on this channel until the client has
+  /// acknowledged it ([_HostPeer.reliableStates]): a snapshot of a later
+  /// tick applied first would make the client drop it as stale.
+  ///
+  /// While more than about two seconds of the send budget is
+  /// unacknowledged on the channel, the delta waits for a later pass
+  /// instead; the entity stays changed, so the next delta carries the
+  /// newest state (updates coalesce rather than pile up).
+  bool _queueReliableState(
+    _HostPeer peer,
+    _HostEntity info,
+    int tick,
+    Uint8List delta,
+    int present,
+    Map<int, Uint8List> comps,
+  ) {
+    if (peer.overflowed ||
+        peer.channel.unackedBytes > _config.sendBudgetBytesPerSecond * 2) {
+      return false;
+    }
+    final message =
+        (_messageOut
+              ..clear()
+              ..writeByte(WireKind.state)
+              ..writeVarUint(info.netId)
+              ..writeUint32(tick)
+              ..writeRawBytes(delta))
+            .build();
+    final seq = _enqueue(peer, message);
+    if (seq == 0) return false;
+    peer.reliableStates[info.netId] = seq;
+    peer.baselines[info.netId] = _Baseline(present, {
+      for (final i in comps.keys) i: info.componentVersions[i]!,
+    }, peer.nextChunkSeq);
+    session.stats.reliableEntityUpdates++;
+    return true;
   }
 
   final PacketBuilder _resourceOut = PacketBuilder();
@@ -1584,14 +1670,10 @@ void _checkRpcSize(Uint8List bytes) {
   }
 }
 
-/// Upper bound of a spawn message's bytes before the entity state:
-/// kind, netId, ownerId and parent varints, uint32 tick.
-const int _spawnHeaderMaxBytes = 1 + 5 + 5 + 5 + 4;
-
 /// Bytes of a snapshot chunk available for entity entries (header and
-/// entity count varint excluded). One entry (netId varint + at most
-/// `NetworkSession.maxEntityStateBytes` of state) always fits; see the
-/// `maxEntityStateBytes` test.
+/// entity count varint excluded). One entry (netId varint + a delta of at
+/// most `NetworkSession.maxSnapshotEntityBytes`) always fits; see the
+/// limits test in `oversized_state_test.dart`.
 const int _snapshotEntryBudget =
     Packet.maxPayloadBytes - SnapshotHeader.maxBytes - 5;
 

@@ -110,7 +110,8 @@ The resource that runs a session. Get it with `world.getResource<NetworkSession>
 
 | Constant | Value | Description |
 |---|---|---|
-| `NetworkSession.maxEntityStateBytes` | 1112 | Largest replicated state of one entity. See [Limits](/docs/networking/replication#limits). |
+| `NetworkSession.maxEntityStateBytes` | 65536 | Largest replicated state of one entity (a hard cap). See [Limits](/docs/networking/replication#limits). |
+| `NetworkSession.maxSnapshotEntityBytes` | 1112 | Largest entity delta sent in a snapshot; a larger one goes on the reliable control channel. See [Limits](/docs/networking/replication#limits). |
 | `NetworkSession.maxActionBytes` | 256 | Largest encoded action payload. |
 
 ## Events
@@ -150,3 +151,4 @@ All are registered by `NetworkPlugin`. Like other Fledge events, they're readabl
 | `lateInputs` | host | Inputs that arrived after their tick was simulated with a repeated input |
 | `tickResets` | client | Hard tick resets |
 | `oversizedEntities` | host | Entities skipped because their state exceeded `maxEntityStateBytes` (each counted once) |
+| `reliableEntityUpdates` | host | Entity deltas sent on the reliable control channel instead of in a snapshot (larger than `maxSnapshotEntityBytes`, or following one not yet acknowledged) |

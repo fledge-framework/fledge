@@ -9,7 +9,7 @@ Networking layer for multiplayer: transport, protocol, host/client architecture,
 - Source: 29 files, ~8,500 LOC
 - Tests: 36 files, ~7,000 LOC (390 tests)
 - TODOs in code: 0
-- Protocol version: 3 (replication layer added before v3 shipped; no bump)
+- Protocol version: 5 (v4: actions and fragmented reliable messages; v5: reliable `state` messages for entity deltas too large for a snapshot)
 
 ## What Works
 - Transport abstraction (UDP-like interface); `UdpTransport`, `EncryptedTransport` (AES-256-GCM via `pointycastle`), public `LoopbackNetwork` / `LoopbackTransport` test network (latency, jitter, loss, duplication, seeded `Random`, manual clock mode)
@@ -39,7 +39,7 @@ Networking layer for multiplayer: transport, protocol, host/client architecture,
 - **[P1]** No key-exchange handshake: encryption requires a pre-shared key distributed out-of-band. A Diffie-Hellman (or similar) negotiation should land before shipping production multiplayer.
 - **[P2]** Snapshots carry full state of relevant entities (no delta vs acked baseline). Fine for co-op scale; delta compression is the next bandwidth optimisation.
 - **[P2]** Congestion controller not yet wired into send path (canSend check not enforced).
-- **[P2]** No fragmentation: one entity's replicated state must fit in ~1.1 KB; raw payloads above `Packet.maxPayloadBytes` throw.
+- **[P3]** Raw `NetworkHost`/`NetworkClient` payloads above `Packet.maxPayloadBytes` throw (no fragmentation below the replication layer). Replicated entities may hold up to `NetworkSession.maxEntityStateBytes` (64 KiB): deltas over `maxSnapshotEntityBytes` (1112) go on the reliable control channel as `state` messages (protocol v5), with later deltas of that entity following on the channel until it's acknowledged.
 - **[P3]** Prediction replays only the registered `step`, not other systems (physics) that touch the predicted component.
 - **[P3]** `correctionBlend` < 1 smooths by blending simulation state; residual error is removed over further round trips (no separate visual-only offset).
 - **[P3]** IPv4 only. `connect()`'s overall timeout and connect retries use real timers (everything else, incl. host peer timeouts and retransmits, uses `NetClock`).

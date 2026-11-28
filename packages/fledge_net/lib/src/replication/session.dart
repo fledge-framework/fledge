@@ -87,6 +87,11 @@ class NetworkStats {
   /// Host: entities skipped because their encoded state exceeded
   /// `NetworkSession.maxEntityStateBytes` (each counted once).
   int oversizedEntities = 0;
+
+  /// Host: entity deltas sent as reliable `state` messages instead of in
+  /// a snapshot (too large for one, or following one not yet
+  /// acknowledged; see `NetworkSession.maxSnapshotEntityBytes`).
+  int reliableEntityUpdates = 0;
 }
 
 /// Resource that owns the live [NetworkHost] or [NetworkClient] and runs
@@ -142,28 +147,43 @@ class NetworkSession {
   /// player did (a slot, a tile), not the state it produces.
   static const int maxActionBytes = 256;
 
-  /// Largest encoded replicated state of one entity, in bytes: the
-  /// registered components' codec output plus a few bytes of framing
-  /// (a presence mask and one length varint per component).
+  /// Largest encoded replicated state of one entity, in bytes (64 KiB):
+  /// the registered components' codec output plus a few bytes of framing
+  /// (a presence mask and one length varint per component). A hard cap,
+  /// far above what an entity should hold; larger state belongs in a
+  /// replicated resource.
   ///
-  /// It is what fits one reliable spawn message (and therefore one
-  /// snapshot entry). It is measured as each client gets the entity: its
-  /// owner with every component, everyone else without owner-only ones
-  /// (so a large private component counts against its owner alone). The
-  /// host does not replicate an entity to a client it is larger for: it is
-  /// reported once (`dart:developer` log, and
-  /// [NetworkStats.oversizedEntities]), never spawned on that client, or
-  /// despawned there if it grew past the limit, and replicated again once
-  /// it fits. Everything else keeps replicating.
-  static const int maxEntityStateBytes =
-      ReliableChannel.maxFragmentBytes - _spawnHeaderMaxBytes <
-          _snapshotEntryMaxBytes
-      ? ReliableChannel.maxFragmentBytes - _spawnHeaderMaxBytes
-      : _snapshotEntryMaxBytes;
+  /// It is measured as each client gets the entity: its owner with every
+  /// component, everyone else without owner-only ones (so a large private
+  /// component counts against its owner alone). The host does not
+  /// replicate an entity to a client it is larger for: it is reported once
+  /// (`dart:developer` log, and [NetworkStats.oversizedEntities]), never
+  /// spawned on that client, or despawned there if it grew past the
+  /// limit, and replicated again once it fits. Everything else keeps
+  /// replicating.
+  ///
+  /// State up to this size replicates in full: see
+  /// [maxSnapshotEntityBytes] for how state too large for a snapshot
+  /// travels.
+  static const int maxEntityStateBytes = 64 * 1024;
 
-  /// Room for one entity in a snapshot chunk: the payload less the
-  /// header, the entity count and the entity's net id.
-  static const int _snapshotEntryMaxBytes =
+  /// Largest entity delta (what changed in one entity, as one client gets
+  /// it) that rides in an unreliable snapshot chunk, in bytes: one chunk's
+  /// payload less its header, the entity count and the entity's net id
+  /// (1112 bytes).
+  ///
+  /// A larger delta goes on the reliable control channel instead, as a
+  /// `state` message the channel splits into fragments, and so does every
+  /// later delta of that entity to that client until the client has
+  /// acknowledged it. Snapshots resume after that, so a snapshot never
+  /// overtakes the reliable update, and state is applied in tick order
+  /// either way. Spawns, which always travel reliably, may be any size up
+  /// to [maxEntityStateBytes].
+  ///
+  /// Deltas list only the components that changed, so an entity with a
+  /// large component that rarely changes (a player's inventory) costs a
+  /// reliable message only when that component changes.
+  static const int maxSnapshotEntityBytes =
       Packet.maxPayloadBytes - SnapshotHeader.maxBytes - 5 - 5;
 
   /// Current role.

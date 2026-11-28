@@ -91,6 +91,21 @@ void main() {
       expect(tx.takePackets(nowMs: 500, resendAfterMs: 100, ack: 0), isEmpty);
     });
 
+    test('isAcknowledged: only sent messages the receiver has acked', () {
+      final tx = ReliableChannel();
+      final first = tx.enqueue(bytes([1]));
+      final last = tx.enqueue(Uint8List(ReliableChannel.maxFragmentBytes * 2));
+      expect(last, first + 2, reason: 'a fragmented message: its last seq');
+      expect(tx.isAcknowledged(first), isFalse);
+      expect(tx.isAcknowledged(0), isFalse);
+      tx.onAck(first);
+      expect(tx.isAcknowledged(first), isTrue);
+      expect(tx.isAcknowledged(last), isFalse);
+      tx.onAck(last);
+      expect(tx.isAcknowledged(last), isTrue);
+      expect(tx.isAcknowledged(last + 1), isFalse, reason: 'never sent');
+    });
+
     test('piggybacks the cumulative ack', () {
       final tx = ReliableChannel()..enqueue(bytes([1]));
       final p = tx.takePackets(nowMs: 0, resendAfterMs: 1, ack: 42).single;

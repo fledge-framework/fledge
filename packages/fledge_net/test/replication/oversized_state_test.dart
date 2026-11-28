@@ -1,5 +1,7 @@
-// An entity whose replicated state does not fit one message must not
-// stop replication of everything else.
+// An entity whose replicated state is over the hard cap
+// (NetworkSession.maxEntityStateBytes) must not stop replication of
+// everything else. State under it replicates however large it is
+// (large_state_test.dart).
 import 'dart:typed_data';
 
 import 'package:fledge_ecs/fledge_ecs.dart';
@@ -27,16 +29,24 @@ ReplicationRegistry _registry() =>
 void main() {
   setUp(ComponentId.resetRegistry);
 
-  test('maxEntityStateBytes fits a spawn message and a snapshot entry', () {
-    // Spawn: kind + 3 varints + uint32 tick before the state.
+  test('the limits: a snapshot entry fits a chunk, the hard cap a reliable '
+      'message', () {
+    // Snapshot entry: netId varint + delta, after header and count.
+    expect(
+      5 + NetworkSession.maxSnapshotEntityBytes,
+      lessThanOrEqualTo(Packet.maxPayloadBytes - SnapshotHeader.maxBytes - 5),
+    );
+    expect(NetworkSession.maxSnapshotEntityBytes, 1112);
+    // Spawn: kind + 3 varints + uint32 tick before the state; a state
+    // message's header is smaller.
     expect(
       20 + NetworkSession.maxEntityStateBytes,
       lessThanOrEqualTo(ReliableChannel.maxMessageBytes),
     );
-    // Snapshot entry: netId varint + state, after header and count.
+    // And its fragments fit what a client buffers out of order.
     expect(
-      5 + NetworkSession.maxEntityStateBytes,
-      lessThanOrEqualTo(Packet.maxPayloadBytes - SnapshotHeader.maxBytes - 5),
+      ReliableChannel.fragmentsFor(20 + NetworkSession.maxEntityStateBytes),
+      lessThan(ReliableChannel.defaultMaxReceiveWindow),
     );
   });
 
@@ -87,20 +97,29 @@ void main() {
     expect(entityFor(client, smallId), isNotNull);
     expect(hostSession.stats.oversizedEntities, 1);
 
-    // The largest allowed state replicates.
+    // The largest allowed state replicates (in fragments: about a second
+    // of the default send budget).
     host.world.insert(
       big.entity,
-      // varint length prefix (2 bytes) + mask/length framing (~4 bytes).
+      // varint length prefix (3 bytes) + mask/length framing (~6 bytes).
       const Blob(NetworkSession.maxEntityStateBytes - 16),
     );
-    await bed.frames(20);
-    expect(entityFor(client, bigId), isNotNull);
+    await bed.runUntil(
+      () => entityFor(client, bigId) != null,
+      maxFrames: 200,
+      what: 'the largest allowed state replicates',
+    );
+    expect(
+      client.world.get<Blob>(entityFor(client, bigId)!)!.size,
+      NetworkSession.maxEntityStateBytes - 16,
+    );
+    expect(entityFor(client, smallId), isNotNull);
 
     await bed.dispose();
   });
 
-  test('a large owner-only component keeps an entity only from its owner: '
-      'everyone else gets its shared state', () async {
+  test('an owner-only component over the hard cap keeps an entity only '
+      'from its owner: everyone else gets its shared state', () async {
     final bed = NetTestbed(
       registry: () =>
           buildRegistry()..component<Blob>('blob', blobCodec, ownerOnly: true),
@@ -116,7 +135,7 @@ void main() {
       ..insert(Replicated())
       ..insert(const Pos(1, 1))
       ..insert(const Blob(NetworkSession.maxEntityStateBytes * 2));
-    // A's player, with private state too big to send even to A.
+    // A's player, with private state over the cap even for A.
     final theirs = host.world.spawn()
       ..insert(Replicated(owner: aId))
       ..insert(const Pos(2, 2))

@@ -146,6 +146,13 @@ class ReliableChannel {
   /// Sequence number the next [enqueue]d message will get.
   int get nextSequence => _nextSeq;
 
+  /// Whether the fragment numbered [seq] (as returned by [enqueue]) was
+  /// sent and the remote receiver has acknowledged it. Acks are
+  /// cumulative, so an acknowledged message also means every message
+  /// queued before it arrived.
+  bool isAcknowledged(int seq) =>
+      seq > 0 && seq < _nextSeq && !_unacked.containsKey(seq);
+
   /// Queue [message] for reliable, ordered delivery, as fragments if it's
   /// bigger than [maxFragmentBytes]. Returns the sequence number of its
   /// last fragment.

@@ -86,6 +86,7 @@ session.pendingActions<UseItem>();                       // client: draw these o
 - **Replicated resources**: big shared state (a tile map) replicates in versioned chunks, only the changed ones, on its own reliable channel: `registry.resource<Farm>('farm', FarmCodec())`.
 - **Send budget**: `NetworkConfig(sendBudgetBytesPerSecond: …)` (64 KiB/s by default) caps what each client is sent; big joins stream in.
 - **Visibility**: `Replicated(ownerOnly: true)` for private entities, `component<T>(…, ownerOnly: true)` for private components on shared ones, `NetworkConfig.relevance` for custom rules, `interestRadius` for distance.
+- **Large entities**: an entity whose changes don't fit one snapshot datagram (a player's long inventory) still replicates: its spawn and large deltas go on the reliable control channel in fragments, in tick order with its snapshots, up to `NetworkSession.maxEntityStateBytes` (64 KiB) per entity.
 - Reliable messages up to 1 MiB are fragmented automatically.
 
 ## Player identity

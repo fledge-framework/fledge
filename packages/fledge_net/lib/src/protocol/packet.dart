@@ -78,6 +78,12 @@ class PacketHeader {
   ///   `rpc` (0x20) packet types were removed (spawns, despawns and RPCs
   ///   travel on [PacketType.replication]), and the replication wire format
   ///   gained player actions and fragmented reliable messages.
+  /// - **5**: entity state too large for a snapshot replicates over the
+  ///   reliable control channel: spawn messages may span several
+  ///   fragments, and a new `state` message (kind 9) carries an entity
+  ///   delta larger than `NetworkSession.maxSnapshotEntityBytes`. A
+  ///   version 4 client would ignore those messages and silently miss
+  ///   state, so the version changed.
   ///
   /// Peers running another version cannot parse each other's packets;
   /// [deserialize] returns `null` on a version mismatch. [peekVersion] lets
@@ -86,7 +92,7 @@ class PacketHeader {
   /// mismatch" error. `NetworkHost` answers a mismatched `connect` with a
   /// `connectRejected` and `NetworkClient` fails its connect with the same
   /// reason; both also emit a `ProtocolMismatchEvent`.
-  static const int version = 4;
+  static const int version = 5;
 
   /// Packet type.
   final PacketType type;

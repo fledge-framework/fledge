@@ -507,6 +507,13 @@ class _ClientSide {
         welcomed = true;
       case WireKind.spawn:
         _spawn(world, r);
+      case WireKind.state:
+        // An entity delta too large for a snapshot. The host sends none of
+        // that entity's snapshots until this one is acknowledged, so it is
+        // never older than what the entity has.
+        final netId = r.readVarUint();
+        final tick = r.readUint32();
+        _applyState(world, netId, tick, readEntityDelta(r));
       case WireKind.despawn:
         _despawn(world, r.readVarUint());
       case WireKind.parent:

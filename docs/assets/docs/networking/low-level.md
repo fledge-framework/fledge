@@ -154,8 +154,8 @@ Datagrams are capped at `Packet.maxDatagramBytes` (1200 bytes), which keeps them
 
 `PacketHeader.deserialize` returns `null` for a packet whose version doesn't match, so peers on different protocol versions can't exchange traffic. Both sides report the mismatch instead of timing out:
 
-- **Host**: emits a `ProtocolMismatchEvent` (`source`, `localVersion`, `remoteVersion`, `remoteIsNewer`) on `onProtocolMismatch`. If the packet was a `connect`, it also replies with `connectRejected` and a reason such as `Protocol version mismatch: host v4, client v3`. It never replies to other traffic.
-- **Client**: when bytes from the host carry the magic number but another version, it emits a `ProtocolMismatchEvent` and fails with `Protocol version mismatch: local v4, server v5`. `connect()` returns `false` right away.
+- **Host**: emits a `ProtocolMismatchEvent` (`source`, `localVersion`, `remoteVersion`, `remoteIsNewer`) on `onProtocolMismatch`. If the packet was a `connect`, it also replies with `connectRejected` and a reason such as `Protocol version mismatch: host v5, client v4`. It never replies to other traffic.
+- **Client**: when bytes from the host carry the magic number but another version, it emits a `ProtocolMismatchEvent` and fails with `Protocol version mismatch: local v5, server v6`. `connect()` returns `false` right away.
 
 In a session these surface as the `NetProtocolMismatch` event and `session.lastError`.
 
