@@ -1,3 +1,33 @@
+## 0.7.2
+
+ - **REFACTOR**(fledge_tiled): depend on fledge_render_2d instead of the fledge_render shim. ([72becfe6](https://github.com/fledge-framework/fledge/commit/72becfe6bef448a30cf5a4d59bbd6fed651678a9))
+ - **REFACTOR**(fledge_render): combine core systems from fledge_render_flutter. ([4126c272](https://github.com/fledge-framework/fledge/commit/4126c272f2ddd3a198a285c5a80afdbea79aa126))
+ - **FIX**(fledge_tiled): parallax like Tiled, image-collection tiles, tile offsets. ([1efa710e](https://github.com/fledge-framework/fledge/commit/1efa710ebc5e0744149bc10df2e9c5dbd763739b))
+ - **FIX**(fledge_tiled): render infinite maps, size oversized tiles, implement TsxLoader. ([bae96543](https://github.com/fledge-framework/fledge/commit/bae965435950188f7058d80c04afc89420f3c894))
+ - **FIX**: bump versions to stable. ([13c9aa7f](https://github.com/fledge-framework/fledge/commit/13c9aa7f0d2702dabaa7088a8679c2113f8d295d))
+ - **FIX**(fledge_render_2d): fix null safety error on private field. ([6378bb1e](https://github.com/fledge-framework/fledge/commit/6378bb1eb375413aebc469a49353bbcf126f615c))
+ - **FIX**(fledge): update dependencies, upgrade melos to v7. ([e513327a](https://github.com/fledge-framework/fledge/commit/e513327a9f77e28d2126f9140e146a9b322c7b94))
+ - **FIX**: update dependencies to latest stable versions. ([9e696757](https://github.com/fledge-framework/fledge/commit/9e696757bef8acc802da081690dc918e51f20b9d))
+ - **FEAT**(*): corrections for retina displays. ([969c8b04](https://github.com/fledge-framework/fledge/commit/969c8b0412126a9693d7418bdceaa4d36e25aee7))
+ - **FEAT**(fledge_render_2d): improve culling. ([966e8657](https://github.com/fledge-framework/fledge/commit/966e86576f4f886ad4afcd24958e607188e222f6))
+ - **FEAT**(fledge_tiled): extract collision from tilesets. ([a5db2352](https://github.com/fledge-framework/fledge/commit/a5db2352f66ec5d5f1d61a8541dbda9b3ff9b1a2))
+ - **FEAT**(fledge_core): performance enhancements. ([839f52da](https://github.com/fledge-framework/fledge/commit/839f52dacb8eab4c1c69d7610cafb52b3af7601f))
+ - **FEAT**(fledge_physics): weighted pathfinding and cost-aware path smoothing. ([42a8899d](https://github.com/fledge-framework/fledge/commit/42a8899d19b666779323c756e6e520b4c1d5e2c3))
+ - **FEAT**: make vsync checks asyncronous to prevent frame skips. ([a1f5cc97](https://github.com/fledge-framework/fledge/commit/a1f5cc97cca011e8f9be638bc4473eeb97858718))
+ - **FEAT**: update render graph. ([1a2aa4f7](https://github.com/fledge-framework/fledge/commit/1a2aa4f762ac933ac1aa9d8ebce431e8016908a8))
+ - **FEAT**(fledge_tiled): expose TilemapSpawnSystem.systemName. ([3b5ea9f9](https://github.com/fledge-framework/fledge/commit/3b5ea9f9c3e4adaf9f2694133b83b188a3b73aa1))
+ - **FEAT**(fledge_tiled): emit ExtractedSprite so tiles draw through FledgeRenderView. ([76ad87f7](https://github.com/fledge-framework/fledge/commit/76ad87f7c9f3b5a8d1bb64bc9847931924227b44))
+ - **FEAT**(fledge_tiled): read tilemaps from Assets<TilemapAsset>. ([eb0515f2](https://github.com/fledge-framework/fledge/commit/eb0515f27f746f536a4060683b178716b9d40b3c))
+ - **FEAT**: upgrade tiled version. ([306fdb67](https://github.com/fledge-framework/fledge/commit/306fdb6708c06ff8c29a1a745a9899677bf9ce27))
+ - **FEAT**: v0.2 engine restructure — 2D/2.5D desktop game engine. ([bf7c2b6c](https://github.com/fledge-framework/fledge/commit/bf7c2b6cc47837c998786f25bc87997f474c5b1d))
+ - **FEAT**(fledge_tiled): add CulledTilemapExtractor. ([8ad8e658](https://github.com/fledge-framework/fledge/commit/8ad8e65817ad8074f55929085fe6d8747da6e114))
+ - **FEAT**(fledge_tiled): add support for pathfinding. ([23ba2e0c](https://github.com/fledge-framework/fledge/commit/23ba2e0cad68aabb2bc8a7a0fab52c0af96acd58))
+ - **FEAT**(fledge_tiled): enable class based tile sorting. ([291d9a12](https://github.com/fledge-framework/fledge/commit/291d9a12ed5d99912919497b024e7fdd286ae1ce))
+ - **FEAT**(fledge_tiled): refactor TilemapSpawnConfig API. ([35b12d1e](https://github.com/fledge-framework/fledge/commit/35b12d1eaa72f7e703f6820b4e0f8d69452f509e))
+ - **FEAT**(fledge_render): use layer enums rather than magic numbers. ([b7337885](https://github.com/fledge-framework/fledge/commit/b73378851a5fc04ea34893e6cd1690a6067b3a46))
+ - **FEAT**: initial commit. ([0e057c5a](https://github.com/fledge-framework/fledge/commit/0e057c5a4646a51d2f7f4c6bd5ed552b745b1b7d))
+ - **DOCS**(*): correct README quick starts and point links at the new docs. ([50d6e5da](https://github.com/fledge-framework/fledge/commit/50d6e5da2e8bf3eb220be3782b66e0b74438fd06))
+
 ## 0.7.1
 
  - **REFACTOR**(fledge_tiled): depend on fledge_render_2d instead of the fledge_render shim. ([72becfe6](https://github.com/fledge-framework/fledge/commit/72becfe6bef448a30cf5a4d59bbd6fed651678a9))

@@ -7,8 +7,8 @@ the other render packages (`fledge_camera_2d`, `fledge_lighting_2d`,
 
 ```yaml
 dependencies:
-  fledge_render_2d: ^0.7.1
-  fledge_camera_2d: ^0.7.1   # almost always wanted alongside it
+  fledge_render_2d: ^0.7.2
+  fledge_camera_2d: ^0.7.2   # almost always wanted alongside it
 ```
 
 It needs Flutter 3.50+ (Dart 3.14+). Desktop (Windows, macOS, Linux) is the

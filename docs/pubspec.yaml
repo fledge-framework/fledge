@@ -17,13 +17,13 @@ dependencies:
     sdk: flutter
 
   # Fledge ECS
-  fledge_ecs: ^0.7.1
+  fledge_ecs: ^0.7.2
 
   # Fledge Input
-  fledge_input: ^0.7.1
+  fledge_input: ^0.7.2
 
   # Fledge Render 2D (two-world architecture + 2D components).
-  fledge_render_2d: ^0.7.1
+  fledge_render_2d: ^0.7.2
 
   # Drifter example — embedded as an interactive demo.
   drifter_example:
@@ -52,23 +52,23 @@ dev_dependencies:
 
   # Every package the docs show code for, so tool/check_snippets.dart can
   # analyze the snippets.
-  fledge_assets: ^0.7.1
-  fledge_audio: ^0.7.1
-  fledge_calendar: ^0.7.1
-  fledge_camera_2d: ^0.7.1
-  fledge_debug: ^0.7.1
-  fledge_ecs_annotations: ^0.7.1
-  fledge_lighting_2d: ^0.7.1
-  fledge_net: ^0.7.1
-  fledge_net_steam: ^0.7.1
-  fledge_particles: ^0.7.1
-  fledge_physics: ^0.7.1
-  fledge_save: ^0.7.1
-  fledge_tiled: ^0.7.1
-  fledge_tween: ^0.7.1
-  fledge_ui: ^0.7.1
-  fledge_window: ^0.7.1
-  fledge_yarn: ^0.7.1
+  fledge_assets: ^0.7.2
+  fledge_audio: ^0.7.2
+  fledge_calendar: ^0.7.2
+  fledge_camera_2d: ^0.7.2
+  fledge_debug: ^0.7.2
+  fledge_ecs_annotations: ^0.7.2
+  fledge_lighting_2d: ^0.7.2
+  fledge_net: ^0.7.2
+  fledge_net_steam: ^0.7.2
+  fledge_particles: ^0.7.2
+  fledge_physics: ^0.7.2
+  fledge_save: ^0.7.2
+  fledge_tiled: ^0.7.2
+  fledge_tween: ^0.7.2
+  fledge_ui: ^0.7.2
+  fledge_window: ^0.7.2
+  fledge_yarn: ^0.7.2
   flutter_lints: ^6.0.0
 
 flutter:

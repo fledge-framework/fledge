@@ -6,8 +6,8 @@ parallax, transitions, projections and pixel snapping. It tells
 
 ```yaml
 dependencies:
-  fledge_render_2d: ^0.7.1
-  fledge_camera_2d: ^0.7.1
+  fledge_render_2d: ^0.7.2
+  fledge_camera_2d: ^0.7.2
 ```
 
 Flutter 3.50+ (Dart 3.14+); desktop first, web and mobile best-effort. Add

@@ -8,7 +8,7 @@ A Bevy-inspired Entity Component System (ECS) for Dart and Flutter game developm
 
 ```yaml
 dependencies:
-  fledge_ecs: ^0.7.1
+  fledge_ecs: ^0.7.2
 ```
 
 ## Quick Start

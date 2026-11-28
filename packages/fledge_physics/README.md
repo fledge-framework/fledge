@@ -8,7 +8,7 @@ Physics and collision handling for [Fledge](https://fledge-framework.dev) games 
 
 ```yaml
 dependencies:
-  fledge_physics: ^0.7.1
+  fledge_physics: ^0.7.2
 ```
 
 ## Quick Start

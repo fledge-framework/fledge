@@ -8,7 +8,7 @@ Ref-counted asset management for the [Fledge](https://fledge-framework.dev) ECS 
 
 ```yaml
 dependencies:
-  fledge_assets: ^0.7.1
+  fledge_assets: ^0.7.2
 ```
 
 ## Quick Start

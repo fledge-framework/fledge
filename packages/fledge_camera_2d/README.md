@@ -8,7 +8,7 @@
 
 ```yaml
 dependencies:
-  fledge_camera_2d: ^0.7.1
+  fledge_camera_2d: ^0.7.2
 ```
 
 ## Quick Start

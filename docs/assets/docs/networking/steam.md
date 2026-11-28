@@ -6,8 +6,8 @@
 
 ```yaml
 dependencies:
-  fledge_net: ^0.7.1
-  fledge_net_steam: ^0.7.1
+  fledge_net: ^0.7.2
+  fledge_net_steam: ^0.7.2
 ```
 
 - **Desktop only**: Windows, Linux and macOS. The package calls the Steamworks API through `dart:ffi`, so it doesn't work on the web (or mobile).

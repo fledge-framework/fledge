@@ -1,3 +1,21 @@
+## 0.7.2
+
+ - **FIX**(fledge_lighting_2d): camera-aware additive light pass fills the visible world viewport. ([23bae1ac](https://github.com/fledge-framework/fledge/commit/23bae1acc5358817a3a469ee8000f379e21e46bf))
+ - **FIX**: bump versions to stable. ([13c9aa7f](https://github.com/fledge-framework/fledge/commit/13c9aa7f0d2702dabaa7088a8679c2113f8d295d))
+ - **FEAT**(*): corrections for retina displays. ([969c8b04](https://github.com/fledge-framework/fledge/commit/969c8b0412126a9693d7418bdceaa4d36e25aee7))
+ - **FEAT**(fledge_core): performance enhancements. ([839f52da](https://github.com/fledge-framework/fledge/commit/839f52dacb8eab4c1c69d7610cafb52b3af7601f))
+ - **FEAT**(fledge_audio): upgrade to leverage soloud. ([13964f36](https://github.com/fledge-framework/fledge/commit/13964f36394d8c39981071d5f03d9d8c153ce4c4))
+ - **FEAT**: make vsync checks asyncronous to prevent frame skips. ([a1f5cc97](https://github.com/fledge-framework/fledge/commit/a1f5cc97cca011e8f9be638bc4473eeb97858718))
+ - **FEAT**: update render graph. ([1a2aa4f7](https://github.com/fledge-framework/fledge/commit/1a2aa4f762ac933ac1aa9d8ebce431e8016908a8))
+ - **FEAT**(fledge_lighting_2d): optional AmbientLight.bounds clips the overSprites multiply. ([e6429852](https://github.com/fledge-framework/fledge/commit/e64298524b34d0fcdcb755570f262c67727e75c1))
+ - **FEAT**: camera-aware widget render path. ([6b8ff1b7](https://github.com/fledge-framework/fledge/commit/6b8ff1b7f1eaf6a930a73d7a4c5a0c4e26f12385))
+ - **FEAT**(fledge_lighting_2d): AmbientBlend.overSprites — ambient darkens sprites too. ([7d0c33db](https://github.com/fledge-framework/fledge/commit/7d0c33dbb8bb5bb6a89b4d73faecfa04d2780a07))
+ - **FEAT**: upgrade tiled version. ([306fdb67](https://github.com/fledge-framework/fledge/commit/306fdb6708c06ff8c29a1a745a9899677bf9ce27))
+ - **FEAT**: add additional examples. ([dccbc356](https://github.com/fledge-framework/fledge/commit/dccbc356dc6b7b21b04fdcc4cd2faec1f258dd8b))
+ - **FEAT**: v0.2 engine restructure — 2D/2.5D desktop game engine. ([bf7c2b6c](https://github.com/fledge-framework/fledge/commit/bf7c2b6cc47837c998786f25bc87997f474c5b1d))
+ - **DOCS**(*): correct README quick starts and point links at the new docs. ([50d6e5da](https://github.com/fledge-framework/fledge/commit/50d6e5da2e8bf3eb220be3782b66e0b74438fd06))
+ - **DOCS**(*): fix stale comments in fledge_lighting_2d and drifter. ([80c17633](https://github.com/fledge-framework/fledge/commit/80c176333b2d34f78dfb6a4239c154b9f8030e55))
+
 ## 0.7.1
 
  - **FIX**(fledge_lighting_2d): camera-aware additive light pass fills the visible world viewport. ([23bae1ac](https://github.com/fledge-framework/fledge/commit/23bae1acc5358817a3a469ee8000f379e21e46bf))

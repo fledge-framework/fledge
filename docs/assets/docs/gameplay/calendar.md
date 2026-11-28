@@ -12,7 +12,7 @@ timestep, which are covered in [Time & Fixed Timestep](/docs/scheduling/time).
 
 ```yaml
 dependencies:
-  fledge_calendar: ^0.7.1
+  fledge_calendar: ^0.7.2
 ```
 
 - **Pure Dart** (Dart `^3.11`), no Flutter dependency; runs on every

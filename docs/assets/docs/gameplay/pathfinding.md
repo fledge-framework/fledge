@@ -14,7 +14,7 @@ from Tiled maps ([below](#grids-from-tiled-maps)).
 
 ```yaml
 dependencies:
-  fledge_physics: ^0.7.1
+  fledge_physics: ^0.7.2
 ```
 
 Flutter 3.50+, like the rest of `fledge_physics`

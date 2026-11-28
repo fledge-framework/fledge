@@ -1,3 +1,18 @@
+## 0.7.2
+
+ - **FIX**(fledge_ecs_generator): apply Commands and await async systems. ([4c168c54](https://github.com/fledge-framework/fledge/commit/4c168c543a6c0d094f0530cc556dab2080df5610))
+ - **FIX**: bump versions to stable. ([13c9aa7f](https://github.com/fledge-framework/fledge/commit/13c9aa7f0d2702dabaa7088a8679c2113f8d295d))
+ - **FIX**(fledge_render_2d): fix null safety error on private field. ([6378bb1e](https://github.com/fledge-framework/fledge/commit/6378bb1eb375413aebc469a49353bbcf126f615c))
+ - **FIX**(fledge): update dependencies, upgrade melos to v7. ([e513327a](https://github.com/fledge-framework/fledge/commit/e513327a9f77e28d2126f9140e146a9b322c7b94))
+ - **FIX**: update dependencies to latest stable versions. ([9e696757](https://github.com/fledge-framework/fledge/commit/9e696757bef8acc802da081690dc918e51f20b9d))
+ - **FEAT**(fledge_core): performance enhancements. ([839f52da](https://github.com/fledge-framework/fledge/commit/839f52dacb8eab4c1c69d7610cafb52b3af7601f))
+ - **FEAT**: upgrade tiled version. ([306fdb67](https://github.com/fledge-framework/fledge/commit/306fdb6708c06ff8c29a1a745a9899677bf9ce27))
+ - **FEAT**: v0.2 engine restructure — 2D/2.5D desktop game engine. ([bf7c2b6c](https://github.com/fledge-framework/fledge/commit/bf7c2b6cc47837c998786f25bc87997f474c5b1d))
+ - **FEAT**(fledge_net): create net package. ([dfed40d6](https://github.com/fledge-framework/fledge/commit/dfed40d6773ee9371bca5cf432372e265bdc0bb0))
+ - **FEAT**: initial commit. ([0e057c5a](https://github.com/fledge-framework/fledge/commit/0e057c5a4646a51d2f7f4c6bd5ed552b745b1b7d))
+ - **DOCS**(*): correct README quick starts and point links at the new docs. ([50d6e5da](https://github.com/fledge-framework/fledge/commit/50d6e5da2e8bf3eb220be3782b66e0b74438fd06))
+ - **DOCS**(fledge_ecs_generator): match the generator doc comment to real output. ([5f1285ee](https://github.com/fledge-framework/fledge/commit/5f1285eef9a0ced03c6e1e7f0f29eee3a7fda135))
+
 ## 0.7.1
 
  - **FIX**(fledge_ecs_generator): apply Commands and await async systems. ([4c168c54](https://github.com/fledge-framework/fledge/commit/4c168c543a6c0d094f0530cc556dab2080df5610))

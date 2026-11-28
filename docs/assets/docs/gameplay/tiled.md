@@ -15,10 +15,10 @@ tiles are drawn, sorted against characters and culled is on
 
 ```yaml
 dependencies:
-  fledge_tiled: ^0.7.1
-  fledge_physics: ^0.7.1    # Collider, CollisionShape, CollisionGrid
-  fledge_render_2d: ^0.7.1  # RenderPlugin, Transform2D, textures
-  fledge_assets: ^0.7.1     # Assets<T> and Handle<T>
+  fledge_tiled: ^0.7.2
+  fledge_physics: ^0.7.2    # Collider, CollisionShape, CollisionGrid
+  fledge_render_2d: ^0.7.2  # RenderPlugin, Transform2D, textures
+  fledge_assets: ^0.7.2     # Assets<T> and Handle<T>
 ```
 
 - **Flutter 3.50+** (Dart 3.14+). Desktop (Windows, macOS, Linux) is the

@@ -8,7 +8,7 @@
 
 ```yaml
 dependencies:
-  fledge_lighting_2d: ^0.7.1
+  fledge_lighting_2d: ^0.7.2
 ```
 
 ## Quick Start

@@ -14,15 +14,15 @@ dependencies:
   flutter:
     sdk: flutter
   material_ui: ^1.11.0
-  fledge_assets: ^0.7.1
-  fledge_ecs: ^0.7.1
-  fledge_render_2d: ^0.7.1
-  fledge_camera_2d: ^0.7.1
-  fledge_input: ^0.7.1
-  fledge_physics: ^0.7.1
-  fledge_save: ^0.7.1
-  fledge_ui: ^0.7.1
-  fledge_debug: ^0.7.1
+  fledge_assets: ^0.7.2
+  fledge_ecs: ^0.7.2
+  fledge_render_2d: ^0.7.2
+  fledge_camera_2d: ^0.7.2
+  fledge_input: ^0.7.2
+  fledge_physics: ^0.7.2
+  fledge_save: ^0.7.2
+  fledge_ui: ^0.7.2
+  fledge_debug: ^0.7.2
   # Used directly by game_app.dart for `Vector2` in sprite `customSize`.
   vector_math: ^2.2.0
 

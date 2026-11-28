@@ -8,7 +8,7 @@ Action-based input system for [Fledge](https://fledge-framework.dev) games. Maps
 
 ```yaml
 dependencies:
-  fledge_input: ^0.7.1
+  fledge_input: ^0.7.2
 ```
 
 ## Quick Start

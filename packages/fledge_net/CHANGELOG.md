@@ -1,3 +1,29 @@
+## 0.7.2
+
+> Note: This release has breaking changes.
+
+ - **FIX**(fledge_net): correct host client replication. ([e928a8e6](https://github.com/fledge-framework/fledge/commit/e928a8e6bbf5448961ad2dfb508823d4138b7363))
+ - **FIX**(fledge_net): close on host disconnect, allow full-host rejoins, resolve through encryption. ([4f873975](https://github.com/fledge-framework/fledge/commit/4f8739752c32f82c767abc83bb678a8474b36fb7))
+ - **FIX**(fledge_net): smooth client interpolation with a decoupled render clock. ([b575aa35](https://github.com/fledge-framework/fledge/commit/b575aa35a49cb1da6f8154254c4bbd0c707c00d2))
+ - **FIX**(fledge_net): latency fixes. ([c686b6ec](https://github.com/fledge-framework/fledge/commit/c686b6ec4727b4923f2e5a851718fb276bd1372c))
+ - **FIX**: bump versions to stable. ([13c9aa7f](https://github.com/fledge-framework/fledge/commit/13c9aa7f0d2702dabaa7088a8679c2113f8d295d))
+ - **FEAT**(fledge_net): create advertiser/browser constructs. ([1d831d33](https://github.com/fledge-framework/fledge/commit/1d831d3329c1335be6e237d6184bf27adc881243))
+ - **FEAT**(*): corrections for retina displays. ([969c8b04](https://github.com/fledge-framework/fledge/commit/969c8b0412126a9693d7418bdceaa4d36e25aee7))
+ - **FEAT**(fledge_core): performance enhancements. ([839f52da](https://github.com/fledge-framework/fledge/commit/839f52dacb8eab4c1c69d7610cafb52b3af7601f))
+ - **FEAT**(fledge_yarn): support for cinematics. ([1572d821](https://github.com/fledge-framework/fledge/commit/1572d8214899162164a8a5258bed8b713b8e4965))
+ - **FEAT**(fledge_physics): weighted pathfinding and cost-aware path smoothing. ([42a8899d](https://github.com/fledge-framework/fledge/commit/42a8899d19b666779323c756e6e520b4c1d5e2c3))
+ - **FEAT**: make vsync checks asyncronous to prevent frame skips. ([a1f5cc97](https://github.com/fledge-framework/fledge/commit/a1f5cc97cca011e8f9be638bc4473eeb97858718))
+ - **FEAT**(fledge_ecs): add FixedTimestep.nudge for external clock sync. ([25e3cfe5](https://github.com/fledge-framework/fledge/commit/25e3cfe5b96a300e522013c9d58a1a2903305f8b))
+ - **FEAT**: update render graph. ([1a2aa4f7](https://github.com/fledge-framework/fledge/commit/1a2aa4f762ac933ac1aa9d8ebce431e8016908a8))
+ - **FEAT**: upgrade tiled version. ([306fdb67](https://github.com/fledge-framework/fledge/commit/306fdb6708c06ff8c29a1a745a9899677bf9ce27))
+ - **FEAT**: add additional examples. ([dccbc356](https://github.com/fledge-framework/fledge/commit/dccbc356dc6b7b21b04fdcc4cd2faec1f258dd8b))
+ - **FEAT**: v0.2 engine restructure — 2D/2.5D desktop game engine. ([bf7c2b6c](https://github.com/fledge-framework/fledge/commit/bf7c2b6cc47837c998786f25bc87997f474c5b1d))
+ - **FEAT**(fledge_net): add network packet encryption. ([843c1c99](https://github.com/fledge-framework/fledge/commit/843c1c9911d82a997f8d52841267409d6cdceb4c))
+ - **FEAT**(fledge_net): remediate documented limitations. ([203a78a6](https://github.com/fledge-framework/fledge/commit/203a78a6093897de435f9cf4528e3afcfab6073f))
+ - **FEAT**(fledge_net): create net package. ([dfed40d6](https://github.com/fledge-framework/fledge/commit/dfed40d6773ee9371bca5cf432372e265bdc0bb0))
+ - **DOCS**(*): correct README quick starts and point links at the new docs. ([50d6e5da](https://github.com/fledge-framework/fledge/commit/50d6e5da2e8bf3eb220be3782b66e0b74438fd06))
+ - **BREAKING** **FIX**(fledge_net): hidden ancestors hide their descendants. ([db1a84d0](https://github.com/fledge-framework/fledge/commit/db1a84d05390675c2795d707780934ec8b01f6db))
+
 ## 0.7.1
 
 > Note: This release has breaking changes.

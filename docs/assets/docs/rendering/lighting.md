@@ -8,8 +8,8 @@ no special widget is needed.
 
 ```yaml
 dependencies:
-  fledge_render_2d: ^0.7.1
-  fledge_lighting_2d: ^0.7.1
+  fledge_render_2d: ^0.7.2
+  fledge_lighting_2d: ^0.7.2
 ```
 
 Flutter 3.50+ (Dart 3.14+); desktop first, web and mobile best-effort. Add

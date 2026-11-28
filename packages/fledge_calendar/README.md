@@ -10,7 +10,7 @@ In-game calendar and time-of-day system for [Fledge](https://fledge-framework.de
 
 ```yaml
 dependencies:
-  fledge_calendar: ^0.7.1
+  fledge_calendar: ^0.7.2
 ```
 
 ## Quick Start
