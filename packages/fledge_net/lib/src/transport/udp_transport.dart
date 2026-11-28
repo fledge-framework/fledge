@@ -32,6 +32,17 @@ class UdpTransport extends Transport {
   /// [TransportStats.packetsLost]).
   final int maxQueuedSends;
 
+  /// Whether the socket may send to broadcast addresses (`255.255.255.255`
+  /// or a subnet's), as LAN discovery's beacons do.
+  final bool broadcast;
+
+  /// Whether other sockets on this machine may bind the same port too
+  /// (`SO_REUSEPORT`, macOS and Linux), so several listeners all receive
+  /// broadcasts. Windows doesn't support it and already shares the port
+  /// through `SO_REUSEADDR` (always on), so it's ignored there, as it is
+  /// wherever the system refuses it.
+  final bool reusePort;
+
   RawDatagramSocket? _socket;
   ConnectionState _state = ConnectionState.disconnected;
   NetAddress? _localAddress;
@@ -47,6 +58,8 @@ class UdpTransport extends Transport {
     InternetAddress? bindAddress,
     this.maxBufferedPackets = 1024,
     this.maxQueuedSends = 1024,
+    this.broadcast = false,
+    this.reusePort = false,
   }) : bindAddress = bindAddress ?? InternetAddress.anyIPv4;
 
   /// Transport statistics.
@@ -83,7 +96,8 @@ class UdpTransport extends Transport {
     _setState(ConnectionState.connecting);
 
     try {
-      _socket = await RawDatagramSocket.bind(bindAddress, port);
+      _socket = await _bindSocket(port);
+      if (broadcast) _socket!.broadcastEnabled = true;
       _localAddress = NetAddress(_socket!.address.address, _socket!.port);
 
       _socket!.listen(
@@ -97,6 +111,17 @@ class UdpTransport extends Transport {
       _setState(ConnectionState.failed);
       rethrow;
     }
+  }
+
+  Future<RawDatagramSocket> _bindSocket(int port) async {
+    if (reusePort && !Platform.isWindows) {
+      try {
+        return await RawDatagramSocket.bind(bindAddress, port, reusePort: true);
+      } on SocketException {
+        // Not supported here: bind without it.
+      }
+    }
+    return RawDatagramSocket.bind(bindAddress, port);
   }
 
   void _handleSocketEvent(RawSocketEvent event) {

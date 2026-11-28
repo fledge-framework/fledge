@@ -223,6 +223,59 @@ Queue messages with `channel.enqueue(bytes)`. The channel never gives up on a me
 
 Choose `resendAfterMs` from the measured RTT (the replication layer uses about 1.5 RTT plus two ticks, between 50 ms and 2 s).
 
+## LAN discovery
+
+Players on one local network can pick a host from a list instead of typing its address. A host that accepts players over direct IP runs a `LanAdvertiser`, which broadcasts a small beacon about twice a second; a player looking for a game runs a `LanBrowser`, which lists the hosts it hears.
+
+```dart
+import 'dart:convert';
+
+import 'package:fledge_net/fledge_net.dart';
+
+Future<void> advertise(NetworkSession session) async {
+  await session.host(port: 7777);
+  final advertiser = LanAdvertiser(
+    appId: 'my-game',
+    gamePort: 7777,
+    payload: utf8.encode(jsonEncode({'name': 'Red Acre', 'players': 1})),
+  );
+  await advertiser.start();
+
+  // A friend joined: the next beacon says so.
+  advertiser.payload = utf8.encode(
+    jsonEncode({'name': 'Red Acre', 'players': 2}),
+  );
+
+  // Hosting ends: a last "leaving" beacon drops it from every list at once.
+  await advertiser.stop();
+}
+
+Future<void> browse(NetworkSession session) async {
+  final browser = LanBrowser(appId: 'my-game');
+  browser.onChanged.listen((hosts) {
+    for (final host in hosts) {
+      print('${host.address}: ${host.payloadText}');
+    }
+  });
+  await browser.start();
+
+  // The player picks one: join it like a typed address.
+  final picked = browser.hosts.first;
+  await browser.stop();
+  await session.join(picked.host, picked.port);
+}
+```
+
+- **The beacon** (`LanBeacon`) carries a magic number and format version, your **app id** (so different games never list each other's hosts), the **game port**, a random per-run instance number (one host heard on several network interfaces is listed once) and your **payload**, opaque bytes of at most `LanBeacon.maxPayloadBytes` (512). The host's address is where the datagram came from.
+- **Ports**: beacons go to UDP port `LanDiscovery.defaultPort` (47776), shared by every game and kept apart from game ports. Pass `discoveryPort:` to both sides to change it.
+- **Where beacons go**: `LanDiscovery.broadcastTargets()`, the limited broadcast address `255.255.255.255`, `127.0.0.1` (other copies on the same machine) and each IPv4 interface's subnet broadcast, assuming a /24 since `dart:io` doesn't report netmasks. Pass `targets:` to choose your own. Broadcasts stop at routers, so only the local network sees them.
+- **The list**: `browser.hosts` (in the order first heard) and `onChanged` (whenever a host appears, changes its payload, leaves or expires). A host not heard for `expiry` (5 s) drops off; `stop()` on the advertiser drops it at once. At most `maxHosts` (32) are listed.
+- **Errors never reach the game**: a port that can't be opened, a send with no route or a failed socket is logged (`dart:developer`, `fledge_net.discovery`) and passed to `onError`. The browser keeps trying to open its port every `retryInterval`, and its list stays empty meanwhile.
+- **Trust**: beacons are plaintext and unauthenticated, so anyone on the network can send one. Validate and display the payload, never act on it: joining still goes through the connect handshake and its authentication. Don't put identities, keys or passwords in a payload.
+- **Testing**: pass `transportFactory: () => net.createTransport(host: ...)` and the browser's `clock:` to run both sides on a manual `LoopbackNetwork`, which delivers datagrams sent to `255.255.255.255` to every transport bound on that port.
+
+Several copies on one machine can browse at once: the default transport shares the discovery port (`UdpTransport(reusePort: true)` on macOS and Linux; Windows shares it already). The first time a game listens on the discovery port, the system firewall may ask whether to allow it, and a declined or public network sees no hosts.
+
 ## Transports
 
 A `Transport` moves datagrams between `NetAddress`es. `NetworkHost`, `NetworkClient` and `NetworkSession` take any transport:
@@ -244,7 +297,7 @@ To write your own transport, extend `Transport` and implement `state`, `localAdd
 
 ### UdpTransport
 
-`UdpTransport({bindAddress, maxBufferedPackets = 1024, maxQueuedSends = 1024})` binds an IPv4 `RawDatagramSocket` (all interfaces by default; pass `InternetAddress.loopbackIPv4` for local-only). Destination hosts must be numeric IPv4 addresses (`NetworkClient` resolves host names first).
+`UdpTransport({bindAddress, maxBufferedPackets = 1024, maxQueuedSends = 1024, broadcast = false, reusePort = false})` binds an IPv4 `RawDatagramSocket` (all interfaces by default; pass `InternetAddress.loopbackIPv4` for local-only). Destination hosts must be numeric IPv4 addresses (`NetworkClient` resolves host names first). `broadcast: true` lets it send to broadcast addresses, and `reusePort: true` lets other sockets on the machine bind the same port (macOS and Linux; ignored on Windows, which shares ports already), as [LAN discovery](#lan-discovery) does.
 
 - **Send queue**: when the OS send buffer is full (the socket would block, which Windows reports under bursts), datagrams are queued and sent when the socket becomes writable, instead of being silently dropped. The queue holds `maxQueuedSends` datagrams; beyond that the oldest are dropped and counted in `stats.packetsLost`. Only queue overflow is counted there: UDP itself may still drop, duplicate or reorder datagrams anywhere on the way, with no error, which is why the layers above ack and resend.
 - Each read event drains every waiting datagram.

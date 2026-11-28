@@ -36,7 +36,8 @@ class ExpressionEvaluator {
   /// Evaluate [source] as a boolean with truthy coercion.
   bool evaluateBool(String source) => _toBool(evaluate(source));
 
-  /// Parse and execute a `<<set>>` body, e.g. `$x = 1 + 2` or `$x += 5`.
+  /// Parse and execute a `<<set>>` body, e.g. `$x = 1 + 2`, `$x to 1` or
+  /// `$x += 5`.
   ///
   /// Calls [assign] with the (unqualified) variable name and the resulting
   /// value. Compound operators read the current value via the constructor's
@@ -65,7 +66,11 @@ class ExpressionEvaluator {
     final rhs = parser.parseExpression();
     parser.expectEnd();
 
-    switch (opToken.type) {
+    // Yarn Spinner's `<<set $x to 1>>` is the same as `<<set $x = 1>>`.
+    final op = opToken.type == _TokenType.ident && opToken.lexeme == 'to'
+        ? _TokenType.assign
+        : opToken.type;
+    switch (op) {
       case _TokenType.assign:
         assign(name, rhs);
       case _TokenType.plusAssign:

@@ -173,7 +173,7 @@ if (!ok) print('Could not join: ${session.lastError}');
 - `join` accepts a numeric IPv4 address or a host name. It resolves to `true` once the host accepted the connection. Tick sync and the welcome message follow within a few round trips; then `session.isReady` becomes true and a `NetConnected` event is sent.
 - On failure `join` resolves to `false` and `session.lastError` says why (`Authentication failed`, `Server full`, `Connection timeout`, a protocol version mismatch). Problems found after the host accepted (a different tick rate or registry) end the session with `NetDisconnected`, and `lastError` holds the reason too.
 - `host` throws if a session is already running, if `FixedTimestep` doesn't match `tickRate`, or if encryption is on without a key.
-- `session.close()` ends the session. Call these from a menu callback or a test, not from inside a system.
+- `session.close()` ends the session and cleans up the world before it returns (see [Disconnects](/docs/networking/replication#disconnects)). Call these from a menu callback or a test, not from inside a system.
 
 ### 4. Spawn replicated entities on the host
 

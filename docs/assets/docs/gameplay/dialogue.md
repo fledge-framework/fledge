@@ -113,7 +113,7 @@ Shopkeeper: Welcome! You have {$gold} gold. #greeting
 | Inline expression | `{$gold}`, `{$gold - 5}`. Whole numbers print without a decimal point; `\{` is a literal brace |
 | Choice | `-> text`, with an optional `<<if cond>>` and tags. The body is indented 4 spaces (or a tab) deeper |
 | Conditional | `<<if cond>>` ... `<<elseif cond>>` ... `<<else>>` ... `<<endif>>` |
-| Variables | `<<set $x = expr>>`, also `+=`, `-=`, `*=`, `/=`. Strings are quoted and may contain spaces and `\"` escapes: `<<set $name = "Alex Smith">>` |
+| Variables | `<<set $x = expr>>` (or Yarn Spinner's `<<set $x to expr>>`), also `+=`, `-=`, `*=`, `/=`. Strings are quoted and may contain spaces and `\"` escapes: `<<set $name = "Alex Smith">>` |
 | Jump / end | `<<jump node>>`, `<<stop>>` |
 | Custom command | `<<name arg1 arg2>>` |
 

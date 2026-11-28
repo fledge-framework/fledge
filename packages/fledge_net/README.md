@@ -102,6 +102,33 @@ NetworkConfig(
 
 With `holdForReturn`, a returning player gets their entities back (`NetPeerConnected.returned`). See [Security and identity](https://fledge-framework.dev/docs/networking/security-identity#player-identity) for hubs and mixed verifiers.
 
+## Finding hosts on the LAN
+
+So players on one network can pick a host from a list instead of typing its address, a host broadcasts a small beacon (your app id, the game port and a payload of your own, up to 512 bytes) about twice a second, and a browser lists the hosts it hears:
+
+```dart
+// Host, while accepting players over direct IP:
+final advertiser = LanAdvertiser(
+  appId: 'my-game',
+  gamePort: 7777,
+  payload: utf8.encode(jsonEncode({'name': 'Red Acre', 'players': 1})),
+);
+await advertiser.start();
+advertiser.payload = utf8.encode(jsonEncode({'name': 'Red Acre', 'players': 2}));
+await advertiser.stop(); // browsers drop it at once
+
+// Player looking for a game:
+final browser = LanBrowser(appId: 'my-game');
+browser.onChanged.listen((hosts) {
+  for (final h in hosts) print('${h.address} ${h.payloadText}');
+});
+await browser.start();
+// join one: session.join(host.host, host.port)
+await browser.stop();
+```
+
+Beacons go to UDP port `LanDiscovery.defaultPort` (47776), separate from the game port; hosts not heard for 5 s drop off. Socket errors never throw: the list stays empty. Beacons are unauthenticated, so show the payload, never trust it; joining goes through the normal handshake.
+
 ## Documentation
 
 See the [networking docs](https://fledge-framework.dev/docs/networking/overview) for the co-op quickstart, [how replication works](https://fledge-framework.dev/docs/networking/replication), [configuration](https://fledge-framework.dev/docs/networking/configuration), and the [low-level API](https://fledge-framework.dev/docs/networking/low-level).

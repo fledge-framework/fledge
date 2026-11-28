@@ -38,8 +38,9 @@ class NetPeerConnected {
   });
 }
 
-/// Host: a client left (disconnect, timeout or kick). Its owned entities
-/// have already been handled according to [policy].
+/// Host: a client left (disconnect, timeout or kick, or the host closed the
+/// session). Its owned entities have already been handled according to
+/// [policy].
 class NetPeerDisconnected {
   /// The departed peer's id.
   final int peerId;
@@ -75,7 +76,9 @@ class NetConnected {
 
 /// Client or host: the session ended (or failed after connecting).
 ///
-/// On a client, every replicated entity has been despawned.
+/// On a client, every replicated entity has been despawned. On a host,
+/// every peer has had its `NetPeerDisconnected`, and no entity keeps a
+/// `NetworkIdentity` from the session.
 class NetDisconnected {
   /// Human-readable reason (never contains secrets).
   final String reason;

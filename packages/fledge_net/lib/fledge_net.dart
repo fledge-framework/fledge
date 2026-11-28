@@ -15,6 +15,8 @@
 ///   server tick.
 /// - **Low level**: `NetworkHost` / `NetworkClient`, `UdpTransport`,
 ///   `EncryptedTransport` (AES-256-GCM), `LoopbackNetwork` for tests.
+/// - **LAN discovery**: a host broadcasts beacons with `LanAdvertiser`;
+///   `LanBrowser` lists the hosts on the local network.
 ///
 /// ## Hosting and joining
 ///
@@ -53,6 +55,10 @@ export 'src/transport/transport.dart';
 export 'src/transport/udp_transport.dart';
 export 'src/transport/encrypted_transport.dart';
 export 'src/transport/loopback_transport.dart';
+
+// LAN discovery
+export 'src/discovery/lan_beacon.dart';
+export 'src/discovery/lan_discovery.dart';
 
 // Protocol
 export 'src/protocol/net_clock.dart';

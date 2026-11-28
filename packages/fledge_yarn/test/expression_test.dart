@@ -159,6 +159,14 @@ void main() {
       expect(vars['x'], 5);
     });
 
+    test("Yarn Spinner's `to` assigns, as `=` does", () {
+      eval.executeSet(r'$offer to "none"', (name, value) => vars[name] = value);
+      expect(vars['offer'], 'none');
+      vars['n'] = 2;
+      eval.executeSet(r'$m to $n * 3', (name, value) => vars[name] = value);
+      expect(vars['m'], 6);
+    });
+
     test('assignment with expression rhs', () {
       vars['base'] = 10;
       eval.executeSet(

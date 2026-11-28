@@ -98,4 +98,57 @@ void main() {
 
     await bed.dispose();
   });
+
+  test('a large owner-only component keeps an entity only from its owner: '
+      'everyone else gets its shared state', () async {
+    final bed = NetTestbed(
+      registry: () =>
+          buildRegistry()..component<Blob>('blob', blobCodec, ownerOnly: true),
+    );
+    final host = await bed.startHost(vehicle: false);
+    final a = await bed.addClient();
+    final b = await bed.addClient();
+    final aId = NetTestbed.session(a).localPeerId!;
+    final hostSession = NetTestbed.session(host);
+
+    // The host's own player: its private state never leaves the host.
+    final mine = host.world.spawn()
+      ..insert(Replicated())
+      ..insert(const Pos(1, 1))
+      ..insert(const Blob(NetworkSession.maxEntityStateBytes * 2));
+    // A's player, with private state too big to send even to A.
+    final theirs = host.world.spawn()
+      ..insert(Replicated(owner: aId))
+      ..insert(const Pos(2, 2))
+      ..insert(const Blob(NetworkSession.maxEntityStateBytes * 2));
+    await bed.frames(20);
+
+    final mineId = netIdOf(host, mine.entity);
+    final theirsId = netIdOf(host, theirs.entity);
+    for (final client in [a, b]) {
+      final mirror = entityFor(client, mineId);
+      expect(mirror, isNotNull, reason: 'its shared state fits');
+      expect(client.world.get<Pos>(mirror!)!.x, closeTo(1, 1e-6));
+      expect(client.world.has<Blob>(mirror), isFalse);
+    }
+    expect(entityFor(a, theirsId), isNull, reason: 'too big for its owner');
+    expect(
+      entityFor(b, theirsId),
+      isNotNull,
+      reason: 'but not for anyone else',
+    );
+    expect(hostSession.stats.oversizedEntities, 1);
+
+    // Snapshots of the shared state keep flowing.
+    host.world.insert(mine.entity, const Pos(5, 5));
+    await bed.frames(20);
+    expect(b.world.get<Pos>(entityFor(b, mineId)!)!.x, closeTo(5, 1e-6));
+
+    // Shrinks: A gets its own entity, private state and all.
+    host.world.insert(theirs.entity, const Blob(16));
+    await bed.frames(20);
+    expect(a.world.get<Blob>(entityFor(a, theirsId)!)?.size, 16);
+
+    await bed.dispose();
+  });
 }

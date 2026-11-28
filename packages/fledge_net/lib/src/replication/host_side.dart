@@ -104,9 +104,17 @@ class _HostEntity {
   int sentParent = 0;
   int sentOwner = 0;
 
-  /// Encoded state exceeds `NetworkSession.maxEntityStateBytes`: not
-  /// replicated (despawned on clients) until it fits again.
+  /// Encoded state, every component included, exceeds
+  /// `NetworkSession.maxEntityStateBytes`: not replicated to its owner
+  /// (despawned there) until it fits again.
   bool oversized = false;
+
+  /// Encoded state without owner-only components (what every client but
+  /// the owner gets) exceeds `NetworkSession.maxEntityStateBytes`: not
+  /// replicated to anyone else until it fits again. Implies [oversized].
+  /// Kept apart from it so a large private component (a player's
+  /// inventory) never hides an entity from the clients it isn't sent to.
+  bool oversizedPublic = false;
 
   // Refreshed every send pass.
   int parent = 0;
@@ -228,6 +236,35 @@ class _HostSide {
     _subs.clear();
   }
 
+  /// The session ended (`NetworkSession.close`): every connected peer
+  /// leaves as a disconnect would, then the session is forgotten: no
+  /// entity keeps its [NetworkIdentity], and no [Replicated] marker keeps
+  /// a peer of this session as owner.
+  void end(World world, String reason) {
+    for (final peerId in sortedPeerIds()) {
+      _onDisconnect(world, peerId, reason);
+    }
+    for (final info in _entities.values) {
+      if (world.isAlive(info.entity))
+        world.remove<NetworkIdentity>(info.entity);
+    }
+    _entities.clear();
+    _held.clear();
+    final peerOwned = [
+      for (final (entity, rep) in world.query1<Replicated>().iter())
+        if (rep.owner != 0) (entity, rep),
+    ];
+    for (final (entity, rep) in peerOwned) {
+      world.insert(
+        entity,
+        Replicated(
+          alwaysRelevant: rep.alwaysRelevant,
+          ownerOnly: rep.ownerOnly,
+        ),
+      );
+    }
+  }
+
   void _send(int peerId, PacketType type, Uint8List payload) {
     NetworkSession._sendSafely(
       payload,
@@ -241,13 +278,20 @@ class _HostSide {
     host.update();
     final tick = world.getResource<NetworkTick>()?.serverTick ?? 0;
     final keep = <_HostInbound>[];
+    // Connects are welcomed at once, unless a disconnect came before them:
+    // then they wait for the receive pass, in order. The same player
+    // reconnecting replaces their old connection, and must find what it
+    // left held for them (`NetPeerConnected.returned`), which only its
+    // disconnect does.
+    var behindDisconnect = false;
     for (final item in _inbox) {
-      if (item.kind == _InboundKind.connect) {
+      if (item.kind == _InboundKind.connect && !behindDisconnect) {
         _onConnect(world, item.peerId, tick);
       } else if (item.kind == _InboundKind.data &&
           item.type == PacketType.tickSync) {
         _answerTickSync(item, tick);
       } else {
+        if (item.kind == _InboundKind.disconnect) behindDisconnect = true;
         keep.add(item);
       }
     }
@@ -879,8 +923,8 @@ class _HostSide {
         if (c.ownerOnly) c.index,
     };
     final publicCache = <int, Map<int, Uint8List>>{};
-    Map<int, Uint8List> componentsFor(_HostEntity info, int peerId) {
-      if (private.isEmpty || info.owner == peerId) return componentsOf(info);
+    Map<int, Uint8List> publicComponentsOf(_HostEntity info) {
+      if (private.isEmpty) return componentsOf(info);
       return publicCache.putIfAbsent(
         info.netId,
         () => {
@@ -890,18 +934,32 @@ class _HostSide {
       );
     }
 
+    Map<int, Uint8List> componentsFor(_HostEntity info, int peerId) =>
+        info.owner == peerId ? componentsOf(info) : publicComponentsOf(info);
+
     final publicStateCache = <int, Uint8List>{};
-    Uint8List stateFor(_HostEntity info, int peerId) {
-      if (private.isEmpty || info.owner == peerId) return stateOf(info);
+    Uint8List publicStateOf(_HostEntity info) {
+      if (private.isEmpty) return stateOf(info);
       return publicStateCache.putIfAbsent(info.netId, () {
         _stateOut.clear();
-        writeEntityState(_stateOut, componentsFor(info, peerId));
+        writeEntityState(_stateOut, publicComponentsOf(info));
         return _stateOut.build();
       });
     }
 
+    // The state [peerId] gets: everything if it owns the entity, else
+    // without owner-only components. Its size decides whether the entity
+    // fits for that peer ([_fits]): a large private component keeps an
+    // entity only from its owner, never from everyone else.
+    Uint8List stateFor(_HostEntity info, int peerId) =>
+        info.owner == peerId ? stateOf(info) : publicStateOf(info);
+
     // Entities skipped as oversized rejoin once their state fits again.
     for (final info in _entities.values) {
+      if (info.oversizedPublic) {
+        info.oversizedPublic =
+            publicStateOf(info).length > NetworkSession.maxEntityStateBytes;
+      }
       if (info.oversized) {
         info.oversized =
             stateOf(info).length > NetworkSession.maxEntityStateBytes;
@@ -949,11 +1007,12 @@ class _HostSide {
           next.remove(info.netId);
           continue;
         }
-        if (!_fits(info, stateOf(info))) {
+        final state = stateFor(info, peer.id);
+        if (!_fits(info, state, owned: info.owner == peer.id)) {
           next.remove(info.netId); // never spawned on this peer
           continue;
         }
-        _enqueue(peer, _spawnMessage(info, tick, stateFor(info, peer.id)));
+        _enqueue(peer, _spawnMessage(info, tick, state));
         spawned.add(info.netId);
         // The spawn arrives reliably: the client has this state.
         final comps = componentsFor(info, peer.id);
@@ -1019,7 +1078,7 @@ class _HostSide {
     _flushChannels(bulk: false);
     Set<int>? lagging;
     if (tick % _config.syncInterval == 0) {
-      _sendSnapshots(world, tick, stateOf, componentsFor);
+      _sendSnapshots(world, tick, stateFor, componentsFor);
       lagging = _sendResources(world);
     } else if (_registry.resources.isEmpty) {
       lagging = const {}; // no resource to wait for: resolve every tick
@@ -1041,17 +1100,23 @@ class _HostSide {
     peer.channel.enqueue(message);
   }
 
-  /// Whether [info]'s encoded [state] fits `maxEntityStateBytes`. If not,
-  /// marks it oversized (it is then not relevant to any peer) and reports
-  /// it once.
-  bool _fits(_HostEntity info, Uint8List state) {
+  /// Whether [info]'s encoded [state], as one peer gets it, fits
+  /// `maxEntityStateBytes`: with every component for its owner ([owned]),
+  /// without owner-only ones for everyone else. If not, marks it oversized
+  /// for that kind of peer ([_HostEntity.oversized] or
+  /// [_HostEntity.oversizedPublic]; it is then not relevant to them) and
+  /// reports it once.
+  bool _fits(_HostEntity info, Uint8List state, {required bool owned}) {
     if (state.length <= NetworkSession.maxEntityStateBytes) return true;
+    // The owner's state holds everything the others' does, and more.
     info.oversized = true;
+    if (!owned) info.oversizedPublic = true;
     if (_reportedOversized.add(info.netId)) {
       session.stats.oversizedEntities++;
       developer.log(
-        'Not replicating entity netId ${info.netId}: its replicated state '
-        'is ${state.length} bytes, more than '
+        'Not replicating entity netId ${info.netId}'
+        '${owned ? ' to its owner' : ''}: its replicated state is '
+        '${state.length} bytes, more than '
         '${NetworkSession.maxEntityStateBytes} bytes. It replicates again '
         'once it fits.',
         name: 'fledge_net',
@@ -1229,7 +1294,11 @@ class _HostSide {
     final radius = _config.interestRadius;
     final custom = _config.relevance;
     bool visible(_HostEntity info) {
-      if (info.oversized) return false;
+      // Too big as this peer would get it: its owner gets every component,
+      // everyone else only the shared ones.
+      if (info.owner == peerId ? info.oversized : info.oversizedPublic) {
+        return false;
+      }
       if (info.ownerOnly && info.owner != peerId) return false;
       if (custom != null &&
           info.owner != peerId &&
@@ -1306,7 +1375,7 @@ class _HostSide {
   void _sendSnapshots(
     World world,
     int tick,
-    Uint8List Function(_HostEntity) stateOf,
+    Uint8List Function(_HostEntity, int peerId) stateFor,
     Map<int, Uint8List> Function(_HostEntity, int peerId) componentsFor,
   ) {
     const budget = _snapshotEntryBudget;
@@ -1334,13 +1403,13 @@ class _HostSide {
       for (final id in ids) {
         final info = _entities[id];
         if (info == null) continue;
-        // Outgrown maxEntityStateBytes: left out (and despawned on clients
-        // by the next send pass).
-        if (!_fits(info, stateOf(info))) continue;
+        // Outgrown maxEntityStateBytes as this peer gets it: left out (and
+        // despawned there by the next send pass).
+        final owned = info.owner == peer.id;
+        if (!_fits(info, stateFor(info, peer.id), owned: owned)) continue;
         final comps = componentsFor(info, peer.id);
         final present = _maskOf(comps.keys);
         final base = peer.baselines[id];
-        final owned = info.owner == peer.id;
         final changed = <int, Uint8List>{};
         final versions = <int, int>{};
         for (final MapEntry(key: index, value: bytes) in comps.entries) {

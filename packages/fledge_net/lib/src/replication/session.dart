@@ -147,11 +147,14 @@ class NetworkSession {
   /// (a presence mask and one length varint per component).
   ///
   /// It is what fits one reliable spawn message (and therefore one
-  /// snapshot entry). The host does not replicate an entity whose state is
-  /// larger: it is reported once (`dart:developer` log, and
-  /// [NetworkStats.oversizedEntities]), never spawned on clients, or
-  /// despawned on clients if it grew past the limit, and replicated again
-  /// once it fits. Everything else keeps replicating.
+  /// snapshot entry). It is measured as each client gets the entity: its
+  /// owner with every component, everyone else without owner-only ones
+  /// (so a large private component counts against its owner alone). The
+  /// host does not replicate an entity to a client it is larger for: it is
+  /// reported once (`dart:developer` log, and
+  /// [NetworkStats.oversizedEntities]), never spawned on that client, or
+  /// despawned there if it grew past the limit, and replicated again once
+  /// it fits. Everything else keeps replicating.
   static const int maxEntityStateBytes =
       ReliableChannel.maxFragmentBytes - _spawnHeaderMaxBytes <
           _snapshotEntryMaxBytes
@@ -341,14 +344,44 @@ class NetworkSession {
   }
 
   /// End the session. Hosts disconnect every peer; clients notify the
-  /// host. On the next frame clients despawn all replicated entities and
-  /// a `NetDisconnected` event is sent.
+  /// host.
+  ///
+  /// The world is cleaned up at once, before `close` returns (when the
+  /// session is attached to one, as `NetworkPlugin` does), so an app that
+  /// stops ticking afterwards (a menu, loading another game) finds nothing
+  /// of the session left:
+  ///
+  /// - a client despawns every replicated entity;
+  /// - a host first lets each connected peer leave exactly as a disconnect
+  ///   would (its owned entities follow `NetworkConfig.disconnectPolicy`,
+  ///   and a `NetPeerDisconnected` is sent for it), then forgets the
+  ///   session: every entity it replicated loses its [NetworkIdentity],
+  ///   and a [Replicated] marker naming a peer as owner names the host
+  ///   again (peer ids are per session: the next session's peer 1 is
+  ///   someone else). [Replicated] markers stay, so hosting again
+  ///   replicates the same entities under new network ids.
+  ///
+  /// The `NetDisconnected` event (and a host's `NetPeerDisconnected`
+  /// events) are read on the next frame. A session that ends on its own
+  /// (a client losing its host) is cleaned up the same way by the next
+  /// receive pass.
   Future<void> close([String reason = 'Session closed']) async {
     final h = _host;
     final c = _client;
     _endSide(reason);
+    final world = _world;
+    if (world != null) _cleanUpEnded(world);
     if (h != null) await h.host.stop();
     if (c != null) await c.client.disconnect();
+  }
+
+  void _cleanUpEnded(World world) {
+    if (_ending.isEmpty) return;
+    final ended = List<_EndedSide>.of(_ending);
+    _ending.clear();
+    for (final e in ended) {
+      e.cleanup(world, this);
+    }
   }
 
   void _endSide(String reason) {
@@ -673,13 +706,7 @@ class NetworkSession {
   /// `NetReceiveSystem`: apply inbound packets to the world.
   @internal
   void receive(World world) {
-    if (_ending.isNotEmpty) {
-      final ended = List<_EndedSide>.of(_ending);
-      _ending.clear();
-      for (final e in ended) {
-        e.cleanup(world, this);
-      }
-    }
+    _cleanUpEnded(world);
     _host?.receive(world);
     _client?.receive(world);
   }
@@ -762,7 +789,8 @@ class NetworkSession {
   }
 }
 
-/// A side whose session ended; cleaned up by the next receive pass.
+/// A side whose session ended; cleaned up by [NetworkSession.close] at once,
+/// else by the next receive pass.
 class _EndedSide {
   final _HostSide? host;
   final _ClientSide? client;
@@ -773,6 +801,7 @@ class _EndedSide {
   void cleanup(World world, NetworkSession session) {
     final registry = world.getResource<NetworkEntityRegistry>();
     final tick = world.getResource<NetworkTick>();
+    host?.end(world, reason);
     final c = client;
     if (c != null) {
       for (final info in c.entities.values) {

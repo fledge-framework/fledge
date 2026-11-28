@@ -80,8 +80,8 @@ Chunks are self-contained and at most `Packet.maxPayloadBytes`; one entity never
 ### Limits
 
 - A registry holds at most 32 component types (`ReplicationRegistry.maxComponents`).
-- One entity's encoded state (its replicated components plus a few bytes of framing) must fit in `NetworkSession.maxEntityStateBytes` (1112 bytes), because it has to fit one snapshot datagram. Put larger state in a [replicated resource](#replicated-resources).
-- The host doesn't replicate a larger entity. It logs a warning once (`dart:developer`, name `fledge_net`), counts it in `NetworkSession.stats.oversizedEntities`, never spawns it on clients (or despawns it there if it grew past the limit), and replicates it again once it fits. Everything else keeps replicating. Children of a skipped entity wait on clients as orphans until it arrives.
+- One entity's encoded state, as a client gets it (its replicated components plus a few bytes of framing), must fit in `NetworkSession.maxEntityStateBytes` (1112 bytes), because it has to fit one snapshot datagram. Its owner gets every component; everyone else gets it without owner-only ones, so large private state only counts against its owner. Put larger state in a [replicated resource](#replicated-resources).
+- The host doesn't replicate a larger entity to the clients it's too large for (just its owner, when only its owner-only components make it too large). It logs a warning once (`dart:developer`, name `fledge_net`), counts it in `NetworkSession.stats.oversizedEntities`, never spawns it on those clients (or despawns it there if it grew past the limit), and replicates it again once it fits. Everything else keeps replicating. Children of a skipped entity wait on clients as orphans until it arrives.
 
 ## Replicated resources
 
@@ -257,6 +257,10 @@ When a client leaves (it disconnects, times out, or the host disconnects it), th
 | `releaseToHost` | Kept, and ownership moves to the host (`ownerId` 0). |
 | `holdForReturn` | Kept and owned by the host for now. When a client joins again with the same [player identity](/docs/networking/security-identity#player-identity), ownership goes back to it and `NetPeerConnected.returned` lists the entities. Anonymous players' entities are simply released to the host. |
 
-When a client's session ends, it despawns every replicated entity and sends `NetDisconnected`. A client that loses the host (timeout, kicked, handshake mismatch) ends its session the same way, with the reason in `session.lastError`.
+When a client's session ends, it despawns every replicated entity and sends `NetDisconnected`. `session.close()` does this before it returns, so a client that leaves and stops ticking (a menu, loading its own game) has nothing of the host's world left over. A client that loses the host (timeout, kicked, handshake mismatch) ends its session the same way on its next receive pass, with the reason in `session.lastError`.
+
+When the host closes its session, every connected client leaves exactly as above: the policy is applied to what it owned and a `NetPeerDisconnected` is sent for it (reason: the one passed to `close`), followed by `NetDisconnected`. Then the session is forgotten, at once: no entity keeps its `NetworkIdentity`, and a `Replicated` marker that named a client as its owner names the host again, since peer ids are per session (the next session's peer 1 is someone else). The markers stay, so hosting again replicates the same entities under new network ids.
+
+A player reconnecting with the same identity replaces their old connection. The old connection's `NetPeerDisconnected` always comes before the new one's `NetPeerConnected`, so under `holdForReturn` the new connection gets back what the old one held.
 
 Disconnect notices are sent redundantly (3 identical copies a few ms apart), so a single lost datagram doesn't leave a departed player's entities around until `connectionTimeout`. Duplicates are ignored.

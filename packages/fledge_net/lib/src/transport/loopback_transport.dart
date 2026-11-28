@@ -49,7 +49,9 @@ class LoopbackStats {
 /// [createTransport]. Pass those transports to `NetworkHost` /
 /// `NetworkClient` exactly as you would a `UdpTransport`. Transports find
 /// each other by the address they bind to (`host` from [createTransport],
-/// port from `bind`; port `0` picks an ephemeral port).
+/// port from `bind`; port `0` picks an ephemeral port). A datagram sent to
+/// [broadcastHost] (`255.255.255.255`) reaches every transport bound on
+/// its port, as a LAN broadcast would.
 ///
 /// The network can simulate a bad link:
 /// - [latency]: fixed one-way delay applied to every datagram.
@@ -300,19 +302,31 @@ class LoopbackNetwork {
     _timers.add(timer);
   }
 
+  /// The limited broadcast address: a datagram sent to it reaches every
+  /// transport bound on its port (each counted as delivered).
+  static const String broadcastHost = '255.255.255.255';
+
   void _deliver(LoopbackDatagram datagram) {
-    final receiver = _bound[datagram.destination];
-    if (receiver == null) {
+    final destination = datagram.destination;
+    final receivers = destination.host == broadcastHost
+        ? [
+            for (final MapEntry(:key, :value) in _bound.entries)
+              if (key.port == destination.port) value,
+          ]
+        : [?_bound[destination]];
+    if (receivers.isEmpty) {
       stats.undeliverable++;
       return;
     }
-    stats.delivered++;
-    receiver._receive(
-      ReceivedPacket(
-        source: datagram.source,
-        data: Uint8List.fromList(datagram.data),
-      ),
-    );
+    for (final receiver in receivers) {
+      stats.delivered++;
+      receiver._receive(
+        ReceivedPacket(
+          source: datagram.source,
+          data: Uint8List.fromList(datagram.data),
+        ),
+      );
+    }
   }
 }
 

@@ -68,7 +68,7 @@ The resource that runs a session. Get it with `world.getResource<NetworkSession>
 |---|---|
 | `host({port = 7777, transport})` | Start hosting. Throws if a session is running, if `FixedTimestep` doesn't match `tickRate`, or if encryption is enabled without a key. |
 | `join(address, port, {transport, credentials})` | Connect to a host (IPv4 address, host name, or a transport-specific address such as `steam:<id>`). Resolves to `true` once accepted; `false` with `lastError` on failure. `credentials` default to the UTF-8 bytes of `serverPassword`. |
-| `close([reason])` | End the session. Hosts disconnect every peer; clients notify the host. On the next frame clients despawn all replicated entities and `NetDisconnected` is sent. |
+| `close([reason])` | End the session. Hosts disconnect every peer; clients notify the host. Before it returns, a client despawns every replicated entity; a host sends `NetPeerDisconnected` for each peer (applying `disconnectPolicy`), then removes every `NetworkIdentity` and hands peer-owned `Replicated` markers back to the host. `NetDisconnected` is read on the next frame. |
 | `lastError` | Why the last `join` failed or the last session ended. |
 | `transportFactory` | The default transport factory (settable). |
 
@@ -120,7 +120,7 @@ All are registered by `NetworkPlugin`. Like other Fledge events, they're readabl
 | Event | Where | Fields | When |
 |---|---|---|---|
 | `NetPeerConnected` | host | `peerId`, `identity` (empty if anonymous), `returned` (net ids handed back) | A client finished connecting. It receives the relevant world state on the next fixed tick. |
-| `NetPeerDisconnected` | host | `peerId`, `reason`, `identity`, `ownedNetIds`, `policy` | A client left (disconnect, timeout or kick); its entities were already handled per `policy`. |
+| `NetPeerDisconnected` | host | `peerId`, `reason`, `identity`, `ownedNetIds`, `policy` | A client left (disconnect, timeout, kick, or the host closing the session); its entities were already handled per `policy`. |
 | `NetConnected` | client | `localPeerId` | Handshake and tick sync are done. |
 | `NetDisconnected` | both | `reason` | The session ended or failed after connecting. Clients have despawned every replicated entity. |
 | `NetProtocolMismatch` | both | `details` (a `ProtocolMismatchEvent`: `source`, `localVersion`, `remoteVersion`, `remoteIsNewer`) | A peer runs another protocol version. |
